@@ -1,0 +1,25 @@
+{
+  "name": "eclass-record",
+  "version": "2.0.0",
+  "description": "Local, teacher-owned class record for DepEd three-term and legacy grading workflows",
+  "author": "E-Class Record App",
+  "license": "MIT",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder --win",
+    "publish": "electron-builder --win --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "extends": "electron-builder.yml"
+  }
+}

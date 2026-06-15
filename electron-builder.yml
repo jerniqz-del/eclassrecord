@@ -1,0 +1,25 @@
+appId: com.eclassrecord.app
+productName: E-Class Record
+copyright: Copyright © 2026 E-Class Record App
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - src/**/*
+  - "!src/**/*.map"
+
+win:
+  target: nsis
+  icon: src/assets/icon.png
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+
+publish:
+  provider: github
+  releaseType: release

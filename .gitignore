@@ -1,6 +1,9 @@
 # Build output
 dist/
 
+# Dependencies
+node_modules/
+
 # Local runtime data (generated per-user at runtime)
 data.json
 
@@ -8,3 +11,6 @@ data.json
 Thumbs.db
 Desktop.ini
 *.tmp
+.idea/
+.vscode/
+*.log

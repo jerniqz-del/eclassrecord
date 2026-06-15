@@ -1,0 +1,144 @@
+/* ============================================================
+   E-Class Record — Animations
+   Keyframes, view transitions, hover effects, focus rings.
+   ============================================================ */
+
+/* ── View / Content Transitions ────────────────────────── */
+
+@keyframes contentFadeIn {
+  from {
+    opacity: 0.2;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ── Toast Animations ──────────────────────────────────── */
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%) scale(0.92);
+  }
+}
+
+@keyframes toastProgress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+/* ── Modal ─────────────────────────────────────────────── */
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Pulse (save dot, status indicators) ───────────────── */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.9); }
+}
+
+@keyframes pulseError {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50%  { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.12); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ── Skeleton Shimmer ──────────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 25%,
+    var(--color-neutral-200) 50%,
+    var(--color-neutral-100) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite ease-in-out;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Utility Animation Classes ─────────────────────────── */
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-base) ease forwards;
+}
+
+.animate-slide-up {
+  animation: slideInUp var(--transition-base) ease forwards;
+}
+
+.animate-slide-right {
+  animation: slideInRight var(--transition-base) ease forwards;
+}
+
+/* ── Global Focus Ring ─────────────────────────────────── */
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-glow-primary);
+}

@@ -1,55 +1,69 @@
-# E-Class Record
+# E-Class Record (Electron Desktop Edition)
 
-This project builds a local Windows desktop E-Class Record app. It can be packaged either as a full per-user installer or as the older portable executable.
+A premium, modern offline desktop application designed for Filipino teachers to manage DepEd class grading records. Built with Electron, HTML5, Vanilla CSS (harmonised custom design system), and Node.js.
 
-## Features
+## Core Features
 
-- Multiple grade levels, sections, subjects, and teaching loads
-- Sidebar navigation for Dashboard, Classes, E-Class Record, and Settings
-- DepEd DO 015, s. 2026 transition grading mode
-- DepEd DO 015, s. 2026 zero-based grading mode
-- DepEd DO 8, s. 2015 legacy grading mode
-- Term-based class record with WW, PT, ST1, ST2, and TE inputs
-- Local auto-save under the teacher's Windows profile
-- JSON backup export and import
-- CSV learner import using `LRN,Last Name,First Name,Sex`
-- SF1 upload/import for learner name and sex/gender extraction
-- Learner sorting grouped by sex and alphabetized within each group
-- Learner name formatting as `Last Name, First Name MI.`
+- **Standard DepEd Grading Rules**: Verification engine supporting DO 015 s.2026 (Transition & Zero-Based modes), DO 8 s.2015 (Legacy mode), and Key Stage 2 Trimester sheets.
+- **Roster Management**: Roster uploads from LIS school records via native SF1 spreadsheet importer (`.xlsx`, `.xls`, `.csv`, `.txt` parsed using `xlsx` library) and direct CSV rosters paste.
+- **Dense Score Grid**: Smooth score matrix with inline Arrow/Enter key navigation and HPS (Highest Possible Score) adjustment rows.
+- **Final Grades Summary**: Auto-computed averages across terms with remarked pass/fail color-coded badges.
+- **Native File Dialogs**: Backup and recovery in JSON backups, and grades reports exporting in standard CSV files.
+- **Over-the-Air (OTA) Updates**: Automated startup updates check and download from GitHub Releases.
+- **Responsive & Printable Layouts**: Dedicated `@media print` styling for clean physical paper reporting.
 
-SF1 `.xls` and `.xlsx` import uses Windows ACE/Jet OLEDB providers, not Excel automation. If a computer cannot read the workbook provider, save the SF1 as CSV and import it through the same upload flow.
-- Printable class record and final grade summary
-
-## Build Installer
-
-Run:
-
-```powershell
-.\build-installer.ps1
-```
-
-The installer is created at:
+## Directory Structure
 
 ```text
-dist\E-ClassRecordSetup.exe
+eclassrecord/
+├── .github/workflows/       # GitHub Actions automated release building
+├── src/
+│   ├── assets/              # App graphics (icon.png)
+│   ├── main/
+│   │   ├── file-io.js       # Node FS filesystem backend
+│   │   ├── main.js          # Electron main process window and IPC
+│   │   ├── preload.js       # Secured context bridge
+│   │   ├── sf1-reader.js    # Spreadsheet LIS parser engine
+│   │   └── updater.js       # electron-updater configuration
+│   └── renderer/
+│       ├── css/             # Custom CSS design modules
+│       ├── js/              # Client-side grading scripts and renderers
+│       └── index.html       # Application shell viewport
+├── package.json             # NPM dependencies and scripts
+└── electron-builder.yml     # Desktop packaging options (NSIS installer)
 ```
 
-The installer copies the app to `%LOCALAPPDATA%\Programs\E-Class Record`, adds Start Menu and Desktop shortcuts, registers an Apps & Features uninstall entry, and launches the app after install.
+## Getting Started & Development
 
-## Build Portable
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
 
-Run:
+2. **Run Application locally in Dev mode**:
+   ```bash
+   npm start
+   # or
+   npm run dev
+   ```
 
-```powershell
-iexpress /N /Q build-package.sed
-```
+3. **Build Installer locally**:
+   Produces a Windows NSIS installer under `dist/E-Class Record Setup <version>.exe`:
+   ```bash
+   npm run build
+   ```
 
-The executable is created at:
+## Local Data Storage & Migration
 
-```text
-dist\E-ClassRecordPortable.exe
-```
+Teacher records are stored locally on the computer:
+- **Path**: `%APPDATA%\EClassRecordPortable\data.json`
 
-## Data
+This ensures that upgrading from the older single-file HTA version automatically preserves all existing teaching loads, rosters, and scores without needing manual exports.
 
-Teacher data is generated locally at runtime and can be exported as JSON for backup or transfer. Existing data remains under `%APPDATA%\EClassRecordPortable\data.json` so upgrades from the portable build keep working.
+## Release & OTA Publishing
+
+To build and publish an OTA update:
+1. Increment the version number in `package.json`.
+2. Commit and push a Git release tag matching the pattern `v*` (e.g., `git tag v2.1.0` then `git push origin v2.1.0`).
+3. GitHub Actions will build the NSIS executable and metadata files, pushing them directly to GitHub Releases.
+4. Active users will automatically prompt to download and apply the update on relaunch.

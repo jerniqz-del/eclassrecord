@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E-Class Record</title>
+  
+  <!-- Typography from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  
+  <!-- Style Sheets -->
+  <link rel="stylesheet" href="css/design-tokens.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/record-table.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/print.css" media="print" />
+</head>
+<body>
+  
+  <!-- Toast Notification Wrapper -->
+  <div id="toastWrap" class="toast-wrap no-print"></div>
+
+  <!-- Main Viewport Layout -->
+  <div class="layout">
+    
+    <!-- Sidebar Navigation Panel -->
+    <aside class="sidebar no-print">
+      <div class="sidebar__brand">
+        <svg class="sidebar__brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+        <span class="sidebar__brand-text">E-Class Record</span>
+      </div>
+
+      <div class="sidebar__body">
+
+      <span class="sidebar__section-title">Navigation</span>
+      <!-- View Navigation Menu -->
+      <nav class="nav-menu">
+        <button id="navDashboard" class="nav-btn nav-btn--active" onclick="setView('dashboard')">
+          <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9"></rect>
+            <rect x="14" y="3" width="7" height="5"></rect>
+            <rect x="14" y="12" width="7" height="9"></rect>
+            <rect x="3" y="16" width="7" height="5"></rect>
+          </svg>
+          Dashboard
+        </button>
+        <button id="navClasses" class="nav-btn" onclick="setView('classes')">
+          <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Teaching Load
+        </button>
+        <button id="navRecord" class="nav-btn" onclick="setView('record')">
+          <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+            <line x1="15" y1="3" x2="15" y2="21"></line>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="3" y1="15" x2="21" y2="15"></line>
+          </svg>
+          Grading Sheet
+        </button>
+        <button id="navSettings" class="nav-btn" onclick="setView('settings')">
+          <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          Settings
+        </button>
+      </nav>
+      
+      <span class="sidebar__section-title">Teaching Load</span>
+      <!-- Teaching Load List Panel -->
+      <div class="card view-section" data-view="dashboard,classes,record">
+        <ul id="assignmentList" class="load-list"></ul>
+        <div id="assignmentStatus" class="text-muted text-xs" style="margin-top:var(--space-2)">0 class load(s)</div>
+      </div>
+
+      <span class="sidebar__section-title view-section" data-view="classes">Add Class Load</span>
+
+      <!-- Add Teaching Load Card Form -->
+      <div class="card view-section" data-view="classes">
+        
+        <div class="split-row">
+          <div class="field">
+            <label class="field-label">Grade Level</label>
+            <select id="newGrade" class="field-select" onchange="populateSubjects()">
+              <option>1</option><option>2</option><option>3</option><option selected>4</option>
+              <option>5</option><option>6</option><option>7</option><option>8</option>
+              <option>9</option><option>10</option><option>11</option><option>12</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Section</label>
+            <input id="newSection" class="field-input" value="A" placeholder="Section name" />
+          </div>
+        </div>
+        
+        <div class="field">
+          <label class="field-label">Subject</label>
+          <select id="newSubject" class="field-select" onchange="handleSubjectChanged()"></select>
+        </div>
+        
+        <div id="customSubjectField" class="field" style="display:none">
+          <label class="field-label">Custom Subject Name</label>
+          <input id="customSubjectInput" class="field-input" placeholder="e.g. Science Elective" />
+        </div>
+        
+        <div class="field">
+          <label class="field-label">Weight Set</label>
+          <select id="newSubjectGroup" class="field-select">
+            <option value="CORE_20_50_30">Core Subjects (WW 20% - PT 50% - EX 30%)</option>
+            <option value="KS2_TRIMESTER">Key Stage 2 Trimester (WW 20% - PT 50% - EX 30%)</option>
+            <option value="SKILLS_20_60_20">EPP / TLE / MAPEH (WW 20% - PT 60% - EX 20%)</option>
+            <option value="SHS_CORE">SHS Core Academic (WW 20% - PT 50% - EX 30%)</option>
+            <option value="SHS_ARTS">SHS Arts / Sports (WW 20% - PT 60% - EX 20%)</option>
+            <option value="SHS_FIELD">SHS Field Exposure (WW 15% - PT 70% - EX 15%)</option>
+            <option value="SHS_RESEARCH">SHS Research / Design (WW 40% - PT 60% - EX 0%)</option>
+            <option value="SHS_TECHPRO">SHS TechPro Elective (WW 15% - PT 65% - EX 20%)</option>
+            <option value="SHS_WORK">SHS Work Immersion (WW 20% - PT 80% - EX 0%)</option>
+            <option value="DO8_LANG_AP_ESP">DO 8 Legacy Lang/AP/EsP (WW 30% - PT 50% - EX 20%)</option>
+            <option value="DO8_SCI_MATH">DO 8 Legacy Sci/Math (WW 40% - PT 40% - EX 20%)</option>
+            <option value="DO8_MUSIC_TLE">DO 8 Legacy MAPEH/TLE (WW 20% - PT 60% - EX 20%)</option>
+            <option value="DO8_SHS_CORE">DO 8 Legacy SHS Core (WW 25% - PT 50% - EX 25%)</option>
+            <option value="DO8_SHS_ACAD_OTHER">DO 8 Legacy SHS Acad Other (WW 25% - PT 45% - EX 30%)</option>
+            <option value="DO8_SHS_ACAD_WORK">DO 8 Legacy SHS Acad Work (WW 35% - PT 40% - EX 25%)</option>
+            <option value="DO8_SHS_TVL">DO 8 Legacy SHS TVL (WW 20% - PT 60% - EX 20%)</option>
+          </select>
+        </div>
+        
+        <div class="field">
+          <label class="field-label">Policy Mode</label>
+          <select id="newPolicy" class="field-select">
+            <option value="DO15_TRANSITION">DO 015 s.2026 Transition</option>
+            <option value="DO15_ZERO">DO 015 s.2026 Zero-Based</option>
+            <option value="DO8_2015">DO 8 s.2015 Legacy Mode</option>
+          </select>
+        </div>
+        
+        <button class="btn btn-primary" onclick="addAssignment()" style="width:100%">Add Teaching Load</button>
+      </div>
+
+      </div><!-- /sidebar__body -->
+    </aside>
+    
+    <!-- Main Content Area -->
+    <main class="main">
+      
+      <!-- Top Action Toolbar -->
+      <header class="app-header no-print">
+        <div class="app-header__left">
+          <h1 id="currentTitle" class="app-header__title">Dashboard</h1>
+          <div id="currentMeta" class="app-header__subtitle">Loading database details…</div>
+        </div>
+        <div class="app-header__actions">
+          <button class="btn btn-primary btn-sm" onclick="saveDatabase()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            Save
+          </button>
+          <button class="btn btn-sm" onclick="exportJson()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Export Backup
+          </button>
+          <button class="btn btn-sm" onclick="importJsonBackupFile()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Import Backup
+          </button>
+          <button class="btn btn-sm" onclick="printClassRecord()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            Print
+          </button>
+          <span id="saveStatus"></span>
+        </div>
+      </header>
+      
+      <!-- Paste Data Panel (Hidden default) -->
+      <section id="importPanel" class="card view-section no-print" data-view="classes,record,settings" style="display:none">
+        <h2 id="importTitle" class="card-title">Import Panel</h2>
+        <div class="field">
+          <label id="importHelp" class="field-label">Paste text here.</label>
+          <textarea id="importText" class="field-textarea" placeholder="Paste data..."></textarea>
+        </div>
+        <div style="display:flex;gap:var(--space-2)">
+          <button class="btn btn-primary btn-sm" onclick="runImport()">Process Import</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleImport('')">Cancel</button>
+        </div>
+      </section>
+
+      <!-- Dashboard View -->
+      <section class="view-section" data-view="dashboard">
+        <div id="dashboardTable"></div>
+      </section>
+
+      <!-- Classes & Learners View -->
+      <section class="view-section" data-view="classes">
+        
+        <!-- Action Toolbar for Learners List -->
+        <div class="card no-print">
+          <h2 class="card-title">Roster Operations</h2>
+          <div class="action-group">
+            <button class="btn btn-primary btn-sm" onclick="importSf1()">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+              Upload SF1 Spreadsheet
+            </button>
+            <button class="btn btn-sm" onclick="toggleImport('csv')">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              Paste CSV Learners List
+            </button>
+            <button class="btn btn-sm" onclick="sortLearners()">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="14" y2="9"></line><line x1="4" y1="15" x2="10" y2="15"></line><polyline points="14 12 18 16 22 12"></polyline><line x1="18" y1="8" x2="18" y2="16"></line></svg>
+              Sort Learners
+            </button>
+          </div>
+          <div class="action-group--divider">
+            <button class="btn btn-warn btn-sm" onclick="removeLastLearner()">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+              Remove Last Learner
+            </button>
+            <button class="btn btn-warn btn-sm" onclick="removeCurrentAssignment()">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              Delete This Class
+            </button>
+          </div>
+        </div>
+
+        <!-- Add Learner Roster Form -->
+        <div class="card no-print">
+          <h2 class="card-title">Add Learner</h2>
+          <div class="split-row">
+            <div class="field">
+              <label class="field-label">Learner Reference (LRN)</label>
+              <input id="learnerLrn" class="field-input" placeholder="e.g. 101234567890" maxlength="12" />
+            </div>
+            <div class="field">
+              <label class="field-label">Last Name</label>
+              <input id="learnerLast" class="field-input" placeholder="e.g. Dela Cruz" />
+            </div>
+            <div class="field">
+              <label class="field-label">First Name</label>
+              <input id="learnerFirst" class="field-input" placeholder="e.g. Juan" />
+            </div>
+            <div class="field">
+              <label class="field-label">Sex</label>
+              <select id="learnerSex" class="field-select">
+                <option value=""></option>
+                <option value="M">Male / Boy</option>
+                <option value="F">Female / Girl</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="addLearner()">Add Learner</button>
+        </div>
+      </section>
+
+      <!-- Record & Grading Sheets View -->
+      <section class="view-section" data-view="record">
+        
+        <!-- Record Grid Tabs -->
+        <div id="recordTabs" class="record-tabs no-print">
+          <button id="recTab1" class="record-tab" onclick="setRecordTab('1')">Term 1</button>
+          <button id="recTab2" class="record-tab" onclick="setRecordTab('2')">Term 2</button>
+          <button id="recTab3" class="record-tab" onclick="setRecordTab('3')">Term 3</button>
+          <button id="recTabSummary" class="record-tab record-tab--summary" onclick="setRecordTab('summary')">Summary</button>
+        </div>
+
+        <!-- Add Term Assessment Form Card -->
+        <div id="termInputsPanel" class="card no-print">
+          <h2 id="termInputsTitle" class="card-title">Add Assessment - Term 1</h2>
+          
+          <div class="split-row">
+            <div class="field">
+              <label class="field-label">Component</label>
+              <select id="assessmentComponent" class="field-select">
+                <option value="WW">Written Work (WW)</option>
+                <option value="PT">Performance Task (PT)</option>
+                <option value="SA1">Summative Assessment 1 (SA1)</option>
+                <option value="SA2">Summative Assessment 2 (SA2)</option>
+                <option value="TE">Term Exam (TE)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">Highest Possible Score (HPS)</label>
+              <input id="assessmentMax" class="field-input" type="number" value="10" placeholder="e.g. 20" />
+            </div>
+            <div class="field">
+              <label class="field-label">Activity Title</label>
+              <input id="assessmentTitle" class="field-input" value="Assessment 1" placeholder="Title" />
+            </div>
+            <div class="field">
+              <label class="field-label">Assessment Date</label>
+              <input id="assessmentDate" class="field-input" type="date" />
+            </div>
+          </div>
+          
+          <div class="action-group">
+            <button class="btn btn-primary btn-sm" onclick="addAssessment()">Add Assessment</button>
+            <button class="btn btn-ghost btn-sm" onclick="applyKeyStage2Template()">Apply Key Stage 2 Template</button>
+            <button class="btn btn-warn btn-sm" onclick="removeLastAssessment()">Remove Last Assessment</button>
+          </div>
+        </div>
+        
+        <!-- CSV Grades Export Button -->
+        <div class="card no-print" style="padding:var(--space-3);margin-bottom:var(--space-3)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="text-muted text-xs">Download spreadsheet records for this term grid or final summary.</div>
+            <button class="btn btn-success btn-sm" onclick="exportCsv()">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              Export Term Grades CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Sheet Grid Tables -->
+        <div id="classRecordPanel" class="card" style="padding:0;overflow:hidden">
+          <h2 id="classRecordTitle" class="card-title" style="padding:var(--space-4);margin-bottom:0">Class Record</h2>
+          <div id="recordTable" class="table-wrap"></div>
+        </div>
+
+        <div id="finalGradesPanel" class="card" style="display:none;padding:0;overflow:hidden">
+          <h2 class="card-title" style="padding:var(--space-4);margin-bottom:0">Final Grades Summary</h2>
+          <div id="finalTable" class="table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- Settings & App Details View -->
+      <section class="view-section" data-view="settings">
+        
+        <!-- Teacher Profile Configuration -->
+        <div class="card">
+          <h2 class="card-title">Teacher Profile</h2>
+          <div class="split-row">
+            <div class="field">
+              <label class="field-label">Teacher Name</label>
+              <input id="teacherName" class="field-input" placeholder="e.g. DELA CRUZ, MARIA S." onkeyup="updateProfile()" onchange="updateProfile()" />
+            </div>
+            <div class="field">
+              <label class="field-label">School Name</label>
+              <input id="schoolName" class="field-input" placeholder="e.g. Manila High School" onkeyup="updateProfile()" onchange="updateProfile()" />
+            </div>
+            <div class="field">
+              <label class="field-label">School Year</label>
+              <input id="schoolYear" class="field-input" value="2026-2027" onkeyup="updateProfile()" onchange="updateProfile()" />
+            </div>
+          </div>
+        </div>
+        
+        <!-- OTA updates checking card -->
+        <div class="card">
+          <h2 class="card-title">Over-the-Air Updates</h2>
+          <div class="settings-row">
+            <div class="settings-row__left">
+              <div class="settings-row__title" style="display:flex;align-items:center;gap:var(--space-2)">
+                App Update Status
+                <div id="updateIndicator" class="update-indicator"></div>
+              </div>
+              <div id="updateText" class="settings-row__desc">Up-to-date. Checking is run automatically on startup.</div>
+            </div>
+            <button id="btnCheckUpdates" class="btn btn-sm" onclick="window.electronAPI.checkForUpdates()">Check for Updates</button>
+          </div>
+        </div>
+
+        <!-- Reset actions -->
+        <div class="card">
+          <h2 class="card-title">App Danger Zone</h2>
+          <div class="settings-row settings-row--danger">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Clear local app data</div>
+              <div class="settings-row__desc">Permanently erase all rosters, assessments, and marks stored locally on this machine.</div>
+            </div>
+            <button class="btn btn-warn btn-sm" onclick="clearLocalData()">Clear Local Data</button>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Footer Info Row -->
+      <footer class="app-footer no-print">
+        <div class="app-footer__text">E-Class Record Application — DepEd DO 015, s. 2026 and DO 8, s. 2015</div>
+        <div id="appVersionLabel" class="app-footer__version">v1.0.0</div>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Modular Scripts Injection -->
+  <script src="js/ui-helpers.js"></script>
+  <script src="js/grading.js"></script>
+  <script src="js/learners.js"></script>
+  <script src="js/database.js"></script>
+  <script src="js/import-export.js"></script>
+  <script src="js/record-table.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

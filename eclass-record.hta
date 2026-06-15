@@ -1425,6 +1425,67 @@
       renderFinalOnly();
     }
 
+    var recordRowCount = 0;
+    var recordColCount = 0;
+
+    function scoreNav(event, r, j, learnerId, assessmentId) {
+      var e = event || window.event;
+      var code = e.keyCode;
+      if (code !== 13 && code !== 9) return true;
+      var input = e.srcElement || e.target;
+      var value = input ? input.value : "";
+      var targetId = null;
+      if (code === 13) {
+        var nr = r + 1;
+        if (nr < recordRowCount) targetId = "sc-" + nr + "-" + j;
+        else if (j + 1 < recordColCount) targetId = "sc-0-" + (j + 1);
+      } else {
+        var index = r * recordColCount + j;
+        var ni = index + (e.shiftKey ? -1 : 1);
+        if (ni >= 0 && ni < recordRowCount * recordColCount) {
+          targetId = "sc-" + Math.floor(ni / recordColCount) + "-" + (ni % recordColCount);
+        }
+      }
+      if (e.preventDefault) e.preventDefault();
+      e.returnValue = false;
+      updateScore(learnerId, assessmentId, value);
+      if (targetId) {
+        var el = document.getElementById(targetId);
+        if (el) {
+          el.focus();
+          if (el.select) el.select();
+        }
+      }
+      return false;
+    }
+
+    function maxNav(event, h, assessmentId) {
+      var e = event || window.event;
+      var code = e.keyCode;
+      if (code !== 13 && code !== 9) return true;
+      var input = e.srcElement || e.target;
+      var value = input ? input.value : "";
+      var targetId = null;
+      if (code === 13) {
+        if (recordRowCount > 0) targetId = "sc-0-" + h;
+        else if (h + 1 < recordColCount) targetId = "hps-" + (h + 1);
+      } else {
+        var nh = h + (e.shiftKey ? -1 : 1);
+        if (nh >= 0 && nh < recordColCount) targetId = "hps-" + nh;
+      }
+      if (e.preventDefault) e.preventDefault();
+      e.returnValue = false;
+      updateAssessmentMax(assessmentId, value);
+      if (targetId) {
+        var el = document.getElementById(targetId);
+        if (el) {
+          el.focus();
+          if (el.select) el.select();
+        }
+      }
+      return false;
+    }
+
     function updateAssessmentMax(assessmentId, value) {
       var a = currentAssignment();
       if (!a) return;
@@ -1601,6 +1662,8 @@
         return;
       }
       var items = termAssessments(a, db.currentTerm);
+      recordRowCount = a.learners.length;
+      recordColCount = items.length;
       var w = weightsFor(a.subjectGroup);
       var cols = recordColGroup(a, items);
       var html = "<div class='record-head-wrap'><table class='record-grid'>" + cols + "<thead>";
@@ -1622,7 +1685,7 @@
       }
       html += "<tr class='sheet-row-label'><td class='c-no'></td><td class='c-learner learner-cell'>HPS</td><td class='c-sex'></td>";
       for (var h = 0; h < items.length; h++) {
-        html += "<td class='c-score'><input class='score-input max-input' value='" + esc(items[h].maxScore) + "' onchange=\"updateAssessmentMax('" + esc(items[h].id) + "',this.value)\" /></td>";
+        html += "<td class='c-score'><input id='hps-" + h + "' class='score-input max-input' value='" + esc(items[h].maxScore) + "' onkeydown=\"return maxNav(event," + h + ",'" + esc(items[h].id) + "')\" onchange=\"updateAssessmentMax('" + esc(items[h].id) + "',this.value)\" /></td>";
         if (isKeyStage2(a) && (h === 4 || h === 7 || h === 10)) {
           var group = groupScoreMax(items, h);
           html += "<td class='c-calc'>" + blankZero(group) + "</td><td class='c-calc'>100</td><td class='c-calc'>" + (h === 4 ? w[0] / 100 : h === 7 ? w[1] / 100 : w[2] / 100) + "</td>";
@@ -1641,7 +1704,7 @@
           var maxNum = number(items[j].maxScore);
           var overMax = maxNum > 0 && val !== "" && !isNaN(parseFloat(val)) && parseFloat(val) > maxNum;
           var scoreTitle = learnerDisplayName(learner) + " - " + componentLabel(items[j].component) + " " + (items[j].title || "") + (maxNum > 0 ? " (max " + maxNum + ")" : "");
-          html += "<td class='c-score'><input class='score-input" + (overMax ? " invalid" : "") + "' title='" + esc(scoreTitle) + "' value='" + esc(val) + "' onchange=\"updateScore('" + esc(learner.id) + "','" + esc(items[j].id) + "',this.value)\" /></td>";
+          html += "<td class='c-score'><input id='sc-" + r + "-" + j + "' class='score-input" + (overMax ? " invalid" : "") + "' title='" + esc(scoreTitle) + "' value='" + esc(val) + "' onkeydown=\"return scoreNav(event," + r + "," + j + ",'" + esc(learner.id) + "','" + esc(items[j].id) + "')\" onchange=\"updateScore('" + esc(learner.id) + "','" + esc(items[j].id) + "',this.value)\" /></td>";
           if (isKeyStage2(a) && (j === 4 || j === 7 || j === 10)) {
             var block = j === 4 ? result.ww : j === 7 ? result.pt : componentScore(a, learner.id, db.currentTerm, ["SA1", "SA2", "ST1", "ST2", "TE"]);
             var weight = j === 4 ? w[0] : j === 7 ? w[1] : w[2];

@@ -1,0 +1,279 @@
+
+/* ── Table Container ─────────────────────────────────────── */
+
+#recordTable {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+#recordTable .record-scroll {
+  overflow: auto;
+  max-height: 500px;
+}
+
+/* ── Shared grid ─────────────────────────────────────────── */
+
+#recordTable .record-grid {
+  table-layout: fixed;
+  width: 100%;
+  font-size: 9.5px;
+  line-height: 1.15;
+  border-collapse: collapse;
+}
+
+/* ── Cells ──────────────────────────────────────────────── */
+
+#recordTable .record-grid th,
+#recordTable .record-grid td {
+  padding: 3px 2px;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+  overflow: hidden;
+  border: 1px solid var(--color-neutral-200);
+}
+
+#recordTable .record-grid th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  font-weight: var(--font-weight-bold);
+  background: var(--color-neutral-50);
+  font-size: 9px;
+  color: var(--text-primary);
+  letter-spacing: 0;
+  border-bottom: 2px solid var(--color-neutral-300);
+}
+
+#recordTable .record-grid .learner-cell {
+  text-align: left;
+  word-break: normal;
+  font-weight: var(--font-weight-medium);
+  padding-left: 5px;
+  font-size: 9.5px;
+}
+
+/* ── Score Inputs ───────────────────────────────────────── */
+
+#recordTable .record-grid .score-input {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 2px 2px;
+  font-size: 9.5px;
+  font-family: var(--font-family-mono);
+  text-align: center;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+#recordTable .record-grid .score-input:hover {
+  border-color: var(--color-neutral-300);
+  background: var(--color-neutral-50);
+}
+
+#recordTable .record-grid .score-input:focus {
+  outline: none;
+  border-color: var(--color-primary-400);
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.18);
+  background: var(--color-primary-50);
+}
+
+/* HPS (max-score) row inputs — amber tinted */
+#recordTable .record-grid .score-input.max-input {
+  background: var(--color-accent-50);
+  border-color: var(--color-accent-200);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent-700);
+}
+
+#recordTable .record-grid .score-input.max-input:hover {
+  background: var(--color-accent-100);
+  border-color: var(--color-accent-300);
+}
+
+#recordTable .record-grid .score-input.max-input:focus {
+  border-color: var(--color-accent-500);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18);
+  background: var(--color-accent-50);
+}
+
+/* Invalid — over max-score */
+#recordTable .record-grid .score-input.invalid {
+  border-color: var(--color-error-500) !important;
+  background: var(--color-error-50) !important;
+  color: var(--color-error-700) !important;
+  font-weight: var(--font-weight-bold);
+  animation: pulseError 600ms ease;
+}
+
+
+/* ── Component-colored Column Headers ───────────────────── */
+
+/* Written Work — blue */
+#recordTable .record-grid th.c-comp-ww {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-bottom-color: #bae6fd;
+}
+
+/* Performance Task — violet */
+#recordTable .record-grid th.c-comp-pt {
+  background: #f3e8ff;
+  color: #7c3aed;
+  border-bottom-color: #e9d5ff;
+}
+
+/* Summative Assessment 1 — teal */
+#recordTable .record-grid th.c-comp-sa1 {
+  background: #ccfbf1;
+  color: #0f766e;
+  border-bottom-color: #99f6e4;
+}
+
+/* Summative Assessment 2 — emerald */
+#recordTable .record-grid th.c-comp-sa2 {
+  background: #dcfce7;
+  color: #15803d;
+  border-bottom-color: #bbf7d0;
+}
+
+/* Term Exam / Summative Evaluation — amber */
+#recordTable .record-grid th.c-comp-te {
+  background: #fef3c7;
+  color: #b45309;
+  border-bottom-color: #fde68a;
+}
+
+/* KS2-specific components */
+#recordTable .record-grid th.c-comp-sa {
+  background: #ccfbf1;
+  color: #0f766e;
+  border-bottom-color: #99f6e4;
+}
+
+/* ── Column Width Tokens ─────────────────────────────────── */
+
+#recordTable .c-no      { width: 3%; }
+#recordTable .c-learner { width: 18%; }
+#recordTable .c-sex     { width: 3%; }
+#recordTable .c-score   { width: 3%; }
+#recordTable .c-calc    { width: 3%; }
+#recordTable .c-grade   { width: 4%; }
+#recordTable .c-desc    { width: 8%; }
+
+/* ── Computed / Grade Columns ───────────────────────────── */
+
+#recordTable .record-grid td.c-calc {
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+#recordTable .record-grid td.c-grade {
+  font-weight: var(--font-weight-bold);
+  font-size: 10px;
+}
+
+#recordTable .record-grid td.c-desc {
+  font-size: 8.5px;
+  font-weight: var(--font-weight-semibold);
+}
+
+#recordTable .record-grid th.c-score,
+#recordTable .record-grid th.c-calc,
+#recordTable .record-grid th.c-grade,
+#recordTable .record-grid th.c-desc {
+  font-size: 8.5px;
+  line-height: 1.1;
+  white-space: nowrap;
+  word-break: normal;
+  font-weight: var(--font-weight-bold);
+}
+
+/* ── Sheet Row Labels ───────────────────────────────────── */
+
+.sheet-row-label {
+  background: var(--color-neutral-100) !important;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+}
+
+#recordTable .record-grid .sheet-row-label td {
+  font-size: 8.5px;
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+/* ── Spacer / Group Headers ─────────────────────────────── */
+
+#recordTable .record-grid .c-spacer {
+  border-left: 0;
+  border-right: 0;
+  background: transparent !important;
+  padding: 0;
+}
+
+.group-head {
+  text-align: center;
+  color: var(--text-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+/* ── Grade-colored rows (final grades table) ────────────── */
+
+.grade-advancing td:last-child  { color: var(--color-primary-700); }
+.grade-connecting td:last-child { color: var(--color-success-700); }
+.grade-developing td:last-child { color: var(--color-warning-600); }
+.grade-emerging td:last-child   { color: var(--color-error-600); }
+
+/* ── Row alternating (inside record table body) ─────────── */
+
+#recordTable .record-grid tbody tr:nth-child(even) td {
+  background: rgba(241, 245, 249, 0.5);
+}
+
+#recordTable .record-grid tbody tr:hover td {
+  background: var(--color-primary-50);
+}
+
+/* ── Standalone Score Input (outside table) ─────────────── */
+
+.score-input {
+  width: 62px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 5px;
+  text-align: right;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-base);
+  background: var(--bg-surface);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.score-input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: var(--shadow-glow-primary);
+}
+
+.small-input {
+  width: 76px;
+}
+
+/* ── Import text box ────────────────────────────────────── */
+
+.import-box {
+  height: 120px;
+  resize: vertical;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+}

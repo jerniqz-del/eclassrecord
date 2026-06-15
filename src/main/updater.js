@@ -1,0 +1,85 @@
+/**
+ * E-Class Record — Electron Auto-Updater Module
+ *
+ * Configures electron-updater to handle checking, downloading,
+ * and installing OTA updates from GitHub Releases.
+ */
+
+const { autoUpdater } = require('electron-updater');
+
+let mainAppWindow = null;
+
+// Enable simple logging
+autoUpdater.logger = console;
+
+/**
+ * Sends update status to the renderer process.
+ * @param {string} status The status key (checking, available, not-available, downloading, downloaded, error).
+ * @param {object} payload Content details including message.
+ */
+function sendStatus(status, payload) {
+  if (mainAppWindow && !mainAppWindow.isDestroyed()) {
+    mainAppWindow.webContents.send('update-status', status, payload);
+  }
+}
+
+/**
+ * Initialises updater event listeners.
+ * @param {BrowserWindow} window Reference to main window.
+ */
+function initAutoUpdater(window) {
+  mainAppWindow = window;
+
+  autoUpdater.on('checking-for-update', () => {
+    sendStatus('checking', { message: 'Checking for updates…' });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    sendStatus('available', {
+      message: `New version v${info.version} is available.`,
+      version: info.version
+    });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    sendStatus('not-available', { message: 'You are running the latest version.' });
+  });
+
+  autoUpdater.on('error', (err) => {
+    sendStatus('error', { message: `Update error: ${err.message || err}` });
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    const percent = Math.round(progressObj.percent || 0);
+    sendStatus('downloading', {
+      message: `Downloading update… ${percent}%`,
+      percent: percent
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    sendStatus('downloaded', {
+      message: `Update v${info.version} downloaded. Restart the app to apply.`,
+      version: info.version
+    });
+  });
+}
+
+/**
+ * Manually checks for updates.
+ * @param {BrowserWindow} window Reference to main window.
+ */
+function checkForUpdates(window) {
+  if (window) mainAppWindow = window;
+  
+  // Triggers checking and automatically downloads update if available
+  autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+    console.error('Update check failed:', err);
+    sendStatus('error', { message: `Checking failed: ${err.message || err}` });
+  });
+}
+
+module.exports = {
+  initAutoUpdater,
+  checkForUpdates
+};
