@@ -1,0 +1,10 @@
+# Build output
+dist/
+
+# Local runtime data (generated per-user at runtime)
+data.json
+
+# Windows / editor cruft
+Thumbs.db
+Desktop.ini
+*.tmp

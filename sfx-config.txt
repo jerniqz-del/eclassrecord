@@ -1,0 +1,6 @@
+;!@Install@!UTF-8!
+Title="E-Class Record Portable"
+BeginPrompt=""
+RunProgram="mshta.exe eclass-record.hta"
+GUIMode="2"
+;!@InstallEnd@!

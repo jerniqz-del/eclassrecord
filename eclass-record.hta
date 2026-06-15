@@ -1,0 +1,2428 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta charset="utf-8" />
+  <title>E-Class Record</title>
+  <hta:application
+    id="EClassRecord"
+    applicationname="E-Class Record"
+    border="thin"
+    caption="yes"
+    maximizebutton="yes"
+    minimizebutton="yes"
+    scroll="yes"
+    singleinstance="yes"
+    sysmenu="yes"
+    windowstate="maximize" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      color: #1d2733;
+      background: #f5f7fa;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    button, input, select, textarea {
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+    }
+
+    .app-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 72px;
+      z-index: 30;
+      background: #ffffff;
+      color: #17202a;
+      padding: 14px 24px 12px 24px;
+      border-bottom: 1px solid #d8e1ea;
+      box-shadow: 0 2px 10px rgba(21, 34, 50, 0.08);
+    }
+
+    .app-title {
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .app-subtitle {
+      margin-top: 4px;
+      color: #6a7380;
+      font-size: 12px;
+    }
+
+    .toolbar {
+      position: fixed;
+      top: 72px;
+      left: 0;
+      right: 0;
+      height: 54px;
+      z-index: 25;
+      background: #ffffff;
+      border-bottom: 1px solid #dde5ee;
+      padding: 9px 18px 8px 18px;
+      box-shadow: 0 1px 4px rgba(21, 34, 50, 0.05);
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .toolbar button,
+    .panel button {
+      min-height: 34px;
+      border: 1px solid #cfd8e3;
+      background: #ffffff;
+      color: #23364a;
+      padding: 7px 12px;
+      margin-right: 7px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease, color 0.14s ease;
+    }
+
+    .toolbar button:hover,
+    .panel button:hover {
+      background: #f7fafc;
+      border-color: #9eb1c5;
+      box-shadow: 0 1px 4px rgba(21, 34, 50, 0.10);
+    }
+
+    .toolbar button:active,
+    .panel button:active {
+      background: #edf3f7;
+      box-shadow: none;
+    }
+
+    .toolbar button:focus,
+    .panel button:focus,
+    .nav-button:focus {
+      outline: 0;
+      box-shadow: 0 0 0 3px rgba(21, 119, 148, 0.22);
+    }
+
+    .toolbar button.primary,
+    .panel button.primary {
+      background: #157794;
+      border-color: #157794;
+      color: #fff;
+      box-shadow: 0 1px 5px rgba(21, 119, 148, 0.22);
+    }
+
+    .toolbar button.primary:hover,
+    .panel button.primary:hover {
+      background: #11677f;
+      border-color: #11677f;
+    }
+
+    .toolbar button.primary:active,
+    .panel button.primary:active {
+      background: #0e5266;
+    }
+
+    .toolbar button.warn,
+    .panel button.warn {
+      border-color: #efc2bc;
+      color: #a13a2b;
+      background: #fff;
+    }
+
+    .toolbar button.warn:hover,
+    .panel button.warn:hover {
+      background: #fff2ef;
+      border-color: #e09b91;
+    }
+
+    .layout {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 126px;
+      bottom: 0;
+      left: 0;
+      z-index: 20;
+      width: 304px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: #ffffff;
+      border-right: 1px solid #d8e1ea;
+      padding: 14px;
+    }
+
+    .main {
+      position: absolute;
+      top: 126px;
+      right: 0;
+      bottom: 0;
+      left: 304px;
+      overflow: auto;
+      padding: 18px 20px 28px 20px;
+    }
+
+    .nav-menu {
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 4px rgba(21, 34, 50, 0.05);
+    }
+
+    .nav-button {
+      display: block;
+      width: 100%;
+      border: 1px solid transparent;
+      background: #ffffff;
+      color: #34475c;
+      text-align: left;
+      padding: 10px 12px 10px 14px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+    }
+
+    .nav-button:hover {
+      background: #f6f9fc;
+      color: #1e3349;
+    }
+
+    .nav-button.active {
+      background: #e9f6f9;
+      border-color: #b8dce7;
+      color: #0e6078;
+      box-shadow: inset 3px 0 0 #157794;
+    }
+
+    .view-section {
+      display: none;
+    }
+
+    .panel {
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 5px rgba(21, 34, 50, 0.05);
+    }
+
+    .panel h2 {
+      font-size: 13px;
+      margin: 0 0 12px 0;
+      padding-bottom: 9px;
+      border-bottom: 1px solid #edf2f6;
+      color: #182a3a;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .field {
+      margin-bottom: 10px;
+    }
+
+    .field label {
+      display: block;
+      color: #657384;
+      font-size: 11.5px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      border: 1px solid #cbd6e2;
+      border-radius: 6px;
+      padding: 8px;
+      background: #ffffff;
+      color: #1d2733;
+      transition: border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus,
+    .score-input:focus {
+      outline: 0;
+      border-color: #157794;
+      box-shadow: 0 0 0 3px rgba(21, 119, 148, 0.16);
+    }
+
+    .split {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    .split .col {
+      display: table-cell;
+      vertical-align: top;
+      padding-right: 10px;
+    }
+
+    .teaching-load-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 240px;
+      overflow: auto;
+      border: 1px solid #d8e1ea;
+      border-radius: 6px;
+    }
+
+    .teaching-load-list li {
+      border-bottom: 1px solid #eef2f6;
+      padding: 9px 10px;
+      cursor: pointer;
+      transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+    }
+
+    .teaching-load-list li:hover {
+      background: #f7fafc;
+    }
+
+    .teaching-load-list li:last-child {
+      border-bottom: 0;
+    }
+
+    .teaching-load-list li.active {
+      background: #e9f6f9;
+      box-shadow: inset 3px 0 0 #157794;
+      color: #0e6078;
+      font-weight: 600;
+    }
+
+    .muted {
+      color: #697789;
+    }
+
+    .status {
+      margin-top: 8px;
+      color: #2f6f4e;
+      min-height: 18px;
+      font-size: 12px;
+    }
+
+    .save-pill {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #edf8f2;
+      border: 1px solid #bee4cf;
+      color: #276449;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 60;
+    }
+
+    .toast {
+      margin-top: 8px;
+      min-width: 220px;
+      max-width: 360px;
+      padding: 11px 14px;
+      border-radius: 8px;
+      background: #1f2d3d;
+      color: #ffffff;
+      box-shadow: 0 4px 16px rgba(21, 34, 50, 0.28);
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .toast.success {
+      background: #1f7a52;
+    }
+
+    .toast.error {
+      background: #a13a2b;
+    }
+
+    .empty-state {
+      padding: 28px 18px;
+      text-align: center;
+      color: #6a7789;
+    }
+
+    .empty-state .es-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #33485c;
+      margin-bottom: 5px;
+    }
+
+    .score-input.invalid {
+      border-color: #d9534f;
+      background: #fff1ef;
+      color: #a13a2b;
+      font-weight: 700;
+    }
+
+    .record-tabs {
+      margin-bottom: 14px;
+      border-bottom: 2px solid #dde5ee;
+      white-space: nowrap;
+    }
+
+    .record-tab {
+      display: inline-block;
+      margin: 0 2px -2px 0;
+      padding: 10px 20px;
+      border: 0;
+      border-bottom: 3px solid transparent;
+      background: transparent;
+      color: #51637a;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      transition: color 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+    }
+
+    .record-tab:hover {
+      color: #25394e;
+      background: #eef3f8;
+    }
+
+    .record-tab:focus {
+      outline: 0;
+      box-shadow: 0 0 0 3px rgba(21, 119, 148, 0.22);
+    }
+
+    .record-tab.active {
+      color: #0e6078;
+      border-bottom: 3px solid #157794;
+    }
+
+    .record-tab.summary-tab.active {
+      color: #1f7a52;
+      border-bottom: 3px solid #1f7a52;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid #d8e1ea;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    #recordTable {
+      overflow: hidden;
+    }
+
+    #recordTable .record-grid {
+      table-layout: fixed;
+      width: 100%;
+      font-size: 9.5px;
+      line-height: 1.1;
+    }
+
+    #recordTable .record-head-wrap {
+      overflow: hidden;
+      border-bottom: 1px solid #d3deea;
+      padding-right: 17px;
+      background: #ffffff;
+    }
+
+    #recordTable .record-body-wrap {
+      max-height: 430px;
+      overflow-y: scroll;
+      overflow-x: hidden;
+    }
+
+    #recordTable .record-grid th,
+    #recordTable .record-grid td {
+      padding: 3px 2px;
+      text-align: center;
+      white-space: normal;
+      word-break: break-word;
+      overflow: hidden;
+    }
+
+    #recordTable .record-grid th {
+      font-weight: 600;
+    }
+
+    #recordTable .record-grid .learner-cell {
+      text-align: left;
+      word-break: normal;
+    }
+
+    #recordTable .record-grid .score-input {
+      width: 100%;
+      min-width: 0;
+      height: 22px;
+      padding: 3px 2px;
+      font-size: 9.5px;
+      text-align: center;
+    }
+
+    #recordTable .record-grid th.c-score,
+    #recordTable .record-grid th.c-calc,
+    #recordTable .record-grid th.c-grade,
+    #recordTable .record-grid th.c-desc {
+      font-size: 8.5px;
+      line-height: 1.05;
+      white-space: nowrap;
+      word-break: normal;
+      font-weight: 600;
+    }
+
+    #recordTable .record-grid .sheet-row-label td {
+      font-size: 8.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    #recordTable .c-no { width: 3%; }
+    #recordTable .c-learner { width: 18%; }
+    #recordTable .c-sex { width: 3%; }
+    #recordTable .c-score { width: 3%; }
+    #recordTable .c-calc { width: 3%; }
+    #recordTable .c-grade { width: 4%; }
+    #recordTable .c-desc { width: 8%; }
+
+    #recordTable .record-grid .c-spacer {
+      border-left: 0;
+      border-right: 0;
+      background: transparent;
+      padding: 0;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    th, td {
+      border: 1px solid #e2e8ef;
+      padding: 8px;
+      text-align: left;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f0f5f9;
+      color: #24384d;
+      font-weight: 700;
+      border-bottom: 2px solid #d3deea;
+    }
+
+    tbody tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    tbody tr:hover td {
+      background: #edf7fa;
+    }
+
+    .score-input {
+      width: 56px;
+      border: 1px solid #cbd6e2;
+      border-radius: 5px;
+      padding: 5px;
+      text-align: right;
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .max-input {
+      width: 62px;
+      background: #fffdf5;
+      border-color: #d8c98e;
+      font-weight: 600;
+    }
+
+    .group-head {
+      text-align: center;
+      color: #17202a;
+    }
+
+    .sheet-row-label {
+      background: #fbfcfd;
+      color: #4d5d6d;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .small-input {
+      width: 76px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: #edf8f2;
+      color: #276449;
+      border: 1px solid #bee4cf;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+
+    .badge.fail {
+      background: #fff1ef;
+      color: #a13a2b;
+      border-color: #efc2bc;
+    }
+
+    .summary-grid {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: separate;
+      border-spacing: 10px;
+      margin: -10px -10px 6px -10px;
+    }
+
+    .summary-cell {
+      display: table-cell;
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-top: 3px solid #157794;
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: 0 1px 5px rgba(21, 34, 50, 0.05);
+    }
+
+    .summary-label {
+      color: #697789;
+      font-size: 11.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .summary-value {
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 6px;
+      color: #182a3a;
+    }
+
+    .import-box {
+      height: 115px;
+      resize: vertical;
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    @media print {
+      html, body {
+        height: auto;
+        overflow: visible;
+      }
+      .toolbar, .sidebar, .no-print {
+        display: none !important;
+      }
+      .layout, .main {
+        display: block;
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        padding: 0;
+      }
+      body {
+        background: #fff;
+        color: #000;
+        font-size: 10px;
+      }
+      .app-header {
+        position: static;
+        height: auto;
+        background: #fff;
+        color: #000;
+        box-shadow: none;
+        border-bottom: 1px solid #000;
+        padding: 0 0 8px 0;
+      }
+      .app-subtitle {
+        color: #000;
+      }
+      .panel {
+        border: 0;
+        padding: 0;
+        box-shadow: none;
+      }
+      .panel h2 {
+        border-bottom: 1px solid #000;
+        color: #000;
+      }
+      th, td {
+        border: 1px solid #000;
+        padding: 3px;
+        background: #fff !important;
+        white-space: normal;
+      }
+      th {
+        border-bottom: 1px solid #000;
+      }
+      .summary-cell {
+        border: 1px solid #000;
+        border-top: 1px solid #000;
+        box-shadow: none;
+      }
+      .summary-value, .summary-label {
+        color: #000;
+      }
+      .badge {
+        border: 1px solid #000;
+        background: #fff !important;
+        color: #000;
+      }
+      input {
+        border: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-header">
+    <div class="app-title">E-Class Record</div>
+    <div class="app-subtitle">Local, teacher-owned class record for DepEd three-term and legacy grading workflows</div>
+  </div>
+
+  <div id="toastWrap" class="toast-wrap no-print"></div>
+
+  <div class="toolbar no-print">
+    <button class="primary" onclick="saveDatabase()">Save</button>
+    <button onclick="exportJson()">Export JSON</button>
+    <button onclick="toggleImport('json')">Import JSON</button>
+    <button onclick="toggleImport('csv')">Import Learners CSV</button>
+    <button onclick="printClassRecord()">Print</button>
+    <button class="warn" onclick="clearLocalData()">Clear Local Data</button>
+    <span id="saveStatus" class="muted"></span>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar no-print">
+      <div class="nav-menu">
+        <button id="navDashboard" class="nav-button active" onclick="setView('dashboard')">Dashboard</button>
+        <button id="navClasses" class="nav-button" onclick="setView('classes')">Classes</button>
+        <button id="navRecord" class="nav-button" onclick="setView('record')">E-Class Record</button>
+        <button id="navSettings" class="nav-button" onclick="setView('settings')">Settings</button>
+      </div>
+
+      <div class="panel view-section" data-view="settings">
+        <h2>Teacher Profile</h2>
+        <div class="field">
+          <label>Teacher Name</label>
+          <input id="teacherName" placeholder="Last Name, First Name" onkeyup="updateProfile()" onchange="updateProfile()" />
+        </div>
+        <div class="field">
+          <label>School</label>
+          <input id="schoolName" placeholder="School name" onkeyup="updateProfile()" onchange="updateProfile()" />
+        </div>
+        <div class="field">
+          <label>School Year</label>
+          <input id="schoolYear" value="2026-2027" onkeyup="updateProfile()" onchange="updateProfile()" />
+        </div>
+      </div>
+
+      <div class="panel view-section" data-view="dashboard,classes,record">
+        <h2>Teaching Load</h2>
+        <ul id="assignmentList" class="teaching-load-list"></ul>
+        <div class="status" id="assignmentStatus"></div>
+      </div>
+
+      <div class="panel view-section" data-view="classes">
+        <h2>Add Teaching Load</h2>
+        <div class="split">
+          <div class="col">
+            <div class="field">
+              <label>Grade Level</label>
+              <select id="newGrade" onchange="populateSubjects()">
+                <option>1</option><option>2</option><option>3</option><option selected="selected">4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+                <option>9</option><option>10</option><option>11</option><option>12</option>
+              </select>
+            </div>
+          </div>
+          <div class="col">
+            <div class="field">
+              <label>Section</label>
+              <input id="newSection" value="A" />
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Subject</label>
+          <select id="newSubject"></select>
+        </div>
+        <div class="field">
+          <label>Subject Group / Weight Set</label>
+          <select id="newSubjectGroup">
+            <option value="KS2_TRIMESTER">Key Stage 2 Trimester E-Class Record (20-50-30)</option>
+            <option value="CORE_20_50_30">Core / English / Filipino / Math / Science / AP / GMRC / VE (20-50-30)</option>
+            <option value="SKILLS_20_60_20">EPP / TLE / MAPEH (20-60-20)</option>
+            <option value="SHS_CORE">SHS Core or Academic Elective (20-50-30)</option>
+            <option value="SHS_ARTS">SHS Arts, Sports, Health, Wellness (20-60-20)</option>
+            <option value="SHS_FIELD">SHS Field Exposure / Arts Apprenticeship / Creative Production (15-70-15)</option>
+            <option value="SHS_RESEARCH">SHS Research / Design and Innovation (40-60-0)</option>
+            <option value="SHS_TECHPRO">SHS TechPro Elective (15-65-20)</option>
+            <option value="SHS_WORK">SHS Work Immersion (20-80-0)</option>
+            <option value="DO8_LANG_AP_ESP">DO 8 Legacy Languages / AP / EsP (30-50-20)</option>
+            <option value="DO8_SCI_MATH">DO 8 Legacy Science / Math (40-40-20)</option>
+            <option value="DO8_MUSIC_TLE">DO 8 Legacy MAPEH / EPP / TLE (20-60-20)</option>
+            <option value="DO8_SHS_CORE">DO 8 Legacy SHS Core (25-50-25)</option>
+            <option value="DO8_SHS_ACAD_OTHER">DO 8 Legacy SHS Academic Other (25-45-30)</option>
+            <option value="DO8_SHS_ACAD_WORK">DO 8 Legacy SHS Academic Work Immersion / Research (35-40-25)</option>
+            <option value="DO8_SHS_TVL">DO 8 Legacy SHS TVL / Sports / Arts (20-60-20)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Policy Mode</label>
+          <select id="newPolicy">
+            <option value="DO15_TRANSITION">DO 015, s. 2026 Transition (SY 2026-2027)</option>
+            <option value="DO15_ZERO">DO 015 Zero-Based (SY 2027-2028 onward)</option>
+            <option value="DO8_2015">DO 8, s. 2015 Legacy</option>
+          </select>
+        </div>
+        <button class="primary" onclick="addAssignment()">Add Teaching Load</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="panel view-section" data-view="dashboard,classes,record,settings">
+        <h2 id="currentTitle">No teaching load selected</h2>
+        <div id="currentMeta" class="muted"></div>
+      </div>
+
+      <div id="importPanel" class="panel no-print view-section" data-view="classes,record,settings" style="display:none">
+        <h2 id="importTitle">Import</h2>
+        <div class="field">
+          <label id="importHelp">Paste data here.</label>
+          <textarea id="importText" class="import-box"></textarea>
+        </div>
+        <button class="primary" onclick="runImport()">Import</button>
+        <button onclick="toggleImport('')">Cancel</button>
+      </div>
+
+      <div class="record-tabs no-print view-section" data-view="record" id="recordTabs">
+        <button class="record-tab" id="recTab1" onclick="setRecordTab('1')">Term 1</button>
+        <button class="record-tab" id="recTab2" onclick="setRecordTab('2')">Term 2</button>
+        <button class="record-tab" id="recTab3" onclick="setRecordTab('3')">Term 3</button>
+        <button class="record-tab summary-tab" id="recTabSummary" onclick="setRecordTab('summary')">Summary</button>
+      </div>
+
+      <div class="panel no-print view-section" data-view="record" id="termInputsPanel">
+        <h2 id="termInputsTitle">Add Assessment</h2>
+        <div class="split">
+          <div class="col">
+            <div class="field">
+              <label>Component</label>
+              <select id="assessmentComponent">
+                <option value="WW">Written / Oral Work</option>
+                <option value="PT">Performance Task</option>
+                <option value="SA1">Summative Assessment 1</option>
+                <option value="SA2">Summative Assessment 2</option>
+                <option value="TE">Term Exam</option>
+              </select>
+            </div>
+          </div>
+          <div class="col">
+            <div class="field">
+              <label>Highest Score</label>
+              <input id="assessmentMax" value="10" />
+            </div>
+          </div>
+        </div>
+        <div class="split">
+          <div class="col">
+            <div class="field">
+              <label>Assessment Title</label>
+              <input id="assessmentTitle" value="Assessment 1" />
+            </div>
+          </div>
+          <div class="col">
+            <div class="field">
+              <label>Date</label>
+              <input id="assessmentDate" />
+            </div>
+          </div>
+        </div>
+        <button class="primary" onclick="addAssessment()">Add Assessment</button>
+        <button onclick="applyKeyStage2Template()">Apply Key Stage 2 Sheet</button>
+        <button onclick="removeLastAssessment()">Remove Last Assessment</button>
+      </div>
+
+      <div class="panel no-print view-section" data-view="classes">
+        <h2>Learners</h2>
+        <div class="split">
+          <div class="col">
+            <div class="field">
+              <label>LRN</label>
+              <input id="learnerLrn" placeholder="12-digit LRN" />
+            </div>
+          </div>
+          <div class="col">
+            <div class="field">
+              <label>Last Name</label>
+              <input id="learnerLast" placeholder="Dela Cruz" />
+            </div>
+          </div>
+          <div class="col">
+            <div class="field">
+              <label>First Name</label>
+              <input id="learnerFirst" placeholder="Juan" />
+            </div>
+          </div>
+          <div class="col">
+            <div class="field">
+              <label>Sex</label>
+              <select id="learnerSex"><option></option><option>F</option><option>M</option></select>
+            </div>
+          </div>
+        </div>
+        <button class="primary" onclick="addLearner()">Add Learner</button>
+        <button onclick="sortLearners()">Sort Learners</button>
+        <button onclick="importSf1()">Upload SF1</button>
+        <input id="sf1File" type="file" style="display:none" accept=".xls,.xlsx,.csv,.txt" onchange="handleSf1Selected()" />
+        <button onclick="removeLastLearner()">Remove Last Learner</button>
+      </div>
+
+      <div class="summary-grid view-section" data-view="dashboard,classes,record">
+        <div class="summary-cell">
+          <div class="summary-label">Learners</div>
+          <div class="summary-value" id="statLearners">0</div>
+        </div>
+        <div class="summary-cell">
+          <div class="summary-label">Assessments This Term</div>
+          <div class="summary-value" id="statAssessments">0</div>
+        </div>
+        <div class="summary-cell">
+          <div class="summary-label">Weight Set</div>
+          <div class="summary-value" id="statWeights">-</div>
+        </div>
+      </div>
+
+      <div class="panel view-section" data-view="dashboard">
+        <h2>Dashboard</h2>
+        <div class="table-wrap" id="dashboardTable"></div>
+      </div>
+
+      <div class="panel view-section" data-view="settings">
+        <h2>Settings</h2>
+        <button class="primary" onclick="saveDatabase()">Save Local Data</button>
+        <button onclick="exportJson()">Export JSON Backup</button>
+        <button onclick="toggleImport('json')">Import JSON Backup</button>
+        <button class="warn" onclick="clearLocalData()">Clear Local Data</button>
+        <div class="muted">Local data is stored under the teacher's Windows profile. Export JSON regularly for backup or transfer.</div>
+      </div>
+
+      <div class="panel view-section" data-view="record" id="classRecordPanel">
+        <h2 id="classRecordTitle">Class Record</h2>
+        <div class="table-wrap" id="recordTable"></div>
+      </div>
+
+      <div class="panel view-section" data-view="record" id="finalGradesPanel">
+        <h2>Final Grades Summary</h2>
+        <div class="table-wrap" id="finalTable"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    var DB_VERSION = 2;
+    var db = {
+      version: DB_VERSION,
+      teacherName: "",
+      schoolName: "",
+      schoolYear: "2026-2027",
+      currentAssignmentId: "",
+      currentTerm: "1",
+      activeView: "dashboard",
+      assignments: []
+    };
+    var importMode = "";
+    var currentView = "dashboard";
+    var recordTab = "1";
+
+    var adjusted2026 = [
+      [99.50,100.00,100],[98.32,99.49,99],[97.14,98.31,98],[95.96,97.13,97],
+      [94.78,95.95,96],[93.60,94.77,95],[92.42,93.59,94],[91.24,92.41,93],
+      [90.06,91.23,92],[88.88,90.05,91],[87.70,88.87,90],[86.52,87.69,89],
+      [85.34,86.51,88],[84.16,85.33,87],[82.98,84.15,86],[81.80,82.97,85],
+      [80.62,81.79,84],[79.44,80.61,83],[78.26,79.43,82],[77.08,78.25,81],
+      [75.90,77.07,80],[74.72,75.89,79],[73.54,74.71,78],[72.36,73.53,77],
+      [71.18,72.35,76],[70.00,71.17,75],[65.34,69.99,74],[60.67,65.33,73],
+      [56.01,60.66,72],[51.34,56.00,71],[46.67,51.33,70],[42.01,46.66,69],
+      [37.34,42.00,68],[32.68,37.33,67],[28.01,32.67,66],[23.35,28.00,65],
+      [18.68,23.34,64],[14.01,18.67,63],[9.35,14.00,62],[4.68,9.34,61],
+      [0.00,4.67,60]
+    ];
+
+    var legacy2015 = [
+      [100.00,100.00,100],[98.40,99.99,99],[96.80,98.39,98],[95.20,96.79,97],
+      [93.60,95.19,96],[92.00,93.59,95],[90.40,91.99,94],[88.80,90.39,93],
+      [87.20,88.79,92],[85.60,87.19,91],[84.00,85.59,90],[82.40,83.99,89],
+      [80.80,82.39,88],[79.20,80.79,87],[77.60,79.19,86],[76.00,77.59,85],
+      [74.40,75.99,84],[72.80,74.39,83],[71.20,72.79,82],[69.60,71.19,81],
+      [68.00,69.59,80],[66.40,67.99,79],[64.80,66.39,78],[63.20,64.79,77],
+      [61.60,63.19,76],[60.00,61.59,75],[56.00,59.99,74],[52.00,55.99,73],
+      [48.00,51.99,72],[44.00,47.99,71],[40.00,43.99,70],[36.00,39.99,69],
+      [32.00,35.99,68],[28.00,31.99,67],[24.00,27.99,66],[20.00,23.99,65],
+      [16.00,19.99,64],[12.00,15.99,63],[8.00,11.99,62],[4.00,7.99,61],
+      [0.00,3.99,60]
+    ];
+
+    var keyStage2Transmutation = [
+      [99.5,100],[97.5,99],[96,98],[95,97],[94,96],[93,95],[92,94],[91,93],
+      [90,92],[89,91],[88,90],[87,89],[86,88],[85,87],[84,86],[83,85],
+      [82,84],[81,83],[80,82],[79,81],[78,80],[77,79],[76,78],[75,77],
+      [73,76],[70,75],[68,74],[66,73],[64,72],[62,71],[60,70],[58,69],
+      [56,68],[54,67],[52,66],[50,65],[48,64],[46,63],[43,62],[40,61],
+      [0,60]
+    ];
+
+    var keyStage2Template = [
+      { component: "WW", title: "WW 1" },
+      { component: "WW", title: "WW 2" },
+      { component: "WW", title: "WW 3" },
+      { component: "WW", title: "WW 4" },
+      { component: "WW", title: "WW 5" },
+      { component: "PT", title: "PT 1" },
+      { component: "PT", title: "PT 2" },
+      { component: "PT", title: "PT 3" },
+      { component: "SA1", title: "SA1" },
+      { component: "SA2", title: "SA2" },
+      { component: "TE", title: "TE" }
+    ];
+
+    function weightsFor(group) {
+      var map = {
+        KS2_TRIMESTER: [20,50,30],
+        CORE_20_50_30: [20,50,30],
+        SKILLS_20_60_20: [20,60,20],
+        SHS_CORE: [20,50,30],
+        SHS_ARTS: [20,60,20],
+        SHS_FIELD: [15,70,15],
+        SHS_RESEARCH: [40,60,0],
+        SHS_TECHPRO: [15,65,20],
+        SHS_WORK: [20,80,0],
+        DO8_LANG_AP_ESP: [30,50,20],
+        DO8_SCI_MATH: [40,40,20],
+        DO8_MUSIC_TLE: [20,60,20],
+        DO8_SHS_CORE: [25,50,25],
+        DO8_SHS_ACAD_OTHER: [25,45,30],
+        DO8_SHS_ACAD_WORK: [35,40,25],
+        DO8_SHS_TVL: [20,60,20]
+      };
+      return map[group] || [20,50,30];
+    }
+
+    function pathToDatabase() {
+      try {
+        var shell = new ActiveXObject("WScript.Shell");
+        return shell.ExpandEnvironmentStrings("%APPDATA%") + "\\EClassRecordPortable\\data.json";
+      } catch (e) {
+        return "";
+      }
+    }
+
+    function ensureDataFolder() {
+      var path = pathToDatabase();
+      if (!path) return;
+      var folder = path.substring(0, path.lastIndexOf("\\"));
+      var fso = new ActiveXObject("Scripting.FileSystemObject");
+      if (!fso.FolderExists(folder)) fso.CreateFolder(folder);
+    }
+
+    function readTextFile(path) {
+      var fso = new ActiveXObject("Scripting.FileSystemObject");
+      var file = fso.OpenTextFile(path, 1, false);
+      var text = file.ReadAll();
+      file.Close();
+      return text;
+    }
+
+    function writeTextFile(path, text) {
+      var fso = new ActiveXObject("Scripting.FileSystemObject");
+      var file = fso.OpenTextFile(path, 2, true);
+      file.Write(text);
+      file.Close();
+    }
+
+    function normalizeDatabase() {
+      if (!db.assignments) db.assignments = [];
+      if (!db.activeView) db.activeView = "dashboard";
+      if (!db.currentTerm) db.currentTerm = "1";
+      if (!db.version || db.version < DB_VERSION) db.version = DB_VERSION;
+      for (var i = 0; i < db.assignments.length; i++) {
+        var a = db.assignments[i];
+        if (!a.subjectGroup) a.subjectGroup = "CORE_20_50_30";
+        if (!a.policy) a.policy = "DO15_TRANSITION";
+        if (!a.assessments) a.assessments = [];
+        if (!a.scores) a.scores = {};
+        normalizeAssessmentComponents(a);
+        if (isKeyStage2(a) && a.assessments.length === 0) seedKeyStage2Assessments(a);
+      }
+    }
+
+    function loadDatabase() {
+      try {
+        var path = pathToDatabase();
+        if (!path) return;
+        var fso = new ActiveXObject("Scripting.FileSystemObject");
+        if (fso.FileExists(path)) {
+          db = JSON.parse(readTextFile(path));
+          normalizeDatabase();
+          currentView = db.activeView;
+        }
+      } catch (e) {
+        alert("Could not load local database: " + e.message);
+      }
+    }
+
+    function saveDatabase() {
+      updateProfile();
+      db.activeView = currentView;
+      try {
+        ensureDataFolder();
+        writeTextFile(pathToDatabase(), JSON.stringify(db, null, 2));
+        setStatus("Saved locally at " + new Date().toLocaleTimeString());
+      } catch (e) {
+        alert("Could not save local database: " + e.message);
+      }
+    }
+
+    function setStatus(message) {
+      var el = document.getElementById("saveStatus");
+      el.innerHTML = message ? "<span class='save-pill'>" + esc(message) + "</span>" : "";
+    }
+
+    function toast(message, kind) {
+      var wrap = document.getElementById("toastWrap");
+      if (!wrap) { alert(message); return; }
+      var node = document.createElement("div");
+      node.className = "toast" + (kind ? " " + kind : "");
+      node.innerHTML = esc(message);
+      wrap.appendChild(node);
+      window.setTimeout(function() {
+        if (node.parentNode) node.parentNode.removeChild(node);
+      }, 3200);
+    }
+
+    function uid(prefix) {
+      return prefix + "_" + (new Date().getTime()) + "_" + Math.floor(Math.random() * 100000);
+    }
+
+    function currentAssignment() {
+      for (var i = 0; i < db.assignments.length; i++) {
+        if (db.assignments[i].id === db.currentAssignmentId) return db.assignments[i];
+      }
+      if (db.assignments.length > 0) {
+        db.currentAssignmentId = db.assignments[0].id;
+        return db.assignments[0];
+      }
+      return null;
+    }
+
+    function isKeyStage2(a) {
+      return a && a.subjectGroup === "KS2_TRIMESTER";
+    }
+
+    function normalizeAssessmentComponents(a) {
+      for (var i = 0; i < a.assessments.length; i++) {
+        if (a.assessments[i].component === "ST1") a.assessments[i].component = "SA1";
+        if (a.assessments[i].component === "ST2") a.assessments[i].component = "SA2";
+      }
+    }
+
+    function seedKeyStage2Assessments(a) {
+      for (var term = 1; term <= 3; term++) {
+        for (var i = 0; i < keyStage2Template.length; i++) {
+          a.assessments.push({
+            id: uid("assessment"),
+            term: String(term),
+            component: keyStage2Template[i].component,
+            title: keyStage2Template[i].title,
+            maxScore: "",
+            date: ""
+          });
+        }
+      }
+    }
+
+    function applyKeyStage2Template() {
+      var a = currentAssignment();
+      if (!a) {
+        alert("Add a teaching load first.");
+        return;
+      }
+      a.subjectGroup = "KS2_TRIMESTER";
+      a.policy = "KEY_STAGE_2_TRIMESTER";
+      normalizeAssessmentComponents(a);
+      ensureKeyStage2Assessments(a);
+      saveDatabase();
+      render();
+    }
+
+    function ensureKeyStage2Assessments(a) {
+      for (var term = 1; term <= 3; term++) {
+        for (var i = 0; i < keyStage2Template.length; i++) {
+          var item = keyStage2Template[i];
+          if (!findAssessment(a, String(term), item.component, item.title)) {
+            a.assessments.push({
+              id: uid("assessment"),
+              term: String(term),
+              component: item.component,
+              title: item.title,
+              maxScore: "",
+              date: ""
+            });
+          }
+        }
+      }
+    }
+
+    function findAssessment(a, term, component, title) {
+      for (var i = 0; i < a.assessments.length; i++) {
+        var item = a.assessments[i];
+        if (item.term === term && item.component === component && item.title === title) return item;
+      }
+      return null;
+    }
+
+    function addAssignment() {
+      var assignment = {
+        id: uid("class"),
+        gradeLevel: document.getElementById("newGrade").value,
+        section: trim(document.getElementById("newSection").value),
+        subject: trim(document.getElementById("newSubject").value),
+        subjectGroup: document.getElementById("newSubjectGroup").value,
+        policy: document.getElementById("newPolicy").value,
+        learners: [],
+        assessments: [],
+        scores: {}
+      };
+      if (isKeyStage2(assignment)) {
+        assignment.policy = "KEY_STAGE_2_TRIMESTER";
+        seedKeyStage2Assessments(assignment);
+      }
+      db.assignments.push(assignment);
+      db.currentAssignmentId = assignment.id;
+      saveDatabase();
+      render();
+    }
+
+    function selectAssignment(id) {
+      db.currentAssignmentId = id;
+      saveDatabase();
+      render();
+    }
+
+    function addLearner() {
+      var a = currentAssignment();
+      if (!a) {
+        alert("Add a teaching load first.");
+        return;
+      }
+      var learner = {
+        id: uid("learner"),
+        lrn: trim(document.getElementById("learnerLrn").value),
+        lastName: normalizeNamePart(document.getElementById("learnerLast").value),
+        firstName: normalizeNamePart(document.getElementById("learnerFirst").value),
+        sex: document.getElementById("learnerSex").value
+      };
+      if (!learner.lastName && !learner.firstName) {
+        alert("Enter at least a learner name.");
+        return;
+      }
+      learner.displayName = formatLearnerName(learner.lastName, learner.firstName, "");
+      a.learners.push(learner);
+      document.getElementById("learnerLrn").value = "";
+      document.getElementById("learnerLast").value = "";
+      document.getElementById("learnerFirst").value = "";
+      document.getElementById("learnerSex").value = "";
+      document.getElementById("learnerLast").focus();
+      saveDatabase();
+      render();
+    }
+
+    function removeLastLearner() {
+      var a = currentAssignment();
+      if (!a || a.learners.length === 0) return;
+      if (!confirm("Remove the last learner from this teaching load?")) return;
+      var learner = a.learners.pop();
+      for (var key in a.scores) {
+        if (key.indexOf(learner.id + "|") === 0) delete a.scores[key];
+      }
+      saveDatabase();
+      render();
+    }
+
+    function sortLearners() {
+      var a = currentAssignment();
+      if (!a) return;
+      a.learners.sort(function(x, y) {
+        var sx = sexRank(x.sex);
+        var sy = sexRank(y.sex);
+        if (sx !== sy) return sx - sy;
+        var ax = learnerDisplayName(x).toLowerCase();
+        var ay = learnerDisplayName(y).toLowerCase();
+        return ax < ay ? -1 : ax > ay ? 1 : 0;
+      });
+      saveDatabase();
+      render();
+    }
+
+    function addAssessment() {
+      var a = currentAssignment();
+      if (!a) {
+        alert("Add a teaching load first.");
+        return;
+      }
+      var max = parseFloat(document.getElementById("assessmentMax").value);
+      if (isNaN(max) || max <= 0) {
+        alert("Highest score must be a positive number.");
+        return;
+      }
+      var assessment = {
+        id: uid("assessment"),
+        term: db.currentTerm,
+        component: document.getElementById("assessmentComponent").value,
+        title: trim(document.getElementById("assessmentTitle").value) || "Assessment",
+        maxScore: max,
+        date: trim(document.getElementById("assessmentDate").value)
+      };
+      a.assessments.push(assessment);
+      saveDatabase();
+      render();
+    }
+
+    function removeLastAssessment() {
+      var a = currentAssignment();
+      if (!a) return;
+      var idx = -1;
+      for (var i = a.assessments.length - 1; i >= 0; i--) {
+        if (a.assessments[i].term === db.currentTerm) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx < 0) return;
+      if (!confirm("Remove the last assessment for the active term?")) return;
+      var assessment = a.assessments.splice(idx, 1)[0];
+      for (var key in a.scores) {
+        if (key.indexOf("|" + assessment.id) > -1) delete a.scores[key];
+      }
+      saveDatabase();
+      render();
+    }
+
+    function setRecordTab(tab) {
+      recordTab = tab;
+      if (tab === "1" || tab === "2" || tab === "3") db.currentTerm = tab;
+      db.recordTab = tab;
+      saveDatabase();
+      render();
+    }
+
+    function applyRecordTab() {
+      var ids = { "1": "recTab1", "2": "recTab2", "3": "recTab3", "summary": "recTabSummary" };
+      for (var k in ids) {
+        var btn = document.getElementById(ids[k]);
+        if (btn) btn.className = "record-tab" + (k === "summary" ? " summary-tab" : "") + (recordTab === k ? " active" : "");
+      }
+      if (currentView !== "record") return;
+      var isSummary = recordTab === "summary";
+      showEl("termInputsPanel", !isSummary);
+      showEl("classRecordPanel", !isSummary);
+      showEl("finalGradesPanel", isSummary);
+      var t = db.currentTerm || "1";
+      var crt = document.getElementById("classRecordTitle");
+      if (crt) crt.innerHTML = "Class Record - Term " + esc(t);
+      var tit = document.getElementById("termInputsTitle");
+      if (tit) tit.innerHTML = "Add Assessment - Term " + esc(t);
+    }
+
+    function showEl(id, on) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = on ? "block" : "none";
+    }
+
+    function setView(view) {
+      currentView = view;
+      db.activeView = view;
+      showView();
+      saveDatabase();
+    }
+
+    function showView() {
+      var all = document.getElementsByTagName("*");
+      for (var i = 0; i < all.length; i++) {
+        var views = all[i].getAttribute("data-view");
+        if (!views) continue;
+        var visible = ("," + views + ",").indexOf("," + currentView + ",") >= 0;
+        if (all[i].id === "importPanel" && !importMode) visible = false;
+        all[i].style.display = visible ? displayMode(all[i]) : "none";
+      }
+
+      var nav = {
+        dashboard: "navDashboard",
+        classes: "navClasses",
+        record: "navRecord",
+        settings: "navSettings"
+      };
+      for (var key in nav) {
+        var item = document.getElementById(nav[key]);
+        if (item) item.className = key === currentView ? "nav-button active" : "nav-button";
+      }
+
+      applyRecordTab();
+    }
+
+    function displayMode(el) {
+      var cls = " " + el.className + " ";
+      if (cls.indexOf(" summary-grid ") >= 0) return "table";
+      return "block";
+    }
+
+    function updateProfile() {
+      db.teacherName = document.getElementById("teacherName").value;
+      db.schoolName = document.getElementById("schoolName").value;
+      db.schoolYear = document.getElementById("schoolYear").value;
+    }
+
+    function updateScore(learnerId, assessmentId, value) {
+      var a = currentAssignment();
+      if (!a) return;
+      var key = learnerId + "|" + assessmentId;
+      var clean = trim(value);
+      if (clean === "") {
+        delete a.scores[key];
+      } else {
+        var n = parseFloat(clean);
+        if (!isNaN(n)) a.scores[key] = n;
+      }
+      saveDatabase();
+      renderRecordTable();
+      renderFinalOnly();
+    }
+
+    function updateAssessmentMax(assessmentId, value) {
+      var a = currentAssignment();
+      if (!a) return;
+      for (var i = 0; i < a.assessments.length; i++) {
+        if (a.assessments[i].id === assessmentId) {
+          var clean = trim(value);
+          a.assessments[i].maxScore = clean === "" ? "" : number(clean);
+          break;
+        }
+      }
+      saveDatabase();
+      render();
+    }
+
+    function termAssessments(a, term) {
+      var out = [];
+      if (!a) return out;
+      for (var i = 0; i < a.assessments.length; i++) {
+        if (a.assessments[i].term === term) out.push(a.assessments[i]);
+      }
+      if (isKeyStage2(a)) {
+        out.sort(function(x, y) {
+          return assessmentOrder(x) - assessmentOrder(y);
+        });
+      }
+      return out;
+    }
+
+    function assessmentOrder(item) {
+      for (var i = 0; i < keyStage2Template.length; i++) {
+        if (keyStage2Template[i].component === item.component && keyStage2Template[i].title === item.title) return i;
+      }
+      return 100;
+    }
+
+    function componentScore(a, learnerId, term, components) {
+      var raw = 0, max = 0;
+      for (var i = 0; i < a.assessments.length; i++) {
+        var item = a.assessments[i];
+        if (item.term !== term) continue;
+        var found = false;
+        for (var c = 0; c < components.length; c++) {
+          if (item.component === components[c]) found = true;
+        }
+        if (!found) continue;
+        max += number(item.maxScore);
+        var val = a.scores[learnerId + "|" + item.id];
+        if (typeof val !== "undefined" && val !== "") raw += number(val);
+      }
+      if (max <= 0) return { raw: raw, max: max, ps: 0, hasData: false };
+      return { raw: raw, max: max, ps: (raw / max) * 100, hasData: true };
+    }
+
+    function computeTerm(a, learnerId, term) {
+      var w = weightsFor(a.subjectGroup);
+      var ww = componentScore(a, learnerId, term, ["WW"]);
+      var pt = componentScore(a, learnerId, term, ["PT"]);
+      var st1 = componentScore(a, learnerId, term, ["SA1", "ST1"]);
+      var st2 = componentScore(a, learnerId, term, ["SA2", "ST2"]);
+      var te = componentScore(a, learnerId, term, ["TE"]);
+
+      var examPS;
+      if (isKeyStage2(a) || a.policy === "DO8_2015") {
+        var qa = componentScore(a, learnerId, term, ["SA1", "SA2", "ST1", "ST2", "TE"]);
+        examPS = qa.ps;
+      } else {
+        examPS = (st1.ps * 0.30) + (st2.ps * 0.30) + (te.ps * 0.40);
+      }
+
+      var ig = (ww.ps * w[0] / 100) + (pt.ps * w[1] / 100) + (examPS * w[2] / 100);
+      var tg = transmute(a, ig);
+      var hasData = ww.hasData || pt.hasData || st1.hasData || st2.hasData || te.hasData;
+
+      return {
+        ww: ww, pt: pt, st1: st1, st2: st2, te: te,
+        examPS: examPS,
+        initialGrade: ig,
+        termGrade: hasData ? tg : null,
+        hasData: hasData
+      };
+    }
+
+    function transmute(a, ig) {
+      if (isKeyStage2(a)) return keyStage2Grade(ig);
+      if (a.policy === "DO15_ZERO") return Math.round(ig);
+      var table = a.policy === "DO8_2015" ? legacy2015 : adjusted2026;
+      for (var i = 0; i < table.length; i++) {
+        if (ig >= table[i][0] && ig <= table[i][1]) return table[i][2];
+      }
+      return ig >= 100 ? 100 : 60;
+    }
+
+    function keyStage2Grade(ig) {
+      for (var i = 0; i < keyStage2Transmutation.length; i++) {
+        if (ig >= keyStage2Transmutation[i][0]) return keyStage2Transmutation[i][1];
+      }
+      return 60;
+    }
+
+    function termDescription(a, grade) {
+      if (grade === null || typeof grade === "undefined") return "";
+      if (isKeyStage2(a)) {
+        if (grade >= 90) return "A";
+        if (grade >= 80) return "B";
+        if (grade >= 75) return "C";
+        if (grade >= 65) return "D";
+        return "E";
+      }
+      return descriptor(grade);
+    }
+
+    function descriptor(grade) {
+      if (grade === null || typeof grade === "undefined") return "";
+      if (grade >= 90) return "Advancing";
+      if (grade >= 80) return "Benchmarking";
+      if (grade >= 75) return "Connecting";
+      if (grade >= 65) return "Developing";
+      return "Emerging";
+    }
+
+    function render() {
+      document.getElementById("teacherName").value = db.teacherName || "";
+      document.getElementById("schoolName").value = db.schoolName || "";
+      document.getElementById("schoolYear").value = db.schoolYear || "2026-2027";
+      renderAssignments();
+      renderCurrentHeader();
+      renderRecordTable();
+      renderFinalOnly();
+      renderDashboardOverview();
+      showView();
+    }
+
+    function renderAssignments() {
+      var html = "";
+      for (var i = 0; i < db.assignments.length; i++) {
+        var a = db.assignments[i];
+        var cls = a.id === db.currentAssignmentId ? " class='active'" : "";
+        html += "<li" + cls + " onclick=\"selectAssignment('" + esc(a.id) + "')\">";
+        html += "Grade " + esc(a.gradeLevel) + " - " + esc(a.section) + "<br />";
+        html += "<span class='muted'>" + esc(a.subject) + "</span></li>";
+      }
+      if (!html) html = "<li class='muted'>No teaching loads yet.</li>";
+      document.getElementById("assignmentList").innerHTML = html;
+      document.getElementById("assignmentStatus").innerHTML = db.assignments.length + " teaching load(s)";
+    }
+
+    function renderCurrentHeader() {
+      var a = currentAssignment();
+      if (!a) {
+        document.getElementById("currentTitle").innerHTML = "No teaching load selected";
+        document.getElementById("currentMeta").innerHTML = "Add a grade level, section, and subject to begin.";
+        document.getElementById("statLearners").innerHTML = "0";
+        document.getElementById("statAssessments").innerHTML = "0";
+        document.getElementById("statWeights").innerHTML = "-";
+        return;
+      }
+      var w = weightsFor(a.subjectGroup);
+      document.getElementById("currentTitle").innerHTML = "Grade " + esc(a.gradeLevel) + " - " + esc(a.section) + " / " + esc(a.subject);
+      document.getElementById("currentMeta").innerHTML = esc(db.schoolName || "School") + " | " + esc(db.schoolYear || "School Year") + " | " + esc(gradingLabel(a));
+      document.getElementById("statLearners").innerHTML = a.learners.length;
+      document.getElementById("statAssessments").innerHTML = termAssessments(a, db.currentTerm).length;
+      document.getElementById("statWeights").innerHTML = w[0] + "-" + w[1] + "-" + w[2];
+    }
+
+    function renderRecordTable() {
+      var a = currentAssignment();
+      if (!a) {
+        document.getElementById("recordTable").innerHTML = emptyState("No teaching load selected", "Open the Classes tab to add a grade level, section, and subject.");
+        return;
+      }
+      if (isKeyStage2(a)) ensureKeyStage2Assessments(a);
+      if (a.learners.length === 0) {
+        document.getElementById("recordTable").innerHTML = emptyState("No learners yet", "Add learners in the Classes tab, or upload an SF1 / import a CSV.");
+        return;
+      }
+      var items = termAssessments(a, db.currentTerm);
+      var w = weightsFor(a.subjectGroup);
+      var cols = recordColGroup(a, items);
+      var html = "<div class='record-head-wrap'><table class='record-grid'>" + cols + "<thead>";
+      if (isKeyStage2(a)) {
+        html += "<tr><th class='c-no'>No.</th><th class='c-learner'>Learner</th><th class='c-sex'>Sex</th>";
+        for (var gi = 0; gi < items.length; gi++) {
+          html += "<th class='c-score'>" + esc(compactAssessmentLabel(items[gi])) + "</th>";
+          if (gi === 4) html += "<th class='c-calc'>T</th><th class='c-calc'>%</th><th class='c-calc'>WS</th>";
+          if (gi === 7) html += "<th class='c-calc'>T</th><th class='c-calc'>%</th><th class='c-calc'>WS</th>";
+          if (gi === 10) html += "<th class='c-calc'>T</th><th class='c-calc'>%</th><th class='c-calc'>WS</th>";
+        }
+        html += "<th class='c-grade'>IG</th><th class='c-grade'>TG</th><th class='c-desc'>Desc.</th></tr>";
+      } else {
+        html += "<tr><th class='c-no'>No.</th><th class='c-learner'>Learner</th><th class='c-sex'>Sex</th>";
+        for (var i = 0; i < items.length; i++) {
+          html += "<th class='c-score'>" + esc(componentLabel(items[i].component)) + "<br />" + esc(items[i].title) + "</th>";
+        }
+        html += "<th class='c-spacer'></th><th class='c-calc'>WW PS</th><th class='c-calc'>PT PS</th><th class='c-calc'>EX PS</th><th class='c-grade'>IG</th><th class='c-grade'>TG</th><th class='c-desc'>Desc.</th></tr>";
+      }
+      html += "<tr class='sheet-row-label'><td class='c-no'></td><td class='c-learner learner-cell'>HPS</td><td class='c-sex'></td>";
+      for (var h = 0; h < items.length; h++) {
+        html += "<td class='c-score'><input class='score-input max-input' value='" + esc(items[h].maxScore) + "' onchange=\"updateAssessmentMax('" + esc(items[h].id) + "',this.value)\" /></td>";
+        if (isKeyStage2(a) && (h === 4 || h === 7 || h === 10)) {
+          var group = groupScoreMax(items, h);
+          html += "<td class='c-calc'>" + blankZero(group) + "</td><td class='c-calc'>100</td><td class='c-calc'>" + (h === 4 ? w[0] / 100 : h === 7 ? w[1] / 100 : w[2] / 100) + "</td>";
+        }
+      }
+      if (!isKeyStage2(a)) html += "<td class='c-spacer'></td><td class='c-calc'></td><td class='c-calc'></td><td class='c-calc'></td><td class='c-grade'></td><td class='c-grade'></td><td class='c-desc'></td>";
+      html += "</tr></thead></table></div><div class='record-body-wrap'><table class='record-grid'>" + cols + "<tbody>";
+      for (var r = 0; r < a.learners.length; r++) {
+        var learner = a.learners[r];
+        var result = computeTerm(a, learner.id, db.currentTerm);
+        html += "<tr>";
+        html += "<td class='c-no'>" + (r + 1) + "</td><td class='c-learner learner-cell'>" + esc(learnerDisplayName(learner)) + "</td><td class='c-sex'>" + esc(learner.sex) + "</td>";
+        for (var j = 0; j < items.length; j++) {
+          var key = learner.id + "|" + items[j].id;
+          var val = typeof a.scores[key] === "undefined" ? "" : a.scores[key];
+          var maxNum = number(items[j].maxScore);
+          var overMax = maxNum > 0 && val !== "" && !isNaN(parseFloat(val)) && parseFloat(val) > maxNum;
+          var scoreTitle = learnerDisplayName(learner) + " - " + componentLabel(items[j].component) + " " + (items[j].title || "") + (maxNum > 0 ? " (max " + maxNum + ")" : "");
+          html += "<td class='c-score'><input class='score-input" + (overMax ? " invalid" : "") + "' title='" + esc(scoreTitle) + "' value='" + esc(val) + "' onchange=\"updateScore('" + esc(learner.id) + "','" + esc(items[j].id) + "',this.value)\" /></td>";
+          if (isKeyStage2(a) && (j === 4 || j === 7 || j === 10)) {
+            var block = j === 4 ? result.ww : j === 7 ? result.pt : componentScore(a, learner.id, db.currentTerm, ["SA1", "SA2", "ST1", "ST2", "TE"]);
+            var weight = j === 4 ? w[0] : j === 7 ? w[1] : w[2];
+            html += "<td class='c-calc'>" + blankZero(block.raw) + "</td><td class='c-calc'>" + (block.hasData ? fmt(block.ps) : "") + "</td><td class='c-calc'>" + (block.hasData ? fmt(block.ps * weight / 100) : "") + "</td>";
+          }
+        }
+        if (!isKeyStage2(a)) {
+          html += "<td class='c-spacer'></td><td class='c-calc'>" + fmt(result.ww.ps) + "</td><td class='c-calc'>" + fmt(result.pt.ps) + "</td><td class='c-calc'>" + fmt(result.examPS) + "</td>";
+        }
+        html += "<td class='c-grade'>" + (result.hasData ? fmt(result.initialGrade) : "") + "</td>";
+        html += "<td class='c-grade'>" + (result.termGrade === null ? "" : result.termGrade) + "</td>";
+        html += "<td class='c-desc'>" + esc(termDescription(a, result.termGrade)) + "</td>";
+        html += "</tr>";
+      }
+      html += "</tbody></table></div>";
+      document.getElementById("recordTable").innerHTML = html;
+    }
+
+    function recordColGroup(a, items) {
+      var html = "<colgroup>";
+      if (isKeyStage2(a)) {
+        html += "<col style='width:3%' /><col style='width:18%' /><col style='width:3%' />";
+        for (var i = 0; i < 11; i++) {
+          html += "<col style='width:3%' />";
+          if (i === 4 || i === 7 || i === 10) {
+            html += "<col style='width:3%' /><col style='width:3%' /><col style='width:3%' />";
+          }
+        }
+        html += "<col style='width:4%' /><col style='width:4%' /><col style='width:8%' />";
+      } else {
+        var refCount = maxTermAssessmentCount(a);
+        if (refCount < 1) refCount = 1;
+        var scoreWidth = 45 / refCount;
+        var spacerWidth = 45 - (items.length * scoreWidth);
+        if (spacerWidth < 0) spacerWidth = 0;
+        html += "<col style='width:3%' /><col style='width:18%' /><col style='width:3%' />";
+        for (var j = 0; j < items.length; j++) html += "<col style='width:" + scoreWidth + "%' />";
+        html += "<col style='width:" + spacerWidth + "%' />";
+        html += "<col style='width:5%' /><col style='width:5%' /><col style='width:5%' />";
+        html += "<col style='width:4%' /><col style='width:4%' /><col style='width:8%' />";
+      }
+      html += "</colgroup>";
+      return html;
+    }
+
+    function maxTermAssessmentCount(a) {
+      var m = 0;
+      for (var t = 1; t <= 3; t++) {
+        var c = termAssessments(a, String(t)).length;
+        if (c > m) m = c;
+      }
+      return m;
+    }
+
+    function groupScoreMax(items, endIndex) {
+      var start = endIndex === 4 ? 0 : endIndex === 7 ? 5 : 8;
+      var total = 0;
+      for (var i = start; i <= endIndex; i++) total += number(items[i].maxScore);
+      return total;
+    }
+
+    function renderFinalOnly() {
+      var a = currentAssignment();
+      if (!a) {
+        document.getElementById("finalTable").innerHTML = "";
+        return;
+      }
+      if (a.learners.length === 0) {
+        document.getElementById("finalTable").innerHTML = emptyState("No learners yet", "Final grades will appear here once learners are added.");
+        return;
+      }
+      var html = "<table><thead><tr><th>No.</th><th>LRN</th><th>Learner</th><th>Term 1</th><th>Term 2</th><th>Term 3</th><th>Final Grade</th><th>Remarks</th></tr></thead><tbody>";
+      for (var r = 0; r < a.learners.length; r++) {
+        var learner = a.learners[r];
+        var terms = [], sum = 0, count = 0;
+        for (var t = 1; t <= 3; t++) {
+          var res = computeTerm(a, learner.id, String(t));
+          terms.push(res.termGrade);
+          if (res.termGrade !== null) {
+            sum += res.termGrade;
+            count++;
+          }
+        }
+        var fg = count > 0 ? Math.round(sum / count) : null;
+        html += "<tr><td>" + (r + 1) + "</td><td>" + esc(learner.lrn) + "</td><td>" + esc(learnerDisplayName(learner)) + "</td>";
+        html += "<td>" + blankNull(terms[0]) + "</td><td>" + blankNull(terms[1]) + "</td><td>" + blankNull(terms[2]) + "</td>";
+        html += "<td>" + blankNull(fg) + "</td><td>" + finalRemark(a, fg) + "</td></tr>";
+      }
+      html += "</tbody></table>";
+      document.getElementById("finalTable").innerHTML = html;
+    }
+
+    function renderDashboardOverview() {
+      var target = document.getElementById("dashboardTable");
+      if (!target) return;
+      var html = "<table><thead><tr><th>Teaching Load</th><th>Policy</th><th>Learners</th><th>Assessments</th><th>Current Term</th><th>Weight Set</th></tr></thead><tbody>";
+      if (!db.assignments || db.assignments.length === 0) {
+        html += "<tr><td colspan='6' class='muted'>No teaching loads yet.</td></tr>";
+      } else {
+        for (var i = 0; i < db.assignments.length; i++) {
+          var a = db.assignments[i];
+          var w = weightsFor(a.subjectGroup);
+          var label = "Grade " + esc(a.gradeLevel) + " - " + esc(a.section) + " / " + esc(a.subject);
+          html += "<tr>";
+          html += "<td>" + label + "</td>";
+          html += "<td>" + esc(gradingLabel(a)) + "</td>";
+          html += "<td>" + a.learners.length + "</td>";
+          html += "<td>" + a.assessments.length + "</td>";
+          html += "<td>Term " + esc(db.currentTerm || "1") + "</td>";
+          html += "<td>" + w[0] + "-" + w[1] + "-" + w[2] + "</td>";
+          html += "</tr>";
+        }
+      }
+      html += "</tbody></table>";
+      target.innerHTML = html;
+    }
+
+    function renderBadge(grade) {
+      if (grade === null || typeof grade === "undefined" || grade === "") return "";
+      var fail = grade < 75 ? " fail" : "";
+      var text = grade >= 75 ? "Passed - " + descriptor(grade) : "For Intervention - " + descriptor(grade);
+      return "<span class='badge" + fail + "'>" + esc(text) + "</span>";
+    }
+
+    function finalRemark(a, grade) {
+      if (grade === null || typeof grade === "undefined" || grade === "") return "";
+      if (isKeyStage2(a)) return esc(descriptor(grade));
+      return renderBadge(grade);
+    }
+
+    function gradingLabel(a) {
+      if (isKeyStage2(a)) return "Key Stage 2 Trimester E-Class Record";
+      return policyLabel(a.policy);
+    }
+
+    function policyLabel(policy) {
+      if (policy === "KEY_STAGE_2_TRIMESTER") return "Key Stage 2 Trimester E-Class Record";
+      if (policy === "DO15_ZERO") return "DO 015, s. 2026 Zero-Based";
+      if (policy === "DO8_2015") return "DO 8, s. 2015 Legacy";
+      return "DO 015, s. 2026 Transition";
+    }
+
+    function toggleImport(mode) {
+      importMode = mode;
+      var panel = document.getElementById("importPanel");
+      if (!mode) {
+        panel.style.display = "none";
+        showView();
+        return;
+      }
+      if (mode === "json") currentView = "settings";
+      if (mode === "csv") currentView = "classes";
+      db.activeView = currentView;
+      panel.style.display = "block";
+      document.getElementById("importText").value = "";
+      if (mode === "json") {
+        document.getElementById("importTitle").innerHTML = "Import JSON Backup";
+        document.getElementById("importHelp").innerHTML = "Paste an exported E-Class Record JSON backup.";
+      } else {
+        document.getElementById("importTitle").innerHTML = "Import Learners CSV";
+        document.getElementById("importHelp").innerHTML = "Paste CSV rows: LRN,Last Name,First Name,Sex. A header row is allowed. Names will be formatted as Last Name, First Name MI.";
+      }
+      showView();
+    }
+
+    function runImport() {
+      var text = document.getElementById("importText").value;
+      if (importMode === "json") importJson(text);
+      if (importMode === "csv") importCsvLearners(text);
+    }
+
+    function importJson(text) {
+      try {
+        var incoming = JSON.parse(text);
+        if (!incoming.assignments) throw new Error("Missing assignments array.");
+        db = incoming;
+        normalizeDatabase();
+        saveDatabase();
+        toggleImport("");
+        render();
+      } catch (e) {
+        alert("JSON import failed: " + e.message);
+      }
+    }
+
+    function importCsvLearners(text) {
+      var a = currentAssignment();
+      if (!a) {
+        alert("Add or select a teaching load before importing learners.");
+        return;
+      }
+      var lines = text.replace(/\r/g, "").split("\n");
+      var added = 0;
+      for (var i = 0; i < lines.length; i++) {
+        var line = trim(lines[i]);
+        if (!line) continue;
+        var cols = parseCsvLine(line);
+        if (cols.length < 3) continue;
+        if (i === 0 && cols[0].toLowerCase().indexOf("lrn") >= 0) continue;
+        var last = normalizeNamePart(cols[1]);
+        var first = normalizeNamePart(cols[2]);
+        var middle = cols.length > 4 ? normalizeNamePart(cols[4]) : "";
+        a.learners.push({
+          id: uid("learner"),
+          lrn: trim(cols[0]),
+          lastName: last,
+          firstName: first,
+          middleName: middle,
+          displayName: formatLearnerName(last, first, middle),
+          sex: cols.length > 3 ? normalizeSex(cols[3]) : ""
+        });
+        added++;
+      }
+      saveDatabase();
+      toggleImport("");
+      sortLearners();
+      toast("Imported " + added + " learner(s).", "success");
+    }
+
+    function importSf1() {
+      var a = currentAssignment();
+      if (!a) {
+        alert("Add or select a teaching load before uploading SF1.");
+        return;
+      }
+
+      var path = "";
+      try {
+        var fileInput = document.getElementById("sf1File");
+        fileInput.value = "";
+        fileInput.click();
+      } catch (e) {
+        path = prompt("Enter the full path to the SF1 file (.xlsx, .xls, .csv, or .txt):", "");
+        if (!path) return;
+        importSf1Path(path);
+      }
+    }
+
+    function handleSf1Selected() {
+      var fileInput = document.getElementById("sf1File");
+      var path = fileInput.value;
+      if (!path) return;
+      if (path.toLowerCase().indexOf("fakepath") >= 0) {
+        path = prompt("Enter the full path to the selected SF1 file:", "");
+        if (!path) return;
+      }
+      importSf1Path(path);
+    }
+
+    function importSf1Path(path) {
+      var a = currentAssignment();
+      if (!a) {
+        alert("Add or select a teaching load before uploading SF1.");
+        return;
+      }
+      try {
+        var table = readSf1Table(path);
+        var learners = extractSf1Learners(table);
+        if (learners.length === 0) {
+          alert("No learners were found. Make sure the SF1 includes learner names and sex/gender columns.");
+          return;
+        }
+
+        for (var i = 0; i < learners.length; i++) {
+          learners[i].id = uid("learner");
+          a.learners.push(learners[i]);
+        }
+        sortLearners();
+        saveDatabase();
+        render();
+        toast("Imported " + learners.length + " learner(s) from SF1.", "success");
+      } catch (e) {
+        alert("SF1 import failed: " + e.message);
+      }
+    }
+
+    function readSf1Table(path) {
+      var lower = path.toLowerCase();
+      if (endsWith(lower, ".csv") || endsWith(lower, ".txt")) {
+        return readDelimitedTable(readTextFile(path));
+      }
+      return readWorkbookTable(path);
+    }
+
+    function readWorkbookTable(path) {
+      // Genuine BIFF/xlsx workbooks read fastest through OLEDB (no Excel needed).
+      // Many DepEd LIS SF1 files are OLE2 compound files without a standard
+      // Workbook/Book stream, which OLEDB cannot read at all ("External table is
+      // not in the expected format") even with ACE installed. Excel itself opens
+      // them fine, so fall back to Excel automation before giving up.
+      var oledbError;
+      try {
+        return readWorkbookViaOledb(path);
+      } catch (e) {
+        oledbError = e.message;
+      }
+      try {
+        return readWorkbookViaExcel(path);
+      } catch (excelError) {
+        throw new Error("Could not read the workbook. Save the SF1 as CSV (in Excel: File > Save As > CSV) and import again.\n\nOLEDB: " + oledbError + "\nExcel: " + excelError.message);
+      }
+    }
+
+    function readWorkbookViaOledb(path) {
+      var lower = path.toLowerCase();
+      var extended = endsWith(lower, ".xlsx") || endsWith(lower, ".xlsm")
+        ? "Excel 12.0 Xml;HDR=NO;IMEX=1"
+        : "Excel 8.0;HDR=NO;IMEX=1";
+      var providers = ["Microsoft.ACE.OLEDB.16.0", "Microsoft.ACE.OLEDB.12.0", "Microsoft.Jet.OLEDB.4.0"];
+      var lastError = "";
+
+      for (var i = 0; i < providers.length; i++) {
+        try {
+          return readWorkbookWithProvider(path, providers[i], extended);
+        } catch (e) {
+          lastError = e.message;
+        }
+      }
+      throw new Error(lastError || "no OLEDB provider available");
+    }
+
+    function readWorkbookViaExcel(path) {
+      var excel = null, wb = null;
+      try {
+        excel = new ActiveXObject("Excel.Application");
+        excel.Visible = false;
+        excel.DisplayAlerts = false;
+        // Open(read-only): UpdateLinks=0, ReadOnly=true
+        wb = excel.Workbooks.Open(path, 0, true);
+        var ws = wb.Worksheets.Item(1);
+        var used = ws.UsedRange;
+        var rowCount = used.Rows.Count;
+        var colCount = used.Columns.Count;
+        var firstRow = used.Row;
+        var firstCol = used.Column;
+        if (rowCount > 600) rowCount = 600;
+        if (colCount > 80) colCount = 80;
+
+        var table = [];
+        for (var r = 0; r < rowCount; r++) {
+          var row = [];
+          for (var c = 0; c < colCount; c++) {
+            var cell = ws.Cells(firstRow + r, firstCol + c).Value;
+            row.push(cell === null || typeof cell === "undefined" ? "" : String(cell));
+          }
+          table.push(row);
+        }
+
+        wb.Close(false);
+        wb = null;
+        excel.Quit();
+        excel = null;
+        return table;
+      } catch (e) {
+        try { if (wb) wb.Close(false); } catch (closeWbError) {}
+        try { if (excel) excel.Quit(); } catch (quitError) {}
+        throw new Error(e.message);
+      }
+    }
+
+    function readWorkbookWithProvider(path, provider, extended) {
+      var conn = null, rs = null;
+      try {
+        conn = new ActiveXObject("ADODB.Connection");
+        conn.ConnectionTimeout = 5;
+        conn.CommandTimeout = 10;
+        conn.Open("Provider=" + provider + ";Data Source=" + path + ";Extended Properties='" + extended + "'");
+
+        var sheet = firstWorkbookSheet(conn);
+        if (!sheet) throw new Error("No worksheet found.");
+
+        rs = new ActiveXObject("ADODB.Recordset");
+        rs.Open("SELECT * FROM [" + sheet + "]", conn, 0, 1);
+
+        var table = [];
+        while (!rs.EOF) {
+          var row = [];
+          for (var c = 0; c < rs.Fields.Count; c++) {
+            var value = rs.Fields.Item(c).Value;
+            row.push(value === null || typeof value === "undefined" ? "" : String(value));
+          }
+          table.push(row);
+          rs.MoveNext();
+        }
+        rs.Close();
+        conn.Close();
+        return table;
+      } catch (e) {
+        try { if (rs && rs.State === 1) rs.Close(); } catch (closeRsError) {}
+        try { if (conn && conn.State === 1) conn.Close(); } catch (closeConnError) {}
+        throw e;
+      }
+    }
+
+    function firstWorkbookSheet(conn) {
+      var schema = conn.OpenSchema(20);
+      var fallback = "";
+      while (!schema.EOF) {
+        var name = String(schema.Fields.Item("TABLE_NAME").Value);
+        var type = String(schema.Fields.Item("TABLE_TYPE").Value);
+        if (type === "TABLE" && name.indexOf("_FilterDatabase") < 0) {
+          if (name.indexOf("$") >= 0) {
+            schema.Close();
+            return name;
+          }
+          if (!fallback) fallback = name;
+        }
+        schema.MoveNext();
+      }
+      schema.Close();
+      return fallback;
+    }
+
+    function readDelimitedTable(text) {
+      var rows = [];
+      var lines = text.replace(/\r/g, "").split("\n");
+      for (var i = 0; i < lines.length; i++) {
+        if (trim(lines[i]) === "") continue;
+        rows.push(parseCsvLine(lines[i]));
+      }
+      return rows;
+    }
+
+    function extractSf1Learners(table) {
+      var learners = [];
+
+      // Pass 1: find the learner header. Prefer a header that includes a Sex
+      // column (the real learner table). This avoids latching onto secondary
+      // sub-headers further right (e.g. Father's / Mother's Name columns), which
+      // would otherwise hijack name parsing and produce parent names.
+      var header = null;
+      var headerRowIndex = -1;
+      for (var hr = 0; hr < table.length; hr++) {
+        var det = detectSf1Header(table[hr]);
+        if (!det) continue;
+        if (det.sex >= 0) { header = det; headerRowIndex = hr; break; }
+        if (!header) { header = det; headerRowIndex = hr; }
+      }
+
+      // Pass 2: parse the rows that follow the header (skip pre-header banner /
+      // school-info rows). If no header was found, fall back to scanning all rows.
+      var currentSex = "";
+      var start = headerRowIndex >= 0 ? headerRowIndex + 1 : 0;
+      for (var r = start; r < table.length; r++) {
+        var row = table[r];
+        var joined = row.join(" ").toUpperCase();
+
+        if (joined === "MALE" || joined.indexOf(" MALE ") >= 0 || joined.indexOf(" BOYS ") >= 0) currentSex = "M";
+        if (joined === "FEMALE" || joined.indexOf(" FEMALE ") >= 0 || joined.indexOf(" GIRLS ") >= 0) currentSex = "F";
+
+        var parsed = header ? parseSf1RowWithHeader(row, header, currentSex) : parseSf1RowWithoutHeader(row, currentSex);
+        if (parsed && parsed.lastName && parsed.firstName) {
+          parsed.sex = normalizeSex(parsed.sex || currentSex);
+          parsed.displayName = formatLearnerName(parsed.lastName, parsed.firstName, parsed.middleName);
+          learners.push(parsed);
+        }
+      }
+
+      learners.sort(function(a, b) {
+        var sa = sexRank(a.sex);
+        var sb = sexRank(b.sex);
+        if (sa !== sb) return sa - sb;
+        var ax = learnerDisplayName(a).toLowerCase();
+        var bx = learnerDisplayName(b).toLowerCase();
+        return ax < bx ? -1 : ax > bx ? 1 : 0;
+      });
+      return learners;
+    }
+
+    function detectSf1Header(row) {
+      var header = { lrn: -1, name: -1, last: -1, first: -1, middle: -1, sex: -1 };
+      var hits = 0;
+      for (var c = 0; c < row.length; c++) {
+        var cell = normalizeHeader(row[c]);
+        if (!cell) continue;
+        if (cell === "lrn" || cell.indexOf("learner reference") >= 0) { header.lrn = c; hits++; }
+        if (cell.indexOf("name") >= 0 && cell.indexOf("parent") < 0 && cell.indexOf("guardian") < 0 && cell.indexOf("father") < 0 && cell.indexOf("mother") < 0) { header.name = c; hits++; }
+        if (cell.indexOf("last name") >= 0 || cell === "surname") { header.last = c; hits++; }
+        if (cell.indexOf("first name") >= 0 || cell === "given name") { header.first = c; hits++; }
+        if (cell.indexOf("middle name") >= 0 || cell.indexOf("middle initial") >= 0) { header.middle = c; hits++; }
+        if (cell === "sex" || cell === "gender" || cell.indexOf("sex") >= 0 || cell.indexOf("gender") >= 0) { header.sex = c; hits++; }
+      }
+      // DepEd SF1 packs the learner name into a single column whose header reads
+      // "NAME (Last Name, First Name, Middle Name)". That makes last/first/middle
+      // all resolve to the same column; collapse them so the value is split from
+      // one combined column instead of being copied into every name part.
+      if (header.last >= 0 && header.last === header.first) {
+        if (header.name < 0) header.name = header.last;
+        header.last = -1;
+        header.first = -1;
+        header.middle = -1;
+      }
+      if ((header.name >= 0 || (header.last >= 0 && header.first >= 0)) && header.sex >= 0) return header;
+      if (hits >= 2 && (header.name >= 0 || header.last >= 0)) return header;
+      return null;
+    }
+
+    function parseSf1RowWithHeader(row, header, fallbackSex) {
+      var name = null;
+      if (header.last >= 0 || header.first >= 0) {
+        name = {
+          lastName: normalizeNamePart(row[header.last] || ""),
+          firstName: normalizeNamePart(row[header.first] || ""),
+          middleName: header.middle >= 0 ? normalizeNamePart(row[header.middle] || "") : ""
+        };
+      } else if (header.name >= 0) {
+        name = splitSf1Name(row[header.name]);
+      }
+      if (!name || !name.lastName || !name.firstName) return null;
+      return {
+        id: "",
+        lrn: header.lrn >= 0 ? trim(row[header.lrn]) : "",
+        lastName: name.lastName,
+        firstName: name.firstName,
+        middleName: name.middleName,
+        sex: header.sex >= 0 ? normalizeSex(row[header.sex]) : normalizeSex(fallbackSex),
+        displayName: ""
+      };
+    }
+
+    function parseSf1RowWithoutHeader(row, fallbackSex) {
+      var possibleName = "";
+      var possibleLrn = "";
+      var possibleSex = normalizeSex(fallbackSex);
+
+      for (var c = 0; c < row.length; c++) {
+        var cell = trim(row[c]);
+        if (!cell) continue;
+        var sex = normalizeSex(cell);
+        if (sex) {
+          possibleSex = sex;
+          continue;
+        }
+        if (!possibleLrn && /^\d{10,13}$/.test(cell.replace(/\D/g, ""))) {
+          possibleLrn = cell.replace(/\D/g, "");
+          continue;
+        }
+        if (!possibleName && looksLikeLearnerName(cell)) possibleName = cell;
+      }
+
+      var name = splitSf1Name(possibleName);
+      if (!name.lastName || !name.firstName) return null;
+      return {
+        id: "",
+        lrn: possibleLrn,
+        lastName: name.lastName,
+        firstName: name.firstName,
+        middleName: name.middleName,
+        sex: possibleSex,
+        displayName: ""
+      };
+    }
+
+    function splitSf1Name(raw) {
+      raw = normalizeNamePart(raw);
+      raw = raw.replace(/\s+(MALE|FEMALE|M|F)$/i, "");
+      var upperRaw = raw.toUpperCase();
+      if (!raw || upperRaw === "NAME" || upperRaw.indexOf("LEARNER") >= 0 || upperRaw.indexOf("TOTAL") >= 0 || upperRaw.indexOf("COMBINED") >= 0 || upperRaw.indexOf("GENERATED") >= 0) {
+        return { lastName: "", firstName: "", middleName: "" };
+      }
+
+      if (raw.indexOf(",") >= 0) {
+        var parts = raw.split(",");
+        var last = normalizeNamePart(parts[0]);
+        var first = normalizeNamePart(parts.length > 1 ? parts[1] : "");
+        var explicitMiddle = parts.length > 2;
+        var middle = normalizeNamePart(explicitMiddle ? parts.slice(2).join(" ") : "");
+        // Only guess a middle name from the first-name tokens when the source did
+        // not provide an explicit middle field. "LAST, FIRST, " (trailing comma)
+        // means the middle is intentionally blank and FIRST should stay intact.
+        if (!middle && !explicitMiddle) {
+          var tokens = first.split(/\s+/);
+          if (tokens.length > 1 && isMiddleToken(tokens[tokens.length - 1])) {
+            middle = tokens.pop();
+            first = normalizeNamePart(tokens.join(" "));
+          }
+        }
+        return { lastName: last, firstName: first, middleName: middle };
+      }
+
+      var words = raw.split(/\s+/);
+      if (words.length < 2) return { lastName: "", firstName: "", middleName: "" };
+      var middleName = words.length > 2 ? words.pop() : "";
+      var lastName = words.shift();
+      return { lastName: normalizeNamePart(lastName), firstName: normalizeNamePart(words.join(" ")), middleName: normalizeNamePart(middleName) };
+    }
+
+    function formatLearnerName(lastName, firstName, middleName) {
+      lastName = normalizeNamePart(lastName);
+      firstName = normalizeNamePart(firstName);
+      middleName = normalizeNamePart(middleName);
+      var mi = middleInitial(middleName);
+      return lastName + ", " + firstName + (mi ? " " + mi : "");
+    }
+
+    function learnerDisplayName(learner) {
+      if (learner.displayName) return learner.displayName;
+      return formatLearnerName(learner.lastName, learner.firstName, learner.middleName || "");
+    }
+
+    function middleInitial(middleName) {
+      middleName = normalizeNamePart(middleName).replace(/\./g, "");
+      if (!middleName || middleName === "-") return "";
+      if (!middleName) return "";
+      return middleName.charAt(0).toUpperCase() + ".";
+    }
+
+    function normalizeNamePart(value) {
+      value = trim(value).replace(/\s+/g, " ");
+      value = value.replace(/\s*,\s*/g, ", ");
+      return value;
+    }
+
+    function normalizeSex(value) {
+      value = trim(value).toUpperCase();
+      if (value === "M" || value === "MALE" || value === "BOY" || value === "BOYS") return "M";
+      if (value === "F" || value === "FEMALE" || value === "GIRL" || value === "GIRLS") return "F";
+      return "";
+    }
+
+    function sexRank(value) {
+      value = normalizeSex(value);
+      if (value === "M") return 1;
+      if (value === "F") return 2;
+      return 3;
+    }
+
+    function normalizeHeader(value) {
+      return trim(value).toLowerCase().replace(/\s+/g, " ");
+    }
+
+    function looksLikeLearnerName(value) {
+      value = trim(value);
+      if (!value || value.length < 3) return false;
+      if (/^\d+$/.test(value.replace(/\D/g, ""))) return false;
+      var upper = value.toUpperCase();
+      if (upper.indexOf("TOTAL") >= 0 || upper.indexOf("SCHOOL") >= 0 || upper.indexOf("GRADE") >= 0) return false;
+      return value.indexOf(",") >= 0 || value.split(/\s+/).length >= 2;
+    }
+
+    function isMiddleToken(value) {
+      value = trim(value).replace(/\./g, "");
+      if (!value) return false;
+      if (value.length === 1) return true;
+      return /^[A-Za-zÑñ]+$/.test(value);
+    }
+
+    function endsWith(value, suffix) {
+      return value.substring(value.length - suffix.length) === suffix;
+    }
+
+    function exportJson() {
+      updateProfile();
+      var text = JSON.stringify(db, null, 2);
+      var path = prompt("Save JSON backup as:", defaultExportPath("eclass-record-backup.json"));
+      if (!path) return;
+      try {
+        writeTextFile(path, text);
+        toast("Backup exported to " + path, "success");
+      } catch (e) {
+        alert("Export failed: " + e.message);
+      }
+    }
+
+    function defaultExportPath(fileName) {
+      try {
+        var shell = new ActiveXObject("WScript.Shell");
+        return shell.ExpandEnvironmentStrings("%USERPROFILE%") + "\\Desktop\\" + fileName;
+      } catch (e) {
+        return fileName;
+      }
+    }
+
+    function clearLocalData() {
+      if (!confirm("Clear local app data on this computer? Export first if you need a backup.")) return;
+      db = {
+        version: DB_VERSION,
+        teacherName: "",
+        schoolName: "",
+        schoolYear: "2026-2027",
+        currentAssignmentId: "",
+        currentTerm: "1",
+        activeView: "dashboard",
+        assignments: []
+      };
+      currentView = "dashboard";
+      saveDatabase();
+      render();
+    }
+
+    function printClassRecord() {
+      updateProfile();
+      currentView = "record";
+      db.activeView = "record";
+      render();
+      window.print();
+    }
+
+    function parseCsvLine(line) {
+      var out = [], cur = "", inQuote = false;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line.charAt(i);
+        if (ch === '"') {
+          if (inQuote && line.charAt(i + 1) === '"') {
+            cur += '"';
+            i++;
+          } else {
+            inQuote = !inQuote;
+          }
+        } else if (ch === "," && !inQuote) {
+          out.push(cur);
+          cur = "";
+        } else {
+          cur += ch;
+        }
+      }
+      out.push(cur);
+      return out;
+    }
+
+    function trim(s) {
+      return String(s || "").replace(/^\s+|\s+$/g, "");
+    }
+
+    function esc(value) {
+      return String(value === null || typeof value === "undefined" ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function number(value) {
+      var n = parseFloat(value);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function fmt(value) {
+      if (isNaN(value)) return "";
+      return Math.round(value * 100) / 100;
+    }
+
+    function blankNull(value) {
+      return value === null || typeof value === "undefined" ? "" : value;
+    }
+
+    function blankZero(value) {
+      return value === 0 ? "" : value;
+    }
+
+    function emptyState(title, hint) {
+      return "<div class='empty-state'><div class='es-title'>" + esc(title) + "</div><div>" + esc(hint) + "</div></div>";
+    }
+
+    function componentLabel(component) {
+      if (component === "WW") return "WW";
+      if (component === "PT") return "PT";
+      if (component === "SA1" || component === "ST1") return "SA1";
+      if (component === "SA2" || component === "ST2") return "SA2";
+      if (component === "TE") return "TE";
+      return component;
+    }
+
+    function compactAssessmentLabel(item) {
+      var title = trim(item.title || "");
+      if (title) {
+        title = title.replace(/\s+/g, "");
+        title = title.replace(/^WW/i, "W");
+        title = title.replace(/^PT/i, "P");
+        return title;
+      }
+      return componentLabel(item.component);
+    }
+
+    window.onload = function() {
+      loadDatabase();
+      normalizeDatabase();
+      recordTab = db.recordTab ? db.recordTab : (db.currentTerm || "1");
+      render();
+    };
+  </script>
+</body>
+</html>
