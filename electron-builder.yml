@@ -22,4 +22,6 @@ nsis:
 
 publish:
   provider: github
+  owner: jerniqz-del
+  repo: eclassrecord
   releaseType: release

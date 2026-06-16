@@ -5,6 +5,7 @@
  * and installing OTA updates from GitHub Releases.
  */
 
+const { app } = require('electron');
 const { autoUpdater } = require('electron-updater');
 
 let mainAppWindow = null;
@@ -29,6 +30,16 @@ function sendStatus(status, payload) {
  */
 function initAutoUpdater(window) {
   mainAppWindow = window;
+
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'jerniqz-del',
+    repo: 'eclassrecord'
+  });
+
+  if (!app.isPackaged) {
+    autoUpdater.forceDevUpdateConfig = true;
+  }
 
   autoUpdater.on('checking-for-update', () => {
     sendStatus('checking', { message: 'Checking for updates…' });

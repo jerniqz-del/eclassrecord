@@ -4,6 +4,10 @@
   "description": "Local, teacher-owned class record for DepEd three-term and legacy grading workflows",
   "author": "E-Class Record App",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jerniqz-del/eclassrecord.git"
+  },
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
