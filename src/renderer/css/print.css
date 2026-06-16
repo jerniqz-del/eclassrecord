@@ -24,7 +24,6 @@
   .record-tabs,
   .btn,
   button,
-  #termInputsPanel,
   #importPanel {
     display: none !important;
   }
@@ -70,12 +69,12 @@
     display: none;
   }
 
-  /* Cards/Panels: no borders/shadows */
   .card {
-    border: none;
-    padding: 0;
-    box-shadow: none;
-    margin-bottom: 8px;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    margin-bottom: 8px !important;
+    overflow: visible !important;
   }
 
   .card-title {
@@ -124,14 +123,17 @@
     font-size: 8px;
   }
 
-  /* Record table */
-  #recordTable .record-body-wrap {
-    max-height: none;
-    overflow: visible;
+  /* Record table overrides to prevent scrolling/clipping in print */
+  #recordTable .record-scroll {
+    max-height: none !important;
+    overflow: visible !important;
   }
 
+  #recordTable .record-body-wrap,
   #recordTable .record-head-wrap {
-    padding-right: 0;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
   }
 
   .table-wrap {
@@ -192,5 +194,34 @@
 
   tbody tr:nth-child(even) td {
     background: #f8f8f8 !important;
+  }
+
+  /* Hide inline headers during PDF exports to prevent duplicates with page-repeating headers */
+  body.pdf-export-mode .card-title,
+  body.pdf-export-mode .print-metadata-header {
+    display: none !important;
+  }
+
+  /* Print metadata header details block */
+  .print-metadata-header {
+    display: block !important;
+    margin-bottom: 12px !important;
+    margin-top: 6px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 2px solid #000 !important;
+  }
+
+  .print-metadata-grid {
+    display: table !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .print-metadata-col {
+    display: table-cell !important;
+    width: 50% !important;
+    font-size: 10px !important;
+    line-height: 1.5 !important;
+    color: #000 !important;
   }
 }

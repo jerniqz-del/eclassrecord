@@ -11,10 +11,137 @@ let recordColCount = 0;
 // Debounced save — batches rapid score entries into one IPC round-trip per 400ms
 const debouncedSave = debounce(saveDatabase, 400);
 
+// History Stacks for Undo and Redo
+let undoStack = [];
+let redoStack = [];
+
+// Trackers to detect changes to sheet or class
+let lastAssignmentId = null;
+let lastTerm = null;
+let lastMapehSubTab = null;
+
+/**
+ * Returns a snapshot of current active sheet data (scores and assessments list).
+ */
+function getSheetSnapshot() {
+  const a = currentAssignment();
+  if (!a) return null;
+  return {
+    scores: JSON.parse(JSON.stringify(a.scores || {})),
+    assessments: JSON.parse(JSON.stringify(a.assessments || []))
+  };
+}
+
+/**
+ * Captures current sheet state and pushes it to the undo stack.
+ * Clears the redo stack.
+ */
+function pushHistoryState() {
+  const snapshot = getSheetSnapshot();
+  if (!snapshot) return;
+  
+  undoStack.push(snapshot);
+  if (undoStack.length > 100) {
+    undoStack.shift(); // Limit history depth
+  }
+  
+  redoStack = [];
+  updateUndoRedoUI();
+}
+
+/**
+ * Toggles the disabled property of the UI buttons.
+ */
+function updateUndoRedoUI() {
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  if (undoBtn) {
+    undoBtn.disabled = (undoStack.length === 0);
+  }
+  if (redoBtn) {
+    redoBtn.disabled = (redoStack.length === 0);
+  }
+}
+
+/**
+ * Restores the database state from a snapshot.
+ */
+function restoreSheetSnapshot(snapshot) {
+  const a = currentAssignment();
+  if (!a) return;
+  a.scores = JSON.parse(JSON.stringify(snapshot.scores));
+  a.assessments = JSON.parse(JSON.stringify(snapshot.assessments));
+  
+  debouncedSave();
+  render();
+}
+
+/**
+ * Triggers the Undo action.
+ */
+function triggerUndo() {
+  if (undoStack.length === 0) return;
+  
+  const currentSnapshot = getSheetSnapshot();
+  if (!currentSnapshot) return;
+  
+  redoStack.push(currentSnapshot);
+  const previousSnapshot = undoStack.pop();
+  restoreSheetSnapshot(previousSnapshot);
+  updateUndoRedoUI();
+}
+
+/**
+ * Triggers the Redo action.
+ */
+function triggerRedo() {
+  if (redoStack.length === 0) return;
+  
+  const currentSnapshot = getSheetSnapshot();
+  if (!currentSnapshot) return;
+  
+  undoStack.push(currentSnapshot);
+  const nextSnapshot = redoStack.pop();
+  restoreSheetSnapshot(nextSnapshot);
+  updateUndoRedoUI();
+}
+
+/**
+ * Detects if the user changed the sheet (term, MAPEH sub-tab) or class load.
+ * Autosaves immediately and clears history stacks.
+ */
+function checkActiveSheetChange() {
+  const a = currentAssignment();
+  const currentId = a ? a.id : null;
+  const currentTerm = db.currentTerm || '1';
+  const currentSubTab = (a && isMapehSubject(a.subject)) ? currentMapehSubTab : null;
+  
+  if (currentId !== lastAssignmentId || currentTerm !== lastTerm || currentSubTab !== lastMapehSubTab) {
+    // If a class was previously loaded and there were modifications, autosave immediately
+    // to prevent losing any unwritten debounced database edits
+    if (lastAssignmentId !== null) {
+      debouncedSave.cancel();
+      saveDatabase();
+    }
+    
+    // Wipe history
+    undoStack = [];
+    redoStack = [];
+    
+    // Update active sheet trackers
+    lastAssignmentId = currentId;
+    lastTerm = currentTerm;
+    lastMapehSubTab = currentSubTab;
+    
+    updateUndoRedoUI();
+  }
+}
+
 /**
  * Renders the active term class record grid.
  */
 function renderRecordTable() {
+  checkActiveSheetChange();
   const a = currentAssignment();
   if (!a) {
     document.getElementById('recordTable').innerHTML = emptyState(
@@ -24,25 +151,33 @@ function renderRecordTable() {
     return;
   }
   
-  if (isKeyStage2(a)) {
-    ensureKeyStage2Assessments(a);
-  }
+  ensureTemplateAssessments(a);
   
   if (a.learners.length === 0) {
     document.getElementById('recordTable').innerHTML = emptyState(
       'No learners yet',
-      'Add student rosters under the Classes tab, upload an SF1, or paste a CSV list.'
+      'Add student rosters under the Classes tab, upload an SF1, or paste a CSV list.',
+      'Upload SF1',
+      'proceedToUploadSf1()'
     );
     return;
   }
   
-  const items = termAssessments(a, db.currentTerm);
+  const isMapeh = isMapehSubject(a.subject);
+  if (isMapeh && currentMapehSubTab === 'consolidated') {
+    renderConsolidatedMapehTable(a);
+    return;
+  }
+  
+  const mapePart = isMapeh ? currentMapehSubTab : undefined;
+  const items = termAssessments(a, db.currentTerm, mapePart);
   recordRowCount = a.learners.length;
   recordColCount = items.length;
   const w = weightsFor(a.subjectGroup);
-  const cols = recordColGroup(a, items);
+  const cols = recordColGroup(a, items, mapePart);
   
-  let html = `<div class="record-scroll"><table class="record-grid">${cols}<thead>`;
+  const isKS2 = isKeyStage2(a);
+  let html = `<div class="record-scroll"><table class="record-grid${isMapeh ? ' is-mapeh' : ''}${isKS2 ? ' is-ks2' : ''}">${cols}<thead>`;
   
   if (isKeyStage2(a)) {
     // Key Stage 2 Columns Headers (Trimesters split)
@@ -51,7 +186,10 @@ function renderRecordTable() {
       <th class="c-learner">Learner</th>
       <th class="c-sex">Sex</th>`;
     for (let gi = 0; gi < items.length; gi++) {
-      html += `<th class="c-score" title="${esc(items[gi].title)}">${esc(compactAssessmentLabel(items[gi]))}</th>`;
+      html += `<th class="c-score" title="${esc(items[gi].title)}">
+        ${esc(compactAssessmentLabel(items[gi]))}
+        <button class="col-delete-btn no-print" title="Clear all student scores in this column" onclick="clearColumnScores('${esc(items[gi].id)}')">&times;</button>
+      </th>`;
       if (gi === 4) html += `<th class="c-calc" title="Written Work Total">T</th><th class="c-calc" title="Written Work Percentage">%</th><th class="c-calc" title="Written Work Weighted Score">WS</th>`;
       if (gi === 7) html += `<th class="c-calc" title="Performance Task Total">T</th><th class="c-calc" title="Performance Task Percentage">%</th><th class="c-calc" title="Performance Task Weighted Score">WS</th>`;
       if (gi === 10) html += `<th class="c-calc" title="Trimester Exam Total">T</th><th class="c-calc" title="Trimester Exam Percentage">%</th><th class="c-calc" title="Trimester Exam Weighted Score">WS</th>`;
@@ -67,7 +205,11 @@ function renderRecordTable() {
       <th class="c-sex">Sex</th>`;
     for (let i = 0; i < items.length; i++) {
       const compClass = `c-comp-${items[i].component.toLowerCase()}`;
-      html += `<th class="c-score ${compClass}" title="${esc(items[i].title)}">${esc(componentLabel(items[i].component))}<br/><span class="text-xs text-muted">${esc(items[i].title)}</span></th>`;
+      html += `<th class="c-score ${compClass}" title="${esc(items[i].title)}">
+        ${esc(componentLabel(items[i].component))}<br/>
+        <span class="text-xs text-muted">${esc(items[i].title)}</span>
+        <button class="col-delete-btn no-print" title="Clear all student scores in this column" onclick="clearColumnScores('${esc(items[i].id)}')">&times;</button>
+      </th>`;
     }
     html += `
       <th class="c-spacer"></th>
@@ -114,7 +256,7 @@ function renderRecordTable() {
   // Roster Student Rows
   for (let r = 0; r < a.learners.length; r++) {
     const learner = a.learners[r];
-    const result = computeTerm(a, learner.id, db.currentTerm);
+    const result = computeTerm(a, learner.id, db.currentTerm, mapePart);
     
     html += `<tr>
       <td class="c-no">${r + 1}</td>
@@ -126,17 +268,19 @@ function renderRecordTable() {
       const val = a.scores[key] === undefined ? '' : a.scores[key];
       const maxNum = number(items[j].maxScore);
       const overMax = maxNum > 0 && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) > maxNum;
+      const isPerfect = maxNum > 0 && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) === maxNum;
+      const isSimilar = maxNum > 0 && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= maxNum * 0.9 && parseFloat(val) < maxNum;
       
       const scoreTitle = `${learnerDisplayName(learner)} - ${componentLabel(items[j].component)} ${items[j].title || ''} ${maxNum > 0 ? '(max ' + maxNum + ')' : ''}`;
       
       html += `<td class="c-score">
-        <input id="sc-${r}-${j}" class="score-input${overMax ? ' invalid' : ''}" title="${esc(scoreTitle)}" value="${esc(val)}"
+        <input id="sc-${r}-${j}" class="score-input${overMax ? ' invalid' : ''}${isPerfect ? ' perfect' : ''}${isSimilar ? ' similar' : ''}" title="${esc(scoreTitle)}" value="${esc(val)}"
           onkeydown="return scoreNav(event, ${r}, ${j}, '${esc(learner.id)}', '${esc(items[j].id)}')"
           onchange="updateScore('${esc(learner.id)}', '${esc(items[j].id)}', this.value)" />
       </td>`;
       
       if (isKeyStage2(a) && (j === 4 || j === 7 || j === 10)) {
-        const block = j === 4 ? result.ww : j === 7 ? result.pt : componentScore(a, learner.id, db.currentTerm, ['SA1', 'SA2', 'ST1', 'ST2', 'TE']);
+        const block = j === 4 ? result.ww : j === 7 ? result.pt : componentScore(a, learner.id, db.currentTerm, ['SA1', 'SA2', 'ST1', 'ST2', 'TE'], mapePart);
         const weight = j === 4 ? w[0] : j === 7 ? w[1] : w[2];
         html += `<td class="c-calc">${blankZero(block.raw)}</td>
                  <td class="c-calc">${block.hasData ? fmt(block.ps) : ''}</td>
@@ -159,12 +303,35 @@ function renderRecordTable() {
   
   html += `</tbody></table></div>`;
   document.getElementById('recordTable').innerHTML = html;
+  
+  // Dynamically align HPS row sticky top position below the header row
+  adjustHpsStickyTop();
+}
+
+/**
+ * Dynamically measures the first row (headers th) height and applies it
+ * as the 'top' style offset for sticky HPS row cells.
+ */
+function adjustHpsStickyTop() {
+  const table = document.querySelector('#recordTable .record-grid');
+  if (!table) return;
+  const firstRow = table.querySelector('thead tr:first-child');
+  if (!firstRow) return;
+  
+  const height = firstRow.getBoundingClientRect().height;
+  if (height === 0) return; // Ignore hidden tables to keep CSS fallbacks active
+  
+  const hpsCells = table.querySelectorAll('.sheet-row-label td');
+  hpsCells.forEach(cell => {
+    // Round to nearest integer/half-pixel to avoid layout engine rendering offsets
+    cell.style.top = `${Math.round(height)}px`;
+  });
 }
 
 /**
  * Builds colgroup elements based on columns layout configuration.
  */
-function recordColGroup(a, items) {
+function recordColGroup(a, items, mapePart) {
   let html = '<colgroup>';
   if (isKeyStage2(a)) {
     html += "<col style='width:3%' /><col style='width:18%' /><col style='width:3%' />";
@@ -176,7 +343,7 @@ function recordColGroup(a, items) {
     }
     html += "<col style='width:4%' /><col style='width:4%' /><col style='width:8%' />";
   } else {
-    let refCount = maxTermAssessmentCount(a);
+    let refCount = maxTermAssessmentCount(a, mapePart);
     if (refCount < 1) refCount = 1;
     const scoreWidth = 45 / refCount;
     let spacerWidth = 45 - (items.length * scoreWidth);
@@ -194,10 +361,10 @@ function recordColGroup(a, items) {
   return html;
 }
 
-function maxTermAssessmentCount(a) {
+function maxTermAssessmentCount(a, mapePart) {
   let m = 0;
   for (let t = 1; t <= 3; t++) {
-    const c = termAssessments(a, String(t)).length;
+    const c = termAssessments(a, String(t), mapePart).length;
     if (c > m) m = c;
   }
   return m;
@@ -225,23 +392,44 @@ function renderFinalOnly() {
   if (a.learners.length === 0) {
     document.getElementById('finalTable').innerHTML = emptyState(
       'No learners yet',
-      'Final grades will appear once class lists are populated.'
+      'Final grades will appear once class lists are populated.',
+      'Upload SF1',
+      'proceedToUploadSf1()'
     );
     return;
   }
   
-  let html = `<table><thead>
-    <tr>
-      <th>No.</th>
-      <th>LRN</th>
-      <th>Learner</th>
-      <th>Term 1</th>
-      <th>Term 2</th>
-      <th>Term 3</th>
-      <th>Final Grade</th>
-      <th>Remarks</th>
-    </tr>
-  </thead><tbody>`;
+  const isMapeh = isMapehSubject(a.subject);
+  if (isMapeh && currentMapehSubTab === 'consolidated') {
+    renderConsolidatedMapehSummary(a);
+    return;
+  }
+  
+  const mapePart = isMapeh ? currentMapehSubTab : undefined;
+  
+  let html = `<table class="summary-table">
+    <colgroup>
+      <col style="width: 4%" />
+      <col style="width: 12%" />
+      <col style="width: 28%" />
+      <col style="width: 8%" />
+      <col style="width: 8%" />
+      <col style="width: 8%" />
+      <col style="width: 10%" />
+      <col style="width: 22%" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th>No.</th>
+        <th>LRN</th>
+        <th>Learner</th>
+        <th>Term 1</th>
+        <th>Term 2</th>
+        <th>Term 3</th>
+        <th>Final Grade</th>
+        <th>Remarks</th>
+      </tr>
+    </thead><tbody>`;
   
   for (let r = 0; r < a.learners.length; r++) {
     const learner = a.learners[r];
@@ -250,7 +438,7 @@ function renderFinalOnly() {
     let count = 0;
     
     for (let t = 1; t <= 3; t++) {
-      const res = computeTerm(a, learner.id, String(t));
+      const res = computeTerm(a, learner.id, String(t), mapePart);
       terms.push(res.termGrade);
       if (res.termGrade !== null) {
         sum += res.termGrade;
@@ -272,6 +460,156 @@ function renderFinalOnly() {
     </tr>`;
   }
   
+  html += '</tbody></table>';
+  document.getElementById('finalTable').innerHTML = html;
+}
+
+function renderConsolidatedMapehTable(a) {
+  const term = db.currentTerm || '1';
+  let html = `<div class="record-scroll"><table class="record-grid is-mapeh">
+    <colgroup>
+      <col style="width:5%" />
+      <col style="width:25%" />
+      <col style="width:5%" />
+      <col style="width:15%" />
+      <col style="width:15%" />
+      <col style="width:15%" />
+      <col style="width:20%" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="c-no">No.</th>
+        <th class="c-learner">Learner</th>
+        <th class="c-sex">Sex</th>
+        <th class="c-grade">Music & Arts Grade</th>
+        <th class="c-grade">PE & Health Grade</th>
+        <th class="c-grade">Consolidated Grade</th>
+        <th class="c-desc">Remarks</th>
+      </tr>
+    </thead><tbody>`;
+
+  for (let r = 0; r < a.learners.length; r++) {
+    const learner = a.learners[r];
+    const resMusic = computeTerm(a, learner.id, term, 'music_arts');
+    const resPE = computeTerm(a, learner.id, term, 'pe_health');
+
+    const gMusic = resMusic.termGrade;
+    const gPE = resPE.termGrade;
+    
+    let consolidated = null;
+    if (gMusic !== null && gPE !== null) {
+      consolidated = Math.round((gMusic + gPE) / 2);
+    } else if (gMusic !== null) {
+      consolidated = gMusic;
+    } else if (gPE !== null) {
+      consolidated = gPE;
+    }
+
+    html += `<tr>
+      <td class="c-no">${r + 1}</td>
+      <td class="c-learner learner-cell" title="${esc(learnerDisplayName(learner))}">${esc(learnerDisplayName(learner))}</td>
+      <td class="c-sex">${esc(learner.sex)}</td>
+      <td class="c-grade">${blankNull(gMusic)}</td>
+      <td class="c-grade">${blankNull(gPE)}</td>
+      <td class="c-grade"><strong>${blankNull(consolidated)}</strong></td>
+      <td class="c-desc">${renderBadge(consolidated)}</td>
+    </tr>`;
+  }
+  
+  html += '</tbody></table></div>';
+  document.getElementById('recordTable').innerHTML = html;
+}
+
+function renderConsolidatedMapehSummary(a) {
+  let html = `<table class="summary-table">
+    <colgroup>
+      <col style="width: 4%" />
+      <col style="width: 10%" />
+      <col style="width: 20%" />
+      <col style="width: 10%" />
+      <col style="width: 10%" />
+      <col style="width: 10%" />
+      <col style="width: 10%" />
+      <col style="width: 10%" />
+      <col style="width: 8%" />
+      <col style="width: 8%" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th>No.</th>
+        <th>LRN</th>
+        <th>Learner</th>
+        <th>Music & Arts Final</th>
+        <th>PE & Health Final</th>
+        <th>Term 1 Consolidated</th>
+        <th>Term 2 Consolidated</th>
+        <th>Term 3 Consolidated</th>
+        <th>MAPEH Final</th>
+        <th>Remarks</th>
+      </tr>
+    </thead><tbody>`;
+
+  for (let r = 0; r < a.learners.length; r++) {
+    const learner = a.learners[r];
+    
+    let sumMusic = 0, countMusic = 0;
+    let sumPE = 0, countPE = 0;
+    const consGrades = [];
+
+    for (let t = 1; t <= 3; t++) {
+      const resMusic = computeTerm(a, learner.id, String(t), 'music_arts');
+      const resPE = computeTerm(a, learner.id, String(t), 'pe_health');
+
+      const gm = resMusic.termGrade;
+      const gp = resPE.termGrade;
+
+      if (gm !== null) {
+        sumMusic += gm;
+        countMusic++;
+      }
+
+      if (gp !== null) {
+        sumPE += gp;
+        countPE++;
+      }
+
+      let gc = null;
+      if (gm !== null && gp !== null) {
+        gc = Math.round((gm + gp) / 2);
+      } else if (gm !== null) {
+        gc = gm;
+      } else if (gp !== null) {
+        gc = gp;
+      }
+      consGrades.push(gc);
+    }
+
+    const musicFinal = countMusic > 0 ? Math.round(sumMusic / countMusic) : null;
+    const peFinal = countPE > 0 ? Math.round(sumPE / countPE) : null;
+
+    let finalConsolidated = null;
+    if (musicFinal !== null && peFinal !== null) {
+      finalConsolidated = Math.round((musicFinal + peFinal) / 2);
+    } else if (musicFinal !== null) {
+      finalConsolidated = musicFinal;
+    } else if (peFinal !== null) {
+      finalConsolidated = peFinal;
+    }
+
+    html += `<tr>
+      <td>${r + 1}</td>
+      <td>${esc(learner.lrn)}</td>
+      <td>${esc(learnerDisplayName(learner))}</td>
+      <td>${blankNull(musicFinal)}</td>
+      <td>${blankNull(peFinal)}</td>
+      <td>${blankNull(consGrades[0])}</td>
+      <td>${blankNull(consGrades[1])}</td>
+      <td>${blankNull(consGrades[2])}</td>
+      <td><strong>${blankNull(finalConsolidated)}</strong></td>
+      <td>${finalRemark(a, finalConsolidated)}</td>
+    </tr>`;
+  }
+
   html += '</tbody></table>';
   document.getElementById('finalTable').innerHTML = html;
 }
@@ -368,13 +706,20 @@ function updateScore(learnerId, assessmentId, value) {
   const key = `${learnerId}|${assessmentId}`;
   const clean = trim(value);
   
+  const oldValue = a.scores[key] === undefined ? '' : String(a.scores[key]);
+  const newValue = clean === '' ? '' : String(parseFloat(clean));
+  
+  if (oldValue === newValue || (clean !== '' && isNaN(parseFloat(clean)))) {
+    return;
+  }
+  
+  pushHistoryState();
+  
   if (clean === '') {
     delete a.scores[key];
   } else {
     const n = parseFloat(clean);
-    if (!isNaN(n)) {
-      a.scores[key] = n;
-    }
+    a.scores[key] = n;
   }
   
   debouncedSave();
@@ -389,13 +734,27 @@ function updateAssessmentMax(assessmentId, value) {
   const a = currentAssignment();
   if (!a) return;
   
+  const clean = trim(value);
+  const newMax = clean === '' ? '' : number(clean);
+  
+  let targetAssessment = null;
   for (let i = 0; i < a.assessments.length; i++) {
     if (a.assessments[i].id === assessmentId) {
-      const clean = trim(value);
-      a.assessments[i].maxScore = clean === '' ? '' : number(clean);
+      targetAssessment = a.assessments[i];
       break;
     }
   }
+  
+  if (!targetAssessment) return;
+  
+  const oldMax = targetAssessment.maxScore;
+  if (oldMax === newMax) {
+    return; // No change
+  }
+  
+  pushHistoryState();
+  
+  targetAssessment.maxScore = newMax;
   
   debouncedSave();
   render();
@@ -404,12 +763,15 @@ function updateAssessmentMax(assessmentId, value) {
 /**
  * Retrieves assessments lists matching a term, sorting KS2 formats.
  */
-function termAssessments(a, term) {
+function termAssessments(a, term, mapePart) {
   const out = [];
   if (!a) return out;
   for (let i = 0; i < a.assessments.length; i++) {
-    if (a.assessments[i].term === term) {
-      out.push(a.assessments[i]);
+    const ast = a.assessments[i];
+    if (ast.term === term) {
+      if (mapePart === undefined || ast.mapePart === mapePart) {
+        out.push(ast);
+      }
     }
   }
   if (isKeyStage2(a)) {
@@ -463,4 +825,31 @@ function compactAssessmentLabel(item) {
     return title;
   }
   return componentLabel(item.component);
+}
+
+function clearColumnScores(assessmentId) {
+  const a = currentAssignment();
+  if (!a) return;
+  
+  const activeTerm = db.currentTerm || '1';
+  const isMapeh = isMapehSubject(a.subject);
+  const mapePart = isMapeh ? currentMapehSubTab : undefined;
+  const items = termAssessments(a, activeTerm, mapePart);
+  const item = items.find(it => it.id === assessmentId);
+  const label = item ? `${componentLabel(item.component)} ${item.title || ''}` : 'Assessment Column';
+  
+  confirmModal(
+    'Clear Column Scores',
+    `Are you sure you want to delete all student scores in "${label}"? This action cannot be undone and will not affect the Highest Possible Score (HPS).`,
+    () => {
+      pushHistoryState();
+      a.learners.forEach(learner => {
+        const key = `${learner.id}|${assessmentId}`;
+        delete a.scores[key];
+      });
+      saveDatabase();
+      render();
+      toast('Column scores deleted successfully.', 'success');
+    }
+  );
 }

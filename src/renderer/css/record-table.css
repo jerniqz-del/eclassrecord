@@ -1,14 +1,19 @@
 
 /* ── Table Container ─────────────────────────────────────── */
 
+body[data-active-view="record"] .main {
+  overflow-y: hidden !important;
+}
+
 #recordTable {
   overflow: hidden;
   border-radius: var(--radius-lg);
 }
 
-#recordTable .record-scroll {
+#recordTable .record-scroll,
+#finalTable {
   overflow: auto;
-  max-height: 500px;
+  max-height: calc(100vh - 390px);
 }
 
 /* ── Shared grid ─────────────────────────────────────────── */
@@ -36,7 +41,7 @@
 #recordTable .record-grid th {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 12;
   font-weight: var(--font-weight-bold);
   background: var(--color-neutral-50);
   font-size: 9px;
@@ -112,6 +117,28 @@
   font-weight: var(--font-weight-bold);
   animation: pulseError 600ms ease;
 }
+
+/* Perfect score — matches max-score (HPS) */
+#recordTable .record-grid .score-input.perfect {
+  border-color: var(--color-success-500) !important;
+  background: var(--color-success-50) !important;
+  color: var(--color-success-700) !important;
+  font-weight: var(--font-weight-bold);
+}
+
+/* Similar score — close to max-score (HPS) e.g., >= 90% */
+#recordTable .record-grid .score-input.similar {
+  border-color: var(--color-success-200) !important;
+  background: var(--color-success-50) !important;
+  color: var(--color-success-600) !important;
+}
+
+[data-theme="dark"] #recordTable .record-grid .score-input.similar {
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  background: var(--color-success-50) !important;
+  color: #34d399 !important;
+}
+
 
 
 /* ── Component-colored Column Headers ───────────────────── */
@@ -206,9 +233,18 @@
 }
 
 #recordTable .record-grid .sheet-row-label td {
+  position: sticky;
+  top: 34px; /* Fallback for standard two-line header th elements */
+  z-index: 11;
+  background: var(--color-neutral-100) !important;
+  border-bottom: 2px solid var(--color-neutral-300);
   font-size: 8.5px;
   font-weight: var(--font-weight-bold);
   white-space: nowrap;
+}
+
+#recordTable .record-grid.is-ks2 .sheet-row-label td {
+  top: 23px; /* Fallback for Key Stage 2 one-line header th elements */
 }
 
 /* ── Spacer / Group Headers ─────────────────────────────── */
@@ -277,3 +313,120 @@
   font-family: var(--font-family-mono);
   font-size: var(--font-size-sm);
 }
+
+/* ── Word wrap for MAPEH Headers to prevent horizontal scrolling ───────────────── */
+
+#recordTable .record-grid.is-mapeh th.c-score,
+#recordTable .record-grid.is-mapeh th.c-calc,
+#recordTable .record-grid.is-mapeh th.c-grade,
+#recordTable .record-grid.is-mapeh th.c-desc {
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+/* ── Final Summary Table styling & wrapping ─────────────────── */
+
+#finalTable .summary-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+#finalTable .summary-table th,
+#finalTable .summary-table td {
+  white-space: normal !important;
+  word-break: break-word !important;
+  text-align: center;
+  padding: var(--space-2) var(--space-1);
+}
+
+#finalTable .summary-table th:nth-child(3),
+#finalTable .summary-table td:nth-child(3) {
+  text-align: left; /* Keep learner names left-aligned */
+  padding-left: 8px;
+}
+
+/* Print-only metadata header styling - Hidden on screen */
+.print-metadata-header {
+  display: none;
+}
+
+/* ── Row and Column Highlight on Cell Focus ───────────────── */
+
+#recordTable .record-grid tr.active-row td {
+  background-color: var(--color-primary-100) !important;
+}
+
+#recordTable .record-grid td.active-col {
+  background-color: var(--color-primary-100) !important;
+}
+
+#recordTable .record-grid th.active-col {
+  background-color: var(--color-primary-200) !important;
+}
+
+#recordTable .record-grid td.active-cell {
+  background-color: var(--color-primary-200) !important;
+}
+
+[data-theme="dark"] #recordTable .record-grid tr.active-row td {
+  background-color: rgba(6, 182, 212, 0.15) !important;
+}
+
+[data-theme="dark"] #recordTable .record-grid td.active-col {
+  background-color: rgba(6, 182, 212, 0.15) !important;
+}
+
+[data-theme="dark"] #recordTable .record-grid th.active-col {
+  background-color: rgba(6, 182, 212, 0.3) !important;
+}
+
+[data-theme="dark"] #recordTable .record-grid td.active-cell {
+  background-color: rgba(6, 182, 212, 0.3) !important;
+}
+
+/* ── Column Delete Button ───────────────────────────────── */
+
+#recordTable .record-grid th .col-delete-btn {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-error-600);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  font-size: 8px;
+  line-height: 10px;
+  text-align: center;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+  z-index: 15;
+}
+
+#recordTable .record-grid th:hover .col-delete-btn {
+  opacity: 1;
+}
+
+#recordTable .record-grid th .col-delete-btn:hover {
+  background: var(--color-error-500) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+[data-theme="dark"] #recordTable .record-grid th .col-delete-btn {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] #recordTable .record-grid th .col-delete-btn:hover {
+  background: #dc2626 !important;
+  color: #fff !important;
+}
+

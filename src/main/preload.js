@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   importJson: () => ipcRenderer.invoke('dialog:import-json'),
   importSf1: () => ipcRenderer.invoke('dialog:import-sf1'),
   exportCsv: (csvString) => ipcRenderer.invoke('dialog:export-csv', csvString),
+  showPrintChoose: () => ipcRenderer.invoke('dialog:print-choose'),
+  exportExcelTemplate: (payload) => ipcRenderer.invoke('dialog:export-excel-template', payload),
+  exportPdf: (options) => ipcRenderer.invoke('dialog:export-pdf', options),
 
   // Metadata & System Checks
   getVersion: () => ipcRenderer.invoke('app:version'),

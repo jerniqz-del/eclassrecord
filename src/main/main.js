@@ -7,6 +7,7 @@
 
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const fileIO = require('./file-io');
 const updater = require('./updater');
 
@@ -18,7 +19,7 @@ function createWindow() {
     height: 800,
     minWidth: 1024,
     minHeight: 600,
-    title: 'E-Class Record',
+    title: 'E-Class Record App',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     show: false,
     webPreferences: {
@@ -34,6 +35,10 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.maximize();
+    // Open DevTools automatically in development (not in packaged builds)
+    if (!app.isPackaged) {
+      mainWindow.webContents.openDevTools({ mode: 'detach' });
+    }
     // Start updater only after renderer is fully loaded and listening
     updater.initAutoUpdater(mainWindow);
   });
@@ -164,6 +169,127 @@ ipcMain.handle('dialog:export-csv', async (_event, csvString) => {
   fileIO.writeFile(result.filePath, '\uFEFF' + csvString); // BOM for Excel
   return { success: true, path: result.filePath };
 });
+
+ipcMain.handle('dialog:export-excel-template', async (_event, payload) => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export to DepEd Excel Template',
+    defaultPath: path.join(app.getPath('desktop'), `Class-Record-${payload.gradeLevel}-${payload.section}-${payload.subject}.xlsx`),
+    filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
+  });
+  if (result.canceled || !result.filePath) return { success: false };
+
+  try {
+    const excelExporter = require('./excel-exporter');
+    await excelExporter.generateExcel(result.filePath, payload);
+    return { success: true, path: result.filePath };
+  } catch (e) {
+    console.error(e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('dialog:export-pdf', async (_event, options) => {
+  const { size, landscape, filename, metadata } = options || {};
+  
+  const headerHtml = `
+    <div style="font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000; width: 100%; margin: 0 0.4in; box-sizing: border-box; border-bottom: 2px solid #000; padding-bottom: 6px;">
+      <div style="font-size: 11px; font-weight: bold; font-family: 'Segoe UI', Arial, sans-serif; color: #000; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 5px; text-transform: uppercase;">
+        ${metadata ? (metadata.title || '') : ''}
+      </div>
+      <table style="width: 100%; border-collapse: collapse; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000; margin: 0; padding: 0;">
+        <tr>
+          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+            <strong>Region:</strong> ${metadata ? (metadata.region || '') : ''}
+          </td>
+          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+            <strong>School Year:</strong> ${metadata ? (metadata.schoolYear || '') : ''}
+          </td>
+        </tr>
+        <tr>
+          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+            <strong>Division:</strong> ${metadata ? (metadata.division || '') : ''}
+          </td>
+          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+            <strong>Grade & Section:</strong> Grade ${metadata ? (metadata.gradeLevel || '') : ''} - ${metadata ? (metadata.section || '') : ''}
+          </td>
+        </tr>
+        <tr>
+          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+            <strong>School Name:</strong> ${metadata ? (metadata.schoolName || '') : ''}
+          </td>
+          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+            <strong>Subject:</strong> ${metadata ? (metadata.subject || '') : ''}
+          </td>
+        </tr>
+        <tr>
+          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+            <strong>School ID:</strong> ${metadata ? (metadata.schoolId || '') : ''}
+          </td>
+          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+            <strong>Teacher:</strong> ${metadata ? (metadata.teacherName || '') : ''}
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+  
+  const footerHtml = `
+    <div style="font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #555; width: 100%; margin: 0 0.4in; border-top: 1px solid #ddd; padding-top: 5px; display: flex; justify-content: space-between; box-sizing: border-box;">
+      <div>
+        <strong>File Stamp:</strong> ${filename || 'Class-Record.pdf'} &middot; 
+        <strong>Generated:</strong> ${metadata ? (metadata.timestamp || '') : ''}
+      </div>
+      <div>
+        Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+      </div>
+    </div>
+  `;
+
+  const printOptions = {
+    margins: {
+      marginType: 'custom',
+      top: 1.3, // in inches
+      bottom: 0.6,
+      left: 0.4, // in inches
+      right: 0.4
+    },
+    pageSize: size || 'A4',
+    landscape: !!landscape,
+    printBackground: true,
+    displayHeaderFooter: true,
+    headerTemplate: headerHtml,
+    footerTemplate: footerHtml
+  };
+  
+  try {
+    const data = await mainWindow.webContents.printToPDF(printOptions);
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export PDF',
+      defaultPath: path.join(app.getPath('desktop'), filename || 'Class-Record.pdf'),
+      filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
+    });
+    if (result.canceled || !result.filePath) return { success: false };
+    fs.writeFileSync(result.filePath, data);
+    return { success: true, path: result.filePath };
+  } catch (e) {
+    console.error(e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('dialog:print-choose', async () => {
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    buttons: ['Cancel', 'Print Web Layout', 'Export to DepEd Excel Template…'],
+    defaultId: 2,
+    cancelId: 0,
+    title: 'Print / Export Options',
+    message: 'Select how you would like to print or export this class record:',
+    detail: 'Exporting to the DepEd Excel Template will populate the official class record format with all current scores and calculations.'
+  });
+  return result.response;
+});
+
 
 ipcMain.handle('app:version', () => {
   return app.getVersion();

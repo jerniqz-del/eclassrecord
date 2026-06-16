@@ -30,19 +30,54 @@ function normalizeDatabase() {
   if (!db.assignments) db.assignments = [];
   if (!db.activeView) db.activeView = 'dashboard';
   if (!db.currentTerm) db.currentTerm = '1';
+  if (db.schoolId === undefined) db.schoolId = '';
+  if (db.region === undefined) db.region = '';
+  if (db.division === undefined) db.division = '';
   if (!db.version || db.version < DB_VERSION) db.version = DB_VERSION;
   
   for (let i = 0; i < db.assignments.length; i++) {
     const a = db.assignments[i];
-    if (!a.subjectGroup) a.subjectGroup = 'CORE_20_50_30';
-    if (!a.policy) a.policy = 'DO15_TRANSITION';
+    
+    // Normalize split MAPEH subjects into single MAPEH subject
+    if (a.subject === 'Music and Arts') {
+      if (a.assessments) {
+        a.assessments.forEach(ast => {
+          if (!ast.mapePart) ast.mapePart = 'music_arts';
+        });
+      }
+      a.subject = 'MAPEH';
+    } else if (a.subject === 'Physical Education and Health (PE & Health)') {
+      if (a.assessments) {
+        a.assessments.forEach(ast => {
+          if (!ast.mapePart) ast.mapePart = 'pe_health';
+        });
+      }
+      a.subject = 'MAPEH';
+    } else if (isMapehSubject(a.subject) && a.subject !== 'MAPEH') {
+      if (a.assessments) {
+        a.assessments.forEach(ast => {
+          if (!ast.mapePart) ast.mapePart = 'music_arts';
+        });
+      }
+      a.subject = 'MAPEH';
+    }
+    
+    // Automatically set policy and subjectGroup
+    if (a.gradeLevel >= 4 && a.gradeLevel <= 6) {
+      a.policy = 'KEY_STAGE_2_TRIMESTER';
+      a.subjectGroup = 'KS2_TRIMESTER';
+    } else {
+      if (!a.policy || a.policy === 'KEY_STAGE_2_TRIMESTER') {
+        a.policy = 'DO15_TRANSITION';
+      }
+      a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy);
+    }
+
     if (!a.assessments) a.assessments = [];
     if (!a.scores) a.scores = {};
     
     normalizeAssessmentComponents(a);
-    if (isKeyStage2(a) && a.assessments.length === 0) {
-      seedKeyStage2Assessments(a);
-    }
+    ensureTemplateAssessments(a);
   }
 }
 
@@ -55,7 +90,8 @@ async function loadDatabase() {
     if (localData) {
       db = localData;
       normalizeDatabase();
-      currentView = db.activeView || 'dashboard';
+      currentView = 'dashboard';
+      db.activeView = 'dashboard';
       recordTab = db.recordTab || db.currentTerm || '1';
     }
   } catch (error) {
@@ -118,8 +154,6 @@ function addAssignment() {
   const gradeLevel = document.getElementById('newGrade').value;
   const section = trim(document.getElementById('newSection').value);
   let subject = trim(document.getElementById('newSubject').value);
-  const subjectGroup = document.getElementById('newSubjectGroup').value;
-  const policy = document.getElementById('newPolicy').value;
 
   if (subject === 'Custom') {
     subject = trim(document.getElementById('customSubjectInput').value);
@@ -129,6 +163,9 @@ function addAssignment() {
     toast('Section and subject fields are required.', 'warning');
     return;
   }
+
+  const policy = determinePolicy(gradeLevel, subject);
+  const subjectGroup = determineSubjectGroup(gradeLevel, subject, policy);
 
   const assignment = {
     id: uid('class'),
@@ -142,10 +179,7 @@ function addAssignment() {
     scores: {}
   };
 
-  if (isKeyStage2(assignment)) {
-    assignment.policy = 'KEY_STAGE_2_TRIMESTER';
-    seedKeyStage2Assessments(assignment);
-  }
+  seedTemplateAssessments(assignment, templateForGrade(gradeLevel));
 
   db.assignments.push(assignment);
   db.currentAssignmentId = assignment.id;
@@ -157,6 +191,9 @@ function addAssignment() {
 
   saveDatabase();
   render();
+  if (typeof hideAddClassLoadModal === 'function') {
+    hideAddClassLoadModal();
+  }
   toast('Class load added successfully.', 'success');
 }
 
@@ -166,6 +203,10 @@ function addAssignment() {
 function selectAssignment(id) {
   db.currentAssignmentId = id;
   saveDatabase();
+  if (typeof setView === 'function') {
+    const targetView = (currentView === 'classes') ? 'classes' : 'record';
+    setView(targetView);
+  }
   render();
 }
 
@@ -195,10 +236,16 @@ function removeCurrentAssignment() {
 function updateProfile() {
   const teacherEl = document.getElementById('teacherName');
   const schoolEl = document.getElementById('schoolName');
+  const schoolIdEl = document.getElementById('schoolId');
+  const regionEl = document.getElementById('schoolRegion');
+  const divisionEl = document.getElementById('schoolDivision');
   const yearEl = document.getElementById('schoolYear');
   
   if (teacherEl) db.teacherName = teacherEl.value;
   if (schoolEl) db.schoolName = schoolEl.value;
+  if (schoolIdEl) db.schoolId = schoolIdEl.value;
+  if (regionEl) db.region = regionEl.value;
+  if (divisionEl) db.division = divisionEl.value;
   if (yearEl) db.schoolYear = yearEl.value;
 }
 
@@ -214,6 +261,9 @@ function clearLocalData() {
         version: DB_VERSION,
         teacherName: '',
         schoolName: '',
+        schoolId: '',
+        region: '',
+        division: '',
         schoolYear: '2026-2027',
         currentAssignmentId: '',
         currentTerm: '1',
@@ -228,4 +278,137 @@ function clearLocalData() {
       toast('All database contents cleared.', 'success');
     }
   );
+}
+
+/**
+ * Opens an edit modal for an existing teaching load assignment.
+ * @param {string} id Assignment ID to edit.
+ */
+function editAssignmentModal(id) {
+  const a = db.assignments.find(x => x.id === id);
+  if (!a) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal modal--wide">
+      <div class="modal__title">Edit Teaching Load</div>
+      <div class="modal__body">
+        <div class="split-row">
+          <div class="field">
+            <label class="field-label">Grade Level</label>
+            <select id="editGrade" class="field-input">
+              ${[1,2,3,4,5,6,7,8,9,10].map(g =>
+                `<option value="${g}" ${String(g) === String(a.gradeLevel) ? 'selected' : ''}>${g}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Section</label>
+            <input id="editSection" class="field-input" value="${esc(a.section)}" placeholder="Section name" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Subject</label>
+          <select id="editSubject" class="field-input"></select>
+        </div>
+        <div id="editCustomSubjectField" class="field" style="display:none">
+          <label class="field-label">Custom Subject Name</label>
+          <input id="editCustomSubjectInput" class="field-input" placeholder="e.g. Science Elective" />
+        </div>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-ghost btn-sm" id="editModalCancel">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="editModalSave">Save Changes</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
+
+  const editGradeSelect = overlay.querySelector('#editGrade');
+  const editSubjectSelect = overlay.querySelector('#editSubject');
+  const editCustomField = overlay.querySelector('#editCustomSubjectField');
+  const editCustomInput = overlay.querySelector('#editCustomSubjectInput');
+
+  const populateEditSubjects = () => {
+    const grade = parseInt(editGradeSelect.value);
+    const subjects = getSubjectsForGrade(grade);
+    
+    editSubjectSelect.innerHTML = '';
+    subjects.forEach(sub => {
+      const opt = document.createElement('option');
+      opt.value = sub;
+      opt.innerText = sub;
+      editSubjectSelect.appendChild(opt);
+    });
+    
+    const otherOpt = document.createElement('option');
+    otherOpt.value = 'Custom';
+    otherOpt.innerText = 'Other / Custom Subject…';
+    editSubjectSelect.appendChild(otherOpt);
+  };
+
+  const handleEditSubjectChange = () => {
+    if (editSubjectSelect.value === 'Custom') {
+      editCustomField.style.display = 'block';
+    } else {
+      editCustomField.style.display = 'none';
+    }
+  };
+
+  editSubjectSelect.addEventListener('change', handleEditSubjectChange);
+
+  // Populate initial state
+  populateEditSubjects();
+  const subjectsForInitialGrade = getSubjectsForGrade(a.gradeLevel);
+  if (subjectsForInitialGrade.includes(a.subject)) {
+    editSubjectSelect.value = a.subject;
+    editCustomField.style.display = 'none';
+    editCustomInput.value = '';
+  } else {
+    editSubjectSelect.value = 'Custom';
+    editCustomField.style.display = 'block';
+    editCustomInput.value = a.subject;
+  }
+
+  editGradeSelect.addEventListener('change', () => {
+    populateEditSubjects();
+    handleEditSubjectChange();
+  });
+
+  overlay.querySelector('#editModalCancel').addEventListener('click', close);
+  overlay.querySelector('#editModalSave').addEventListener('click', () => {
+    const newSection = trim(overlay.querySelector('#editSection').value);
+    let newSubject = editSubjectSelect.value;
+    if (newSubject === 'Custom') {
+      newSubject = trim(editCustomInput.value);
+    }
+    if (!newSection || !newSubject) {
+      toast('Section and subject cannot be empty.', 'warning');
+      return;
+    }
+    const newGrade = editGradeSelect.value;
+    const newPolicy = determinePolicy(newGrade, newSubject);
+
+    a.gradeLevel   = newGrade;
+    a.section      = newSection;
+    a.subject      = newSubject;
+    a.policy       = newPolicy;
+    a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy);
+
+    // Apply template assessments for new grade level
+    ensureTemplateAssessments(a);
+
+    close();
+    saveDatabase();
+    render();
+    toast('Teaching load updated.', 'success');
+  });
+
+  // Close on backdrop click
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  // Auto-focus section input
+  setTimeout(() => overlay.querySelector('#editSection').focus(), 80);
 }

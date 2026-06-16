@@ -20,6 +20,26 @@ function esc(value) {
 }
 
 /**
+ * Returns a subject color class suffix for a given subject name.
+ * Matches common DepEd subject names case-insensitively.
+ * @param {string} subject Subject name.
+ * @returns {string} One of: english|filipino|math|science|ap|epp|mapeh|gmrc|default
+ */
+function subjectColorClass(subject) {
+  if (!subject) return 'default';
+  const s = subject.toLowerCase();
+  if (/english/.test(s))                                            return 'english';
+  if (/filipin|wika|komunikasyon/.test(s))                         return 'filipino';
+  if (/math|matematika|numero/.test(s))                            return 'math';
+  if (/science|siyensya|agham/.test(s))                            return 'science';
+  if (/araling|panlipunan|\bap\b|hekasi|sibika/.test(s))           return 'ap';
+  if (/\bepp\b|tle|technology|livelihood|edukasyong pantahanan/.test(s)) return 'epp';
+  if (/mapeh|music|arts|physical|health/.test(s))                  return 'mapeh';
+  if (/gmrc|good manners|values|edukasyon sa pagpapakatao|\besp\b/.test(s)) return 'gmrc';
+  return 'default';
+}
+
+/**
  * Strips outer whitespace.
  */
 function trim(s) {
@@ -57,12 +77,12 @@ function blankZero(value) {
 }
 
 /**
- * Toggles element display block/none.
+ * Toggles element display.
  */
-function showEl(id, on) {
+function showEl(id, on, displayType = 'block') {
   const el = document.getElementById(id);
   if (el) {
-    el.style.display = on ? 'block' : 'none';
+    el.style.display = on ? displayType : 'none';
   }
 }
 
@@ -172,8 +192,93 @@ function confirmModal(title, message, onConfirm) {
  */
 function debounce(fn, waitMs) {
   let timer = null;
-  return function (...args) {
+  const debounced = function (...args) {
     clearTimeout(timer);
     timer = setTimeout(() => fn.apply(this, args), waitMs);
   };
+  debounced.cancel = function () {
+    clearTimeout(timer);
+  };
+  return debounced;
+}
+
+// ── Font Size Rocker ──────────────────────────────────────────────────────────
+
+const FONT_STEPS = [80, 85, 90, 95, 100, 105, 110, 115, 120];
+const FONT_DEFAULT_IDX = 4; // 100%
+let fontStepIndex = FONT_DEFAULT_IDX;
+
+/**
+ * Initialises font size from localStorage and applies it.
+ * Call once on app startup.
+ */
+function initFontSize() {
+  const saved = parseInt(localStorage.getItem('ecr_font_step'), 10);
+  fontStepIndex = (!isNaN(saved) && saved >= 0 && saved < FONT_STEPS.length)
+    ? saved
+    : FONT_DEFAULT_IDX;
+  applyFontSize();
+}
+
+/**
+ * Steps the font size up (+1) or down (-1).
+ * @param {number} dir +1 to increase, -1 to decrease.
+ */
+function adjustFontSize(dir) {
+  const next = fontStepIndex + dir;
+  if (next < 0 || next >= FONT_STEPS.length) return;
+  fontStepIndex = next;
+  localStorage.setItem('ecr_font_step', fontStepIndex);
+  applyFontSize();
+}
+
+/**
+ * Applies the current font step to the document root and updates the label/buttons.
+ */
+function applyFontSize() {
+  const pct = FONT_STEPS[fontStepIndex];
+  document.documentElement.style.fontSize = pct + '%';
+
+  const label = document.getElementById('fontSizeLabel');
+  const btnDec = document.getElementById('fontDecrease');
+  const btnInc = document.getElementById('fontIncrease');
+
+  if (label) label.textContent = pct + '%';
+  if (btnDec) btnDec.disabled = fontStepIndex === 0;
+  if (btnInc) btnInc.disabled = fontStepIndex === FONT_STEPS.length - 1;
+  
+  if (typeof adjustHpsStickyTop === 'function') {
+    setTimeout(adjustHpsStickyTop, 0);
+  }
+}
+
+/**
+ * Modern modal-based alert popup.
+ * @param {string} title Header title.
+ * @param {string} message Description.
+ */
+function alertModal(title, message) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal__title">${esc(title)}</div>
+      <div class="modal__body">${esc(message)}</div>
+      <div class="modal__actions">
+        <button class="btn btn-primary btn-sm" id="alertModalOk">OK</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  
+  const okBtn = overlay.querySelector('#alertModalOk');
+  
+  const close = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+  
+  okBtn.addEventListener('click', close);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
 }

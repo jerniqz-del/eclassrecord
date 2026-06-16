@@ -225,3 +225,89 @@ function splitSf1Name(raw) {
     middleName: normalizeNamePart(middleName)
   };
 }
+
+/**
+ * Renders a structured list of students currently enrolled in the active load.
+ */
+function renderLearnersRoster() {
+  const target = document.getElementById('classRosterContainer');
+  if (!target) return;
+  
+  const a = currentAssignment();
+  if (!a) {
+    target.innerHTML = '';
+    return;
+  }
+  
+  if (a.learners.length === 0) {
+    target.innerHTML = `
+      <div class="text-muted text-sm" style="padding:var(--space-4);text-align:center">
+        No learners registered in this class roster. Upload an SF1 spreadsheet or add a learner to get started.
+      </div>
+    `;
+    return;
+  }
+  
+  let html = `
+    <table class="roster-table" style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border-color);text-align:left">
+          <th style="padding:var(--space-2);width:8%">No.</th>
+          <th style="padding:var(--space-2);width:25%">LRN</th>
+          <th style="padding:var(--space-2)">Name</th>
+          <th style="padding:var(--space-2);width:15%">Sex</th>
+          <th style="padding:var(--space-2);width:10%;text-align:center">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  
+  for (let i = 0; i < a.learners.length; i++) {
+    const l = a.learners[i];
+    html += `
+      <tr style="border-bottom:1px solid var(--border-color)">
+        <td style="padding:var(--space-2)">${i + 1}</td>
+        <td style="padding:var(--space-2)">${esc(l.lrn || '—')}</td>
+        <td style="padding:var(--space-2)"><strong>${esc(learnerDisplayName(l))}</strong></td>
+        <td style="padding:var(--space-2)">${esc(l.sex || '—')}</td>
+        <td style="padding:var(--space-2);text-align:center">
+          <button class="btn btn-warn btn-sm" style="padding:var(--space-1) var(--space-2)" 
+            title="Remove student" 
+            onclick="removeLearner('${esc(l.id)}')">
+            Remove
+          </button>
+        </td>
+      </tr>
+    `;
+  }
+  
+  html += '</tbody></table>';
+  target.innerHTML = html;
+}
+
+/**
+ * Removes an individual student from the roster list with confirmation.
+ */
+function removeLearner(learnerId) {
+  const a = currentAssignment();
+  if (!a) return;
+  
+  const learner = a.learners.find(x => x.id === learnerId);
+  if (!learner) return;
+  
+  confirmModal(
+    'Remove Learner',
+    `Are you sure you want to remove ${learnerDisplayName(learner)}? All associated scores will be permanently deleted.`,
+    () => {
+      a.learners = a.learners.filter(x => x.id !== learnerId);
+      for (const key in a.scores) {
+        if (key.startsWith(learnerId + '|')) {
+          delete a.scores[key];
+        }
+      }
+      saveDatabase();
+      render();
+      toast('Learner removed.', 'success');
+    }
+  );
+}

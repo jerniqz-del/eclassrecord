@@ -14,11 +14,11 @@ async function exportJson() {
   try {
     const result = await window.electronAPI.exportJson(text);
     if (result.success) {
-      toast('Backup exported successfully.', 'success');
+      toast('Backup downloaded successfully.', 'success');
     }
   } catch (error) {
     console.error(error);
-    toast('Export failed: ' + error.message, 'error');
+    toast('Download failed: ' + error.message, 'error');
   }
 }
 
@@ -37,11 +37,11 @@ async function importJsonBackupFile() {
       normalizeDatabase();
       await saveDatabase();
       render();
-      toast('Database successfully restored from file backup.', 'success');
+      toast('Backup uploaded successfully.', 'success');
     }
   } catch (error) {
     console.error(error);
-    toast('Import failed: ' + error.message, 'error');
+    toast('Upload failed: ' + error.message, 'error');
   }
 }
 
@@ -94,57 +94,141 @@ async function exportCsv() {
   }
   
   let csvContent = '';
+  const isMapeh = isMapehSubject(a.subject);
   
-  if (recordTab === 'summary') {
-    // Export Final Grades Summary
-    csvContent += 'No.,LRN,Learner,Sex,Term 1,Term 2,Term 3,Final Grade,Remarks\n';
-    for (let r = 0; r < a.learners.length; r++) {
-      const learner = a.learners[r];
-      const terms = [];
-      let sum = 0;
-      let count = 0;
-      for (let t = 1; t <= 3; t++) {
-        const res = computeTerm(a, learner.id, String(t));
-        terms.push(res.termGrade);
-        if (res.termGrade !== null) {
-          sum += res.termGrade;
-          count++;
+  if (isMapeh && currentMapehSubTab === 'consolidated') {
+    if (recordTab === 'summary') {
+      // Export Consolidated Final Summary
+      csvContent += 'No.,LRN,Learner,Music & Arts Final,PE & Health Final,Term 1 Consolidated,Term 2 Consolidated,Term 3 Consolidated,MAPEH Final,Remarks\n';
+      for (let r = 0; r < a.learners.length; r++) {
+        const learner = a.learners[r];
+        
+        let sumMusic = 0, countMusic = 0;
+        let sumPE = 0, countPE = 0;
+        const consGrades = [];
+
+        for (let t = 1; t <= 3; t++) {
+          const resMusic = computeTerm(a, learner.id, String(t), 'music_arts');
+          const resPE = computeTerm(a, learner.id, String(t), 'pe_health');
+
+          const gm = resMusic.termGrade;
+          const gp = resPE.termGrade;
+
+          if (gm !== null) {
+            sumMusic += gm;
+            countMusic++;
+          }
+          if (gp !== null) {
+            sumPE += gp;
+            countPE++;
+          }
+
+          let gc = '';
+          if (gm !== null && gp !== null) {
+            gc = Math.round((gm + gp) / 2);
+          } else if (gm !== null) {
+            gc = gm;
+          } else if (gp !== null) {
+            gc = gp;
+          }
+          consGrades.push(gc);
         }
+
+        const musicFinal = countMusic > 0 ? Math.round(sumMusic / countMusic) : '';
+        const peFinal = countPE > 0 ? Math.round(sumPE / countPE) : '';
+
+        let finalConsolidated = '';
+        if (musicFinal !== '' && peFinal !== '') {
+          finalConsolidated = Math.round((musicFinal + peFinal) / 2);
+        } else if (musicFinal !== '') {
+          finalConsolidated = musicFinal;
+        } else if (peFinal !== '') {
+          finalConsolidated = peFinal;
+        }
+
+        const remarkText = finalConsolidated !== '' ? (finalConsolidated >= 75 ? 'Passed' : 'For Intervention') : '';
+        csvContent += `"${r + 1}","${learner.lrn}","${learnerDisplayName(learner)}","${musicFinal}","${peFinal}","${consGrades[0]}","${consGrades[1]}","${consGrades[2]}","${finalConsolidated}","${remarkText}"\n`;
       }
-      const fg = count > 0 ? Math.round(sum / count) : '';
-      const remarkText = fg !== '' ? (fg >= 75 ? 'Passed' : 'For Intervention') : '';
-      csvContent += `"${r + 1}","${learner.lrn}","${learnerDisplayName(learner)}","${learner.sex}","${blankNull(terms[0])}","${blankNull(terms[1])}","${blankNull(terms[2])}","${fg}","${remarkText}"\n`;
+    } else {
+      // Export Consolidated Term Sheet
+      const term = db.currentTerm || '1';
+      csvContent += 'No.,Learner,Sex,Music & Arts Grade,PE & Health Grade,Consolidated Grade,Remarks\n';
+      for (let r = 0; r < a.learners.length; r++) {
+        const learner = a.learners[r];
+        const resMusic = computeTerm(a, learner.id, term, 'music_arts');
+        const resPE = computeTerm(a, learner.id, term, 'pe_health');
+
+        const gMusic = resMusic.termGrade;
+        const gPE = resPE.termGrade;
+        
+        let consolidated = '';
+        if (gMusic !== null && gPE !== null) {
+          consolidated = Math.round((gMusic + gPE) / 2);
+        } else if (gMusic !== null) {
+          consolidated = gMusic;
+        } else if (gPE !== null) {
+          consolidated = gPE;
+        }
+
+        const remarkText = consolidated !== '' ? (consolidated >= 75 ? 'Passed' : 'For Intervention') : '';
+        csvContent += `"${r + 1}","${learnerDisplayName(learner)}","${learner.sex}","${blankNull(gMusic)}","${blankNull(gPE)}","${consolidated}","${remarkText}"\n`;
+      }
     }
   } else {
-    // Export Active Term Grid
-    const items = termAssessments(a, db.currentTerm);
-    let headerRow = 'No.,Learner,Sex';
-    for (let i = 0; i < items.length; i++) {
-      headerRow += `,"${componentLabel(items[i].component)} - ${items[i].title}"`;
-    }
-    headerRow += ',Initial Grade,Transmuted Grade,Description\n';
-    csvContent += headerRow;
+    // Standard non-consolidated CSV export (or specific component of MAPEH if selected)
+    const mapePart = isMapeh ? currentMapehSubTab : undefined;
     
-    // Header Highest Possible Score
-    let hpsRow = ',HPS,';
-    for (let i = 0; i < items.length; i++) {
-      hpsRow += `,"${items[i].maxScore}"`;
-    }
-    hpsRow += ',,,\n';
-    csvContent += hpsRow;
-    
-    // Learners Row
-    for (let r = 0; r < a.learners.length; r++) {
-      const learner = a.learners[r];
-      const result = computeTerm(a, learner.id, db.currentTerm);
-      let row = `"${r + 1}","${learnerDisplayName(learner)}","${learner.sex}"`;
-      for (let j = 0; j < items.length; j++) {
-        const key = `${learner.id}|${items[j].id}`;
-        const scoreVal = a.scores[key] === undefined ? '' : a.scores[key];
-        row += `,"${scoreVal}"`;
+    if (recordTab === 'summary') {
+      // Export Final Grades Summary
+      csvContent += 'No.,LRN,Learner,Sex,Term 1,Term 2,Term 3,Final Grade,Remarks\n';
+      for (let r = 0; r < a.learners.length; r++) {
+        const learner = a.learners[r];
+        const terms = [];
+        let sum = 0;
+        let count = 0;
+        for (let t = 1; t <= 3; t++) {
+          const res = computeTerm(a, learner.id, String(t), mapePart);
+          terms.push(res.termGrade);
+          if (res.termGrade !== null) {
+            sum += res.termGrade;
+            count++;
+          }
+        }
+        const fg = count > 0 ? Math.round(sum / count) : '';
+        const remarkText = fg !== '' ? (fg >= 75 ? 'Passed' : 'For Intervention') : '';
+        csvContent += `"${r + 1}","${learner.lrn}","${learnerDisplayName(learner)}","${learner.sex}","${blankNull(terms[0])}","${blankNull(terms[1])}","${blankNull(terms[2])}","${fg}","${remarkText}"\n`;
       }
-      row += `,"${result.hasData ? fmt(result.initialGrade) : ''}","${result.termGrade === null ? '' : result.termGrade}","${termDescription(a, result.termGrade)}"\n`;
-      csvContent += row;
+    } else {
+      // Export Active Term Grid
+      const items = termAssessments(a, db.currentTerm, mapePart);
+      let headerRow = 'No.,Learner,Sex';
+      for (let i = 0; i < items.length; i++) {
+        headerRow += `,"${componentLabel(items[i].component)} - ${items[i].title}"`;
+      }
+      headerRow += ',Initial Grade,Transmuted Grade,Description\n';
+      csvContent += headerRow;
+      
+      // Header Highest Possible Score
+      let hpsRow = ',HPS,';
+      for (let i = 0; i < items.length; i++) {
+        hpsRow += `,"${items[i].maxScore}"`;
+      }
+      hpsRow += ',,,\n';
+      csvContent += hpsRow;
+      
+      // Learners Row
+      for (let r = 0; r < a.learners.length; r++) {
+        const learner = a.learners[r];
+        const result = computeTerm(a, learner.id, db.currentTerm, mapePart);
+        let row = `"${r + 1}","${learnerDisplayName(learner)}","${learner.sex}"`;
+        for (let j = 0; j < items.length; j++) {
+          const key = `${learner.id}|${items[j].id}`;
+          const scoreVal = a.scores[key] === undefined ? '' : a.scores[key];
+          row += `,"${scoreVal}"`;
+        }
+        row += `,"${result.hasData ? fmt(result.initialGrade) : ''}","${result.termGrade === null ? '' : result.termGrade}","${termDescription(a, result.termGrade)}"\n`;
+        csvContent += row;
+      }
     }
   }
   
@@ -206,7 +290,7 @@ function runImport() {
       saveDatabase();
       toggleImport('');
       render();
-      toast('JSON Backup imported.', 'success');
+      toast('JSON Backup restored.', 'success');
     } catch (e) {
       toast('Paste import failed: ' + e.message, 'error');
     }
@@ -428,3 +512,267 @@ function parseCsvLine(line) {
   out.push(cur);
   return out;
 }
+
+/**
+ * Compiles grading database state and exports using the Templates.xlsx Excel file.
+ */
+async function exportToExcelTemplate() {
+  const a = currentAssignment();
+  if (!a) return;
+  
+  toast('Compiling data for Excel template...', 'info');
+  const payload = buildExcelExportPayload(a);
+  
+  try {
+    const result = await window.electronAPI.exportExcelTemplate(payload);
+    if (result.success) {
+      toast(`Successfully exported to: ${result.path}`, 'success');
+    }
+  } catch (err) {
+    console.error(err);
+    toast('Excel export failed: ' + err.message, 'error');
+  }
+}
+
+function buildExcelExportPayload(a) {
+  const isMapeh = isMapehSubject(a.subject);
+  
+  const baseData = {
+    schoolName: db.schoolName || '',
+    schoolId: db.schoolId || '',
+    region: db.region || '',
+    division: db.division || '',
+    schoolYear: db.schoolYear || '',
+    gradeLevel: a.gradeLevel,
+    section: a.section,
+    subject: a.subject,
+    teacherName: db.teacherName || '',
+    isMapeh: isMapeh
+  };
+
+  if (!isMapeh) {
+    const males = a.learners.filter(l => l.sex === 'M');
+    const females = a.learners.filter(l => l.sex === 'F');
+
+    baseData.males = males.map(student => compileStudentExcelData(a, student, undefined));
+    baseData.females = females.map(student => compileStudentExcelData(a, student, undefined));
+    baseData.terms = {
+      '1': compileTermHps(a, '1', undefined),
+      '2': compileTermHps(a, '2', undefined),
+      '3': compileTermHps(a, '3', undefined)
+    };
+  } else {
+    baseData.music_arts = {
+      ...baseData,
+      males: a.learners.filter(l => l.sex === 'M').map(student => compileStudentExcelData(a, student, 'music_arts')),
+      females: a.learners.filter(l => l.sex === 'F').map(student => compileStudentExcelData(a, student, 'music_arts')),
+      terms: {
+        '1': compileTermHps(a, '1', 'music_arts'),
+        '2': compileTermHps(a, '2', 'music_arts'),
+        '3': compileTermHps(a, '3', 'music_arts')
+      }
+    };
+    
+    baseData.pe_health = {
+      ...baseData,
+      males: a.learners.filter(l => l.sex === 'M').map(student => compileStudentExcelData(a, student, 'pe_health')),
+      females: a.learners.filter(l => l.sex === 'F').map(student => compileStudentExcelData(a, student, 'pe_health')),
+      terms: {
+        '1': compileTermHps(a, '1', 'pe_health'),
+        '2': compileTermHps(a, '2', 'pe_health'),
+        '3': compileTermHps(a, '3', 'pe_health')
+      }
+    };
+    
+    baseData.consolidated = {
+      males: a.learners.filter(l => l.sex === 'M').map(student => compileStudentConsolidatedExcelData(a, student)),
+      females: a.learners.filter(l => l.sex === 'F').map(student => compileStudentConsolidatedExcelData(a, student))
+    };
+  }
+  
+  return baseData;
+}
+
+function compileStudentExcelData(a, student, mapePart) {
+  const terms = {};
+  let finalGrade = null;
+  let term1 = null, term2 = null, term3 = null;
+  let termCount = 0;
+  let sum = 0;
+  
+  for (let t = 1; t <= 3; t++) {
+    const termStr = String(t);
+    const result = computeTerm(a, student.id, termStr, mapePart);
+    const wwAssessments = termAssessments(a, termStr, mapePart).filter(x => x.component === 'WW');
+    const ptAssessments = termAssessments(a, termStr, mapePart).filter(x => x.component === 'PT');
+    const sa1Ast = termAssessments(a, termStr, mapePart).find(x => x.component === 'SA1' || x.component === 'ST1');
+    const sa2Ast = termAssessments(a, termStr, mapePart).find(x => x.component === 'SA2' || x.component === 'ST2');
+    const teAst = termAssessments(a, termStr, mapePart).find(x => x.component === 'TE');
+    
+    const wwScores = wwAssessments.map(ast => {
+      const val = a.scores[`${student.id}|${ast.id}`];
+      return (val !== undefined && val !== '') ? parseFloat(val) : '';
+    });
+    const ptScores = ptAssessments.map(ast => {
+      const val = a.scores[`${student.id}|${ast.id}`];
+      return (val !== undefined && val !== '') ? parseFloat(val) : '';
+    });
+    const sa1Score = sa1Ast ? a.scores[`${student.id}|${sa1Ast.id}`] : '';
+    const sa2Score = sa2Ast ? a.scores[`${student.id}|${sa2Ast.id}`] : '';
+    const teScore = teAst ? a.scores[`${student.id}|${teAst.id}`] : '';
+    
+    terms[termStr] = {
+      ww: wwScores,
+      wwTotal: result.ww.hasData ? result.ww.raw : '',
+      wwPS: result.ww.hasData ? result.ww.ps : '',
+      wwWS: result.ww.hasData ? (result.ww.ps * weightsFor(a.subjectGroup)[0] / 100) : '',
+      
+      pt: ptScores,
+      ptTotal: result.pt.hasData ? result.pt.raw : '',
+      ptPS: result.pt.hasData ? result.pt.ps : '',
+      ptWS: result.pt.hasData ? (result.pt.ps * weightsFor(a.subjectGroup)[1] / 100) : '',
+      
+      sa1: (sa1Score !== undefined && sa1Score !== '') ? parseFloat(sa1Score) : '',
+      sa2: (sa2Score !== undefined && sa2Score !== '') ? parseFloat(sa2Score) : '',
+      te: (teScore !== undefined && teScore !== '') ? parseFloat(teScore) : '',
+      saTotal: result.hasData ? (result.st1.raw + result.st2.raw + result.te.raw) : '',
+      saPS: result.hasData ? result.examPS : '',
+      saWS: result.hasData ? (result.examPS * weightsFor(a.subjectGroup)[2] / 100) : '',
+      
+      initialGrade: result.hasData ? result.initialGrade : '',
+      termGrade: result.termGrade !== null ? result.termGrade : '',
+      desc: result.termGrade !== null ? termDescription(a, result.termGrade) : ''
+    };
+    
+    if (result.termGrade !== null) {
+      sum += result.termGrade;
+      termCount++;
+      if (t === 1) term1 = result.termGrade;
+      if (t === 2) term2 = result.termGrade;
+      if (t === 3) term3 = result.termGrade;
+    }
+  }
+  
+  if (termCount > 0) {
+    finalGrade = Math.round(sum / termCount);
+  }
+  
+  return {
+    name: formatLearnerName(student.lastName, student.firstName, student.middleName),
+    terms,
+    final: {
+      term1: term1 !== null ? term1 : '',
+      term2: term2 !== null ? term2 : '',
+      term3: term3 !== null ? term3 : '',
+      finalGrade: finalGrade !== null ? finalGrade : '',
+      remarks: finalGrade !== null ? plainFinalRemark(a, finalGrade) : ''
+    }
+  };
+}
+
+function compileTermHps(a, term, mapePart) {
+  const termStr = String(term);
+  const wwAssessments = termAssessments(a, termStr, mapePart).filter(x => x.component === 'WW');
+  const ptAssessments = termAssessments(a, termStr, mapePart).filter(x => x.component === 'PT');
+  const sa1Ast = termAssessments(a, termStr, mapePart).find(x => x.component === 'SA1' || x.component === 'ST1');
+  const sa2Ast = termAssessments(a, termStr, mapePart).find(x => x.component === 'SA2' || x.component === 'ST2');
+  const teAst = termAssessments(a, termStr, mapePart).find(x => x.component === 'TE');
+  
+  const wwHps = wwAssessments.map(ast => (ast.maxScore !== undefined && ast.maxScore !== '') ? number(ast.maxScore) : '');
+  const ptHps = ptAssessments.map(ast => (ast.maxScore !== undefined && ast.maxScore !== '') ? number(ast.maxScore) : '');
+  const sa1Hps = (sa1Ast && sa1Ast.maxScore !== '') ? number(sa1Ast.maxScore) : '';
+  const sa2Hps = (sa2Ast && sa2Ast.maxScore !== '') ? number(sa2Ast.maxScore) : '';
+  const teHps = (teAst && teAst.maxScore !== '') ? number(teAst.maxScore) : '';
+  
+  return {
+    wwHps,
+    ptHps,
+    sa1Hps,
+    sa2Hps,
+    teHps
+  };
+}
+
+function compileStudentConsolidatedExcelData(a, student) {
+  const name = formatLearnerName(student.lastName, student.firstName, student.middleName);
+  
+  const res1Music = computeTerm(a, student.id, '1', 'music_arts');
+  const res1PE = computeTerm(a, student.id, '1', 'pe_health');
+  const g1Music = res1Music.termGrade;
+  const g1PE = res1PE.termGrade;
+  let g1Cons = '';
+  if (g1Music !== null && g1PE !== null) g1Cons = Math.round((g1Music + g1PE) / 2);
+  else if (g1Music !== null) g1Cons = g1Music;
+  else if (g1PE !== null) g1Cons = g1PE;
+  
+  const res2Music = computeTerm(a, student.id, '2', 'music_arts');
+  const res2PE = computeTerm(a, student.id, '2', 'pe_health');
+  const g2Music = res2Music.termGrade;
+  const g2PE = res2PE.termGrade;
+  let g2Cons = '';
+  if (g2Music !== null && g2PE !== null) g2Cons = Math.round((g2Music + g2PE) / 2);
+  else if (g2Music !== null) g2Cons = g2Music;
+  else if (g2PE !== null) g2Cons = g2PE;
+  
+  const res3Music = computeTerm(a, student.id, '3', 'music_arts');
+  const res3PE = computeTerm(a, student.id, '3', 'pe_health');
+  const g3Music = res3Music.termGrade;
+  const g3PE = res3PE.termGrade;
+  let g3Cons = '';
+  if (g3Music !== null && g3PE !== null) g3Cons = Math.round((g3Music + g3PE) / 2);
+  else if (g3Music !== null) g3Cons = g3Music;
+  else if (g3PE !== null) g3Cons = g3PE;
+  
+  let musicFinal = '', peFinal = '', finalConsolidated = '', remarks = '';
+  let sumMusic = 0, countMusic = 0;
+  let sumPE = 0, countPE = 0;
+  
+  if (g1Music !== null) { sumMusic += g1Music; countMusic++; }
+  if (g2Music !== null) { sumMusic += g2Music; countMusic++; }
+  if (g3Music !== null) { sumMusic += g3Music; countMusic++; }
+  
+  if (g1PE !== null) { sumPE += g1PE; countPE++; }
+  if (g2PE !== null) { sumPE += g2PE; countPE++; }
+  if (g3PE !== null) { sumPE += g3PE; countPE++; }
+  
+  if (countMusic > 0) musicFinal = Math.round(sumMusic / countMusic);
+  if (countPE > 0) peFinal = Math.round(sumPE / countPE);
+  
+  if (musicFinal !== '' && peFinal !== '') {
+    finalConsolidated = Math.round((musicFinal + peFinal) / 2);
+  } else if (musicFinal !== '') {
+    finalConsolidated = musicFinal;
+  } else if (peFinal !== '') {
+    finalConsolidated = peFinal;
+  }
+  
+  if (finalConsolidated !== '') {
+    remarks = plainFinalRemark(a, finalConsolidated);
+  }
+  
+  return {
+    name,
+    t1Music: g1Music !== null ? g1Music : '',
+    t1PE: g1PE !== null ? g1PE : '',
+    t1Cons: g1Cons,
+    t2Music: g2Music !== null ? g2Music : '',
+    t2PE: g2PE !== null ? g2PE : '',
+    t2Cons: g2Cons,
+    t3Music: g3Music !== null ? g3Music : '',
+    t3PE: g3PE !== null ? g3PE : '',
+    t3Cons: g3Cons,
+    musicFinal,
+    peFinal,
+    finalConsolidated,
+    remarks
+  };
+}
+
+function plainFinalRemark(a, grade) {
+  if (grade === null || grade === undefined || grade === '') return '';
+  const isPass = grade >= 75;
+  const desc = descriptor(grade);
+  if (isKeyStage2(a)) return desc;
+  return isPass ? `Passed - ${desc}` : `For Intervention - ${desc}`;
+}
+

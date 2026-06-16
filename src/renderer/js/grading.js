@@ -5,6 +5,13 @@
  * including DO 15 s.2026, DO 8 s.2015, and Key Stage 2 Trimester.
  */
 
+let currentMapehSubTab = 'music_arts';
+
+function isMapehSubject(subject) {
+  const s = (subject || '').toLowerCase();
+  return s === 'mapeh' || s.includes('mapeh') || s.includes('music and arts') || s.includes('physical education and health') || s === 'arts and physical education';
+}
+
 // Transmutation table: DO 015, s. 2026 Transition
 const adjusted2026 = [
   [99.50, 100.00, 100], [98.32, 99.49, 99], [97.14, 98.31, 98], [95.96, 97.13, 97],
@@ -37,15 +44,30 @@ const legacy2015 = [
 
 // Transmutation table: Key Stage 2 Trimester
 const keyStage2Transmutation = [
-  [99.5, 100], [97.5, 99], [96, 98], [95, 97], [94, 96], [93, 95], [92, 94], [91, 93],
-  [90, 92], [89, 91], [88, 90], [87, 89], [86, 88], [85, 87], [84, 86], [83, 85],
-  [82, 84], [81, 83], [80, 82], [79, 81], [78, 80], [77, 79], [76, 78], [75, 77],
-  [73, 76], [70, 75], [68, 74], [66, 73], [64, 72], [62, 71], [60, 70], [58, 69],
-  [56, 68], [54, 67], [52, 66], [50, 65], [48, 64], [46, 63], [43, 62], [40, 61],
-  [0, 60]
+  [99.50, 100], [98.32, 99], [97.14, 98], [95.96, 97], [94.78, 96], [93.60, 95], [92.42, 94], [91.24, 93],
+  [90.06, 92], [88.88, 91], [87.70, 90], [86.52, 89], [85.34, 88], [84.16, 87], [82.98, 86], [81.80, 85],
+  [80.62, 84], [79.44, 83], [78.26, 82], [77.08, 81], [75.90, 80], [74.72, 79], [73.54, 78], [72.36, 77],
+  [71.18, 76], [70.00, 75], [65.34, 74], [60.67, 73], [56.01, 72], [51.34, 71], [46.67, 70], [42.01, 69],
+  [37.34, 68], [32.68, 67], [28.01, 66], [23.35, 65], [18.68, 64], [14.01, 63], [9.35, 62], [4.68, 61],
+  [0.00, 60]
 ];
 
-// Key Stage 2 Preset Template for Trimesters
+// Key Stage 1 Template (Grades 1-3)
+const keyStage1Template = [
+  { component: 'WW', title: 'WW 1' },
+  { component: 'WW', title: 'WW 2' },
+  { component: 'WW', title: 'WW 3' },
+  { component: 'WW', title: 'WW 4' },
+  { component: 'PT', title: 'PT 1' },
+  { component: 'PT', title: 'PT 2' },
+  { component: 'PT', title: 'PT 3' },
+  { component: 'PT', title: 'PT 4' },
+  { component: 'SA1', title: 'SA1' },
+  { component: 'SA2', title: 'SA2' },
+  { component: 'TE', title: 'TE' }
+];
+
+// Key Stage 2 Preset Template for Trimesters (Grades 4-6)
 const keyStage2Template = [
   { component: 'WW', title: 'WW 1' },
   { component: 'WW', title: 'WW 2' },
@@ -59,6 +81,113 @@ const keyStage2Template = [
   { component: 'SA2', title: 'SA2' },
   { component: 'TE', title: 'TE' }
 ];
+
+// Junior High Template (Grades 7-10)
+const juniorHighTemplate = [
+  { component: 'WW', title: 'WW 1' },
+  { component: 'WW', title: 'WW 2' },
+  { component: 'WW', title: 'WW 3' },
+  { component: 'WW', title: 'WW 4' },
+  { component: 'WW', title: 'WW 5' },
+  { component: 'PT', title: 'PT 1' },
+  { component: 'PT', title: 'PT 2' },
+  { component: 'PT', title: 'PT 3' },
+  { component: 'PT', title: 'PT 4' },
+  { component: 'PT', title: 'PT 5' },
+  { component: 'SA1', title: 'SA1' },
+  { component: 'SA2', title: 'SA2' },
+  { component: 'TE', title: 'TE' }
+];
+
+// Senior High Template (Grades 11-12)
+const seniorHighTemplate = [
+  { component: 'WW', title: 'WW 1' },
+  { component: 'WW', title: 'WW 2' },
+  { component: 'WW', title: 'WW 3' },
+  { component: 'WW', title: 'WW 4' },
+  { component: 'PT', title: 'PT 1' },
+  { component: 'PT', title: 'PT 2' },
+  { component: 'PT', title: 'PT 3' },
+  { component: 'PT', title: 'PT 4' },
+  { component: 'PT', title: 'PT 5' },
+  { component: 'SA1', title: 'SA1' },
+  { component: 'SA2', title: 'SA2' },
+  { component: 'TE', title: 'TE' }
+];
+
+/**
+ * Returns the assessment template matching the given grade level.
+ * @param {string|number} gradeLevel
+ */
+function templateForGrade(gradeLevel) {
+  const grade = parseInt(gradeLevel);
+  if (grade <= 3) return keyStage1Template;
+  if (grade <= 6) return keyStage2Template;
+  if (grade <= 10) return juniorHighTemplate;
+  return seniorHighTemplate;
+}
+
+/**
+ * Returns the list of standard subjects for a given grade level.
+ * @param {string|number} gradeLevel
+ * @returns {string[]}
+ */
+function getSubjectsForGrade(gradeLevel) {
+  const grade = parseInt(gradeLevel);
+  if (grade === 1) {
+    return [
+      'Language',
+      'Reading and Literacy',
+      'Mathematics',
+      'Makabansa',
+      'Good Manners and Right Conduct (GMRC)',
+      'Arts and Physical Education'
+    ];
+  } else if (grade === 2) {
+    return [
+      'Filipino',
+      'English',
+      'Mathematics',
+      'Makabansa',
+      'Good Manners and Right Conduct (GMRC)',
+      'Music, Arts, Physical Education, and Health (MAPEH)'
+    ];
+  } else if (grade === 3) {
+    return [
+      'Filipino',
+      'English',
+      'Mathematics',
+      'Science',
+      'Makabansa',
+      'Good Manners and Right Conduct (GMRC)',
+      'Music, Arts, Physical Education, and Health (MAPEH)'
+    ];
+  } else if (grade >= 4 && grade <= 6) {
+    return [
+      'Filipino',
+      'English',
+      'Mathematics',
+      'Science',
+      'Araling Panlipunan',
+      'Good Manners and Right Conduct (GMRC)',
+      'EPP/TLE',
+      'MAPEH'
+    ];
+  } else if (grade >= 7 && grade <= 10) {
+    return [
+      'Filipino',
+      'English',
+      'Mathematics',
+      'Science',
+      'Araling Panlipunan',
+      'Values Education',
+      'EPP/TLE',
+      'MAPEH'
+    ];
+  } else {
+    return [];
+  }
+}
 
 /**
  * Returns weight configuration [Written Work %, Performance Task %, Exam %].
@@ -88,6 +217,100 @@ function weightsFor(group) {
 }
 
 /**
+ * Automatically calculates and assigns the weight set (subjectGroup)
+ * based on the grade level, subject keywords, and selected policy mode.
+ */
+function determineSubjectGroup(gradeLevel, subject, policy) {
+  const grade = parseInt(gradeLevel);
+  const s = (subject || '').toLowerCase();
+  
+  if (policy === 'DO8_2015') {
+    // DO 8 Legacy weights rules
+    if (grade >= 11) {
+      if (/immersion|research|inquiries|investigation|practical/i.test(s)) {
+        return 'DO8_SHS_ACAD_WORK';
+      }
+      if (/tvl|tech|livelihood|empowerment/i.test(s)) {
+        return 'DO8_SHS_TVL';
+      }
+      if (/oral|reading|writing|komunikasyon|pagbasa|philosophy|pe|health|physical/i.test(s)) {
+        return 'DO8_SHS_CORE';
+      }
+      return 'DO8_SHS_ACAD_OTHER';
+    } else {
+      if (/english|filipin|ap|araling|panlipunan|esp|values|gmrc/i.test(s)) {
+        return 'DO8_LANG_AP_ESP';
+      }
+      if (/science|agham|math|matematika/i.test(s)) {
+        return 'DO8_SCI_MATH';
+      }
+      if (/mapeh|music|arts|physical|health|tle|epp|livelihood/i.test(s)) {
+        return 'DO8_MUSIC_TLE';
+      }
+      return 'DO8_LANG_AP_ESP'; // standard fallback
+    }
+  } else {
+    // DO 15 weights rules
+    if (grade >= 4 && grade <= 6) {
+      return 'KS2_TRIMESTER';
+    }
+    if (grade >= 11) {
+      if (/immersion|work/i.test(s)) {
+        return 'SHS_WORK';
+      }
+      if (/field|exposure/i.test(s)) {
+        return 'SHS_FIELD';
+      }
+      if (/research|inquiries|investigation|practical/i.test(s)) {
+        return 'SHS_RESEARCH';
+      }
+      if (/techpro|elective/i.test(s)) {
+        return 'SHS_TECHPRO';
+      }
+      if (/arts|sports/i.test(s)) {
+        return 'SHS_ARTS';
+      }
+      return 'SHS_CORE';
+    } else {
+      if (/mapeh|music|arts|physical|health|tle|epp|livelihood/i.test(s)) {
+        return 'SKILLS_20_60_20';
+      }
+      return 'CORE_20_50_30';
+    }
+  }
+}
+
+/**
+ * Automatically determines the appropriate policy mode based on grade level and subject.
+ * @param {string|number} gradeLevel
+ * @param {string} subject
+ * @returns {string} One of: KEY_STAGE_2_TRIMESTER|DO15_ZERO|DO15_TRANSITION
+ */
+function determinePolicy(gradeLevel, subject) {
+  const grade = parseInt(gradeLevel);
+  if (grade >= 4 && grade <= 6) {
+    return 'KEY_STAGE_2_TRIMESTER';
+  }
+  
+  const s = (subject || '').toLowerCase();
+  
+  // Grade 11-12 TVL / Work Immersion / Electives
+  if (grade >= 11) {
+    if (/immersion|work|field|exposure|techpro|tvl/i.test(s)) {
+      return 'DO15_ZERO';
+    }
+    return 'DO15_TRANSITION';
+  }
+  
+  // Grades 1-10 TLE / EPP / Skills-heavy subjects
+  if (/tle|epp|livelihood|technology/i.test(s)) {
+    return 'DO15_ZERO';
+  }
+  
+  return 'DO15_TRANSITION';
+}
+
+/**
  * Checks if teaching load uses Key Stage 2.
  */
 function isKeyStage2(a) {
@@ -106,48 +329,83 @@ function normalizeAssessmentComponents(a) {
 }
 
 /**
- * Pre-populates KS2 assessments.
+ * Seeds standard assessments according to grade-level templates.
  */
-function seedKeyStage2Assessments(a) {
+function seedTemplateAssessments(a, template) {
+  a.assessments = [];
+  const isMapeh = isMapehSubject(a.subject);
+  const parts = isMapeh ? ['music_arts', 'pe_health'] : [undefined];
+  
   for (let term = 1; term <= 3; term++) {
-    for (let i = 0; i < keyStage2Template.length; i++) {
-      a.assessments.push({
-        id: uid('assessment'),
-        term: String(term),
-        component: keyStage2Template[i].component,
-        title: keyStage2Template[i].title,
-        maxScore: '',
-        date: ''
-      });
-    }
-  }
-}
-
-/**
- * Ensures KS2 elements exist.
- */
-function ensureKeyStage2Assessments(a) {
-  for (let term = 1; term <= 3; term++) {
-    for (let i = 0; i < keyStage2Template.length; i++) {
-      const item = keyStage2Template[i];
-      if (!findAssessment(a, String(term), item.component, item.title)) {
+    for (const mapePart of parts) {
+      for (let i = 0; i < template.length; i++) {
         a.assessments.push({
           id: uid('assessment'),
           term: String(term),
-          component: item.component,
-          title: item.title,
+          component: template[i].component,
+          title: template[i].title,
           maxScore: '',
-          date: ''
+          date: '',
+          ...(mapePart ? { mapePart } : {})
         });
       }
     }
   }
 }
 
-function findAssessment(a, term, component, title) {
+/**
+ * Ensures appropriate template assessments exist, removing legacy custom ones
+ * and preserving scores on matching template columns.
+ */
+function ensureTemplateAssessments(a) {
+  if (!a) return;
+  const template = templateForGrade(a.gradeLevel);
+  const isMapeh = isMapehSubject(a.subject);
+  
+  const newAssessments = [];
+  const parts = isMapeh ? ['music_arts', 'pe_health'] : [undefined];
+  
+  for (let term = 1; term <= 3; term++) {
+    for (const mapePart of parts) {
+      for (let i = 0; i < template.length; i++) {
+        const tItem = template[i];
+        const existing = findAssessment(a, String(term), tItem.component, tItem.title, mapePart);
+        if (existing) {
+          newAssessments.push(existing);
+        } else {
+          newAssessments.push({
+            id: uid('assessment'),
+            term: String(term),
+            component: tItem.component,
+            title: tItem.title,
+            maxScore: '',
+            date: '',
+            ...(mapePart ? { mapePart } : {})
+          });
+        }
+      }
+    }
+  }
+  
+  // Clean up scores for assessments that are discarded
+  const validIds = new Set(newAssessments.map(x => x.id));
+  for (const key in a.scores) {
+    const parts = key.split('|');
+    if (parts.length === 2) {
+      const assessId = parts[1];
+      if (!validIds.has(assessId)) {
+        delete a.scores[key];
+      }
+    }
+  }
+  
+  a.assessments = newAssessments;
+}
+
+function findAssessment(a, term, component, title, mapePart) {
   for (let i = 0; i < a.assessments.length; i++) {
     const item = a.assessments[i];
-    if (item.term === term && item.component === component && item.title === title) {
+    if (item.term === term && item.component === component && item.title === title && item.mapePart === mapePart) {
       return item;
     }
   }
@@ -157,7 +415,7 @@ function findAssessment(a, term, component, title) {
 /**
  * Computes component raw/max/percentage score.
  */
-function componentScore(a, learnerId, term, components) {
+function componentScore(a, learnerId, term, components, mapePart) {
   let raw = 0;
   let max = 0;
   let hasData = false;
@@ -166,6 +424,7 @@ function componentScore(a, learnerId, term, components) {
     const item = a.assessments[i];
     if (item.term !== term) continue;
     if (!components.includes(item.component)) continue;
+    if (mapePart && item.mapePart !== mapePart) continue;
 
     const maxScoreVal = number(item.maxScore);
     if (maxScoreVal <= 0) continue;
@@ -185,17 +444,17 @@ function componentScore(a, learnerId, term, components) {
 /**
  * Computes complete term scores for a learner.
  */
-function computeTerm(a, learnerId, term) {
+function computeTerm(a, learnerId, term, mapePart) {
   const w = weightsFor(a.subjectGroup);
-  const ww = componentScore(a, learnerId, term, ['WW']);
-  const pt = componentScore(a, learnerId, term, ['PT']);
-  const st1 = componentScore(a, learnerId, term, ['SA1', 'ST1']);
-  const st2 = componentScore(a, learnerId, term, ['SA2', 'ST2']);
-  const te = componentScore(a, learnerId, term, ['TE']);
+  const ww = componentScore(a, learnerId, term, ['WW'], mapePart);
+  const pt = componentScore(a, learnerId, term, ['PT'], mapePart);
+  const st1 = componentScore(a, learnerId, term, ['SA1', 'ST1'], mapePart);
+  const st2 = componentScore(a, learnerId, term, ['SA2', 'ST2'], mapePart);
+  const te = componentScore(a, learnerId, term, ['TE'], mapePart);
 
   let examPS;
   if (isKeyStage2(a) || a.policy === 'DO8_2015') {
-    const qa = componentScore(a, learnerId, term, ['SA1', 'SA2', 'ST1', 'ST2', 'TE']);
+    const qa = componentScore(a, learnerId, term, ['SA1', 'SA2', 'ST1', 'ST2', 'TE'], mapePart);
     examPS = qa.ps;
   } else {
     examPS = (st1.ps * 0.30) + (st2.ps * 0.30) + (te.ps * 0.40);
@@ -243,18 +502,8 @@ function keyStage2Grade(ig) {
   return 60;
 }
 
-/**
- * Returns text descriptions for a grade.
- */
 function termDescription(a, grade) {
   if (grade === null || grade === undefined) return '';
-  if (isKeyStage2(a)) {
-    if (grade >= 90) return 'A';
-    if (grade >= 80) return 'B';
-    if (grade >= 75) return 'C';
-    if (grade >= 65) return 'D';
-    return 'E';
-  }
   return descriptor(grade);
 }
 
