@@ -1,5 +1,6 @@
 # Build output
 dist/
+out/
 
 # Dependencies
 node_modules/
@@ -7,10 +8,20 @@ node_modules/
 # Local runtime data (generated per-user at runtime)
 data.json
 
+# Electron packager cache
+.electron-builder-cache/
+
 # Windows / editor cruft
 Thumbs.db
 Desktop.ini
 *.tmp
+*.log
+.DS_Store
+
+# IDE directories
 .idea/
 .vscode/
-*.log
+
+# Environment
+.env
+.env.local
