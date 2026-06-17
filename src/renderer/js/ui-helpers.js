@@ -102,19 +102,23 @@ function uid(prefix = 'id') {
  */
 function emptyState(title, hint, actionLabel, actionCallback) {
   const btn = actionLabel
-    ? `<button class="btn btn-primary btn-sm" style="margin-top:var(--space-4)" onclick="${esc(actionCallback)}">${esc(actionLabel)}</button>`
+    ? `<button class="btn btn-primary" style="margin-top:var(--space-5); padding: 8px 20px; font-size: var(--font-size-md);" onclick="${esc(actionCallback)}">${esc(actionLabel)}</button>`
     : '';
   return `
-    <div class="empty-state animate-slide-up">
-      <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-        <line x1="12" y1="8" x2="12" y2="12"></line>
-        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-      </svg>
-      <div class="empty-state__title">${esc(title)}</div>
-      <div class="empty-state__hint">${esc(hint)}</div>
-      ${btn}
+    <div class="empty-state animate-fade-in">
+      <div class="empty-state__bg-glow-1"></div>
+      <div class="empty-state__bg-glow-2"></div>
+      <div class="empty-state__card">
+        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <div class="empty-state__title">${esc(title)}</div>
+        <div class="empty-state__hint">${esc(hint)}</div>
+        ${btn}
+      </div>
     </div>
   `;
 }
@@ -281,4 +285,44 @@ function alertModal(title, message) {
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) close();
   });
+}
+
+/**
+ * Checks if the welcome modal should be shown on startup.
+ * Called during DOMContentLoaded.
+ */
+function checkWelcomeModal() {
+  const dismissedUntil = localStorage.getItem('welcome_modal_dismissed_until');
+  const todayString = new Date().toDateString();
+  if (dismissedUntil !== todayString) {
+    showEl('welcomeModal', true, 'flex');
+  }
+}
+
+/**
+ * Saves preference and closes the welcome modal on click of the Close button.
+ */
+function closeWelcomeModal() {
+  const checkbox = document.getElementById('welcomeDoNotShowCheckbox');
+  if (checkbox && checkbox.checked) {
+    const todayString = new Date().toDateString();
+    localStorage.setItem('welcome_modal_dismissed_until', todayString);
+  }
+  showEl('welcomeModal', false);
+
+  // If the profile overlay is currently hidden (e.g., during startup when welcome modal is active),
+  // we now show the profile overlay / login screen.
+  const profileOverlay = document.getElementById('profileOverlay');
+  if (profileOverlay && profileOverlay.style.display === 'none') {
+    showEl('profileOverlay', true, 'flex');
+    if (typeof showProfileSelect === 'function' && typeof showCreateProfileForm === 'function') {
+      const hasProfiles = (typeof dbRoot !== 'undefined' && dbRoot.profiles && dbRoot.profiles.length > 0);
+      const hasLegacy = (typeof legacyDataToMigrate !== 'undefined' && legacyDataToMigrate !== null);
+      if (hasLegacy || !hasProfiles) {
+        showCreateProfileForm();
+      } else {
+        showProfileSelect();
+      }
+    }
+  }
 }

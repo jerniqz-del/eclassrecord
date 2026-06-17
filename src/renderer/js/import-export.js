@@ -10,9 +10,24 @@
  */
 async function exportJson() {
   updateProfile();
-  const text = JSON.stringify(db, null, 2);
+  
+  const activeProfile = dbRoot.profiles.find(p => p.id === dbRoot.activeProfileId);
+  let textToExport = '';
+  
   try {
-    const result = await window.electronAPI.exportJson(text);
+    if (activeProfile && activeProfile.pinEnabled) {
+      const pin = currentProfilePin;
+      if (!pin) {
+        toast('Backup export failed: No active PIN session. Please re-authenticate.', 'error');
+        return;
+      }
+      const encryptedObj = await encryptPayload(JSON.stringify(db), pin);
+      textToExport = JSON.stringify(encryptedObj, null, 2);
+    } else {
+      textToExport = JSON.stringify(db, null, 2);
+    }
+    
+    const result = await window.electronAPI.exportJson(textToExport);
     if (result.success) {
       toast('Backup downloaded successfully.', 'success');
     }
@@ -23,6 +38,64 @@ async function exportJson() {
 }
 
 /**
+ * Helper to display a PIN prompt modal for encrypted backup uploads.
+ */
+function promptBackupPinModal(onConfirm, onCancel) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '11000';
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal__title">PIN Protected Backup</div>
+      <div class="modal__body">
+        <p style="margin-top:0">This backup is encrypted and secured with a PIN. Please enter the PIN to decrypt and upload.</p>
+        <div class="field">
+          <label class="field-label">Enter 6-digit PIN</label>
+          <input type="password" id="backupDecryptPin" class="field-input" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="off" />
+        </div>
+        <div id="backupDecryptErrorMsg" class="unlock-error-msg" style="color:var(--color-error-600)"></div>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-ghost btn-sm" id="btnCancelBackupDecrypt">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="btnConfirmBackupDecrypt">Decrypt & Import</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  
+  const close = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+  
+  const pinInput = overlay.querySelector('#backupDecryptPin');
+  const errorEl = overlay.querySelector('#backupDecryptErrorMsg');
+  
+  const submit = () => {
+    const pin = pinInput.value;
+    if (!pin || pin.length < 6 || !/^\d+$/.test(pin)) {
+      errorEl.innerText = 'Please enter a valid 6-digit numeric PIN.';
+      return;
+    }
+    onConfirm(pin, errorEl, close);
+  };
+  
+  overlay.querySelector('#btnCancelBackupDecrypt').addEventListener('click', () => {
+    close();
+    if (onCancel) onCancel();
+  });
+  
+  overlay.querySelector('#btnConfirmBackupDecrypt').addEventListener('click', submit);
+  
+  pinInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      submit();
+    }
+  });
+  
+  setTimeout(() => pinInput.focus(), 80);
+}
+
+/**
  * Triggers native open file dialog to import a JSON backup file.
  */
 async function importJsonBackupFile() {
@@ -30,14 +103,39 @@ async function importJsonBackupFile() {
     const result = await window.electronAPI.importJson();
     if (result.success && result.content) {
       const incoming = JSON.parse(result.content);
-      if (!incoming.assignments) {
-        throw new Error('Invalid backup file: assignments list is missing.');
+      
+      if (incoming.secureBackup) {
+        promptBackupPinModal(async (pin, errorEl, closeModal) => {
+          try {
+            errorEl.innerText = 'Decrypting backup...';
+            const decryptedText = await decryptPayload(incoming, pin);
+            const decryptedDb = JSON.parse(decryptedText);
+            
+            if (!decryptedDb.assignments) {
+              throw new Error('Decrypted backup content is missing assignments.');
+            }
+            
+            db = decryptedDb;
+            normalizeDatabase();
+            await saveDatabase();
+            render();
+            closeModal();
+            toast('Secure backup uploaded and restored successfully.', 'success');
+          } catch (e) {
+            console.error(e);
+            errorEl.innerText = e.message || 'Incorrect PIN or corrupted backup file.';
+          }
+        });
+      } else {
+        if (!incoming.assignments) {
+          throw new Error('Invalid backup file: assignments list is missing.');
+        }
+        db = incoming;
+        normalizeDatabase();
+        await saveDatabase();
+        render();
+        toast('Backup uploaded successfully.', 'success');
       }
-      db = incoming;
-      normalizeDatabase();
-      await saveDatabase();
-      render();
-      toast('Backup uploaded successfully.', 'success');
     }
   } catch (error) {
     console.error(error);

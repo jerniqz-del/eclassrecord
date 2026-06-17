@@ -230,6 +230,7 @@ function renderRecordTable() {
   for (let h = 0; h < items.length; h++) {
     html += `<td class="c-score">
       <input id="hps-${h}" class="score-input max-input" value="${esc(items[h].maxScore)}" 
+        data-assessment-id="${esc(items[h].id)}"
         onkeydown="return maxNav(event, ${h}, '${esc(items[h].id)}')" 
         onchange="updateAssessmentMax('${esc(items[h].id)}', this.value)" />
     </td>`;
@@ -275,6 +276,7 @@ function renderRecordTable() {
       
       html += `<td class="c-score">
         <input id="sc-${r}-${j}" class="score-input${overMax ? ' invalid' : ''}${isPerfect ? ' perfect' : ''}${isSimilar ? ' similar' : ''}" title="${esc(scoreTitle)}" value="${esc(val)}"
+          data-learner-index="${r}" data-assessment-id="${esc(items[j].id)}"
           onkeydown="return scoreNav(event, ${r}, ${j}, '${esc(learner.id)}', '${esc(items[j].id)}')"
           onchange="updateScore('${esc(learner.id)}', '${esc(items[j].id)}', this.value)" />
       </td>`;
@@ -617,6 +619,20 @@ function renderConsolidatedMapehSummary(a) {
 /**
  * Handles arrow/enter key navigation inside the scores input matrix.
  */
+document.addEventListener('focusin', (e) => {
+  if (e.target && e.target.classList.contains('score-input')) {
+    const input = e.target;
+    
+    // Store current focus state for Quick Grade Entry modal auto-targeting
+    if (input.dataset.assessmentId) {
+      window.lastFocusedAssessmentId = input.dataset.assessmentId;
+    }
+    if (input.dataset.learnerIndex !== undefined) {
+      window.lastFocusedLearnerIndex = parseInt(input.dataset.learnerIndex);
+    }
+  }
+});
+
 function scoreNav(event, r, j, learnerId, assessmentId) {
   const code = event.keyCode || event.which;
   if (code !== 13 && code !== 9) return true; // Enter or Tab

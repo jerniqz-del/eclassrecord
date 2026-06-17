@@ -310,6 +310,10 @@ function applyRecordTab() {
   showEl('pdfTerm2Btn', recordTab === '2', 'inline-flex');
   showEl('pdfTerm3Btn', recordTab === '3', 'inline-flex');
   showEl('pdfSummaryBtn', recordTab === 'summary', 'inline-flex');
+
+  // Toggle Quick Grade Entry button visibility
+  const hasLearners = a && a.learners && a.learners.length > 0;
+  showEl('quickGradeBtn', !isSummary && hasLearners, 'inline-flex');
 }
 
 async function printClassRecord() {
@@ -463,9 +467,42 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Populate subject selections
   populateSubjects();
   
-  // Initial draw
-  recordTab = db.recordTab ? db.recordTab : (db.currentTerm || '1');
-  render();
+  // Bind enter key for passcode input
+  const passcodeEl = document.getElementById('passcodeField');
+  if (passcodeEl) {
+    passcodeEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        submitPasscode();
+      }
+    });
+  }
+
+  // Bind enter key for profile pin confirmation
+  const confirmPinEl = document.getElementById('createProfilePinConfirm');
+  if (confirmPinEl) {
+    confirmPinEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        submitCreateProfile();
+      }
+    });
+  }
+
+  // Handle Profile Overlay / Welcome Modal on Startup
+  const dismissedUntil = localStorage.getItem('welcome_modal_dismissed_until');
+  const todayString = new Date().toDateString();
+  const welcomeActive = dismissedUntil !== todayString;
+
+  if (welcomeActive) {
+    showEl('profileOverlay', false);
+    showEl('welcomeModal', true, 'flex');
+  } else {
+    showEl('profileOverlay', true, 'flex');
+    if (legacyDataToMigrate !== null || dbRoot.profiles.length === 0) {
+      showCreateProfileForm();
+    } else {
+      showProfileSelect();
+    }
+  }
 
   // Set up delegation for cell row & column highlights on score input focus
   document.addEventListener('focusin', (e) => {
@@ -847,6 +884,20 @@ function hideDonateModal() {
   }
 }
 
+function showDonateQrModal() {
+  const modal = document.getElementById('donateQrModal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function hideDonateQrModal() {
+  const modal = document.getElementById('donateQrModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
 function confirmAppExit() {
   if (window.electronAPI && typeof window.electronAPI.confirmExit === 'function') {
     window.electronAPI.confirmExit();
@@ -873,4 +924,272 @@ function hideImageZoomModal() {
   if (modal) {
     modal.style.display = 'none';
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   MULTI-USER PROFILE MANAGEMENT
+   ═══════════════════════════════════════════════════════ */
+
+/**
+ * Toggles the visibility of PIN passcode fields in the profile creation screen.
+ */
+function togglePinFields(checked) {
+  showEl('pinFieldsWrap', checked);
+}
+
+/**
+ * Renders the user profile selection cards in the startup screen overlay.
+ */
+function renderProfiles() {
+  const listEl = document.getElementById('profileList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  
+  dbRoot.profiles.forEach(p => {
+    const initial = p.name ? p.name.charAt(0).toUpperCase() : '?';
+    const card = document.createElement('div');
+    card.className = 'profile-card';
+    card.onclick = () => selectProfileCard(p.id);
+    
+    let lockBadge = '';
+    if (p.pinEnabled) {
+      lockBadge = `<div class="profile-lock-badge">🔒 PIN Locked</div>`;
+    } else {
+      lockBadge = `<div class="profile-lock-badge">🔓 Unsecured</div>`;
+    }
+    
+    card.innerHTML = `
+      <div class="profile-avatar">${initial}</div>
+      <div class="profile-name" title="${esc(p.name)}">${esc(p.name)}</div>
+      ${lockBadge}
+    `;
+    listEl.appendChild(card);
+  });
+}
+
+/**
+ * Displays the profile creation form panel.
+ */
+function showCreateProfileForm() {
+  showEl('profileSelectPanel', false);
+  showEl('profileUnlockPanel', false);
+  showEl('profileCreatePanel', true);
+  
+  // Reset input fields
+  document.getElementById('createProfileName').value = '';
+  document.getElementById('createProfilePin').value = '';
+  document.getElementById('createProfilePinConfirm').value = '';
+  document.getElementById('createProfilePinEnabled').checked = true;
+  showEl('pinFieldsWrap', true);
+  document.getElementById('createProfileErrorMsg').innerText = '';
+  
+  // Check if profiles list is empty to prevent backing out
+  const hasProfiles = dbRoot.profiles && dbRoot.profiles.length > 0;
+  showEl('btnCancelCreateProfile', hasProfiles);
+  
+  // Setup migration message if legacy data exists
+  const descEl = document.querySelector('#profileCreatePanel .profile-panel-desc');
+  if (legacyDataToMigrate) {
+    if (descEl) {
+      descEl.innerHTML = `<span style="color:var(--color-accent-600); font-weight:var(--font-weight-bold)">⚠️ Existing records detected.</span> Create a profile to migrate and secure your data.`;
+    }
+  } else {
+    if (descEl) {
+      descEl.innerText = 'Add a profile to keep your grading sheets separated and secure.';
+    }
+  }
+}
+
+/**
+ * Handles profile card clicks: starts passcode validation or unlocks immediately.
+ */
+let selectedProfileIdToUnlock = '';
+function selectProfileCard(id) {
+  const p = dbRoot.profiles.find(x => x.id === id);
+  if (!p) return;
+  
+  if (!p.pinEnabled) {
+    unlockProfileAndEnter(p);
+  } else {
+    selectedProfileIdToUnlock = id;
+    showEl('profileSelectPanel', false);
+    showEl('profileCreatePanel', false);
+    showEl('profileUnlockPanel', true);
+    
+    document.getElementById('passcodeField').value = '';
+    document.getElementById('unlockErrorMsg').innerText = '';
+    document.getElementById('unlockTitle').innerText = `Unlock ${p.name}`;
+    
+    setTimeout(() => {
+      document.getElementById('passcodeField').focus();
+    }, 100);
+  }
+}
+
+/**
+ * Shows the profile selection list dashboard screen.
+ */
+function showProfileSelect() {
+  selectedProfileIdToUnlock = '';
+  showEl('profileUnlockPanel', false);
+  showEl('profileCreatePanel', false);
+  showEl('profileSelectPanel', true);
+  renderProfiles();
+}
+
+/**
+ * Processes PIN verification to unlock a secure profile.
+ */
+async function submitPasscode() {
+  const pin = document.getElementById('passcodeField').value;
+  const errorEl = document.getElementById('unlockErrorMsg');
+  
+  if (!pin || pin.length < 6 || !/^\d+$/.test(pin)) {
+    if (errorEl) errorEl.innerText = 'Passcode must be a 6-digit numeric PIN.';
+    return;
+  }
+  
+  const p = dbRoot.profiles.find(x => x.id === selectedProfileIdToUnlock);
+  if (!p) {
+    if (errorEl) errorEl.innerText = 'Profile not found.';
+    return;
+  }
+  
+  const verified = await verifyPin(pin, p.salt, p.pinHash);
+  if (verified) {
+    p.currentPin = pin; // retain pin in session memory for backup encryption
+    unlockProfileAndEnter(p);
+  } else {
+    if (errorEl) errorEl.innerText = 'Incorrect passcode PIN. Please try again.';
+    document.getElementById('passcodeField').value = '';
+    document.getElementById('passcodeField').focus();
+  }
+}
+
+/**
+ * Validates and registers a new profile.
+ */
+async function submitCreateProfile() {
+  const nameInput = document.getElementById('createProfileName');
+  const pinCheckbox = document.getElementById('createProfilePinEnabled');
+  const pinInput = document.getElementById('createProfilePin');
+  const pinConfirmInput = document.getElementById('createProfilePinConfirm');
+  const errorEl = document.getElementById('createProfileErrorMsg');
+  
+  const name = trim(nameInput.value);
+  if (!name) {
+    if (errorEl) errorEl.innerText = 'Teacher / Profile Name is required.';
+    return;
+  }
+  
+  const pinEnabled = pinCheckbox.checked;
+  let salt = '';
+  let pinHash = '';
+  let pin = '';
+  
+  if (pinEnabled) {
+    pin = pinInput.value;
+    const pinConfirm = pinConfirmInput.value;
+    
+    if (!pin || pin.length < 6 || !/^\d+$/.test(pin)) {
+      if (errorEl) errorEl.innerText = 'PIN must be at least 6 numeric digits.';
+      return;
+    }
+    
+    if (pin !== pinConfirm) {
+      if (errorEl) errorEl.innerText = 'PIN confirmations do not match.';
+      return;
+    }
+    
+    salt = generateSalt();
+    pinHash = await hashPin(pin, salt);
+  }
+  
+  const profileId = uid('profile');
+  let profileData = {};
+  
+  if (legacyDataToMigrate) {
+    profileData = legacyDataToMigrate;
+    profileData.teacherName = name;
+    legacyDataToMigrate = null;
+    toast('Legacy class records successfully migrated to your new profile!', 'success');
+  } else {
+    profileData = {
+      version: DB_VERSION,
+      teacherName: name,
+      schoolName: '',
+      schoolYear: '2026-2027',
+      currentAssignmentId: '',
+      currentTerm: '1',
+      activeView: 'dashboard',
+      assignments: []
+    };
+  }
+  
+  const newProfile = {
+    id: profileId,
+    name: name,
+    pinEnabled: pinEnabled,
+    salt: salt,
+    pinHash: pinHash,
+    data: profileData
+  };
+  
+  if (pinEnabled) {
+    newProfile.currentPin = pin;
+  }
+  
+  dbRoot.profiles.push(newProfile);
+  dbRoot.activeProfileId = profileId;
+  
+  await saveRootDatabase();
+  unlockProfileAndEnter(newProfile);
+}
+
+/**
+ * Loads profile workspace data and switches user interface view.
+ */
+function unlockProfileAndEnter(profile) {
+  db = profile.data;
+  dbRoot.activeProfileId = profile.id;
+  currentProfilePin = profile.currentPin || '';
+  
+  normalizeDatabase();
+  showEl('profileOverlay', false);
+  
+  currentView = 'dashboard';
+  recordTab = db.recordTab || db.currentTerm || '1';
+  
+  render();
+  // checkWelcomeModal(); // Welcome modal is now shown on startup before profile login
+  toast(`Welcome back, ${profile.name}!`, 'success');
+}
+
+/**
+ * Saves current profile changes, clears authentication session, and returns to profile screen.
+ */
+async function logoutProfile() {
+  await saveDatabase();
+  
+  currentProfilePin = '';
+  dbRoot.activeProfileId = '';
+  
+  db = {
+    version: DB_VERSION,
+    teacherName: '',
+    schoolName: '',
+    schoolYear: '2026-2027',
+    currentAssignmentId: '',
+    currentTerm: '1',
+    activeView: 'dashboard',
+    assignments: []
+  };
+  
+  currentView = 'dashboard';
+  recordTab = '1';
+  
+  showEl('profileOverlay', true, 'flex');
+  showProfileSelect();
+  
+  toast('Logged out successfully.', 'info');
 }

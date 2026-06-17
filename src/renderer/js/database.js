@@ -6,8 +6,20 @@
  */
 
 const DB_VERSION = 2;
+const ROOT_DB_VERSION = 3;
 
-// In-memory application state copy
+// Entire database loaded from file
+let dbRoot = {
+  version: ROOT_DB_VERSION,
+  profiles: [],
+  activeProfileId: ''
+};
+
+// Global reference for legacy data to migrate
+let legacyDataToMigrate = null;
+let currentProfilePin = '';
+
+// In-memory application state copy (active profile)
 let db = {
   version: DB_VERSION,
   teacherName: '',
@@ -88,11 +100,36 @@ async function loadDatabase() {
   try {
     const localData = await window.electronAPI.loadDatabase();
     if (localData) {
-      db = localData;
-      normalizeDatabase();
-      currentView = 'dashboard';
-      db.activeView = 'dashboard';
-      recordTab = db.recordTab || db.currentTerm || '1';
+      if (localData.profiles && Array.isArray(localData.profiles)) {
+        // This is a profile-based database
+        dbRoot = localData;
+        if (dbRoot.version < ROOT_DB_VERSION) {
+          dbRoot.version = ROOT_DB_VERSION;
+        }
+      } else if (localData.assignments || localData.teacherName) {
+        // This is a legacy database (version 2)
+        // Store legacy data for migration
+        legacyDataToMigrate = localData;
+        dbRoot = {
+          version: ROOT_DB_VERSION,
+          profiles: [],
+          activeProfileId: ''
+        };
+      } else {
+        // Brand new database file or empty object
+        dbRoot = {
+          version: ROOT_DB_VERSION,
+          profiles: [],
+          activeProfileId: ''
+        };
+      }
+    } else {
+      // No database exists yet
+      dbRoot = {
+        version: ROOT_DB_VERSION,
+        profiles: [],
+        activeProfileId: ''
+      };
     }
   } catch (error) {
     console.error('Failed to load database:', error);
@@ -108,8 +145,23 @@ async function saveDatabase() {
   db.activeView = currentView;
   db.recordTab = recordTab;
   
+  if (dbRoot && dbRoot.activeProfileId) {
+    const p = dbRoot.profiles.find(x => x.id === dbRoot.activeProfileId);
+    if (p) {
+      p.data = db;
+      p.name = db.teacherName || p.name;
+    }
+  }
+  
+  await saveRootDatabase();
+}
+
+/**
+ * Saves the entire multi-profile root database to file via Electron IPC.
+ */
+async function saveRootDatabase() {
   try {
-    const success = await window.electronAPI.saveDatabase(db);
+    const success = await window.electronAPI.saveDatabase(dbRoot);
     if (success) {
       setStatus('Saved locally at ' + new Date().toLocaleTimeString());
     }
@@ -255,8 +307,13 @@ function updateProfile() {
 function clearLocalData() {
   confirmModal(
     'Clear All App Data',
-    'This will permanently delete all classes, learners, and grades from this computer. Ensure you have exported a backup JSON if you need to retain this information.',
+    'This will permanently delete all profiles, classes, learners, and grades from this computer. Ensure you have exported a backup JSON if you need to retain this information.',
     async () => {
+      dbRoot = {
+        version: ROOT_DB_VERSION,
+        profiles: [],
+        activeProfileId: ''
+      };
       db = {
         version: DB_VERSION,
         teacherName: '',
@@ -270,12 +327,17 @@ function clearLocalData() {
         activeView: 'dashboard',
         assignments: []
       };
+      currentProfilePin = '';
       currentView = 'dashboard';
       recordTab = '1';
       
-      await saveDatabase();
-      render();
-      toast('All database contents cleared.', 'success');
+      await saveRootDatabase();
+      
+      // Force return to profile screen
+      showEl('profileOverlay', true, 'flex');
+      showCreateProfileForm();
+      
+      toast('All database contents and profiles cleared.', 'success');
     }
   );
 }
