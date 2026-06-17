@@ -5,13 +5,14 @@
  * file I/O and native dialogs, and initialises auto-updates.
  */
 
-const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const fileIO = require('./file-io');
 const updater = require('./updater');
 
 let mainWindow = null;
+let isConfirmedExit = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -41,6 +42,13 @@ function createWindow() {
     }
     // Start updater only after renderer is fully loaded and listening
     updater.initAutoUpdater(mainWindow);
+  });
+
+  mainWindow.on('close', (e) => {
+    if (!isConfirmedExit) {
+      e.preventDefault();
+      mainWindow.webContents.send('app-close-triggered');
+    }
   });
 
   mainWindow.on('closed', () => {
@@ -297,6 +305,15 @@ ipcMain.handle('app:version', () => {
 
 ipcMain.handle('updater:check', async () => {
   return updater.checkForUpdates(mainWindow);
+});
+
+ipcMain.handle('shell:open-external', async (_event, url) => {
+  await shell.openExternal(url);
+});
+
+ipcMain.handle('app:confirm-exit', () => {
+  isConfirmedExit = true;
+  app.quit();
 });
 
 // ── App Lifecycle ─────────────────────────────────────────

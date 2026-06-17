@@ -48,32 +48,7 @@ function addLearner() {
   toast('Learner added.', 'success');
 }
 
-/**
- * Removes the last added learner, requesting confirmation via a modern modal.
- */
-function removeLastLearner() {
-  const a = currentAssignment();
-  if (!a || a.learners.length === 0) {
-    toast('No learners to remove.', 'warning');
-    return;
-  }
-  
-  confirmModal(
-    'Remove Learner',
-    'Are you sure you want to remove the last learner from this teaching load? All associated scores will be permanently deleted.',
-    () => {
-      const learner = a.learners.pop();
-      for (const key in a.scores) {
-        if (key.startsWith(learner.id + '|')) {
-          delete a.scores[key];
-        }
-      }
-      saveDatabase();
-      render();
-      toast('Learner removed.', 'success');
-    }
-  );
-}
+
 
 /**
  * Sorts learners by gender (Boys first, Girls second) and then alphabetically.

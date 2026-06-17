@@ -454,15 +454,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Load local file database
   await loadDatabase();
   
-  // Set version numbers in footer and update window title
-  try {
-    const version = await window.electronAPI.getVersion();
-    const verEl = document.getElementById('appVersionLabel');
-    if (verEl) verEl.innerText = 'v' + version;
-    document.title = 'E-Class Record App v' + version;
-  } catch (error) {
-    console.error(error);
-  }
+  // Set window title
+  document.title = 'E-Class Record App v1.0';
   
   // Populate regions select
   populateRegions();
@@ -523,6 +516,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.electronAPI.onMenuSave(saveDatabase);
   window.electronAPI.onMenuExportJson(exportJson);
   window.electronAPI.onMenuImportJson(importJsonBackupFile);
+  
+  // Connect Window Exit Close Interceptor
+  if (window.electronAPI && typeof window.electronAPI.onAppCloseTriggered === 'function') {
+    window.electronAPI.onAppCloseTriggered(() => {
+      showDonateModal(true);
+    });
+  }
   
   // Connect OTA Auto-Updater Updates
   window.electronAPI.onUpdateStatus((status, details) => {
@@ -810,4 +810,67 @@ function proceedToUploadSf1() {
   setTimeout(() => {
     importSf1();
   }, 150);
+}
+
+/**
+ * Show and hide the support/donation modal
+ */
+/**
+ * Show and hide the support/donation modal
+ * @param {boolean} isExitMode If true, show Cancel and Continue to Exit buttons instead of Close.
+ */
+function showDonateModal(isExitMode = false) {
+  const modal = document.getElementById('donateModal');
+  if (!modal) return;
+
+  const cancelExitBtn = document.getElementById('donateCancelExitBtn');
+  const closeBtn = document.getElementById('donateCloseBtn');
+  const confirmExitBtn = document.getElementById('donateConfirmExitBtn');
+
+  if (isExitMode) {
+    if (cancelExitBtn) cancelExitBtn.style.display = 'inline-flex';
+    if (confirmExitBtn) confirmExitBtn.style.display = 'inline-flex';
+    if (closeBtn) closeBtn.style.display = 'none';
+  } else {
+    if (cancelExitBtn) cancelExitBtn.style.display = 'none';
+    if (confirmExitBtn) confirmExitBtn.style.display = 'none';
+    if (closeBtn) closeBtn.style.display = 'inline-flex';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function hideDonateModal() {
+  const modal = document.getElementById('donateModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function confirmAppExit() {
+  if (window.electronAPI && typeof window.electronAPI.confirmExit === 'function') {
+    window.electronAPI.confirmExit();
+  }
+}
+
+function openDonateExternal(url) {
+  if (window.electronAPI && typeof window.electronAPI.openExternal === 'function') {
+    window.electronAPI.openExternal(url);
+  }
+}
+
+function showImageZoom(src) {
+  const modal = document.getElementById('imageZoomModal');
+  const img = document.getElementById('zoomedImage');
+  if (modal && img) {
+    img.src = src;
+    modal.style.display = 'flex';
+  }
+}
+
+function hideImageZoomModal() {
+  const modal = document.getElementById('imageZoomModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
 }

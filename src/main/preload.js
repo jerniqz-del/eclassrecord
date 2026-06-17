@@ -23,10 +23,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Metadata & System Checks
   getVersion: () => ipcRenderer.invoke('app:version'),
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
 
   // Menu Event Listeners (Main to Renderer)
   onMenuSave: (callback) => ipcRenderer.on('menu-save', (_event) => callback()),
   onMenuExportJson: (callback) => ipcRenderer.on('menu-export-json', (_event) => callback()),
   onMenuImportJson: (callback) => ipcRenderer.on('menu-import-json', (_event) => callback()),
-  onUpdateStatus: (callback) => ipcRenderer.on('update-status', (_event, status, details) => callback(status, details))
+  onUpdateStatus: (callback) => ipcRenderer.on('update-status', (_event, status, details) => callback(status, details)),
+
+  confirmExit: () => ipcRenderer.invoke('app:confirm-exit'),
+  onAppCloseTriggered: (callback) => ipcRenderer.on('app-close-triggered', (_event) => callback())
 });
