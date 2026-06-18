@@ -200,10 +200,13 @@ async function exportCsv() {
       csvContent += 'No.,LRN,Learner,Music & Arts Final,PE & Health Final,Term 1 Consolidated,Term 2 Consolidated,Term 3 Consolidated,MAPEH Final,Remarks\n';
       for (let r = 0; r < a.learners.length; r++) {
         const learner = a.learners[r];
-        
+        const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
         let sumMusic = 0, countMusic = 0;
         let sumPE = 0, countPE = 0;
         const consGrades = [];
+
+        let sumMusicIg = 0, countMusicIg = 0;
+        let sumPEIg = 0, countPEIg = 0;
 
         for (let t = 1; t <= 3; t++) {
           const resMusic = computeTerm(a, learner.id, String(t), 'music_arts');
@@ -212,45 +215,94 @@ async function exportCsv() {
           const gm = resMusic.termGrade;
           const gp = resPE.termGrade;
 
-          if (gm !== null) {
-            sumMusic += gm;
-            countMusic++;
-          }
-          if (gp !== null) {
-            sumPE += gp;
-            countPE++;
-          }
+          if (isDescriptive) {
+            if (resMusic.hasData) {
+              sumMusicIg += resMusic.initialGrade;
+              countMusicIg++;
+            }
+            if (resPE.hasData) {
+              sumPEIg += resPE.initialGrade;
+              countPEIg++;
+            }
 
-          let gc = '';
-          if (gm !== null && gp !== null) {
-            gc = Math.round((gm + gp) / 2);
-          } else if (gm !== null) {
-            gc = gm;
-          } else if (gp !== null) {
-            gc = gp;
+            let sumTermIg = 0;
+            let countTermIg = 0;
+            if (resMusic.hasData) {
+              sumTermIg += resMusic.initialGrade;
+              countTermIg++;
+            }
+            if (resPE.hasData) {
+              sumTermIg += resPE.initialGrade;
+              countTermIg++;
+            }
+            consGrades.push(countTermIg > 0 ? transmute(a, sumTermIg / countTermIg) : '');
+          } else {
+            if (gm !== null) {
+              sumMusic += gm;
+              countMusic++;
+            }
+            if (gp !== null) {
+              sumPE += gp;
+              countPE++;
+            }
+
+            let gc = '';
+            if (gm !== null && gp !== null) {
+              gc = Math.round((gm + gp) / 2);
+            } else if (gm !== null) {
+              gc = gm;
+            } else if (gp !== null) {
+              gc = gp;
+            }
+            consGrades.push(gc);
           }
-          consGrades.push(gc);
         }
 
-        const musicFinal = countMusic > 0 ? Math.round(sumMusic / countMusic) : '';
-        const peFinal = countPE > 0 ? Math.round(sumPE / countPE) : '';
+        const musicFinal = isDescriptive
+          ? (countMusicIg > 0 ? transmute(a, sumMusicIg / countMusicIg) : '')
+          : (countMusic > 0 ? Math.round(sumMusic / countMusic) : '');
+          
+        const peFinal = isDescriptive
+          ? (countPEIg > 0 ? transmute(a, sumPEIg / countPEIg) : '')
+          : (countPE > 0 ? Math.round(sumPE / countPE) : '');
 
         let finalConsolidated = '';
-        if (musicFinal !== '' && peFinal !== '') {
-          finalConsolidated = Math.round((musicFinal + peFinal) / 2);
-        } else if (musicFinal !== '') {
-          finalConsolidated = musicFinal;
-        } else if (peFinal !== '') {
-          finalConsolidated = peFinal;
+        if (isDescriptive) {
+          let sumFinalIg = 0;
+          let countFinalIg = 0;
+          if (countMusicIg > 0) {
+            sumFinalIg += (sumMusicIg / countMusicIg);
+            countFinalIg++;
+          }
+          if (countPEIg > 0) {
+            sumFinalIg += (sumPEIg / countPEIg);
+            countFinalIg++;
+          }
+          finalConsolidated = countFinalIg > 0 ? transmute(a, sumFinalIg / countFinalIg) : '';
+        } else {
+          if (musicFinal !== '' && peFinal !== '') {
+            finalConsolidated = Math.round((musicFinal + peFinal) / 2);
+          } else if (musicFinal !== '') {
+            finalConsolidated = musicFinal;
+          } else if (peFinal !== '') {
+            finalConsolidated = peFinal;
+          }
         }
 
-        const remarkText = finalConsolidated !== '' ? (finalConsolidated >= 75 ? 'Passed' : 'For Intervention') : '';
-        csvContent += `"${r + 1}","${learner.lrn}","${learnerDisplayName(learner)}","${musicFinal}","${peFinal}","${consGrades[0]}","${consGrades[1]}","${consGrades[2]}","${finalConsolidated}","${remarkText}"\n`;
+        const remarkText = finalConsolidated !== '' ? (isPassing(finalConsolidated) ? 'Passed' : 'For Intervention') : '';
+        const fMusicFinal = formatGradeForDisplay(musicFinal, a.policy);
+        const fPeFinal = formatGradeForDisplay(peFinal, a.policy);
+        const fCons0 = formatGradeForDisplay(consGrades[0], a.policy);
+        const fCons1 = formatGradeForDisplay(consGrades[1], a.policy);
+        const fCons2 = formatGradeForDisplay(consGrades[2], a.policy);
+        const fFinalConsolidated = formatGradeForDisplay(finalConsolidated, a.policy);
+        csvContent += `"${r + 1}","${learner.lrn}","${learnerDisplayName(learner)}","${fMusicFinal}","${fPeFinal}","${fCons0}","${fCons1}","${fCons2}","${fFinalConsolidated}","${remarkText}"\n`;
       }
     } else {
       // Export Consolidated Term Sheet
       const term = db.currentTerm || '1';
       csvContent += 'No.,Learner,Sex,Music & Arts Grade,PE & Health Grade,Consolidated Grade,Remarks\n';
+      const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
       for (let r = 0; r < a.learners.length; r++) {
         const learner = a.learners[r];
         const resMusic = computeTerm(a, learner.id, term, 'music_arts');
@@ -260,16 +312,33 @@ async function exportCsv() {
         const gPE = resPE.termGrade;
         
         let consolidated = '';
-        if (gMusic !== null && gPE !== null) {
-          consolidated = Math.round((gMusic + gPE) / 2);
-        } else if (gMusic !== null) {
-          consolidated = gMusic;
-        } else if (gPE !== null) {
-          consolidated = gPE;
+        if (isDescriptive) {
+          let sumIg = 0;
+          let countIg = 0;
+          if (resMusic.hasData) {
+            sumIg += resMusic.initialGrade;
+            countIg++;
+          }
+          if (resPE.hasData) {
+            sumIg += resPE.initialGrade;
+            countIg++;
+          }
+          consolidated = countIg > 0 ? transmute(a, sumIg / countIg) : '';
+        } else {
+          if (gMusic !== null && gPE !== null) {
+            consolidated = Math.round((gMusic + gPE) / 2);
+          } else if (gMusic !== null) {
+            consolidated = gMusic;
+          } else if (gPE !== null) {
+            consolidated = gPE;
+          }
         }
 
-        const remarkText = consolidated !== '' ? (consolidated >= 75 ? 'Passed' : 'For Intervention') : '';
-        csvContent += `"${r + 1}","${learnerDisplayName(learner)}","${learner.sex}","${blankNull(gMusic)}","${blankNull(gPE)}","${consolidated}","${remarkText}"\n`;
+        const remarkText = consolidated !== '' ? (isPassing(consolidated) ? 'Passed' : 'For Intervention') : '';
+        const fMusic = formatGradeForDisplay(gMusic, a.policy);
+        const fPE = formatGradeForDisplay(gPE, a.policy);
+        const fCons = formatGradeForDisplay(consolidated, a.policy);
+        csvContent += `"${r + 1}","${learnerDisplayName(learner)}","${learner.sex}","${blankNull(fMusic)}","${blankNull(fPE)}","${fCons}","${remarkText}"\n`;
       }
     }
   } else {
@@ -279,22 +348,42 @@ async function exportCsv() {
     if (recordTab === 'summary') {
       // Export Final Grades Summary
       csvContent += 'No.,LRN,Learner,Sex,Term 1,Term 2,Term 3,Final Grade,Remarks\n';
+      const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
       for (let r = 0; r < a.learners.length; r++) {
         const learner = a.learners[r];
         const terms = [];
         let sum = 0;
         let count = 0;
+        
+        let sumIg = 0;
+        let countIg = 0;
+        
         for (let t = 1; t <= 3; t++) {
           const res = computeTerm(a, learner.id, String(t), mapePart);
           terms.push(res.termGrade);
-          if (res.termGrade !== null) {
-            sum += res.termGrade;
-            count++;
+          
+          if (isDescriptive) {
+            if (res.hasData) {
+              sumIg += res.initialGrade;
+              countIg++;
+            }
+          } else {
+            if (res.termGrade !== null) {
+              sum += res.termGrade;
+              count++;
+            }
           }
         }
-        const fg = count > 0 ? Math.round(sum / count) : '';
-        const remarkText = fg !== '' ? (fg >= 75 ? 'Passed' : 'For Intervention') : '';
-        csvContent += `"${r + 1}","${learner.lrn}","${learnerDisplayName(learner)}","${learner.sex}","${blankNull(terms[0])}","${blankNull(terms[1])}","${blankNull(terms[2])}","${fg}","${remarkText}"\n`;
+        
+        const fg = isDescriptive
+          ? (countIg > 0 ? transmute(a, sumIg / countIg) : '')
+          : (count > 0 ? Math.round(sum / count) : '');
+        const remarkText = fg !== '' ? (isPassing(fg) ? 'Passed' : 'For Intervention') : '';
+        const fT1 = formatGradeForDisplay(terms[0], a.policy);
+        const fT2 = formatGradeForDisplay(terms[1], a.policy);
+        const fT3 = formatGradeForDisplay(terms[2], a.policy);
+        const fFg = formatGradeForDisplay(fg, a.policy);
+        csvContent += `"${r + 1}","${learner.lrn}","${learnerDisplayName(learner)}","${learner.sex}","${blankNull(fT1)}","${blankNull(fT2)}","${blankNull(fT3)}","${fFg}","${remarkText}"\n`;
       }
     } else {
       // Export Active Term Grid
@@ -324,10 +413,15 @@ async function exportCsv() {
           const scoreVal = a.scores[key] === undefined ? '' : a.scores[key];
           row += `,"${scoreVal}"`;
         }
-        row += `,"${result.hasData ? fmt(result.initialGrade) : ''}","${result.termGrade === null ? '' : result.termGrade}","${termDescription(a, result.termGrade)}"\n`;
+        const fTermGrade = formatGradeForDisplay(result.termGrade, a.policy);
+        row += `,"${result.hasData ? fmt(result.initialGrade) : ''}","${result.termGrade === null ? '' : fTermGrade}","${termDescription(a, result.termGrade)}"\n`;
         csvContent += row;
       }
     }
+  }
+  
+  if (a.policy === 'DO15_DESCRIPTIVE') {
+    csvContent += `\n"Original basis of grade was descriptive (DO 15, s. 2026)."\n`;
   }
   
   try {
@@ -645,7 +739,8 @@ function buildExcelExportPayload(a) {
     section: a.section,
     subject: a.subject,
     teacherName: db.teacherName || '',
-    isMapeh: isMapeh
+    isMapeh: isMapeh,
+    policy: a.policy
   };
 
   if (!isMapeh) {
@@ -698,6 +793,10 @@ function compileStudentExcelData(a, student, mapePart) {
   let termCount = 0;
   let sum = 0;
   
+  const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
+  let sumIg = 0;
+  let countIg = 0;
+
   for (let t = 1; t <= 3; t++) {
     const termStr = String(t);
     const result = computeTerm(a, student.id, termStr, mapePart);
@@ -738,31 +837,40 @@ function compileStudentExcelData(a, student, mapePart) {
       saWS: result.hasData ? (result.examPS * weightsFor(a.subjectGroup)[2] / 100) : '',
       
       initialGrade: result.hasData ? result.initialGrade : '',
-      termGrade: result.termGrade !== null ? result.termGrade : '',
+      termGrade: result.termGrade !== null ? formatGradeForDisplay(result.termGrade, a.policy) : '',
       desc: result.termGrade !== null ? termDescription(a, result.termGrade) : ''
     };
     
     if (result.termGrade !== null) {
-      sum += result.termGrade;
-      termCount++;
+      if (isDescriptive) {
+        sumIg += result.initialGrade;
+        countIg++;
+      } else {
+        sum += result.termGrade;
+        termCount++;
+      }
       if (t === 1) term1 = result.termGrade;
       if (t === 2) term2 = result.termGrade;
       if (t === 3) term3 = result.termGrade;
     }
   }
   
-  if (termCount > 0) {
-    finalGrade = Math.round(sum / termCount);
+  if (isDescriptive) {
+    finalGrade = countIg > 0 ? transmute(a, sumIg / countIg) : '';
+  } else {
+    if (termCount > 0) {
+      finalGrade = Math.round(sum / termCount);
+    }
   }
   
   return {
     name: formatLearnerName(student.lastName, student.firstName, student.middleName),
     terms,
     final: {
-      term1: term1 !== null ? term1 : '',
-      term2: term2 !== null ? term2 : '',
-      term3: term3 !== null ? term3 : '',
-      finalGrade: finalGrade !== null ? finalGrade : '',
+      term1: term1 !== null ? formatGradeForDisplay(term1, a.policy) : '',
+      term2: term2 !== null ? formatGradeForDisplay(term2, a.policy) : '',
+      term3: term3 !== null ? formatGradeForDisplay(term3, a.policy) : '',
+      finalGrade: finalGrade !== null ? formatGradeForDisplay(finalGrade, a.policy) : '',
       remarks: finalGrade !== null ? plainFinalRemark(a, finalGrade) : ''
     }
   };
@@ -792,6 +900,7 @@ function compileTermHps(a, term, mapePart) {
 }
 
 function compileStudentConsolidatedExcelData(a, student) {
+  const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
   const name = formatLearnerName(student.lastName, student.firstName, student.middleName);
   
   const res1Music = computeTerm(a, student.id, '1', 'music_arts');
@@ -799,49 +908,89 @@ function compileStudentConsolidatedExcelData(a, student) {
   const g1Music = res1Music.termGrade;
   const g1PE = res1PE.termGrade;
   let g1Cons = '';
-  if (g1Music !== null && g1PE !== null) g1Cons = Math.round((g1Music + g1PE) / 2);
-  else if (g1Music !== null) g1Cons = g1Music;
-  else if (g1PE !== null) g1Cons = g1PE;
+  if (isDescriptive) {
+    let sumIg = 0, countIg = 0;
+    if (res1Music.hasData) { sumIg += res1Music.initialGrade; countIg++; }
+    if (res1PE.hasData) { sumIg += res1PE.initialGrade; countIg++; }
+    if (countIg > 0) g1Cons = transmute(a, sumIg / countIg);
+  } else {
+    if (g1Music !== null && g1PE !== null) g1Cons = Math.round((g1Music + g1PE) / 2);
+    else if (g1Music !== null) g1Cons = g1Music;
+    else if (g1PE !== null) g1Cons = g1PE;
+  }
   
   const res2Music = computeTerm(a, student.id, '2', 'music_arts');
   const res2PE = computeTerm(a, student.id, '2', 'pe_health');
   const g2Music = res2Music.termGrade;
   const g2PE = res2PE.termGrade;
   let g2Cons = '';
-  if (g2Music !== null && g2PE !== null) g2Cons = Math.round((g2Music + g2PE) / 2);
-  else if (g2Music !== null) g2Cons = g2Music;
-  else if (g2PE !== null) g2Cons = g2PE;
+  if (isDescriptive) {
+    let sumIg = 0, countIg = 0;
+    if (res2Music.hasData) { sumIg += res2Music.initialGrade; countIg++; }
+    if (res2PE.hasData) { sumIg += res2PE.initialGrade; countIg++; }
+    if (countIg > 0) g2Cons = transmute(a, sumIg / countIg);
+  } else {
+    if (g2Music !== null && g2PE !== null) g2Cons = Math.round((g2Music + g2PE) / 2);
+    else if (g2Music !== null) g2Cons = g2Music;
+    else if (g2PE !== null) g2Cons = g2PE;
+  }
   
   const res3Music = computeTerm(a, student.id, '3', 'music_arts');
   const res3PE = computeTerm(a, student.id, '3', 'pe_health');
   const g3Music = res3Music.termGrade;
   const g3PE = res3PE.termGrade;
   let g3Cons = '';
-  if (g3Music !== null && g3PE !== null) g3Cons = Math.round((g3Music + g3PE) / 2);
-  else if (g3Music !== null) g3Cons = g3Music;
-  else if (g3PE !== null) g3Cons = g3PE;
+  if (isDescriptive) {
+    let sumIg = 0, countIg = 0;
+    if (res3Music.hasData) { sumIg += res3Music.initialGrade; countIg++; }
+    if (res3PE.hasData) { sumIg += res3PE.initialGrade; countIg++; }
+    if (countIg > 0) g3Cons = transmute(a, sumIg / countIg);
+  } else {
+    if (g3Music !== null && g3PE !== null) g3Cons = Math.round((g3Music + g3PE) / 2);
+    else if (g3Music !== null) g3Cons = g3Music;
+    else if (g3PE !== null) g3Cons = g3PE;
+  }
   
   let musicFinal = '', peFinal = '', finalConsolidated = '', remarks = '';
   let sumMusic = 0, countMusic = 0;
   let sumPE = 0, countPE = 0;
   
-  if (g1Music !== null) { sumMusic += g1Music; countMusic++; }
-  if (g2Music !== null) { sumMusic += g2Music; countMusic++; }
-  if (g3Music !== null) { sumMusic += g3Music; countMusic++; }
+  let sumMusicIg = 0, countMusicIg = 0;
+  let sumPEIg = 0, countPEIg = 0;
   
-  if (g1PE !== null) { sumPE += g1PE; countPE++; }
-  if (g2PE !== null) { sumPE += g2PE; countPE++; }
-  if (g3PE !== null) { sumPE += g3PE; countPE++; }
+  for (let t = 1; t <= 3; t++) {
+    const resMusic = computeTerm(a, student.id, String(t), 'music_arts');
+    const resPE = computeTerm(a, student.id, String(t), 'pe_health');
+    if (isDescriptive) {
+      if (resMusic.hasData) { sumMusicIg += resMusic.initialGrade; countMusicIg++; }
+      if (resPE.hasData) { sumPEIg += resPE.initialGrade; countPEIg++; }
+    } else {
+      const gm = resMusic.termGrade;
+      const gp = resPE.termGrade;
+      if (gm !== null) { sumMusic += gm; countMusic++; }
+      if (gp !== null) { sumPE += gp; countPE++; }
+    }
+  }
   
-  if (countMusic > 0) musicFinal = Math.round(sumMusic / countMusic);
-  if (countPE > 0) peFinal = Math.round(sumPE / countPE);
-  
-  if (musicFinal !== '' && peFinal !== '') {
-    finalConsolidated = Math.round((musicFinal + peFinal) / 2);
-  } else if (musicFinal !== '') {
-    finalConsolidated = musicFinal;
-  } else if (peFinal !== '') {
-    finalConsolidated = peFinal;
+  if (isDescriptive) {
+    if (countMusicIg > 0) musicFinal = transmute(a, sumMusicIg / countMusicIg);
+    if (countPEIg > 0) peFinal = transmute(a, sumPEIg / countPEIg);
+    
+    let sumFinalIg = 0, countFinalIg = 0;
+    if (countMusicIg > 0) { sumFinalIg += (sumMusicIg / countMusicIg); countFinalIg++; }
+    if (countPEIg > 0) { sumFinalIg += (sumPEIg / countPEIg); countFinalIg++; }
+    if (countFinalIg > 0) finalConsolidated = transmute(a, sumFinalIg / countFinalIg);
+  } else {
+    if (countMusic > 0) musicFinal = Math.round(sumMusic / countMusic);
+    if (countPE > 0) peFinal = Math.round(sumPE / countPE);
+    
+    if (musicFinal !== '' && peFinal !== '') {
+      finalConsolidated = Math.round((musicFinal + peFinal) / 2);
+    } else if (musicFinal !== '') {
+      finalConsolidated = musicFinal;
+    } else if (peFinal !== '') {
+      finalConsolidated = peFinal;
+    }
   }
   
   if (finalConsolidated !== '') {
@@ -850,25 +999,25 @@ function compileStudentConsolidatedExcelData(a, student) {
   
   return {
     name,
-    t1Music: g1Music !== null ? g1Music : '',
-    t1PE: g1PE !== null ? g1PE : '',
-    t1Cons: g1Cons,
-    t2Music: g2Music !== null ? g2Music : '',
-    t2PE: g2PE !== null ? g2PE : '',
-    t2Cons: g2Cons,
-    t3Music: g3Music !== null ? g3Music : '',
-    t3PE: g3PE !== null ? g3PE : '',
-    t3Cons: g3Cons,
-    musicFinal,
-    peFinal,
-    finalConsolidated,
+    t1Music: g1Music !== null ? formatGradeForDisplay(g1Music, a.policy) : '',
+    t1PE: g1PE !== null ? formatGradeForDisplay(g1PE, a.policy) : '',
+    t1Cons: formatGradeForDisplay(g1Cons, a.policy),
+    t2Music: g2Music !== null ? formatGradeForDisplay(g2Music, a.policy) : '',
+    t2PE: g2PE !== null ? formatGradeForDisplay(g2PE, a.policy) : '',
+    t2Cons: formatGradeForDisplay(g2Cons, a.policy),
+    t3Music: g3Music !== null ? formatGradeForDisplay(g3Music, a.policy) : '',
+    t3PE: g3PE !== null ? formatGradeForDisplay(g3PE, a.policy) : '',
+    t3Cons: formatGradeForDisplay(g3Cons, a.policy),
+    musicFinal: formatGradeForDisplay(musicFinal, a.policy),
+    peFinal: formatGradeForDisplay(peFinal, a.policy),
+    finalConsolidated: formatGradeForDisplay(finalConsolidated, a.policy),
     remarks
   };
 }
 
 function plainFinalRemark(a, grade) {
   if (grade === null || grade === undefined || grade === '') return '';
-  const isPass = grade >= 75;
+  const isPass = isPassing(grade);
   const desc = descriptor(grade);
   if (isKeyStage2(a)) return desc;
   return isPass ? `Passed - ${desc}` : `For Intervention - ${desc}`;

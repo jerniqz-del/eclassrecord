@@ -32,6 +32,8 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  mainWindow.setAutoHideMenuBar(true);
+  mainWindow.setMenuBarVisibility(false);
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -47,7 +49,18 @@ function createWindow() {
   mainWindow.on('close', (e) => {
     if (!isConfirmedExit) {
       e.preventDefault();
-      mainWindow.webContents.send('app-close-triggered');
+      try {
+        if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+          mainWindow.webContents.send('app-close-triggered');
+        } else {
+          isConfirmedExit = true;
+          app.exit(0);
+        }
+      } catch (err) {
+        console.error('Failed to send close trigger:', err);
+        isConfirmedExit = true;
+        app.exit(0);
+      }
     }
   });
 
@@ -101,7 +114,7 @@ function createWindow() {
               type: 'info',
               title: 'About E-Class Record',
               message: 'E-Class Record v' + app.getVersion(),
-              detail: 'Local, teacher-owned class record for DepEd three-term and legacy grading workflows.'
+              detail: 'Local, teacher-owned class record for DepEd three-term grading workflows compliant with DepEd Order No. 15 s. 2026.'
             });
           }
         },
@@ -145,6 +158,17 @@ ipcMain.handle('dialog:import-json', async () => {
   if (result.canceled || result.filePaths.length === 0) return { success: false };
   const content = fileIO.readFile(result.filePaths[0]);
   return { success: true, content: content };
+});
+
+ipcMain.handle('dialog:select-folder', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select Secondary Auto-Backup Folder',
+    properties: ['openDirectory', 'createDirectory']
+  });
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+  return result.filePaths[0];
 });
 
 ipcMain.handle('dialog:import-sf1', async () => {
@@ -313,7 +337,7 @@ ipcMain.handle('shell:open-external', async (_event, url) => {
 
 ipcMain.handle('app:confirm-exit', () => {
   isConfirmedExit = true;
-  app.quit();
+  app.exit(0);
 });
 
 // ── App Lifecycle ─────────────────────────────────────────

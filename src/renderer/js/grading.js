@@ -2,14 +2,14 @@
  * E-Class Record — Grading Calculation Engine
  *
  * Implements standard DepEd Department Order (DO) grading rules,
- * including DO 15 s.2026, DO 8 s.2015, and Key Stage 2 Trimester.
+ * including DO 15 s.2026 and Key Stage 2 Trimester.
  */
 
 let currentMapehSubTab = 'music_arts';
 
 function isMapehSubject(subject) {
   const s = (subject || '').toLowerCase();
-  return s === 'mapeh' || s.includes('mapeh') || s.includes('music and arts') || s.includes('physical education and health') || s === 'arts and physical education';
+  return s === 'mapeh' || s.includes('mapeh') || s.includes('music and arts') || s.includes('physical education and health');
 }
 
 // Transmutation table: DO 015, s. 2026 Transition
@@ -27,20 +27,6 @@ const adjusted2026 = [
   [0.00, 4.67, 60]
 ];
 
-// Transmutation table: DO 8, s. 2015 Legacy
-const legacy2015 = [
-  [100.00, 100.00, 100], [98.40, 99.99, 99], [96.80, 98.39, 98], [95.20, 96.79, 97],
-  [93.60, 95.19, 96], [92.00, 93.59, 95], [90.40, 91.99, 94], [88.80, 90.39, 93],
-  [87.20, 88.79, 92], [85.60, 87.19, 91], [84.00, 85.59, 90], [82.40, 83.99, 89],
-  [80.80, 82.39, 88], [79.20, 80.79, 87], [77.60, 79.19, 86], [76.00, 77.59, 85],
-  [74.40, 75.99, 84], [72.80, 74.39, 83], [71.20, 72.79, 82], [69.60, 71.19, 81],
-  [68.00, 69.59, 80], [66.40, 67.99, 79], [64.80, 66.39, 78], [63.20, 64.79, 77],
-  [61.60, 63.19, 76], [60.00, 61.59, 75], [56.00, 59.99, 74], [52.00, 55.99, 73],
-  [48.00, 51.99, 72], [44.00, 47.99, 71], [40.00, 43.99, 70], [36.00, 39.99, 69],
-  [32.00, 35.99, 68], [28.00, 31.99, 67], [24.00, 27.99, 66], [20.00, 23.99, 65],
-  [16.00, 19.99, 64], [12.00, 15.99, 63], [8.00, 11.99, 62], [4.00, 7.99, 61],
-  [0.00, 3.99, 60]
-];
 
 // Transmutation table: Key Stage 2 Trimester
 const keyStage2Transmutation = [
@@ -120,6 +106,9 @@ const seniorHighTemplate = [
  * @param {string|number} gradeLevel
  */
 function templateForGrade(gradeLevel) {
+  if (typeof db !== 'undefined' && db.useUniversalTrimesterLayout) {
+    return keyStage2Template;
+  }
   const grade = parseInt(gradeLevel);
   if (grade <= 3) return keyStage1Template;
   if (grade <= 6) return keyStage2Template;
@@ -162,7 +151,7 @@ function getSubjectsForGrade(gradeLevel) {
       'Good Manners and Right Conduct (GMRC)',
       'Music, Arts, Physical Education, and Health (MAPEH)'
     ];
-  } else if (grade >= 4 && grade <= 6) {
+  } else if (grade >= 4 && grade <= 5) {
     return [
       'Filipino',
       'English',
@@ -170,7 +159,18 @@ function getSubjectsForGrade(gradeLevel) {
       'Science',
       'Araling Panlipunan',
       'Good Manners and Right Conduct (GMRC)',
-      'EPP/TLE',
+      'Edukasyong Pantahanan at Pangkabuhayan (EPP)',
+      'MAPEH'
+    ];
+  } else if (grade === 6) {
+    return [
+      'Filipino',
+      'English',
+      'Mathematics',
+      'Science',
+      'Araling Panlipunan',
+      'Good Manners and Right Conduct (GMRC)',
+      'Technology and Livelihood Education (TLE)',
       'MAPEH'
     ];
   } else if (grade >= 7 && grade <= 10) {
@@ -181,7 +181,7 @@ function getSubjectsForGrade(gradeLevel) {
       'Science',
       'Araling Panlipunan',
       'Values Education',
-      'EPP/TLE',
+      'Technology and Livelihood Education (TLE)',
       'MAPEH'
     ];
   } else {
@@ -204,14 +204,7 @@ function weightsFor(group) {
     SHS_FIELD: [15, 70, 15],
     SHS_RESEARCH: [40, 60, 0],
     SHS_TECHPRO: [15, 65, 20],
-    SHS_WORK: [20, 80, 0],
-    DO8_LANG_AP_ESP: [30, 50, 20],
-    DO8_SCI_MATH: [40, 40, 20],
-    DO8_MUSIC_TLE: [20, 60, 20],
-    DO8_SHS_CORE: [25, 50, 25],
-    DO8_SHS_ACAD_OTHER: [25, 45, 30],
-    DO8_SHS_ACAD_WORK: [35, 40, 25],
-    DO8_SHS_TVL: [20, 60, 20]
+    SHS_WORK: [20, 80, 0]
   };
   return map[group] || [20, 50, 30];
 }
@@ -224,76 +217,79 @@ function determineSubjectGroup(gradeLevel, subject, policy) {
   const grade = parseInt(gradeLevel);
   const s = (subject || '').toLowerCase();
   
-  if (policy === 'DO8_2015') {
-    // DO 8 Legacy weights rules
-    if (grade >= 11) {
-      if (/immersion|research|inquiries|investigation|practical/i.test(s)) {
-        return 'DO8_SHS_ACAD_WORK';
-      }
-      if (/tvl|tech|livelihood|empowerment/i.test(s)) {
-        return 'DO8_SHS_TVL';
-      }
-      if (/oral|reading|writing|komunikasyon|pagbasa|philosophy|pe|health|physical/i.test(s)) {
-        return 'DO8_SHS_CORE';
-      }
-      return 'DO8_SHS_ACAD_OTHER';
-    } else {
-      if (/english|filipin|ap|araling|panlipunan|esp|values|gmrc/i.test(s)) {
-        return 'DO8_LANG_AP_ESP';
-      }
-      if (/science|agham|math|matematika/i.test(s)) {
-        return 'DO8_SCI_MATH';
-      }
-      if (/mapeh|music|arts|physical|health|tle|epp|livelihood/i.test(s)) {
-        return 'DO8_MUSIC_TLE';
-      }
-      return 'DO8_LANG_AP_ESP'; // standard fallback
+  if (grade >= 11) {
+    if (/immersion|work/i.test(s)) {
+      return 'SHS_WORK';
     }
+    if (/field|exposure/i.test(s)) {
+      return 'SHS_FIELD';
+    }
+    if (/research|inquiries|investigation|practical/i.test(s)) {
+      return 'SHS_RESEARCH';
+    }
+    if (/techpro|elective/i.test(s)) {
+      return 'SHS_TECHPRO';
+    }
+    if (/arts|sports/i.test(s)) {
+      return 'SHS_ARTS';
+    }
+    return 'SHS_CORE';
   } else {
-    // DO 15 weights rules
+    if (/mapeh|music|arts|physical|health|tle|epp|livelihood|pantahanan|pangkabuhayan|technology/i.test(s)) {
+      return 'SKILLS_20_60_20';
+    }
     if (grade >= 4 && grade <= 6) {
       return 'KS2_TRIMESTER';
     }
-    if (grade >= 11) {
-      if (/immersion|work/i.test(s)) {
-        return 'SHS_WORK';
-      }
-      if (/field|exposure/i.test(s)) {
-        return 'SHS_FIELD';
-      }
-      if (/research|inquiries|investigation|practical/i.test(s)) {
-        return 'SHS_RESEARCH';
-      }
-      if (/techpro|elective/i.test(s)) {
-        return 'SHS_TECHPRO';
-      }
-      if (/arts|sports/i.test(s)) {
-        return 'SHS_ARTS';
-      }
-      return 'SHS_CORE';
-    } else {
-      if (/mapeh|music|arts|physical|health|tle|epp|livelihood/i.test(s)) {
-        return 'SKILLS_20_60_20';
-      }
-      return 'CORE_20_50_30';
-    }
+    return 'CORE_20_50_30';
   }
 }
 
 /**
- * Automatically determines the appropriate policy mode based on grade level and subject.
+ * Automatically determines the appropriate policy mode based on grade level, subject, and school year.
  * @param {string|number} gradeLevel
  * @param {string} subject
- * @returns {string} One of: KEY_STAGE_2_TRIMESTER|DO15_ZERO|DO15_TRANSITION
+ * @param {string} sy
+ * @returns {string} One of: KEY_STAGE_2_TRIMESTER|DO15_ZERO|DO15_TRANSITION|DO15_DESCRIPTIVE
  */
-function determinePolicy(gradeLevel, subject) {
+function determinePolicy(gradeLevel, subject, sy) {
   const grade = parseInt(gradeLevel);
+  const s = (subject || '').toLowerCase();
+  
+  // Resolve school year start
+  let startYear = 2026;
+  if (sy) {
+    const parts = String(sy).split('-');
+    const parsed = parseInt(parts[0]);
+    if (!isNaN(parsed)) startYear = parsed;
+  }
+  
+  // KS1 Transition rules (Grades 1-3)
+  if (grade <= 3) {
+    if (grade === 1) {
+      return 'DO15_DESCRIPTIVE';
+    }
+    if (grade === 2) {
+      return startYear >= 2027 ? 'DO15_DESCRIPTIVE' : 'DO15_TRANSITION';
+    }
+    if (grade === 3) {
+      if (startYear === 2026) return 'DO15_TRANSITION';
+      if (startYear === 2027) return 'DO15_ZERO';
+      return 'DO15_DESCRIPTIVE';
+    }
+  }
+  
+  // KS2 (Grades 4-6)
   if (grade >= 4 && grade <= 6) {
     return 'KEY_STAGE_2_TRIMESTER';
   }
   
-  const s = (subject || '').toLowerCase();
+  // KS3 and KS4 (Grades 7-12)
+  if (startYear >= 2027) {
+    return 'DO15_ZERO';
+  }
   
+  // For SY 2026-2027:
   // Grade 11-12 TVL / Work Immersion / Electives
   if (grade >= 11) {
     if (/immersion|work|field|exposure|techpro|tvl/i.test(s)) {
@@ -302,7 +298,7 @@ function determinePolicy(gradeLevel, subject) {
     return 'DO15_TRANSITION';
   }
   
-  // Grades 1-10 TLE / EPP / Skills-heavy subjects
+  // Grades 7-10 TLE / EPP / Skills-heavy subjects
   if (/tle|epp|livelihood|technology/i.test(s)) {
     return 'DO15_ZERO';
   }
@@ -314,7 +310,12 @@ function determinePolicy(gradeLevel, subject) {
  * Checks if teaching load uses Key Stage 2.
  */
 function isKeyStage2(a) {
-  return a && a.subjectGroup === 'KS2_TRIMESTER';
+  if (!a) return false;
+  if (typeof db !== 'undefined' && db.useUniversalTrimesterLayout) {
+    return true;
+  }
+  const grade = parseInt(a.gradeLevel);
+  return grade >= 4 && grade <= 6;
 }
 
 /**
@@ -452,13 +453,7 @@ function computeTerm(a, learnerId, term, mapePart) {
   const st2 = componentScore(a, learnerId, term, ['SA2', 'ST2'], mapePart);
   const te = componentScore(a, learnerId, term, ['TE'], mapePart);
 
-  let examPS;
-  if (isKeyStage2(a) || a.policy === 'DO8_2015') {
-    const qa = componentScore(a, learnerId, term, ['SA1', 'SA2', 'ST1', 'ST2', 'TE'], mapePart);
-    examPS = qa.ps;
-  } else {
-    examPS = (st1.ps * 0.30) + (st2.ps * 0.30) + (te.ps * 0.40);
-  }
+  const examPS = (st1.ps * 0.30) + (st2.ps * 0.30) + (te.ps * 0.40);
 
   const ig = (ww.ps * w[0] / 100) + (pt.ps * w[1] / 100) + (examPS * w[2] / 100);
   const hasData = ww.hasData || pt.hasData || st1.hasData || st2.hasData || te.hasData;
@@ -481,10 +476,24 @@ function computeTerm(a, learnerId, term, mapePart) {
  * Transmutes initial grade into final reported grade.
  */
 function transmute(a, ig) {
-  if (isKeyStage2(a)) return keyStage2Grade(ig);
-  if (a.policy === 'DO15_ZERO') return Math.round(ig);
+  const isZeroBased = isZeroBasedSy(a.schoolYear || db.schoolYear) || a.policy === 'DO15_ZERO';
   
-  const table = a.policy === 'DO8_2015' ? legacy2015 : adjusted2026;
+  if (isKeyStage2(a)) {
+    if (isZeroBased) {
+      return Math.round(ig);
+    }
+    return keyStage2Grade(ig);
+  }
+  
+  if (a.policy === 'DO15_DESCRIPTIVE') {
+    return transmuteDescriptive(ig);
+  }
+  
+  if (isZeroBased) {
+    return Math.round(ig);
+  }
+  
+  const table = adjusted2026;
   for (let i = 0; i < table.length; i++) {
     if (ig >= table[i][0] && ig <= table[i][1]) {
       return table[i][2];
@@ -508,10 +517,63 @@ function termDescription(a, grade) {
 }
 
 function descriptor(grade) {
-  if (grade === null || grade === undefined) return '';
-  if (grade >= 90) return 'Advancing';
-  if (grade >= 80) return 'Benchmarking';
-  if (grade >= 75) return 'Connecting';
-  if (grade >= 65) return 'Developing';
-  return 'Emerging';
+  if (grade === null || grade === undefined || grade === '') return '';
+  const g = String(grade).toUpperCase();
+  if (g === 'A') return 'Advancing (Namumukod-tangi)';
+  if (g === 'B') return 'Benchmarking (Napamamalas)';
+  if (g === 'C') return 'Connecting (Natutungo)';
+  if (g === 'D') return 'Developing (Napauunlad)';
+  if (g === 'E') return 'Emerging (Nagsisimula)';
+  
+  const num = parseFloat(grade);
+  if (isNaN(num)) return grade;
+  
+  if (num >= 90) return 'Advancing (Namumukod-tangi)';
+  if (num >= 80) return 'Benchmarking (Napamamalas)';
+  if (num >= 75) return 'Connecting (Natutungo)';
+  if (num >= 65) return 'Developing (Napauunlad)';
+  return 'Emerging (Nagsisimula)';
 }
+
+function isZeroBasedSy(sy) {
+  if (!sy) return false;
+  const parts = String(sy).split('-');
+  const startYear = parseInt(parts[0]);
+  return !isNaN(startYear) && startYear >= 2027;
+}
+
+function isPassing(grade) {
+  if (grade === null || grade === undefined || grade === '') return false;
+  const g = String(grade).toUpperCase();
+  if (['A', 'B', 'C'].includes(g)) return true;
+  if (['D', 'E'].includes(g)) return false;
+  const num = parseFloat(grade);
+  return !isNaN(num) && num >= 75;
+}
+
+function transmuteDescriptive(ig) {
+  if (ig >= 90) return 'A';
+  if (ig >= 80) return 'B';
+  if (ig >= 75) return 'C';
+  if (ig >= 65) return 'D';
+  return 'E';
+}
+
+function formatGradeForDisplay(grade, policy) {
+  if (grade === null || grade === undefined || grade === '') return '';
+  if (policy === 'DO15_DESCRIPTIVE' && typeof db !== 'undefined' && db.showNumericalEquivalents) {
+    const g = String(grade).toUpperCase();
+    const rangeMap = {
+      'A': '90-100',
+      'B': '80-89',
+      'C': '75-79',
+      'D': '65-74',
+      'E': '0-64'
+    };
+    if (rangeMap[g]) {
+      return `${g} (${rangeMap[g]})`;
+    }
+  }
+  return grade;
+}
+

@@ -225,3 +225,71 @@
     color: #000 !important;
   }
 }
+
+/* Custom printing styles for the individual learner grades report */
+@media print {
+  body.print-modal-only .layout,
+  body.print-modal-only .sidebar,
+  body.print-modal-only .app-header,
+  body.print-modal-only .no-print,
+  body.print-modal-only .view-section,
+  body.print-modal-only .toast-wrap,
+  body.print-modal-only .modal-overlay:not(#viewLearnerGradesModal) {
+    display: none !important;
+  }
+  
+  body.print-modal-only #viewLearnerGradesModal {
+    display: block !important;
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  body.print-modal-only #viewLearnerGradesModal .modal {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+    animation: none !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  
+  body.print-modal-only #viewLearnerGradesModal .no-print-modal {
+    display: none !important;
+  }
+  
+  body.print-modal-only #viewLearnerGradesModal .modal__body {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  body.print-modal-only .printable-grades-area table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 12px !important;
+  }
+  
+  body.print-modal-only .printable-grades-area th,
+  body.print-modal-only .printable-grades-area td {
+    border: 1px solid #000 !important;
+    padding: 4px 6px !important;
+    font-size: 10px !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
+

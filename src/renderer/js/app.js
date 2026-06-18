@@ -23,6 +23,15 @@ function render() {
   if (schoolIdEl) schoolIdEl.value = db.schoolId || '';
   if (regionEl) regionEl.value = db.region || '';
   
+  const settingAutoBlur = document.getElementById('settingAutoBlur');
+  if (settingAutoBlur) settingAutoBlur.checked = db.autoBlur || false;
+  
+  const settingShowNumericalEquivalents = document.getElementById('settingShowNumericalEquivalents');
+  if (settingShowNumericalEquivalents) settingShowNumericalEquivalents.checked = db.showNumericalEquivalents || false;
+  
+  const settingUseUniversalTrimesterLayout = document.getElementById('settingUseUniversalTrimesterLayout');
+  if (settingUseUniversalTrimesterLayout) settingUseUniversalTrimesterLayout.checked = db.useUniversalTrimesterLayout || false;
+  
   // Dynamic population of divisions based on selected region
   populateDivisions();
   if (divisionEl) divisionEl.value = db.division || '';
@@ -55,6 +64,19 @@ function render() {
     yearEl.value = val;
   }
 
+  // Update secondary auto-backup folder settings display
+  const backupDescEl = document.getElementById('secondaryBackupPathDesc');
+  const clearBackupBtn = document.getElementById('btnClearBackupFolder');
+  if (backupDescEl && clearBackupBtn) {
+    if (typeof dbRoot !== 'undefined' && dbRoot.secondaryBackupPath) {
+      backupDescEl.innerHTML = `Backup path configured: <code style="font-family:var(--font-family-mono); font-size:12px; color:var(--text-primary); font-weight:var(--font-weight-semibold);">${esc(dbRoot.secondaryBackupPath)}</code>.<br><span style="color:var(--text-secondary); font-size:var(--text-xs);">Both your local AppData and secondary folders store a duplicate active database copy and daily rolling backups (up to 30 days).</span>`;
+      clearBackupBtn.style.display = 'inline-block';
+    } else {
+      backupDescEl.innerHTML = `None configured. Select a directory (like your OneDrive or Google Drive folder) to save duplicate database copies and daily rolling backups (up to 30 days) in both directories.`;
+      clearBackupBtn.style.display = 'none';
+    }
+  }
+
   // Render Sub-components
   renderAssignmentsList();
   renderCurrentHeader();
@@ -63,7 +85,7 @@ function render() {
   renderDashboardOverview();
   renderLearnersRoster();
 
-  const hasClasses = db.assignments && db.assignments.length > 0;
+  const hasClasses = currentAssignment() !== null;
   showEl('classesViewContent', hasClasses);
   showEl('classesViewEmpty', !hasClasses);
   
@@ -80,6 +102,9 @@ function render() {
   }
 
   showView();
+  if (typeof updateBlurClass === 'function') {
+    updateBlurClass();
+  }
 }
 
 /**
@@ -90,9 +115,12 @@ function renderAssignmentsList() {
   const statusEl = document.getElementById('assignmentStatus');
   if (!listEl) return;
   
+  const activeYear = db.schoolYear || '2026-2027';
+  const filtered = db.assignments ? db.assignments.filter(a => a.schoolYear === activeYear) : [];
+  
   let html = '';
-  for (let i = 0; i < db.assignments.length; i++) {
-    const a = db.assignments[i];
+  for (let i = 0; i < filtered.length; i++) {
+    const a = filtered[i];
     const isActive = a.id === db.currentAssignmentId;
     const itemClass = isActive ? 'load-list__item load-list__item--active' : 'load-list__item';
     
@@ -116,12 +144,12 @@ function renderAssignmentsList() {
   }
   
   if (!html) {
-    html = '<li class="load-list__item text-muted text-xs">No teaching loads yet.</li>';
+    html = `<li class="load-list__item text-muted text-xs">No teaching loads for ${esc(activeYear)}.</li>`;
   }
   
   listEl.innerHTML = html;
   if (statusEl) {
-    statusEl.innerHTML = `${db.assignments.length} teaching load(s)`;
+    statusEl.innerHTML = `${filtered.length} teaching load(s)`;
   }
 }
 
@@ -277,6 +305,9 @@ function applyRecordTab() {
   }
 
   if (a) {
+    const complianceNoteHtml = a.policy === 'DO15_DESCRIPTIVE'
+      ? `<div class="print-compliance-note" style="margin-top:var(--space-2); text-align:center; font-size:var(--font-size-xs); font-style:italic; border-top:1px dashed var(--border-subtle); padding-top:var(--space-2)">Original basis of grade was descriptive (DO 15, s. 2026).</div>`
+      : '';
     const printHeaderHtml = `
       <div class="print-metadata-grid">
         <div class="print-metadata-col">
@@ -292,6 +323,7 @@ function applyRecordTab() {
           <div><strong>Teacher:</strong> ${esc(db.teacherName || '')}</div>
         </div>
       </div>
+      ${complianceNoteHtml}
     `;
     const recHeader = document.getElementById('classRecordPrintHeader');
     const finHeader = document.getElementById('finalGradesPrintHeader');
@@ -311,9 +343,10 @@ function applyRecordTab() {
   showEl('pdfTerm3Btn', recordTab === '3', 'inline-flex');
   showEl('pdfSummaryBtn', recordTab === 'summary', 'inline-flex');
 
-  // Toggle Quick Grade Entry button visibility
+  // Toggle Quick Grade Entry and View Learner's Grades buttons visibility
   const hasLearners = a && a.learners && a.learners.length > 0;
   showEl('quickGradeBtn', !isSummary && hasLearners, 'inline-flex');
+  showEl('viewLearnerGradesBtn', hasLearners, 'inline-flex');
 }
 
 async function printClassRecord() {
@@ -637,10 +670,12 @@ function populateSubjects() {
     subjectSelect.appendChild(opt);
   });
   
-  const otherOpt = document.createElement('option');
-  otherOpt.value = 'Custom';
-  otherOpt.innerText = 'Other / Custom Subject…';
-  subjectSelect.appendChild(otherOpt);
+  if (isNaN(grade) || grade < 1 || grade > 10) {
+    const otherOpt = document.createElement('option');
+    otherOpt.value = 'Custom';
+    otherOpt.innerText = 'Other / Custom Subject…';
+    subjectSelect.appendChild(otherOpt);
+  }
   
   handleSubjectChanged();
 }
@@ -804,6 +839,11 @@ function showAddClassLoadModal() {
     
     const customInput = document.getElementById('customSubjectInput');
     if (customInput) customInput.value = '';
+
+    const classYearSelect = document.getElementById('newClassSchoolYear');
+    if (classYearSelect) {
+      classYearSelect.value = db.schoolYear || '2026-2027';
+    }
     
     modal.style.display = 'flex';
   }
@@ -898,9 +938,16 @@ function hideDonateQrModal() {
   }
 }
 
-function confirmAppExit() {
+async function confirmAppExit() {
+  try {
+    await saveDatabase();
+  } catch (err) {
+    console.error('Error saving database on exit:', err);
+  }
   if (window.electronAPI && typeof window.electronAPI.confirmExit === 'function') {
     window.electronAPI.confirmExit();
+  } else {
+    window.close();
   }
 }
 
@@ -909,6 +956,13 @@ function openDonateExternal(url) {
     window.electronAPI.openExternal(url);
   }
 }
+
+function openFeedback() {
+  if (window.electronAPI && typeof window.electronAPI.openExternal === 'function') {
+    window.electronAPI.openExternal('https://forms.gle/eRoNwh2EG8c52Z1K8');
+  }
+}
+
 
 function showImageZoom(src) {
   const modal = document.getElementById('imageZoomModal');
@@ -1159,6 +1213,9 @@ function unlockProfileAndEnter(profile) {
   
   currentView = 'dashboard';
   recordTab = db.recordTab || db.currentTerm || '1';
+  
+  // Initialize spectator grades blur based on settings
+  gradesBlurred = db.autoBlur || false;
   
   render();
   // checkWelcomeModal(); // Welcome modal is now shown on startup before profile login

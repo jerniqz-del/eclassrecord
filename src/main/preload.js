@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File Backup & Migration Dialogs
   exportJson: (jsonString) => ipcRenderer.invoke('dialog:export-json', jsonString),
   importJson: () => ipcRenderer.invoke('dialog:import-json'),
+  selectFolder: () => ipcRenderer.invoke('dialog:select-folder'),
   importSf1: () => ipcRenderer.invoke('dialog:import-sf1'),
   exportCsv: (csvString) => ipcRenderer.invoke('dialog:export-csv', csvString),
   showPrintChoose: () => ipcRenderer.invoke('dialog:print-choose'),

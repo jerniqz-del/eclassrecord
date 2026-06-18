@@ -28,6 +28,7 @@ let db = {
   currentAssignmentId: '',
   currentTerm: '1',
   activeView: 'dashboard',
+  autoBlur: false,
   assignments: []
 };
 
@@ -45,6 +46,7 @@ function normalizeDatabase() {
   if (db.schoolId === undefined) db.schoolId = '';
   if (db.region === undefined) db.region = '';
   if (db.division === undefined) db.division = '';
+  if (db.autoBlur === undefined) db.autoBlur = false;
   if (!db.version || db.version < DB_VERSION) db.version = DB_VERSION;
   
   for (let i = 0; i < db.assignments.length; i++) {
@@ -74,16 +76,14 @@ function normalizeDatabase() {
       a.subject = 'MAPEH';
     }
     
-    // Automatically set policy and subjectGroup
-    if (a.gradeLevel >= 4 && a.gradeLevel <= 6) {
-      a.policy = 'KEY_STAGE_2_TRIMESTER';
-      a.subjectGroup = 'KS2_TRIMESTER';
-    } else {
-      if (!a.policy || a.policy === 'KEY_STAGE_2_TRIMESTER') {
-        a.policy = 'DO15_TRANSITION';
-      }
-      a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy);
+    // Legacy migration to default schoolYear
+    if (!a.schoolYear) {
+      a.schoolYear = db.schoolYear || '2026-2027';
     }
+
+    // Automatically set policy and subjectGroup based on grade, subject, and school year
+    a.policy = determinePolicy(a.gradeLevel, a.subject, a.schoolYear);
+    a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy);
 
     if (!a.assessments) a.assessments = [];
     if (!a.scores) a.scores = {};
@@ -164,11 +164,30 @@ async function saveRootDatabase() {
     const success = await window.electronAPI.saveDatabase(dbRoot);
     if (success) {
       setStatus('Saved locally at ' + new Date().toLocaleTimeString());
+      showAutoSaveIndicator();
     }
   } catch (error) {
     console.error('Failed to save database:', error);
     toast('Could not save data: ' + error.message, 'error');
   }
+}
+
+/**
+ * Triggers the UI fade-in/fade-out animation for the auto-save indicator.
+ */
+function showAutoSaveIndicator() {
+  const el = document.getElementById('autoSaveIndicator');
+  if (!el) return;
+
+  el.classList.add('show');
+
+  if (window.autoSaveTimeout) {
+    clearTimeout(window.autoSaveTimeout);
+  }
+
+  window.autoSaveTimeout = setTimeout(() => {
+    el.classList.remove('show');
+  }, 2500);
 }
 
 /**
@@ -187,14 +206,17 @@ function setStatus(message) {
  * Gets currently selected class teaching load.
  */
 function currentAssignment() {
-  for (let i = 0; i < db.assignments.length; i++) {
-    if (db.assignments[i].id === db.currentAssignmentId) {
-      return db.assignments[i];
+  const activeYear = db.schoolYear || '2026-2027';
+  const filtered = db.assignments.filter(a => a.schoolYear === activeYear);
+
+  for (let i = 0; i < filtered.length; i++) {
+    if (filtered[i].id === db.currentAssignmentId) {
+      return filtered[i];
     }
   }
-  if (db.assignments.length > 0) {
-    db.currentAssignmentId = db.assignments[0].id;
-    return db.assignments[0];
+  if (filtered.length > 0) {
+    db.currentAssignmentId = filtered[0].id;
+    return filtered[0];
   }
   return null;
 }
@@ -206,6 +228,7 @@ function addAssignment() {
   const gradeLevel = document.getElementById('newGrade').value;
   const section = trim(document.getElementById('newSection').value);
   let subject = trim(document.getElementById('newSubject').value);
+  const classSchoolYear = (document.getElementById('newClassSchoolYear') && document.getElementById('newClassSchoolYear').value) || db.schoolYear || '2026-2027';
 
   if (subject === 'Custom') {
     subject = trim(document.getElementById('customSubjectInput').value);
@@ -216,7 +239,7 @@ function addAssignment() {
     return;
   }
 
-  const policy = determinePolicy(gradeLevel, subject);
+  const policy = determinePolicy(gradeLevel, subject, classSchoolYear);
   const subjectGroup = determineSubjectGroup(gradeLevel, subject, policy);
 
   const assignment = {
@@ -226,6 +249,7 @@ function addAssignment() {
     subject,
     subjectGroup,
     policy,
+    schoolYear: classSchoolYear,
     learners: [],
     assessments: [],
     scores: {}
@@ -235,6 +259,12 @@ function addAssignment() {
 
   db.assignments.push(assignment);
   db.currentAssignmentId = assignment.id;
+  db.schoolYear = classSchoolYear;
+
+  const headerYearEl = document.getElementById('schoolYear');
+  if (headerYearEl) {
+    headerYearEl.value = classSchoolYear;
+  }
   
   // Clean inputs
   document.getElementById('newSection').value = '';
@@ -302,6 +332,34 @@ function updateProfile() {
 }
 
 /**
+ * Triggers native folder selector and updates the secondary auto-backup directory path.
+ */
+async function selectSecondaryBackupFolder() {
+  try {
+    const folderPath = await window.electronAPI.selectFolder();
+    if (folderPath) {
+      dbRoot.secondaryBackupPath = folderPath;
+      await saveRootDatabase();
+      render();
+      toast('Secondary auto-backup directory configured successfully.', 'success');
+    }
+  } catch (error) {
+    console.error('Failed to select secondary backup folder:', error);
+    toast('Could not configure backup folder: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Resets secondary auto-backup directory configuration.
+ */
+async function clearSecondaryBackupFolder() {
+  dbRoot.secondaryBackupPath = '';
+  await saveRootDatabase();
+  render();
+  toast('Secondary auto-backup directory cleared.', 'info');
+}
+
+/**
  * Erases local state database completely after confirmation.
  */
 function clearLocalData() {
@@ -325,6 +383,7 @@ function clearLocalData() {
         currentAssignmentId: '',
         currentTerm: '1',
         activeView: 'dashboard',
+        autoBlur: false,
         assignments: []
       };
       currentProfilePin = '';
@@ -369,6 +428,18 @@ function editAssignmentModal(id) {
             <label class="field-label">Section</label>
             <input id="editSection" class="field-input" value="${esc(a.section)}" placeholder="Section name" />
           </div>
+          <div class="field">
+            <label class="field-label">School Year</label>
+            <select id="editSchoolYear" class="field-input">
+              ${[
+                '2025-2026', '2026-2027', '2027-2028',
+                '2028-2029', '2029-2030', '2030-2031', '2031-2032',
+                '2032-2033', '2033-2034', '2034-2035', '2035-2036'
+              ].map(sy =>
+                `<option value="${sy}" ${sy === (a.schoolYear || db.schoolYear || '2026-2027') ? 'selected' : ''}>${sy}</option>`
+              ).join('')}
+            </select>
+          </div>
         </div>
         <div class="field">
           <label class="field-label">Subject</label>
@@ -406,10 +477,12 @@ function editAssignmentModal(id) {
       editSubjectSelect.appendChild(opt);
     });
     
-    const otherOpt = document.createElement('option');
-    otherOpt.value = 'Custom';
-    otherOpt.innerText = 'Other / Custom Subject…';
-    editSubjectSelect.appendChild(otherOpt);
+    if (isNaN(grade) || grade < 1 || grade > 10) {
+      const otherOpt = document.createElement('option');
+      otherOpt.value = 'Custom';
+      otherOpt.innerText = 'Other / Custom Subject…';
+      editSubjectSelect.appendChild(otherOpt);
+    }
   };
 
   const handleEditSubjectChange = () => {
@@ -443,6 +516,7 @@ function editAssignmentModal(id) {
   overlay.querySelector('#editModalCancel').addEventListener('click', close);
   overlay.querySelector('#editModalSave').addEventListener('click', () => {
     const newSection = trim(overlay.querySelector('#editSection').value);
+    const newSchoolYear = overlay.querySelector('#editSchoolYear').value;
     let newSubject = editSubjectSelect.value;
     if (newSubject === 'Custom') {
       newSubject = trim(editCustomInput.value);
@@ -452,13 +526,20 @@ function editAssignmentModal(id) {
       return;
     }
     const newGrade = editGradeSelect.value;
-    const newPolicy = determinePolicy(newGrade, newSubject);
+    const newPolicy = determinePolicy(newGrade, newSubject, newSchoolYear);
 
     a.gradeLevel   = newGrade;
     a.section      = newSection;
     a.subject      = newSubject;
+    a.schoolYear   = newSchoolYear;
     a.policy       = newPolicy;
     a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy);
+
+    db.schoolYear = newSchoolYear;
+    const headerYearEl = document.getElementById('schoolYear');
+    if (headerYearEl) {
+      headerYearEl.value = newSchoolYear;
+    }
 
     // Apply template assessments for new grade level
     ensureTemplateAssessments(a);

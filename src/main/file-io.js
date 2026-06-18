@@ -39,6 +39,56 @@ function loadDatabase() {
 }
 
 /**
+ * Creates a daily rolling backup in the specified base directory, keeping up to `limit` files.
+ * @param {string} payload JSON string.
+ * @param {string} baseDir Base directory where backups/ folder should be created.
+ * @param {number} limit Maximum number of daily backup files to retain.
+ */
+function createRollingBackup(payload, baseDir, limit = 30) {
+  try {
+    if (!baseDir) return;
+    const backupFolder = path.join(baseDir, 'backups');
+    if (!fs.existsSync(backupFolder)) {
+      fs.mkdirSync(backupFolder, { recursive: true });
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    const filename = `backup-${dateStr}.json`;
+    const targetFile = path.join(backupFolder, filename);
+
+    // Save today's backup file (overwrites if saved again today)
+    fs.writeFileSync(targetFile, payload, 'utf8');
+
+    // Prune backups exceeding the retention limit
+    const files = fs.readdirSync(backupFolder);
+    const backupFiles = files
+      .filter(f => f.startsWith('backup-') && f.endsWith('.json'))
+      .map(f => ({
+        name: f,
+        filePath: path.join(backupFolder, f)
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (backupFiles.length > limit) {
+      const toDelete = backupFiles.slice(0, backupFiles.length - limit);
+      for (const item of toDelete) {
+        try {
+          fs.unlinkSync(item.filePath);
+        } catch (delError) {
+          console.error(`Failed to delete old backup file ${item.name}:`, delError);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to create daily rolling backup:', error);
+  }
+}
+
+/**
  * Saves the database to disk.
  * @param {object|string} data The database contents.
  * @returns {boolean} True if successful.
@@ -48,6 +98,24 @@ function saveDatabase(data) {
     ensureDataFolder();
     const payload = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
     fs.writeFileSync(dbPath, payload, 'utf8');
+
+    // Local daily rolling backup in AppData backups folder
+    createRollingBackup(payload, dbDir, 30);
+
+    // Secondary auto-backup if secondaryBackupPath is set
+    try {
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      if (parsed && parsed.secondaryBackupPath) {
+        const secondaryFile = path.join(parsed.secondaryBackupPath, 'eclass-record-backup.json');
+        fs.writeFileSync(secondaryFile, payload, 'utf8');
+
+        // Secondary daily rolling backup
+        createRollingBackup(payload, parsed.secondaryBackupPath, 30);
+      }
+    } catch (secError) {
+      console.error('Secondary auto-backup failed (non-fatal):', secError);
+    }
+
     return true;
   } catch (error) {
     console.error('Failed to save database:', error);

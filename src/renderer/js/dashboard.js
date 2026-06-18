@@ -16,7 +16,7 @@ function gradingLabel(a) {
 function policyLabel(policy) {
   if (policy === 'KEY_STAGE_2_TRIMESTER') return 'Compliant with DepEd Order No. 15 s. 2026';
   if (policy === 'DO15_ZERO') return 'DO 015, s. 2026 Zero-Based';
-  if (policy === 'DO8_2015') return 'DO 8, s. 2015 Legacy';
+  if (policy === 'DO15_DESCRIPTIVE') return 'DO 015, s. 2026 Descriptive Grading';
   return 'DO 015, s. 2026 Transition';
 }
 
@@ -37,9 +37,22 @@ function renderDashboardOverview() {
     return;
   }
 
+  const activeYear = db.schoolYear || '2026-2027';
+  const filtered = db.assignments.filter(a => a.schoolYear === activeYear);
+
+  if (filtered.length === 0) {
+    target.innerHTML = emptyState(
+      'No Teaching Load',
+      `You have no teaching loads registered for school year ${esc(activeYear)}. Setup a new class load to get started.`,
+      'Add a Teaching Load',
+      "showAddClassLoadModal()"
+    );
+    return;
+  }
+
   let html = '<div class="dashboard-cards-grid">';
-  for (let i = 0; i < db.assignments.length; i++) {
-    const a = db.assignments[i];
+  for (let i = 0; i < filtered.length; i++) {
+    const a = filtered[i];
     const isActive = a.id === db.currentAssignmentId;
     const colorClass = subjectColorClass(a.subject);
     const cardClass = isActive
@@ -236,7 +249,14 @@ function renderCurrentHeader() {
   const a = currentAssignment();
   
   const titleEl = document.getElementById('currentTitle');
-  const metaEl = document.getElementById('currentMeta');
+  const schoolEl = document.getElementById('headerSchoolName');
+  const policyEl = document.getElementById('headerPolicy');
+  const selectYear = document.getElementById('schoolYear');
+  const dots = document.querySelectorAll('#currentMeta .meta-dot');
+  
+  if (selectYear && typeof db !== 'undefined' && db.schoolYear) {
+    selectYear.value = db.schoolYear;
+  }
   
   if (!a) {
     if (titleEl) {
@@ -244,14 +264,35 @@ function renderCurrentHeader() {
       titleEl.style.color = 'var(--text-tertiary)';
       titleEl.style.fontStyle = 'normal';
     }
-    if (metaEl) metaEl.innerHTML = 'Select a class from the Teaching Load list, or add one in Classes ↗';
+    if (schoolEl) {
+      schoolEl.innerHTML = esc(db.schoolName || '—');
+    }
+    if (dots.length >= 2) {
+      dots[0].style.display = '';
+      dots[1].style.display = 'none';
+    } else {
+      dots.forEach(d => d.style.display = 'none');
+    }
+    if (policyEl) policyEl.style.display = 'none';
+    if (selectYear) selectYear.style.display = '';
     return;
   }
   
+  if (dots.length >= 2) {
+    dots[0].style.display = '';
+    dots[1].style.display = '';
+  } else {
+    dots.forEach(d => d.style.display = '');
+  }
+  if (policyEl) policyEl.style.display = '';
+  if (selectYear) selectYear.style.display = '';
+
   if (titleEl) {
     titleEl.innerHTML = `Grade ${esc(a.gradeLevel)} — ${esc(a.section)} &middot; ${esc(a.subject)}`;
     titleEl.style.color = '';
     titleEl.style.fontStyle = '';
   }
-  if (metaEl) metaEl.innerHTML = `${esc(db.schoolName || '—')} &nbsp;&middot;&nbsp; ${esc(db.schoolYear || '—')} &nbsp;&middot;&nbsp; ${esc(gradingLabel(a))}`;
+  
+  if (schoolEl) schoolEl.innerHTML = esc(db.schoolName || '—');
+  if (policyEl) policyEl.innerHTML = esc(gradingLabel(a));
 }

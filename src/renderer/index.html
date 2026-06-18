@@ -41,25 +41,25 @@
       <span class="sidebar__section-title">Navigation</span>
       <!-- View Navigation Menu -->
       <nav class="nav-menu">
-        <button id="navDashboard" class="nav-btn nav-btn--active" onclick="setView('dashboard')">
+        <button id="navDashboard" class="nav-btn nav-btn--active" onclick="setView('dashboard')" title="Dashboard">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="9"></rect>
             <rect x="14" y="3" width="7" height="5"></rect>
             <rect x="14" y="12" width="7" height="9"></rect>
             <rect x="3" y="16" width="7" height="5"></rect>
           </svg>
-          Dashboard
+          <span class="nav-btn__label">Dashboard</span>
         </button>
-        <button id="navClasses" class="nav-btn" onclick="setView('classes')">
+        <button id="navClasses" class="nav-btn" onclick="setView('classes')" title="Teaching Load">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
             <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
             <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
           </svg>
-          Teaching Load
+          <span class="nav-btn__label">Teaching Load</span>
         </button>
-        <button id="navRecord" class="nav-btn" onclick="setView('record')">
+        <button id="navRecord" class="nav-btn" onclick="setView('record')" title="Grading Sheet">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="9" y1="3" x2="9" y2="21"></line>
@@ -67,7 +67,7 @@
             <line x1="3" y1="9" x2="21" y2="9"></line>
             <line x1="3" y1="15" x2="21" y2="15"></line>
           </svg>
-          Grading Sheet
+          <span class="nav-btn__label">Grading Sheet</span>
         </button>
       </nav>
       
@@ -86,25 +86,39 @@
       </div>
 
       </div><!-- /sidebar__body -->
-
+      
       <!-- Sidebar Footer -->
       <div class="sidebar__footer no-print">
-        <button id="navSettings" class="nav-btn" onclick="setView('settings')">
+        <button id="sidebarToggle" class="nav-btn" onclick="toggleSidebarCollapse()" title="Collapse Sidebar" style="margin-bottom: 8px;">
+          <svg id="sidebarToggleIcon" class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          <span class="nav-btn__label">Collapse Sidebar</span>
+        </button>
+        <button id="navSettings" class="nav-btn" onclick="setView('settings')" title="Settings">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
-          Settings
+          <span class="nav-btn__label">Settings</span>
         </button>
-        <button id="navLogout" class="nav-btn nav-btn--logout" onclick="logoutProfile()" style="margin-top: 4px;">
+        <button id="navFeedback" class="nav-btn" onclick="openFeedback()" style="margin-top: 4px;" title="Feedback">
+          <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span class="nav-btn__label">Feedback</span>
+        </button>
+        <button id="navLogout" class="nav-btn nav-btn--logout" onclick="logoutProfile()" style="margin-top: 4px;" title="Logout">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" y1="12" x2="9" y2="12"></line>
           </svg>
-          Logout
+          <span class="nav-btn__label">Logout</span>
         </button>
       </div>
+      <!-- Resizer Drag Handle -->
+      <div id="sidebarResizer" class="sidebar__resizer"></div>
     </aside>
     
     <!-- Main Content Area -->
@@ -114,27 +128,60 @@
       <header class="app-header no-print">
         <div class="app-header__left">
           <h1 id="currentTitle" class="app-header__title">Dashboard</h1>
-          <div id="currentMeta" class="app-header__subtitle">Loading database details…</div>
+          <div id="currentMeta" class="app-header__subtitle">
+            <select id="schoolYear" class="header-year-select" onchange="updateProfile(); normalizeDatabase(); saveDatabase(); setView('dashboard'); render()">
+              <option value="2025-2026">2025-2026</option>
+              <option value="2026-2027">2026-2027</option>
+              <option value="2027-2028">2027-2028</option>
+              <option value="2028-2029">2028-2029</option>
+              <option value="2029-2030">2029-2030</option>
+              <option value="2030-2031">2030-2031</option>
+              <option value="2031-2032">2031-2032</option>
+              <option value="2032-2033">2032-2033</option>
+              <option value="2033-2034">2033-2034</option>
+              <option value="2034-2035">2034-2035</option>
+              <option value="2035-2036">2035-2036</option>
+            </select>
+            <span class="meta-dot">&middot;</span>
+            <span id="headerSchoolName">Loading…</span>
+            <span class="meta-dot">&middot;</span>
+            <span id="headerPolicy">Loading…</span>
+          </div>
         </div>
         <div class="app-header__actions">
-          <!-- Font Size Rocker -->
-          <div class="font-rocker" title="Adjust font size">
-            <button class="font-rocker__btn" id="fontDecrease" onclick="adjustFontSize(-1)" title="Decrease font size">A−</button>
-            <span class="font-rocker__label" id="fontSizeLabel">100%</span>
-            <button class="font-rocker__btn" id="fontIncrease" onclick="adjustFontSize(1)" title="Increase font size">A+</button>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="saveDatabase()">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-            Save
-          </button>
+          <span id="autoSaveIndicator" class="auto-save-indicator" title="Changes automatically saved">
+            <svg class="auto-save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Auto-saved
+          </span>
           <button class="btn btn-sm" onclick="exportJson()">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Download Backup
           </button>
           <button class="btn btn-sm" onclick="importJsonBackupFile()">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
             Upload Backup
           </button>
+          <!-- Word-like Zoom Control -->
+          <div class="zoom-word-control" title="Zoom">
+            <button class="zoom-word-btn" id="zoomOutBtn" onclick="changeZoom(-5)" title="Zoom Out">−</button>
+            <input type="range" id="zoomSlider" min="50" max="200" step="5" value="100" oninput="onZoomSliderInput(this.value)" class="zoom-word-slider" title="Zoom Slider" />
+            <button class="zoom-word-btn" id="zoomInBtn" onclick="changeZoom(5)" title="Zoom In">+</button>
+            <div class="zoom-word-label-container">
+              <button class="zoom-word-label" id="zoomLabel" onclick="toggleZoomMenu(event)" title="Zoom Options">100%</button>
+              <div class="zoom-dropdown-menu" id="zoomDropdownMenu">
+                <button onclick="setZoomPct(50)">50%</button>
+                <button onclick="setZoomPct(75)">75%</button>
+                <button onclick="setZoomPct(100)">100% (Default)</button>
+                <button onclick="setZoomPct(120)">120%</button>
+                <button onclick="setZoomPct(150)">150%</button>
+                <button onclick="setZoomPct(200)">200%</button>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
       
@@ -269,6 +316,16 @@
                 Quick Grade Entry
               </button>
               
+              <button id="viewLearnerGradesBtn" class="btn btn-olive btn-sm" onclick="showViewLearnerGradesModal()" title="View individual learner's grades summary" style="display:none">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                View Learner's Grades
+              </button>
+              
               <!-- Separate Download PDF buttons per record sheet per term and summary -->
               <button id="pdfTerm1Btn" class="btn btn-olive btn-sm" onclick="downloadPdf()" style="display:none">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -311,15 +368,35 @@
         <!-- Sheet Grid Tables -->
         <div id="classRecordPanel" class="card" style="padding:0;overflow:hidden">
           <div class="card-header no-print" style="display:flex;justify-content:space-between;align-items:center;padding:var(--space-4);border-bottom:1px solid var(--border-default)">
-            <h2 id="classRecordTitle" class="card-title" style="margin:0;border:0;padding:0">Class Record</h2>
-            <span id="saveStatus"></span>
+            <div style="display:flex;align-items:center;gap:var(--space-3)">
+              <h2 id="classRecordTitle" class="card-title" style="margin:0;border:0;padding:0">Class Record</h2>
+              <span id="saveStatus"></span>
+              <button id="blurToggleBtn" class="btn btn-sm" onclick="toggleGradesBlur()" title="Toggle Blur Grades (Hide from spectators)" style="min-height: 26px; height: 26px; padding: 2px 8px;">
+                <svg id="blurToggleIcon" class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span id="blurToggleText">Blur Grades</span>
+              </button>
+            </div>
           </div>
           <div id="classRecordPrintHeader" class="print-metadata-header"></div>
           <div id="recordTable" class="table-wrap"></div>
         </div>
 
         <div id="finalGradesPanel" class="card" style="display:none;padding:0;overflow:hidden">
-          <h2 class="card-title" style="padding:var(--space-4);margin-bottom:0">Final Grades Summary</h2>
+          <div class="card-header no-print" style="display:flex;justify-content:space-between;align-items:center;padding:var(--space-4);border-bottom:1px solid var(--border-default)">
+            <div style="display:flex;align-items:center;gap:var(--space-3)">
+              <h2 class="card-title" style="margin:0;border:0;padding:0">Final Grades Summary</h2>
+              <button id="blurToggleSummaryBtn" class="btn btn-sm" onclick="toggleGradesBlur()" title="Toggle Blur Grades (Hide from spectators)" style="min-height: 26px; height: 26px; padding: 2px 8px;">
+                <svg id="blurToggleSummaryIcon" class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span id="blurToggleSummaryText">Blur Grades</span>
+              </button>
+            </div>
+          </div>
           <div id="finalGradesPrintHeader" class="print-metadata-header"></div>
           <div id="finalTable" class="table-wrap"></div>
         </div>
@@ -356,30 +433,58 @@
               <label class="field-label">Division</label>
               <select id="schoolDivision" class="field-select" onchange="updateProfile(); saveDatabase()"></select>
             </div>
-            <div class="field">
-              <label class="field-label">School Year</label>
-              <select id="schoolYear" class="field-select" onchange="updateProfile(); saveDatabase()">
-                <option value="2020-2021">2020-2021</option>
-                <option value="2021-2022">2021-2022</option>
-                <option value="2022-2023">2022-2023</option>
-                <option value="2023-2024">2023-2024</option>
-                <option value="2024-2025">2024-2025</option>
-                <option value="2025-2026">2025-2026</option>
-                <option value="2026-2027">2026-2027</option>
-                <option value="2027-2028">2027-2028</option>
-                <option value="2028-2029">2028-2029</option>
-                <option value="2029-2030">2029-2030</option>
-                <option value="2030-2031">2030-2031</option>
-                <option value="2031-2032">2031-2032</option>
-                <option value="2032-2033">2032-2033</option>
-                <option value="2033-2034">2033-2034</option>
-                <option value="2034-2035">2034-2035</option>
-                <option value="2035-2036">2035-2036</option>
-              </select>
+          </div>
+        </div>
+
+        <!-- Auto-Backup Folder Card -->
+        <div class="card">
+          <h2 class="card-title">Secondary Auto-Backup Folder</h2>
+          <div class="settings-row">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Backup Directory Path</div>
+              <div class="settings-row__desc" id="secondaryBackupPathDesc">None configured. Select a directory (like your OneDrive or Google Drive folder) to save duplicate database copies and daily rolling backups (up to 30 days) in both directories.</div>
+            </div>
+            <div style="display:flex;gap:var(--space-2)">
+              <button id="btnClearBackupFolder" class="btn btn-ghost btn-sm" onclick="clearSecondaryBackupFolder()" style="display:none">Clear</button>
+              <button class="btn btn-sm" onclick="selectSecondaryBackupFolder()">Select Folder</button>
             </div>
           </div>
         </div>
         
+        <!-- Grading Preferences Card -->
+        <div class="card">
+          <h2 class="card-title">Grading Preferences</h2>
+          <div class="settings-row">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Auto-blur Grades</div>
+              <div class="settings-row__desc">Automatically blur grades and scores when loading grading sheets to hide them from spectators.</div>
+            </div>
+            <label class="welcome-checkbox-label" style="display:flex; align-items:center; cursor:pointer;">
+              <input type="checkbox" id="settingAutoBlur" onchange="toggleAutoBlurSetting(this.checked)" style="width:16px; height:16px; cursor:pointer;" />
+            </label>
+          </div>
+          <div class="settings-row" style="margin-top:var(--space-4); border-top:1px solid var(--border-subtle); padding-top:var(--space-4)">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Show Numerical Equivalents (DO 15 s. 2026 Annex C)</div>
+              <div class="settings-row__desc">Show numerical grade range equivalents (e.g. 90-100 for A) next to descriptive letters in tables, reports, and exports.</div>
+            </div>
+            <label class="welcome-checkbox-label" style="display:flex; align-items:center; cursor:pointer;">
+              <input type="checkbox" id="settingShowNumericalEquivalents" onchange="toggleShowNumericalEquivalentsSetting(this.checked)" style="width:16px; height:16px; cursor:pointer;" />
+            </label>
+          </div>
+          <div class="settings-row" style="margin-top:var(--space-4); border-top:1px solid var(--border-subtle); padding-top:var(--space-4)">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Use Universal Trimester Layout</div>
+              <div class="settings-row__desc" style="color: var(--color-error-600); font-weight: 500;">
+                ⚠ Caution: Enabling this will apply the Key Stage 2 Trimester calculation/layout (5 WW, 3 PT, 3 SA/TE columns) to all grade levels. It will reconstruct columns for existing class records, resetting mismatching scores.
+              </div>
+            </div>
+            <label class="welcome-checkbox-label" style="display:flex; align-items:center; cursor:pointer;">
+              <input type="checkbox" id="settingUseUniversalTrimesterLayout" onchange="toggleUseUniversalTrimesterLayoutSetting(this.checked)" style="width:16px; height:16px; cursor:pointer;" />
+            </label>
+          </div>
+        </div>
+
         <!-- OTA updates checking card -->
         <div class="card">
           <h2 class="card-title">Over-the-Air Updates</h2>
@@ -392,6 +497,18 @@
               <div id="updateText" class="settings-row__desc">Up-to-date. Checking is run automatically on startup.</div>
             </div>
             <button id="btnCheckUpdates" class="btn btn-sm" onclick="window.electronAPI.checkForUpdates()">Check for Updates</button>
+          </div>
+        </div>
+
+        <!-- Help & Feedback Card -->
+        <div class="card">
+          <h2 class="card-title">Help & Feedback</h2>
+          <div class="settings-row">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Share Your Feedback</div>
+              <div class="settings-row__desc">Help improve the E-Class Record App by reporting bugs, suggesting features, or sharing your experience.</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openFeedback()">Give Feedback</button>
           </div>
         </div>
 
@@ -411,7 +528,7 @@
       <!-- Footer Info Row -->
       <footer class="app-footer no-print">
         <div class="app-footer__content">
-          <div class="app-footer__text">E-Class Record Desktop App</div>
+          <div class="app-footer__text">E-Class Record App</div>
           <div class="app-footer__info-text">Compliant with DepEd Order No. 15 s. 2026 — Developer: JOHN EDWARD A. ENRIQUEZ, T-II</div>
         </div>
       </footer>
@@ -436,6 +553,22 @@
           <div class="field">
             <label class="field-label">Section</label>
             <input id="newSection" class="field-input" value="A" placeholder="Section name" />
+          </div>
+          <div class="field">
+            <label class="field-label">School Year</label>
+            <select id="newClassSchoolYear" class="field-select">
+              <option value="2025-2026">2025-2026</option>
+              <option value="2026-2027">2026-2027</option>
+              <option value="2027-2028">2027-2028</option>
+              <option value="2028-2029">2028-2029</option>
+              <option value="2029-2030">2029-2030</option>
+              <option value="2030-2031">2030-2031</option>
+              <option value="2031-2032">2031-2032</option>
+              <option value="2032-2033">2032-2033</option>
+              <option value="2033-2034">2033-2034</option>
+              <option value="2034-2035">2034-2035</option>
+              <option value="2035-2036">2035-2036</option>
+            </select>
           </div>
         </div>
         
@@ -462,13 +595,19 @@
     <div class="modal" style="max-width: 520px;">
       <div class="modal__title">Support the Developer</div>
       <div class="modal__body">
-        <p style="margin-top:0; font-size:var(--font-size-md);">Thank you for using the E-Class Record Desktop App!</p>
-        <p style="font-size:var(--font-size-md);">If this application has helped you save time in your teaching workflow, please consider supporting its development with a small donation.</p>
+        <p style="margin-top:0; font-size:var(--font-size-md);">Thank you for using the E-Class Record App!</p>
+        <p style="font-size:var(--font-size-md);">If this application has helped you save time in your teaching workflow, please consider supporting its development with a small donation. You can also optionally leave feedback to help improve the application.</p>
         
         <!-- Button container in the center and middle -->
-        <div style="display:flex; justify-content:center; align-items:center; min-height:120px; margin:var(--space-5) 0;">
+        <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:160px; margin:var(--space-5) 0; gap:var(--space-3)">
           <button class="btn btn-primary" onclick="showDonateQrModal()" style="padding:10px 24px; font-size:var(--font-size-md); font-weight:var(--font-weight-semibold); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); display:inline-flex; align-items:center; gap:var(--space-2)">
             Click here to donate 👍
+          </button>
+          <button class="btn btn-olive" onclick="openFeedback()" style="padding:8px 20px; font-size:var(--font-size-base); font-weight:var(--font-weight-semibold); border-radius:var(--radius-lg); display:inline-flex; align-items:center; gap:var(--space-2)">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px; height:16px;">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Leave Feedback 📝
           </button>
         </div>
 
@@ -621,7 +760,7 @@
             </div>
             <div class="welcome-feature-details">
               <div class="welcome-feature-title">DepEd Grading Calculations</div>
-              <div class="welcome-feature-desc">Calculates terms using standard DO 15 s.2026 transition, DO 8 s.2015 legacy, or Key Stage 2 Trimester models.</div>
+              <div class="welcome-feature-desc">Calculates terms using standard DO 15 s.2026 transition, zero-based, or Key Stage 2 Trimester models.</div>
             </div>
           </div>
           
@@ -661,6 +800,61 @@
         </label>
         <!-- Close button on the right -->
         <button class="btn btn-primary btn-sm" onclick="closeWelcomeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Learner's Grades Modal -->
+  <div id="viewLearnerGradesModal" class="modal-overlay" style="display:none">
+    <div class="modal modal--wide" style="max-width: 700px; display:flex; flex-direction:column; max-height: 90vh;">
+      <div class="modal__title no-print-modal">View Learner's Grades</div>
+      <div class="modal__body" style="flex:1; overflow-y:auto; padding-right:5px; margin-bottom: var(--space-4);">
+        
+        <!-- Selection and controls container -->
+        <div class="no-print-modal" style="margin-bottom:var(--space-4); display:flex; flex-direction:column; gap:var(--space-3)">
+          <div class="field" style="margin-bottom:0">
+            <label class="field-label">Select Learner</label>
+            <select id="viewGradesLearnerSelect" class="field-select" onchange="onLearnerSelectedForGrades()">
+              <!-- Dynamic options loaded via JS -->
+            </select>
+          </div>
+          
+          <!-- View checkboxes -->
+          <div style="display:flex; flex-wrap:wrap; gap:var(--space-4); align-items:center; background:var(--bg-muted); padding:var(--space-2) var(--space-3); border-radius:var(--radius-md); border:1px solid var(--border-default)">
+            <span style="font-size:var(--font-size-xs); font-weight:var(--font-weight-bold); color:var(--text-secondary); text-transform:uppercase;">Show Sections:</span>
+            <label style="display:inline-flex; align-items:center; gap:var(--space-1); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-primary);">
+              <input type="checkbox" id="viewGradesShowTerm1" checked onchange="updateLearnerGradesDisplay()" style="cursor:pointer; width:15px; height:15px;" />
+              Term 1
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:var(--space-1); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-primary);">
+              <input type="checkbox" id="viewGradesShowTerm2" checked onchange="updateLearnerGradesDisplay()" style="cursor:pointer; width:15px; height:15px;" />
+              Term 2
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:var(--space-1); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-primary);">
+              <input type="checkbox" id="viewGradesShowTerm3" checked onchange="updateLearnerGradesDisplay()" style="cursor:pointer; width:15px; height:15px;" />
+              Term 3
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:var(--space-1); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-primary);">
+              <input type="checkbox" id="viewGradesShowSummary" checked onchange="updateLearnerGradesDisplay()" style="cursor:pointer; width:15px; height:15px;" />
+              Summary
+            </label>
+          </div>
+        </div>
+
+        <!-- The area showing the actual report/grades of the learner -->
+        <div id="learnerGradesReportArea" class="printable-grades-area">
+          <div class="text-muted" style="text-align:center; padding:var(--space-8)">
+            Please select a learner to view their grades.
+          </div>
+        </div>
+
+      </div>
+      <div class="modal__actions no-print-modal">
+        <button class="btn btn-ghost btn-sm" onclick="hideViewLearnerGradesModal()">Close</button>
+        <button id="downloadLearnerGradesBtn" class="btn btn-primary btn-sm" onclick="downloadLearnerGradesPdf()" style="display:none">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Download Grades Report
+        </button>
       </div>
     </div>
   </div>
@@ -791,7 +985,8 @@
   <script src="js/record-table.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/quick-grade.js"></script>
+  <script src="js/learner-grades.js"></script>
   <script src="js/app.js"></script>
-  <script>initFontSize();</script>
+  <script>initFontSize(); initSidebarResizer();</script>
 </body>
 </html>

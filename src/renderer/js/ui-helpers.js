@@ -208,53 +208,117 @@ function debounce(fn, waitMs) {
 
 // ── Font Size Rocker ──────────────────────────────────────────────────────────
 
-const FONT_STEPS = [80, 85, 90, 95, 100, 105, 110, 115, 120];
-const FONT_DEFAULT_IDX = 4; // 100%
-let fontStepIndex = FONT_DEFAULT_IDX;
+// MS Word-like Zoom Control Sizing
+let zoomPercentage = 100;
 
 /**
  * Initialises font size from localStorage and applies it.
  * Call once on app startup.
  */
 function initFontSize() {
-  const saved = parseInt(localStorage.getItem('ecr_font_step'), 10);
-  fontStepIndex = (!isNaN(saved) && saved >= 0 && saved < FONT_STEPS.length)
-    ? saved
-    : FONT_DEFAULT_IDX;
-  applyFontSize();
+  const saved = parseInt(localStorage.getItem('ecr_zoom_pct'), 10);
+  if (!isNaN(saved) && saved >= 50 && saved <= 200) {
+    zoomPercentage = saved;
+  } else {
+    // Check legacy setting
+    const savedStep = parseInt(localStorage.getItem('ecr_font_step'), 10);
+    const FONT_STEPS = [80, 85, 90, 95, 100, 105, 110, 115, 120];
+    if (!isNaN(savedStep) && savedStep >= 0 && savedStep < FONT_STEPS.length) {
+      zoomPercentage = FONT_STEPS[savedStep];
+    } else {
+      zoomPercentage = 100;
+    }
+  }
+  applyZoom();
+  
+  // Close zoom dropdown on click outside
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('zoomDropdownMenu');
+    const labelBtn = document.getElementById('zoomLabel');
+    if (dropdown && dropdown.style.display === 'block') {
+      if (!dropdown.contains(e.target) && e.target !== labelBtn) {
+        dropdown.style.display = 'none';
+      }
+    }
+  });
 }
 
 /**
- * Steps the font size up (+1) or down (-1).
- * @param {number} dir +1 to increase, -1 to decrease.
+ * Adjusts zoom percentage by a delta.
+ * @param {number} delta Amount to change (e.g. +5 or -5)
  */
-function adjustFontSize(dir) {
-  const next = fontStepIndex + dir;
-  if (next < 0 || next >= FONT_STEPS.length) return;
-  fontStepIndex = next;
-  localStorage.setItem('ecr_font_step', fontStepIndex);
-  applyFontSize();
+function changeZoom(delta) {
+  let next = zoomPercentage + delta;
+  if (next < 50) next = 50;
+  if (next > 200) next = 200;
+  zoomPercentage = next;
+  localStorage.setItem('ecr_zoom_pct', zoomPercentage);
+  applyZoom();
 }
 
 /**
- * Applies the current font step to the document root and updates the label/buttons.
+ * Set zoom percentage directly (for slider or dropdown options).
+ * @param {number} pct Percentage (50-200)
  */
-function applyFontSize() {
-  const pct = FONT_STEPS[fontStepIndex];
-  document.documentElement.style.fontSize = pct + '%';
+function setZoomPct(pct) {
+  let val = parseInt(pct, 10);
+  if (isNaN(val)) val = 100;
+  if (val < 50) val = 50;
+  if (val > 200) val = 200;
+  zoomPercentage = val;
+  localStorage.setItem('ecr_zoom_pct', zoomPercentage);
+  applyZoom();
+  
+  const dropdown = document.getElementById('zoomDropdownMenu');
+  if (dropdown) dropdown.style.display = 'none';
+}
 
-  const label = document.getElementById('fontSizeLabel');
-  const btnDec = document.getElementById('fontDecrease');
-  const btnInc = document.getElementById('fontIncrease');
+/**
+ * Handles slider range inputs.
+ */
+function onZoomSliderInput(val) {
+  setZoomPct(val);
+}
 
-  if (label) label.textContent = pct + '%';
-  if (btnDec) btnDec.disabled = fontStepIndex === 0;
-  if (btnInc) btnInc.disabled = fontStepIndex === FONT_STEPS.length - 1;
+/**
+ * Toggles visibility of zoom presets dropdown menu.
+ */
+function toggleZoomMenu(e) {
+  e.stopPropagation();
+  const dropdown = document.getElementById('zoomDropdownMenu');
+  if (dropdown) {
+    const isOpen = dropdown.style.display === 'block';
+    dropdown.style.display = isOpen ? 'none' : 'block';
+  }
+}
+
+/**
+ * Applies current zoom percentage to document root.
+ */
+function applyZoom() {
+  document.documentElement.style.fontSize = zoomPercentage + '%';
+  document.documentElement.style.setProperty('--zoom-pct', zoomPercentage);
+  
+  const label = document.getElementById('zoomLabel');
+  const slider = document.getElementById('zoomSlider');
+  const btnDec = document.getElementById('zoomOutBtn');
+  const btnInc = document.getElementById('zoomInBtn');
+  
+  if (label) label.textContent = zoomPercentage + '%';
+  if (slider) slider.value = zoomPercentage;
+  if (btnDec) btnDec.disabled = zoomPercentage <= 50;
+  if (btnInc) btnInc.disabled = zoomPercentage >= 200;
   
   if (typeof adjustHpsStickyTop === 'function') {
     setTimeout(adjustHpsStickyTop, 0);
   }
 }
+
+// Legacy compatibility wrapper
+function adjustFontSize(dir) {
+  changeZoom(dir * 5);
+}
+
 
 /**
  * Modern modal-based alert popup.
@@ -326,3 +390,109 @@ function closeWelcomeModal() {
     }
   }
 }
+
+// ── Sidebar Resizing and Collapse ──────────────────────────────────────────
+
+/**
+ * Initializes resizable and collapsible sidebar logic.
+ * Reads saved state from localStorage and attaches drag listeners.
+ */
+function initSidebarResizer() {
+  const isCollapsed = localStorage.getItem('ecr_sidebar_collapsed') === 'true';
+  const savedWidth = parseInt(localStorage.getItem('ecr_sidebar_width'), 10) || 262;
+
+  if (isCollapsed) {
+    document.body.classList.add('sidebar--collapsed');
+    document.documentElement.style.setProperty('--sidebar-width', '64px');
+  } else {
+    document.documentElement.style.setProperty('--sidebar-width', savedWidth + 'px');
+  }
+
+  updateSidebarToggleIcon(isCollapsed);
+
+  const resizer = document.getElementById('sidebarResizer');
+  if (resizer) {
+    resizer.addEventListener('mousedown', (e) => {
+      // Ignore if not primary click
+      if (e.button !== 0) return;
+      e.preventDefault();
+      document.body.classList.add('is-resizing-sidebar');
+
+      const onMouseMove = (moveEvent) => {
+        let newWidth = moveEvent.clientX;
+        if (newWidth < 150) {
+          // Snap to collapsed
+          document.body.classList.add('sidebar--collapsed');
+          document.documentElement.style.setProperty('--sidebar-width', '64px');
+          localStorage.setItem('ecr_sidebar_collapsed', 'true');
+          updateSidebarToggleIcon(true);
+        } else {
+          // Expand and resize
+          if (newWidth < 180) newWidth = 180;
+          if (newWidth > 450) newWidth = 450;
+          document.body.classList.remove('sidebar--collapsed');
+          document.documentElement.style.setProperty('--sidebar-width', newWidth + 'px');
+          localStorage.setItem('ecr_sidebar_width', newWidth);
+          localStorage.setItem('ecr_sidebar_collapsed', 'false');
+          updateSidebarToggleIcon(false);
+        }
+      };
+
+      const onMouseUp = () => {
+        document.body.classList.remove('is-resizing-sidebar');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    // Double-click to toggle collapse state
+    resizer.addEventListener('dblclick', () => {
+      toggleSidebarCollapse();
+    });
+  }
+}
+
+/**
+ * Toggles the sidebar collapse state.
+ */
+function toggleSidebarCollapse() {
+  const isCollapsed = document.body.classList.contains('sidebar--collapsed');
+  if (isCollapsed) {
+    // Expand
+    document.body.classList.remove('sidebar--collapsed');
+    const savedWidth = parseInt(localStorage.getItem('ecr_sidebar_width'), 10) || 262;
+    document.documentElement.style.setProperty('--sidebar-width', savedWidth + 'px');
+    localStorage.setItem('ecr_sidebar_collapsed', 'false');
+    updateSidebarToggleIcon(false);
+  } else {
+    // Collapse
+    document.body.classList.add('sidebar--collapsed');
+    document.documentElement.style.setProperty('--sidebar-width', '64px');
+    localStorage.setItem('ecr_sidebar_collapsed', 'true');
+    updateSidebarToggleIcon(true);
+  }
+}
+
+/**
+ * Updates the toggle button icon and title based on state.
+ */
+function updateSidebarToggleIcon(collapsed) {
+  const icon = document.getElementById('sidebarToggleIcon');
+  if (icon) {
+    if (collapsed) {
+      // chevron-right
+      icon.innerHTML = `<polyline points="9 18 15 12 9 6"></polyline>`;
+    } else {
+      // chevron-left
+      icon.innerHTML = `<polyline points="15 18 9 12 15 6"></polyline>`;
+    }
+  }
+  const toggleBtn = document.getElementById('sidebarToggle');
+  if (toggleBtn) {
+    toggleBtn.title = collapsed ? 'Expand Sidebar' : 'Collapse Sidebar';
+  }
+}
+

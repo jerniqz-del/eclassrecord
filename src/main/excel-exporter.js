@@ -181,6 +181,9 @@ function populateTermSheet(sheet, data, term, subTitleSubject) {
       colsToClear.forEach(col => setCellValue(sheet, `${col}${row}`, ''));
     }
   }
+  if (data.policy === 'DO15_DESCRIPTIVE') {
+    setCellValue(sheet, 'B115', 'Original basis of grade was descriptive (DO 15, s. 2026).');
+  }
 }
 
 /**
@@ -237,6 +240,9 @@ function populateSummarySheet(sheet, data, subTitleSubject) {
     } else {
       colsToClear.forEach(col => setCellValue(sheet, `${col}${row}`, ''));
     }
+  }
+  if (data.policy === 'DO15_DESCRIPTIVE') {
+    setCellValue(sheet, 'B115', 'Original basis of grade was descriptive (DO 15, s. 2026).');
   }
 }
 
@@ -357,6 +363,11 @@ async function generateExcel(outputPath, payload) {
         student.remarks
       ]);
     });
+    
+    if (payload.policy === 'DO15_DESCRIPTIVE') {
+      consolidatedRows.push([]);
+      consolidatedRows.push(['', 'Original basis of grade was descriptive (DO 15, s. 2026).']);
+    }
     
     const consolidatedSheet = XLSX.utils.aoa_to_sheet(consolidatedRows);
     

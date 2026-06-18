@@ -258,10 +258,13 @@
   background: rgba(255,255,255,0.05);
   border-color: var(--color-neutral-300);
 }
-[data-theme="dark"] .font-rocker {
+[data-theme="dark"] .zoom-word-control {
   background: var(--bg-surface-raised);
   border-color: var(--border-default);
 }
-[data-theme="dark"] .font-rocker__label {
+[data-theme="dark"] .zoom-word-label-container {
   border-color: var(--border-default);
+}
+[data-theme="dark"] .zoom-word-slider {
+  background: var(--color-neutral-200);
 }

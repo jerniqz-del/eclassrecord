@@ -186,13 +186,14 @@ function renderRecordTable() {
       <th class="c-learner">Learner</th>
       <th class="c-sex">Sex</th>`;
     for (let gi = 0; gi < items.length; gi++) {
-      html += `<th class="c-score" title="${esc(items[gi].title)}">
+      const compClass = `c-comp-${items[gi].component.toLowerCase()}`;
+      html += `<th class="c-score ${compClass}" title="${esc(items[gi].title)}">
         ${esc(compactAssessmentLabel(items[gi]))}
         <button class="col-delete-btn no-print" title="Clear all student scores in this column" onclick="clearColumnScores('${esc(items[gi].id)}')">&times;</button>
       </th>`;
-      if (gi === 4) html += `<th class="c-calc" title="Written Work Total">T</th><th class="c-calc" title="Written Work Percentage">%</th><th class="c-calc" title="Written Work Weighted Score">WS</th>`;
-      if (gi === 7) html += `<th class="c-calc" title="Performance Task Total">T</th><th class="c-calc" title="Performance Task Percentage">%</th><th class="c-calc" title="Performance Task Weighted Score">WS</th>`;
-      if (gi === 10) html += `<th class="c-calc" title="Trimester Exam Total">T</th><th class="c-calc" title="Trimester Exam Percentage">%</th><th class="c-calc" title="Trimester Exam Weighted Score">WS</th>`;
+      if (gi === 4) html += `<th class="c-calc c-comp-ww" title="Written Work Total">T</th><th class="c-calc c-comp-ww" title="Written Work Percentage">%</th><th class="c-calc c-comp-ww" title="Written Work Weighted Score">WS</th>`;
+      if (gi === 7) html += `<th class="c-calc c-comp-pt" title="Performance Task Total">T</th><th class="c-calc c-comp-pt" title="Performance Task Percentage">%</th><th class="c-calc c-comp-pt" title="Performance Task Weighted Score">WS</th>`;
+      if (gi === 10) html += `<th class="c-calc c-comp-te" title="Trimester Exam Total">T</th><th class="c-calc c-comp-te" title="Trimester Exam Percentage">%</th><th class="c-calc c-comp-te" title="Trimester Exam Weighted Score">WS</th>`;
     }
     html += `<th class="c-grade" title="Initial Grade">IG</th>
              <th class="c-grade" title="Transmuted Grade">TG</th>
@@ -282,7 +283,20 @@ function renderRecordTable() {
       </td>`;
       
       if (isKeyStage2(a) && (j === 4 || j === 7 || j === 10)) {
-        const block = j === 4 ? result.ww : j === 7 ? result.pt : componentScore(a, learner.id, db.currentTerm, ['SA1', 'SA2', 'ST1', 'ST2', 'TE'], mapePart);
+        let block;
+        if (j === 4) {
+          block = result.ww;
+        } else if (j === 7) {
+          block = result.pt;
+        } else {
+          const examRawResult = componentScore(a, learner.id, db.currentTerm, ['SA1', 'SA2', 'ST1', 'ST2', 'TE'], mapePart);
+          block = {
+            raw: examRawResult.raw,
+            max: examRawResult.max,
+            ps: result.examPS,
+            hasData: examRawResult.hasData
+          };
+        }
         const weight = j === 4 ? w[0] : j === 7 ? w[1] : w[2];
         html += `<td class="c-calc">${blankZero(block.raw)}</td>
                  <td class="c-calc">${block.hasData ? fmt(block.ps) : ''}</td>
@@ -298,12 +312,15 @@ function renderRecordTable() {
     }
     
     html += `<td class="c-grade">${result.hasData ? fmt(result.initialGrade) : ''}</td>
-             <td class="c-grade">${result.termGrade === null ? '' : result.termGrade}</td>
+             <td class="c-grade">${result.termGrade === null ? '' : formatGradeForDisplay(result.termGrade, a.policy)}</td>
              <td class="c-desc">${esc(termDescription(a, result.termGrade))}</td>
              </tr>`;
   }
   
   html += `</tbody></table></div>`;
+  if (a.policy === 'DO15_DESCRIPTIVE') {
+    html += `<div class="compliance-footnote" style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
+  }
   document.getElementById('recordTable').innerHTML = html;
   
   // Dynamically align HPS row sticky top position below the header row
@@ -433,36 +450,53 @@ function renderFinalOnly() {
       </tr>
     </thead><tbody>`;
   
+  const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
   for (let r = 0; r < a.learners.length; r++) {
     const learner = a.learners[r];
     const terms = [];
     let sum = 0;
     let count = 0;
     
+    let sumIg = 0;
+    let countIg = 0;
+    
     for (let t = 1; t <= 3; t++) {
       const res = computeTerm(a, learner.id, String(t), mapePart);
       terms.push(res.termGrade);
-      if (res.termGrade !== null) {
-        sum += res.termGrade;
-        count++;
+      
+      if (isDescriptive) {
+        if (res.hasData) {
+          sumIg += res.initialGrade;
+          countIg++;
+        }
+      } else {
+        if (res.termGrade !== null) {
+          sum += res.termGrade;
+          count++;
+        }
       }
     }
     
-    const fg = count > 0 ? Math.round(sum / count) : null;
+    const fg = isDescriptive
+      ? (countIg > 0 ? transmute(a, sumIg / countIg) : null)
+      : (count > 0 ? Math.round(sum / count) : null);
     
     html += `<tr>
       <td>${r + 1}</td>
       <td>${esc(learner.lrn)}</td>
       <td>${esc(learnerDisplayName(learner))}</td>
-      <td>${blankNull(terms[0])}</td>
-      <td>${blankNull(terms[1])}</td>
-      <td>${blankNull(terms[2])}</td>
-      <td><strong>${blankNull(fg)}</strong></td>
+      <td>${blankNull(formatGradeForDisplay(terms[0], a.policy))}</td>
+      <td>${blankNull(formatGradeForDisplay(terms[1], a.policy))}</td>
+      <td>${blankNull(formatGradeForDisplay(terms[2], a.policy))}</td>
+      <td><strong>${blankNull(formatGradeForDisplay(fg, a.policy))}</strong></td>
       <td>${finalRemark(a, fg)}</td>
     </tr>`;
   }
   
   html += '</tbody></table>';
+  if (a.policy === 'DO15_DESCRIPTIVE') {
+    html += `<div class="compliance-footnote" style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
+  }
   document.getElementById('finalTable').innerHTML = html;
 }
 
@@ -490,6 +524,7 @@ function renderConsolidatedMapehTable(a) {
       </tr>
     </thead><tbody>`;
 
+  const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
   for (let r = 0; r < a.learners.length; r++) {
     const learner = a.learners[r];
     const resMusic = computeTerm(a, learner.id, term, 'music_arts');
@@ -499,26 +534,43 @@ function renderConsolidatedMapehTable(a) {
     const gPE = resPE.termGrade;
     
     let consolidated = null;
-    if (gMusic !== null && gPE !== null) {
-      consolidated = Math.round((gMusic + gPE) / 2);
-    } else if (gMusic !== null) {
-      consolidated = gMusic;
-    } else if (gPE !== null) {
-      consolidated = gPE;
+    if (isDescriptive) {
+      let sumIg = 0;
+      let countIg = 0;
+      if (resMusic.hasData) {
+        sumIg += resMusic.initialGrade;
+        countIg++;
+      }
+      if (resPE.hasData) {
+        sumIg += resPE.initialGrade;
+        countIg++;
+      }
+      consolidated = countIg > 0 ? transmute(a, sumIg / countIg) : null;
+    } else {
+      if (gMusic !== null && gPE !== null) {
+        consolidated = Math.round((gMusic + gPE) / 2);
+      } else if (gMusic !== null) {
+        consolidated = gMusic;
+      } else if (gPE !== null) {
+        consolidated = gPE;
+      }
     }
 
     html += `<tr>
       <td class="c-no">${r + 1}</td>
       <td class="c-learner learner-cell" title="${esc(learnerDisplayName(learner))}">${esc(learnerDisplayName(learner))}</td>
       <td class="c-sex">${esc(learner.sex)}</td>
-      <td class="c-grade">${blankNull(gMusic)}</td>
-      <td class="c-grade">${blankNull(gPE)}</td>
-      <td class="c-grade"><strong>${blankNull(consolidated)}</strong></td>
+      <td class="c-grade">${blankNull(formatGradeForDisplay(gMusic, a.policy))}</td>
+      <td class="c-grade">${blankNull(formatGradeForDisplay(gPE, a.policy))}</td>
+      <td class="c-grade"><strong>${blankNull(formatGradeForDisplay(consolidated, a.policy))}</strong></td>
       <td class="c-desc">${renderBadge(consolidated)}</td>
     </tr>`;
   }
   
   html += '</tbody></table></div>';
+  if (a.policy === 'DO15_DESCRIPTIVE') {
+    html += `<div class="compliance-footnote" style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
+  }
   document.getElementById('recordTable').innerHTML = html;
 }
 
@@ -551,12 +603,16 @@ function renderConsolidatedMapehSummary(a) {
       </tr>
     </thead><tbody>`;
 
+  const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
   for (let r = 0; r < a.learners.length; r++) {
     const learner = a.learners[r];
     
     let sumMusic = 0, countMusic = 0;
     let sumPE = 0, countPE = 0;
     const consGrades = [];
+
+    let sumMusicIg = 0, countMusicIg = 0;
+    let sumPEIg = 0, countPEIg = 0;
 
     for (let t = 1; t <= 3; t++) {
       const resMusic = computeTerm(a, learner.id, String(t), 'music_arts');
@@ -565,54 +621,99 @@ function renderConsolidatedMapehSummary(a) {
       const gm = resMusic.termGrade;
       const gp = resPE.termGrade;
 
-      if (gm !== null) {
-        sumMusic += gm;
-        countMusic++;
-      }
+      if (isDescriptive) {
+        if (resMusic.hasData) {
+          sumMusicIg += resMusic.initialGrade;
+          countMusicIg++;
+        }
+        if (resPE.hasData) {
+          sumPEIg += resPE.initialGrade;
+          countPEIg++;
+        }
+        
+        let sumTermIg = 0;
+        let countTermIg = 0;
+        if (resMusic.hasData) {
+          sumTermIg += resMusic.initialGrade;
+          countTermIg++;
+        }
+        if (resPE.hasData) {
+          sumTermIg += resPE.initialGrade;
+          countTermIg++;
+        }
+        consGrades.push(countTermIg > 0 ? transmute(a, sumTermIg / countTermIg) : null);
+      } else {
+        if (gm !== null) {
+          sumMusic += gm;
+          countMusic++;
+        }
 
-      if (gp !== null) {
-        sumPE += gp;
-        countPE++;
-      }
+        if (gp !== null) {
+          sumPE += gp;
+          countPE++;
+        }
 
-      let gc = null;
-      if (gm !== null && gp !== null) {
-        gc = Math.round((gm + gp) / 2);
-      } else if (gm !== null) {
-        gc = gm;
-      } else if (gp !== null) {
-        gc = gp;
+        let gc = null;
+        if (gm !== null && gp !== null) {
+          gc = Math.round((gm + gp) / 2);
+        } else if (gm !== null) {
+          gc = gm;
+        } else if (gp !== null) {
+          gc = gp;
+        }
+        consGrades.push(gc);
       }
-      consGrades.push(gc);
     }
 
-    const musicFinal = countMusic > 0 ? Math.round(sumMusic / countMusic) : null;
-    const peFinal = countPE > 0 ? Math.round(sumPE / countPE) : null;
+    const musicFinal = isDescriptive
+      ? (countMusicIg > 0 ? transmute(a, sumMusicIg / countMusicIg) : null)
+      : (countMusic > 0 ? Math.round(sumMusic / countMusic) : null);
+      
+    const peFinal = isDescriptive
+      ? (countPEIg > 0 ? transmute(a, sumPEIg / countPEIg) : null)
+      : (countPE > 0 ? Math.round(sumPE / countPE) : null);
 
     let finalConsolidated = null;
-    if (musicFinal !== null && peFinal !== null) {
-      finalConsolidated = Math.round((musicFinal + peFinal) / 2);
-    } else if (musicFinal !== null) {
-      finalConsolidated = musicFinal;
-    } else if (peFinal !== null) {
-      finalConsolidated = peFinal;
+    if (isDescriptive) {
+      let sumFinalIg = 0;
+      let countFinalIg = 0;
+      if (countMusicIg > 0) {
+        sumFinalIg += (sumMusicIg / countMusicIg);
+        countFinalIg++;
+      }
+      if (countPEIg > 0) {
+        sumFinalIg += (sumPEIg / countPEIg);
+        countFinalIg++;
+      }
+      finalConsolidated = countFinalIg > 0 ? transmute(a, sumFinalIg / countFinalIg) : null;
+    } else {
+      if (musicFinal !== null && peFinal !== null) {
+        finalConsolidated = Math.round((musicFinal + peFinal) / 2);
+      } else if (musicFinal !== null) {
+        finalConsolidated = musicFinal;
+      } else if (peFinal !== null) {
+        finalConsolidated = peFinal;
+      }
     }
 
     html += `<tr>
       <td>${r + 1}</td>
       <td>${esc(learner.lrn)}</td>
       <td>${esc(learnerDisplayName(learner))}</td>
-      <td>${blankNull(musicFinal)}</td>
-      <td>${blankNull(peFinal)}</td>
-      <td>${blankNull(consGrades[0])}</td>
-      <td>${blankNull(consGrades[1])}</td>
-      <td>${blankNull(consGrades[2])}</td>
-      <td><strong>${blankNull(finalConsolidated)}</strong></td>
+      <td>${blankNull(formatGradeForDisplay(musicFinal, a.policy))}</td>
+      <td>${blankNull(formatGradeForDisplay(peFinal, a.policy))}</td>
+      <td>${blankNull(formatGradeForDisplay(consGrades[0], a.policy))}</td>
+      <td>${blankNull(formatGradeForDisplay(consGrades[1], a.policy))}</td>
+      <td>${blankNull(formatGradeForDisplay(consGrades[2], a.policy))}</td>
+      <td><strong>${blankNull(formatGradeForDisplay(finalConsolidated, a.policy))}</strong></td>
       <td>${finalRemark(a, finalConsolidated)}</td>
     </tr>`;
   }
-
+  
   html += '</tbody></table>';
+  if (a.policy === 'DO15_DESCRIPTIVE') {
+    html += `<div class="compliance-footnote" style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
+  }
   document.getElementById('finalTable').innerHTML = html;
 }
 
@@ -810,7 +911,7 @@ function assessmentOrder(item) {
  */
 function renderBadge(grade) {
   if (grade === null || grade === undefined || grade === '') return '';
-  const isPass = grade >= 75;
+  const isPass = isPassing(grade);
   const badgeClass = isPass ? 'badge badge--pass' : 'badge badge--fail';
   const desc = descriptor(grade);
   const text = isPass ? `Passed - ${desc}` : `For Intervention - ${desc}`;
