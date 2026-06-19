@@ -46,8 +46,8 @@ fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', '
 console.log(`Updated package.json to version ${nextVersion}`);
 
 // 2. Git operations
-runCmd('git add package.json');
-runCmd(`git commit -m "Bump version to v${nextVersion}"`);
+runCmd('git add .');
+runCmd(`git commit -m "release: prepare release v${nextVersion}"`);
 runCmd(`git tag -a v${nextVersion} -m "Release v${nextVersion}"`);
 
 // 3. Push to GitHub
