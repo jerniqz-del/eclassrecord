@@ -36,6 +36,19 @@ function createWindow() {
   mainWindow.setAutoHideMenuBar(true);
   mainWindow.setMenuBarVisibility(false);
 
+  // Block DevTools and Reload keyboard shortcuts in production builds
+  if (app.isPackaged) {
+    Menu.setApplicationMenu(null);
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      const key = input.key.toLowerCase();
+      const isDevTools = (input.key === 'F12') || (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'));
+      const isReload = (input.key === 'F5') || (input.control && key === 'r');
+      if (isDevTools || isReload) {
+        event.preventDefault();
+      }
+    });
+  }
+
   // Chromium Web Bluetooth device selection handler
   mainWindow.webContents.on('select-bluetooth-device', (event, deviceList, callback) => {
     event.preventDefault();
