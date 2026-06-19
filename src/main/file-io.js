@@ -44,7 +44,18 @@ function loadDatabase() {
  * @param {string} baseDir Base directory where backups/ folder should be created.
  * @param {number} limit Maximum number of daily backup files to retain.
  */
-function createRollingBackup(payload, baseDir, limit = 30) {
+function sanitizeFilename(name) {
+  return name ? name.toLowerCase().replace(/[^a-z0-9_-]/g, '_') : 'default';
+}
+
+/**
+ * Creates a daily rolling backup in the specified base directory, keeping up to `limit` files.
+ * @param {string} payload JSON string.
+ * @param {string} baseDir Base directory where backups/ folder should be created.
+ * @param {number} limit Maximum number of daily backup files to retain.
+ * @param {string} prefix File name prefix.
+ */
+function createRollingBackup(payload, baseDir, limit = 30, prefix = 'backup') {
   try {
     if (!baseDir) return;
     const backupFolder = path.join(baseDir, 'backups');
@@ -57,7 +68,7 @@ function createRollingBackup(payload, baseDir, limit = 30) {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
-    const filename = `backup-${dateStr}.json`;
+    const filename = `${prefix}-${dateStr}.json`;
     const targetFile = path.join(backupFolder, filename);
 
     // Save today's backup file (overwrites if saved again today)
@@ -66,7 +77,7 @@ function createRollingBackup(payload, baseDir, limit = 30) {
     // Prune backups exceeding the retention limit
     const files = fs.readdirSync(backupFolder);
     const backupFiles = files
-      .filter(f => f.startsWith('backup-') && f.endsWith('.json'))
+      .filter(f => f.startsWith(`${prefix}-`) && f.endsWith('.json'))
       .map(f => ({
         name: f,
         filePath: path.join(backupFolder, f)
@@ -100,17 +111,22 @@ function saveDatabase(data) {
     fs.writeFileSync(dbPath, payload, 'utf8');
 
     // Local daily rolling backup in AppData backups folder
-    createRollingBackup(payload, dbDir, 30);
+    createRollingBackup(payload, dbDir, 30, 'backup');
 
-    // Secondary auto-backup if secondaryBackupPath is set
+    // Secondary auto-backup if secondaryBackupPath is set on the active profile
     try {
       const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-      if (parsed && parsed.secondaryBackupPath) {
-        const secondaryFile = path.join(parsed.secondaryBackupPath, 'eclass-record-backup.json');
-        fs.writeFileSync(secondaryFile, payload, 'utf8');
+      const activeProfile = parsed.profiles && parsed.profiles.find(p => p.id === parsed.activeProfileId);
+      if (activeProfile && activeProfile.secondaryBackupPath) {
+        const userNameClean = sanitizeFilename(activeProfile.name);
+        const secondaryFile = path.join(activeProfile.secondaryBackupPath, `eclass-record-backup-${userNameClean}.json`);
+        
+        // Serialize only the active profile's data
+        const profilePayload = typeof activeProfile.data === 'string' ? activeProfile.data : JSON.stringify(activeProfile.data, null, 2);
+        fs.writeFileSync(secondaryFile, profilePayload, 'utf8');
 
-        // Secondary daily rolling backup
-        createRollingBackup(payload, parsed.secondaryBackupPath, 30);
+        // Secondary daily rolling backup (rolling limit of 30 days)
+        createRollingBackup(profilePayload, activeProfile.secondaryBackupPath, 30, `backup-${userNameClean}`);
       }
     } catch (secError) {
       console.error('Secondary auto-backup failed (non-fatal):', secError);

@@ -13,6 +13,7 @@ const updater = require('./updater');
 
 let mainWindow = null;
 let isConfirmedExit = false;
+let selectBluetoothDeviceCallback = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -34,6 +35,14 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   mainWindow.setAutoHideMenuBar(true);
   mainWindow.setMenuBarVisibility(false);
+
+  // Chromium Web Bluetooth device selection handler
+  mainWindow.webContents.on('select-bluetooth-device', (event, deviceList, callback) => {
+    event.preventDefault();
+    selectBluetoothDeviceCallback = callback;
+    // Send list of discovered devices to the renderer process
+    mainWindow.webContents.send('bluetooth:device-list', deviceList);
+  });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -338,6 +347,21 @@ ipcMain.handle('shell:open-external', async (_event, url) => {
 ipcMain.handle('app:confirm-exit', () => {
   isConfirmedExit = true;
   app.exit(0);
+});
+
+// ── Bluetooth Sync IPC Listeners ──────────────────────────
+ipcMain.on('bluetooth:select-device', (_event, deviceId) => {
+  if (selectBluetoothDeviceCallback) {
+    selectBluetoothDeviceCallback(deviceId);
+    selectBluetoothDeviceCallback = null;
+  }
+});
+
+ipcMain.on('bluetooth:cancel-device', () => {
+  if (selectBluetoothDeviceCallback) {
+    selectBluetoothDeviceCallback('');
+    selectBluetoothDeviceCallback = null;
+  }
 });
 
 // ── App Lifecycle ─────────────────────────────────────────

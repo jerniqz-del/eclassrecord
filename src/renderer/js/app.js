@@ -68,8 +68,8 @@ function render() {
   const backupDescEl = document.getElementById('secondaryBackupPathDesc');
   const clearBackupBtn = document.getElementById('btnClearBackupFolder');
   if (backupDescEl && clearBackupBtn) {
-    if (typeof dbRoot !== 'undefined' && dbRoot.secondaryBackupPath) {
-      backupDescEl.innerHTML = `Backup path configured: <code style="font-family:var(--font-family-mono); font-size:12px; color:var(--text-primary); font-weight:var(--font-weight-semibold);">${esc(dbRoot.secondaryBackupPath)}</code>.<br><span style="color:var(--text-secondary); font-size:var(--text-xs);">Both your local AppData and secondary folders store a duplicate active database copy and daily rolling backups (up to 30 days).</span>`;
+    if (typeof db !== 'undefined' && db.secondaryBackupPath) {
+      backupDescEl.innerHTML = `Backup path configured: <code style="font-family:var(--font-family-mono); font-size:12px; color:var(--text-primary); font-weight:var(--font-weight-semibold);">${esc(db.secondaryBackupPath)}</code>.<br><span style="color:var(--text-secondary); font-size:var(--text-xs);">Both your local AppData and secondary folders store a duplicate active database copy and daily rolling backups (up to 30 days).</span>`;
       clearBackupBtn.style.display = 'inline-block';
     } else {
       backupDescEl.innerHTML = `None configured. Select a directory (like your OneDrive or Google Drive folder) to save duplicate database copies and daily rolling backups (up to 30 days) in both directories.`;
@@ -1063,7 +1063,7 @@ function selectProfileCard(id) {
   if (!p) return;
   
   if (!p.pinEnabled) {
-    unlockProfileAndEnter(p);
+    unlockProfileAndEnter(p, '');
   } else {
     selectedProfileIdToUnlock = id;
     showEl('profileSelectPanel', false);
@@ -1112,7 +1112,11 @@ async function submitPasscode() {
   const verified = await verifyPin(pin, p.salt, p.pinHash);
   if (verified) {
     p.currentPin = pin; // retain pin in session memory for backup encryption
-    unlockProfileAndEnter(p);
+    try {
+      await unlockProfileAndEnter(p, pin);
+    } catch (e) {
+      if (errorEl) errorEl.innerText = e.message;
+    }
   } else {
     if (errorEl) errorEl.innerText = 'Incorrect passcode PIN. Please try again.';
     document.getElementById('passcodeField').value = '';
@@ -1186,27 +1190,47 @@ async function submitCreateProfile() {
     pinEnabled: pinEnabled,
     salt: salt,
     pinHash: pinHash,
+    secondaryBackupPath: '',
     data: profileData
   };
   
   if (pinEnabled) {
     newProfile.currentPin = pin;
+    const encryptedObj = await encryptPayload(JSON.stringify(profileData), pin);
+    newProfile.data = encryptedObj;
   }
   
   dbRoot.profiles.push(newProfile);
   dbRoot.activeProfileId = profileId;
   
   await saveRootDatabase();
-  unlockProfileAndEnter(newProfile);
+  await unlockProfileAndEnter(newProfile, pin);
 }
 
 /**
  * Loads profile workspace data and switches user interface view.
  */
-function unlockProfileAndEnter(profile) {
-  db = profile.data;
+async function unlockProfileAndEnter(profile, pin) {
+  let decryptedData;
+  if (profile.pinEnabled) {
+    if (profile.data && (profile.data.secureBackup || profile.data.ciphertext)) {
+      try {
+        decryptedData = JSON.parse(await decryptPayload(profile.data, pin));
+      } catch (err) {
+        throw new Error("Incorrect PIN or corrupted profile data.");
+      }
+    } else {
+      // Legacy PIN-enabled profile stored in plain text, migrate it
+      decryptedData = profile.data;
+    }
+  } else {
+    decryptedData = profile.data;
+  }
+
+  db = decryptedData;
+  db.secondaryBackupPath = profile.secondaryBackupPath || '';
   dbRoot.activeProfileId = profile.id;
-  currentProfilePin = profile.currentPin || '';
+  currentProfilePin = pin || '';
   
   normalizeDatabase();
   showEl('profileOverlay', false);
@@ -1216,6 +1240,8 @@ function unlockProfileAndEnter(profile) {
   
   // Initialize spectator grades blur based on settings
   gradesBlurred = db.autoBlur || false;
+  
+  await saveDatabase();
   
   render();
   // checkWelcomeModal(); // Welcome modal is now shown on startup before profile login
@@ -1249,4 +1275,33 @@ async function logoutProfile() {
   showProfileSelect();
   
   toast('Logged out successfully.', 'info');
+}
+
+/**
+ * Handles checking for updates, verifying network status first.
+ */
+function handleCheckUpdatesClick() {
+  const updateTextEl = document.getElementById('updateText');
+  const indicatorEl = document.getElementById('updateIndicator');
+
+  if (!navigator.onLine) {
+    if (updateTextEl) {
+      updateTextEl.innerText = 'Offline: Please check your internet connection and try again.';
+    }
+    if (indicatorEl) {
+      indicatorEl.className = 'update-indicator update-indicator--error';
+    }
+    toast('No internet connection detected.', 'warning');
+    return;
+  }
+
+  // Update status UI to checking state
+  if (updateTextEl) {
+    updateTextEl.innerText = 'Checking for updates…';
+  }
+  if (indicatorEl) {
+    indicatorEl.className = 'update-indicator update-indicator--checking';
+  }
+
+  window.electronAPI.checkForUpdates();
 }

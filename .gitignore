@@ -25,3 +25,10 @@ Desktop.ini
 # Environment
 .env
 .env.local
+
+# Android subproject build & JDK ignores
+android/.gradle/
+android/.kotlin/
+android/build/
+android/jdk/
+android/local.properties

@@ -33,5 +33,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdateStatus: (callback) => ipcRenderer.on('update-status', (_event, status, details) => callback(status, details)),
 
   confirmExit: () => ipcRenderer.invoke('app:confirm-exit'),
-  onAppCloseTriggered: (callback) => ipcRenderer.on('app-close-triggered', (_event) => callback())
+  onAppCloseTriggered: (callback) => ipcRenderer.on('app-close-triggered', (_event) => callback()),
+
+  // Bluetooth Sync APIs
+  selectBluetoothDevice: (deviceId) => ipcRenderer.send('bluetooth:select-device', deviceId),
+  cancelBluetoothDevice: () => ipcRenderer.send('bluetooth:cancel-device'),
+  onBluetoothDeviceList: (callback) => ipcRenderer.on('bluetooth:device-list', (_event, deviceList) => callback(deviceList))
 });

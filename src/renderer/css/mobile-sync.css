@@ -1,0 +1,224 @@
+/**
+ * E-Class Record — Mobile Bluetooth Sync Stylesheet
+ *
+ * Implements styling for the Bluetooth connection status card,
+ * scan action buttons, PIN code prompt, and connection logs.
+ */
+
+.sync-panel {
+  margin: var(--space-4) auto;
+  max-width: 800px;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.sync-panel__header {
+  padding: var(--space-5);
+  background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sync-panel__body {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Connection Status Card */
+.sync-status-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-default);
+  border: 1px solid var(--border-subtle);
+}
+
+.sync-status-indicator {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  position: relative;
+}
+
+.sync-status-indicator::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: var(--radius-full);
+  opacity: 0.4;
+}
+
+/* States */
+.sync-status-indicator--inactive {
+  background-color: var(--text-tertiary);
+}
+
+.sync-status-indicator--scanning {
+  background-color: var(--color-info-600);
+}
+.sync-status-indicator--scanning::after {
+  background-color: var(--color-info-600);
+  animation: pulse-ble 1.5s infinite ease-in-out;
+}
+
+.sync-status-indicator--connected {
+  background-color: var(--color-success-600);
+}
+.sync-status-indicator--connected::after {
+  background-color: var(--color-success-600);
+  animation: pulse-ble 2s infinite ease-in-out;
+}
+
+.sync-status-indicator--error {
+  background-color: var(--color-error-600);
+}
+
+@keyframes pulse-ble {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.sync-status-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.sync-status-label {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.sync-status-sub {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Actions */
+.sync-actions-row {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* PIN Verification Panel */
+.sync-pin-panel {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-100);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.pin-input-group {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.pin-field {
+  max-width: 140px;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-widest);
+  text-align: center;
+  height: 40px;
+  padding: 0;
+}
+
+/* Device Discovery overlay */
+.device-discovery-panel {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-default);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-md);
+}
+
+.device-discovery-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.device-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.device-item {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  cursor: pointer;
+  font-weight: var(--font-weight-semibold);
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.device-item:hover {
+  background: var(--color-primary-50);
+  border-color: var(--color-primary-200);
+  color: var(--color-primary-800);
+}
+
+.device-item__rssi {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+/* Connection Logs Panel */
+.sync-logs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.sync-logs-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.sync-logs-output {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+  overflow-x: auto;
+  max-height: 240px;
+  white-space: pre-wrap;
+  margin: 0;
+  border: 1px solid #333;
+}

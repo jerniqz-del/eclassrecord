@@ -57,7 +57,22 @@ function initAutoUpdater(window) {
   });
 
   autoUpdater.on('error', (err) => {
-    sendStatus('error', { message: `Update error: ${err.message || err}` });
+    const errMsg = err.message || String(err);
+    let friendlyMessage = `Update error: ${errMsg}`;
+    
+    if (
+      errMsg.includes('ERR_INTERNET_DISCONNECTED') || 
+      errMsg.includes('ERR_CONNECTION_RESET') || 
+      errMsg.includes('ERR_CONNECTION_REFUSED') || 
+      errMsg.includes('ERR_NAME_NOT_RESOLVED') || 
+      errMsg.includes('network') || 
+      errMsg.includes('offline') ||
+      errMsg.includes('fetch failed')
+    ) {
+      friendlyMessage = 'Connection failed. Please check your internet connection and try again.';
+    }
+    
+    sendStatus('error', { message: friendlyMessage });
   });
 
   autoUpdater.on('download-progress', (progressObj) => {

@@ -148,7 +148,17 @@ async function saveDatabase() {
   if (dbRoot && dbRoot.activeProfileId) {
     const p = dbRoot.profiles.find(x => x.id === dbRoot.activeProfileId);
     if (p) {
-      p.data = db;
+      p.secondaryBackupPath = db.secondaryBackupPath || '';
+      if (p.pinEnabled) {
+        if (!currentProfilePin) {
+          console.error("Cannot save secure profile: missing PIN in session.");
+          return;
+        }
+        const encryptedObj = await encryptPayload(JSON.stringify(db), currentProfilePin);
+        p.data = encryptedObj;
+      } else {
+        p.data = db;
+      }
       p.name = db.teacherName || p.name;
     }
   }
@@ -334,71 +344,142 @@ function updateProfile() {
 /**
  * Triggers native folder selector and updates the secondary auto-backup directory path.
  */
-async function selectSecondaryBackupFolder() {
-  try {
-    const folderPath = await window.electronAPI.selectFolder();
-    if (folderPath) {
-      dbRoot.secondaryBackupPath = folderPath;
-      await saveRootDatabase();
-      render();
-      toast('Secondary auto-backup directory configured successfully.', 'success');
-    }
-  } catch (error) {
-    console.error('Failed to select secondary backup folder:', error);
-    toast('Could not configure backup folder: ' + error.message, 'error');
+/**
+ * Displays a PIN input modal to verify the user's identity before sensitive actions.
+ * @param {function} onSuccess Callback function executed on successful verification.
+ */
+function promptPinVerification(onSuccess) {
+  const activeProfile = dbRoot.profiles.find(p => p.id === dbRoot.activeProfileId);
+  if (!activeProfile || !activeProfile.pinEnabled) {
+    onSuccess();
+    return;
   }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '11000';
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal__title">Confirm PIN Code</div>
+      <div class="modal__body">
+        <p style="margin-top:0">Please enter your 6-digit PIN to authorize this sensitive action.</p>
+        <div class="field">
+          <label class="field-label">Enter PIN</label>
+          <input type="password" id="actionVerifyPin" class="field-input" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="off" />
+        </div>
+        <div id="actionVerifyPinErrorMsg" class="unlock-error-msg" style="color:var(--color-error-600)"></div>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-ghost btn-sm" id="btnCancelActionVerify">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="btnConfirmActionVerify">Verify & Proceed</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  
+  const close = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+  
+  const pinInput = overlay.querySelector('#actionVerifyPin');
+  const errorEl = overlay.querySelector('#actionVerifyPinErrorMsg');
+  
+  const submit = async () => {
+    const pin = pinInput.value;
+    if (!pin || pin.length < 6 || !/^\d+$/.test(pin)) {
+      errorEl.innerText = 'Please enter your 6-digit numeric PIN.';
+      return;
+    }
+    const verified = await verifyPin(pin, activeProfile.salt, activeProfile.pinHash);
+    if (verified) {
+      close();
+      onSuccess();
+    } else {
+      errorEl.innerText = 'Incorrect PIN. Verification failed.';
+      pinInput.value = '';
+      pinInput.focus();
+    }
+  };
+  
+  overlay.querySelector('#btnCancelActionVerify').addEventListener('click', close);
+  overlay.querySelector('#btnConfirmActionVerify').addEventListener('click', submit);
+  pinInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submit();
+  });
+  setTimeout(() => pinInput.focus(), 80);
+}
+
+async function selectSecondaryBackupFolder() {
+  promptPinVerification(async () => {
+    try {
+      const folderPath = await window.electronAPI.selectFolder();
+      if (folderPath) {
+        db.secondaryBackupPath = folderPath;
+        await saveDatabase();
+        render();
+        toast('Secondary auto-backup directory configured successfully.', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to select secondary backup folder:', error);
+      toast('Could not configure backup folder: ' + error.message, 'error');
+    }
+  });
 }
 
 /**
  * Resets secondary auto-backup directory configuration.
  */
 async function clearSecondaryBackupFolder() {
-  dbRoot.secondaryBackupPath = '';
-  await saveRootDatabase();
-  render();
-  toast('Secondary auto-backup directory cleared.', 'info');
+  promptPinVerification(async () => {
+    db.secondaryBackupPath = '';
+    await saveDatabase();
+    render();
+    toast('Secondary auto-backup directory cleared.', 'info');
+  });
 }
 
 /**
  * Erases local state database completely after confirmation.
  */
 function clearLocalData() {
-  confirmModal(
-    'Clear All App Data',
-    'This will permanently delete all profiles, classes, learners, and grades from this computer. Ensure you have exported a backup JSON if you need to retain this information.',
-    async () => {
-      dbRoot = {
-        version: ROOT_DB_VERSION,
-        profiles: [],
-        activeProfileId: ''
-      };
-      db = {
-        version: DB_VERSION,
-        teacherName: '',
-        schoolName: '',
-        schoolId: '',
-        region: '',
-        division: '',
-        schoolYear: '2026-2027',
-        currentAssignmentId: '',
-        currentTerm: '1',
-        activeView: 'dashboard',
-        autoBlur: false,
-        assignments: []
-      };
-      currentProfilePin = '';
-      currentView = 'dashboard';
-      recordTab = '1';
-      
-      await saveRootDatabase();
-      
-      // Force return to profile screen
-      showEl('profileOverlay', true, 'flex');
-      showCreateProfileForm();
-      
-      toast('All database contents and profiles cleared.', 'success');
-    }
-  );
+  promptPinVerification(() => {
+    confirmModal(
+      'Clear All App Data',
+      'This will permanently delete all profiles, classes, learners, and grades from this computer. Ensure you have exported a backup JSON if you need to retain this information.',
+      async () => {
+        dbRoot = {
+          version: ROOT_DB_VERSION,
+          profiles: [],
+          activeProfileId: ''
+        };
+        db = {
+          version: DB_VERSION,
+          teacherName: '',
+          schoolName: '',
+          schoolId: '',
+          region: '',
+          division: '',
+          schoolYear: '2026-2027',
+          currentAssignmentId: '',
+          currentTerm: '1',
+          activeView: 'dashboard',
+          autoBlur: false,
+          assignments: []
+        };
+        currentProfilePin = '';
+        currentView = 'dashboard';
+        recordTab = '1';
+        
+        await saveRootDatabase();
+        
+        // Force return to profile screen
+        showEl('profileOverlay', true, 'flex');
+        showCreateProfileForm();
+        
+        toast('All database contents and profiles cleared.', 'success');
+      }
+    );
+  });
 }
 
 /**
