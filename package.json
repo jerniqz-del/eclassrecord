@@ -12,8 +12,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "build": "electron-builder --win",
-    "publish": "electron-builder --win --publish always",
+    "build": "node scripts/obfuscate.js && electron-builder --win && git checkout src/",
+    "publish": "node scripts/obfuscate.js && electron-builder --win --publish always && git checkout src/",
     "release": "node scripts/release.js"
   },
   "dependencies": {
@@ -22,7 +22,8 @@
   },
   "devDependencies": {
     "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "electron-builder": "^25.0.0",
+    "javascript-obfuscator": "^5.4.3"
   },
   "build": {
     "extends": "electron-builder.yml"
