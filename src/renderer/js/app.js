@@ -491,8 +491,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Load local file database
   await loadDatabase();
   
-  // Set window title
-  document.title = 'E-Class Record App v1.0';
+  // Set window title dynamically using the actual version
+  const appVersion = await window.electronAPI.getVersion();
+  document.title = `E-Class Record App v${appVersion}`;
   
   // Populate regions select
   populateRegions();
