@@ -13,7 +13,8 @@
     "start": "electron .",
     "dev": "electron . --dev",
     "build": "electron-builder --win",
-    "publish": "electron-builder --win --publish always"
+    "publish": "electron-builder --win --publish always",
+    "release": "node scripts/release.js"
   },
   "dependencies": {
     "electron-updater": "^6.3.0",

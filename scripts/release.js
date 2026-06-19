@@ -1,0 +1,62 @@
+/**
+ * Release Automation Script
+ * Bumps the version in package.json, commits, tags, pushes, and publishes to GitHub.
+ */
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+const packageJsonPath = path.join(__dirname, '../package.json');
+
+// Read package.json
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+const currentVersion = packageJson.version;
+
+// Determine next version (default to patch bump)
+let nextVersion = process.argv[2];
+
+if (!nextVersion) {
+  const parts = currentVersion.split('.');
+  if (parts.length === 3) {
+    const patch = parseInt(parts[2], 10);
+    parts[2] = (patch + 1).toString();
+    nextVersion = parts.join('.');
+  } else {
+    console.error(`Error: Current version ${currentVersion} is not in semver format X.Y.Z`);
+    process.exit(1);
+  }
+}
+
+console.log(`Current version: ${currentVersion}`);
+console.log(`Target next version: ${nextVersion}`);
+
+function runCmd(cmd) {
+  console.log(`Executing: ${cmd}`);
+  try {
+    execSync(cmd, { stdio: 'inherit' });
+  } catch (error) {
+    console.error(`Command failed: ${cmd}`);
+    process.exit(1);
+  }
+}
+
+// 1. Update package.json
+packageJson.version = nextVersion;
+fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
+console.log(`Updated package.json to version ${nextVersion}`);
+
+// 2. Git operations
+runCmd('git add package.json');
+runCmd(`git commit -m "Bump version to v${nextVersion}"`);
+runCmd(`git tag -a v${nextVersion} -m "Release v${nextVersion}"`);
+
+// 3. Push to GitHub
+console.log('Pushing commit and tag to GitHub...');
+runCmd('git push origin main');
+runCmd(`git push origin v${nextVersion}`);
+
+// 4. Build and Publish Release
+console.log('Building and publishing the release assets to GitHub...');
+runCmd('npm run publish');
+
+console.log(`Successfully bumped version, pushed to GitHub, and published Release v${nextVersion}!`);
