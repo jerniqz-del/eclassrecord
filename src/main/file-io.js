@@ -1,1 +1,169 @@
-const _0x492139=_0x990e;(function(_0x320d32,_0x3f3973){const _0x3eb9b5=_0x990e,_0x3a8731=_0x320d32();while(!![]){try{const _0x16b40b=parseInt(_0x3eb9b5(0x11b))/(0x21a3*0x1+0x6*-0x317+-0xf18)+parseInt(_0x3eb9b5(0x14d))/(-0x587+-0x1b12+0x209b)*(-parseInt(_0x3eb9b5(0x13f))/(-0xe98+-0xa20+0x18bb))+parseInt(_0x3eb9b5(0x15a))/(0x1*-0x1b23+0x1*-0x2597+-0x205f*-0x2)+parseInt(_0x3eb9b5(0x13c))/(0x5*-0x50b+0x38+-0x4*-0x641)*(-parseInt(_0x3eb9b5(0x166))/(0x1b7d*-0x1+-0x1a5e+-0x35e1*-0x1))+parseInt(_0x3eb9b5(0x14e))/(-0x1*-0x1cb+0x161*-0xd+0x1029)*(-parseInt(_0x3eb9b5(0x162))/(-0x3b4+-0x1*-0x1af0+0x4a4*-0x5))+parseInt(_0x3eb9b5(0x129))/(0x1*0xc7e+0xee7+-0x1b5c)+parseInt(_0x3eb9b5(0x11f))/(-0x17*-0x4c+-0x6e0+0x2*0xb);if(_0x16b40b===_0x3f3973)break;else _0x3a8731['push'](_0x3a8731['shift']());}catch(_0x1f3b44){_0x3a8731['push'](_0x3a8731['shift']());}}}(_0x4907,-0x269*-0x5bf+-0x125abe+0xe7624));const {app}=require(_0x492139(0x12d)),fs=require('fs'),path=require(_0x492139(0x170)),dbDir=path[_0x492139(0x15f)](app[_0x492139(0x151)](_0x492139(0x120)),_0x492139(0x155)+_0x492139(0x158)),dbPath=path[_0x492139(0x15f)](dbDir,'data.json');function _0x990e(_0x2e7ff3,_0x352663){_0x2e7ff3=_0x2e7ff3-(-0xc53*0x1+0x2*0x37f+-0x10*-0x67);const _0x2ba3cb=_0x4907();let _0x47e207=_0x2ba3cb[_0x2e7ff3];if(_0x990e['Hwkppb']===undefined){var _0x1cf4d8=function(_0x23feb7){const _0x2d96a='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let _0xb7e304='',_0x273d87='';for(let _0x527735=0x56*0xb+-0x1ed3+0x1b21,_0x5bbc66,_0x37f083,_0x31dd5c=0xbfb+0xeeb+-0x1ae6;_0x37f083=_0x23feb7['charAt'](_0x31dd5c++);~_0x37f083&&(_0x5bbc66=_0x527735%(-0x15da*-0x1+0xcbb+-0x2291)?_0x5bbc66*(0x1f66+-0x1914+0x1*-0x612)+_0x37f083:_0x37f083,_0x527735++%(0xff+0x9c3+-0xfa*0xb))?_0xb7e304+=String['fromCharCode'](0x1446+0x23d2+-0x43d*0xd&_0x5bbc66>>(-(0x1503+0x199c+-0x2e9d)*_0x527735&0x2b*-0x13+-0x244a+0x2781)):-0x1*-0x12e+0x107a+-0x11a8){_0x37f083=_0x2d96a['indexOf'](_0x37f083);}for(let _0x1cb672=0x19*-0xa3+-0x4*-0x185+0xe5*0xb,_0x56918d=_0xb7e304['length'];_0x1cb672<_0x56918d;_0x1cb672++){_0x273d87+='%'+('00'+_0xb7e304['charCodeAt'](_0x1cb672)['toString'](0x1a*0xf5+0x22cf+0x3ba1*-0x1))['slice'](-(0x1db9+0x160d+-0x33c4));}return decodeURIComponent(_0x273d87);};_0x990e['ROpBqd']=_0x1cf4d8,_0x990e['RzMbyQ']={},_0x990e['Hwkppb']=!![];}const _0x4e798b=_0x2ba3cb[0x234e+-0x14c*0x4+-0x1e1e],_0x2899d6=_0x2e7ff3+_0x4e798b,_0x369efe=_0x990e['RzMbyQ'][_0x2899d6];return!_0x369efe?(_0x47e207=_0x990e['ROpBqd'](_0x47e207),_0x990e['RzMbyQ'][_0x2899d6]=_0x47e207):_0x47e207=_0x369efe,_0x47e207;}function ensureDataFolder(){const _0x71af9=_0x492139;!fs[_0x71af9(0x16c)](dbDir)&&fs[_0x71af9(0x11d)](dbDir,{'recursive':!![]});}function loadDatabase(){const _0x283957=_0x492139,_0x497f31={'GiNXz':'utf8','Rruxx':'Failed\x20to\x20'+_0x283957(0x130)+_0x283957(0x15b),'SzwAK':function(_0x54b88d,_0x2590ea){return _0x54b88d+_0x2590ea;}};try{if(fs[_0x283957(0x16c)](dbPath)){const _0x37d52e=fs[_0x283957(0x12c)+'nc'](dbPath,_0x497f31['GiNXz']);return JSON[_0x283957(0x14f)](_0x37d52e);}}catch(_0x396e7f){console[_0x283957(0x150)](_0x497f31[_0x283957(0x123)],_0x396e7f);throw new Error(_0x497f31[_0x283957(0x121)]('Database\x20l'+_0x283957(0x136)+_0x283957(0x133),_0x396e7f['message']));}return null;}function sanitizeFilename(_0x255741){const _0xf98b26=_0x492139;return _0x255741?_0x255741[_0xf98b26(0x13d)+'e']()[_0xf98b26(0x163)](/[^a-z0-9_-]/g,'_'):_0xf98b26(0x168);}function createRollingBackup(_0x4bd035,_0x34faff,_0x1cbbc7=0x2*0x38b+-0x25e3+0x1eeb,_0xe59069=_0x492139(0x14c)){const _0xfb581e=_0x492139,_0xd19bbd={'CxNpQ':'backups','YEBpc':function(_0x143e49,_0x2ea23c){return _0x143e49(_0x2ea23c);},'gIeIT':function(_0x5e4bd1,_0x2075fa){return _0x5e4bd1+_0x2075fa;},'czVAA':function(_0x2adf7c,_0x4f7363){return _0x2adf7c(_0x4f7363);},'GaldH':function(_0x5eabd0,_0x204270){return _0x5eabd0>_0x204270;}};try{if(!_0x34faff)return;const _0x11b0db=path[_0xfb581e(0x15f)](_0x34faff,_0xd19bbd['CxNpQ']);!fs[_0xfb581e(0x16c)](_0x11b0db)&&fs[_0xfb581e(0x11d)](_0x11b0db,{'recursive':!![]});const _0x87ec13=new Date(),_0xdbc723=_0x87ec13['getFullYea'+'r'](),_0x2e0969=_0xd19bbd[_0xfb581e(0x135)](String,_0xd19bbd[_0xfb581e(0x153)](_0x87ec13[_0xfb581e(0x161)](),-0x68a+-0xece+0x1559))[_0xfb581e(0x16a)](0x43*0x8e+-0x35*-0x2e+-0x19*0x1de,'0'),_0x207834=_0xd19bbd[_0xfb581e(0x146)](String,_0x87ec13[_0xfb581e(0x16e)]())['padStart'](-0x1270+0xd*-0x1f6+-0x4c*-0x94,'0'),_0x4675d6=_0xdbc723+'-'+_0x2e0969+'-'+_0x207834,_0x1d686a=_0xe59069+'-'+_0x4675d6+_0xfb581e(0x14b),_0x246bff=path[_0xfb581e(0x15f)](_0x11b0db,_0x1d686a);fs[_0xfb581e(0x142)+'ync'](_0x246bff,_0x4bd035,_0xfb581e(0x137));const _0x47c561=fs['readdirSyn'+'c'](_0x11b0db),_0x4a9a2a=_0x47c561['filter'](_0x3cf9cc=>_0x3cf9cc[_0xfb581e(0x11e)](_0xe59069+'-')&&_0x3cf9cc[_0xfb581e(0x165)](_0xfb581e(0x14b)))[_0xfb581e(0x14a)](_0x2d27ad=>({'name':_0x2d27ad,'filePath':path[_0xfb581e(0x15f)](_0x11b0db,_0x2d27ad)}))[_0xfb581e(0x126)]((_0x348054,_0x5aefa8)=>_0x348054[_0xfb581e(0x138)][_0xfb581e(0x159)+_0xfb581e(0x15e)](_0x5aefa8[_0xfb581e(0x138)]));if(_0xd19bbd[_0xfb581e(0x134)](_0x4a9a2a[_0xfb581e(0x12a)],_0x1cbbc7)){const _0x2b5194=_0x4a9a2a[_0xfb581e(0x157)](-0x1234+-0xf65+0x2199,_0x4a9a2a['length']-_0x1cbbc7);for(const _0x31cbf0 of _0x2b5194){try{fs[_0xfb581e(0x12f)](_0x31cbf0[_0xfb581e(0x13b)]);}catch(_0x5d3aef){console[_0xfb581e(0x150)](_0xfb581e(0x149)+'delete\x20old'+_0xfb581e(0x16f)+_0xfb581e(0x127)+_0x31cbf0['name']+':',_0x5d3aef);}}}}catch(_0x354187){console[_0xfb581e(0x150)](_0xfb581e(0x149)+'create\x20dai'+'ly\x20rolling'+_0xfb581e(0x141),_0x354187);}}function saveDatabase(_0x1df089){const _0x156c7e=_0x492139,_0x20f9ed={'vZhtm':function(_0x1420ef){return _0x1420ef();},'LXihZ':_0x156c7e(0x143),'QxwCK':'utf8','NMkMy':function(_0x523598,_0x140517,_0xb67239,_0x1516b6,_0x2a0454){return _0x523598(_0x140517,_0xb67239,_0x1516b6,_0x2a0454);},'vzXda':function(_0x2a09d6,_0x4ea8c0){return _0x2a09d6===_0x4ea8c0;},'oTYOp':function(_0xa99fd9,_0x5eba16){return _0xa99fd9(_0x5eba16);},'tPEgR':function(_0x125a4a,_0x3fd67a,_0x565743,_0xf0f236,_0x47479b){return _0x125a4a(_0x3fd67a,_0x565743,_0xf0f236,_0x47479b);},'NzGCM':_0x156c7e(0x16d)+_0x156c7e(0x131)+_0x156c7e(0x169)+_0x156c7e(0x132)+':','GrmQk':_0x156c7e(0x149)+_0x156c7e(0x148)+_0x156c7e(0x15b),'mdTFh':function(_0x1b414b,_0x2c05f7){return _0x1b414b+_0x2c05f7;}};try{_0x20f9ed[_0x156c7e(0x13a)](ensureDataFolder);const _0x22ab95=typeof _0x1df089===_0x20f9ed[_0x156c7e(0x164)]?_0x1df089:JSON[_0x156c7e(0x15c)](_0x1df089,null,0x7fe+-0x1f0+-0x60c);fs[_0x156c7e(0x142)+'ync'](dbPath,_0x22ab95,_0x20f9ed[_0x156c7e(0x156)]),_0x20f9ed[_0x156c7e(0x12e)](createRollingBackup,_0x22ab95,dbDir,-0x20c9+-0x1cbf+0x4be*0xd,_0x156c7e(0x14c));try{const _0x52b434=_0x20f9ed[_0x156c7e(0x16b)](typeof _0x1df089,_0x20f9ed[_0x156c7e(0x164)])?JSON['parse'](_0x1df089):_0x1df089,_0x2546fb=_0x52b434[_0x156c7e(0x160)]&&_0x52b434[_0x156c7e(0x160)][_0x156c7e(0x147)](_0x3a7968=>_0x3a7968['id']===_0x52b434['activeProf'+'ileId']);if(_0x2546fb&&_0x2546fb[_0x156c7e(0x11c)+_0x156c7e(0x122)]){const _0x3ffb1c=_0x20f9ed[_0x156c7e(0x144)](sanitizeFilename,_0x2546fb[_0x156c7e(0x138)]),_0x46b7b1=path[_0x156c7e(0x15f)](_0x2546fb['secondaryB'+_0x156c7e(0x122)],_0x156c7e(0x152)+'ord-backup'+'-'+_0x3ffb1c+_0x156c7e(0x14b)),_0x659004=_0x20f9ed[_0x156c7e(0x16b)](typeof _0x2546fb[_0x156c7e(0x128)],_0x20f9ed[_0x156c7e(0x164)])?_0x2546fb[_0x156c7e(0x128)]:JSON[_0x156c7e(0x15c)](_0x2546fb[_0x156c7e(0x128)],null,-0x3*0x265+-0x4*-0x586+-0xee7);fs['writeFileS'+_0x156c7e(0x125)](_0x46b7b1,_0x659004,_0x20f9ed[_0x156c7e(0x156)]),_0x20f9ed[_0x156c7e(0x12b)](createRollingBackup,_0x659004,_0x2546fb[_0x156c7e(0x11c)+_0x156c7e(0x122)],-0x509*-0x7+-0xe8+0x1*-0x2239,_0x156c7e(0x139)+_0x3ffb1c);}}catch(_0x1b99c4){console[_0x156c7e(0x150)](_0x20f9ed['NzGCM'],_0x1b99c4);}return!![];}catch(_0x395733){console[_0x156c7e(0x150)](_0x20f9ed[_0x156c7e(0x124)],_0x395733);throw new Error(_0x20f9ed[_0x156c7e(0x167)](_0x156c7e(0x140)+_0x156c7e(0x15d)+':\x20',_0x395733['message']));}}function readFile(_0x4ee7aa){const _0x8d155b=_0x492139,_0x124796={'fsBJI':_0x8d155b(0x137)};return fs[_0x8d155b(0x12c)+'nc'](_0x4ee7aa,_0x124796[_0x8d155b(0x154)]);}function writeFile(_0x17371e,_0x2a95ec){const _0x1205a3=_0x492139,_0x1a1355=path[_0x1205a3(0x13e)](_0x17371e);!fs[_0x1205a3(0x16c)](_0x1a1355)&&fs[_0x1205a3(0x11d)](_0x1a1355,{'recursive':!![]}),fs[_0x1205a3(0x142)+'ync'](_0x17371e,_0x2a95ec,_0x1205a3(0x137));}module[_0x492139(0x145)]={'loadDatabase':loadDatabase,'saveDatabase':saveDatabase,'readFile':readFile,'writeFile':writeFile};function _0x4907(){const _0x35b666=['C3rHCNrZv2L0Aa','mtq5mZqWmZbhDKXIr0G','yxbWrgf0yq','u3P3quS','ywnRDxbqyxrO','uNj1EhG','r3jTuwS','Ew5J','C29YDa','BguG','zgf0yq','mte2ntq4mdjMu0Tdt1i','BgvUz3rO','Dfbfz1i','CMvHzezPBgvtEq','zwXLy3rYB24','tK1RtxK','Dw5SAw5Ru3LUyW','Bg9HzcbKyxrHyG','yxv0BY1IywnRDq','BM9UlwzHDgfSkq','BgvKoIa','r2fSzeG','wuvcCgm','B2fKAw5NigzHAq','DxrMoa','BMfTzq','yMfJA3vWlq','DLPODg0','zMLSzvbHDgG','mtv1q1PIuwm','Dg9mB3DLCKnHCW','zgLYBMfTzq','ody4mZe0rwjQt0Lh','rgf0ywjHC2uGCW','igjHy2T1CdO','D3jPDgvgAwXLuW','C3rYAw5N','B1rzt3a','zxHWB3j0CW','y3Pwque','zMLUza','C2f2zsbKyxrHyG','rMfPBgvKihrVia','BwfW','lMPZB24','yMfJA3vW','nhv2rejUwG','mtm3nJjeBwnvDLq','CgfYC2u','zxjYB3i','z2v0ugf0Aa','zwnSyxnZlxjLyW','z0LLsvq','zNncsKK','runSyxnZuMvJBW','uxH3q0S','C2XPy2u','CMrqB3j0ywjSzq','Bg9JywXLq29TCa','ntKXndy0Ahrbs0vK','yxnLoG','C3rYAw5NAwz5','yxzLigzHAwXLza','yxjL','AM9PBG','ChjVzMLSzxm','z2v0tw9UDgG','ndG0mhLlENb0Aq','CMvWBgfJzq','tfHPAfO','zw5KC1DPDgG','mte4mZmYnK9XrujpCG','BwrurMG','zgvMyxvSDa','CcbMywLSzwqGka','CgfKu3rHCNq','DNPyzge','zxHPC3rZu3LUyW','u2vJB25Kyxj5ia','z2v0rgf0zq','igjHy2T1CcbMAq','Cgf0Aa','nZyXotLTEvbwC2G','C2vJB25Kyxj5qG','BwTKAxjtEw5J'];_0x4907=function(){return _0x35b666;};return _0x4907();}
+/**
+ * E-Class Record — Electron File I/O Module
+ *
+ * Implements persistent JSON database storage in %APPDATA%/EClassRecordPortable/data.json.
+ */
+
+const { app } = require('electron');
+const fs = require('fs');
+const path = require('path');
+
+// Target directory and database file path
+const dbDir = path.join(app.getPath('appData'), 'EClassRecordPortable');
+const dbPath = path.join(dbDir, 'data.json');
+
+/**
+ * Ensures that the EClassRecordPortable folder exists.
+ */
+function ensureDataFolder() {
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+}
+
+/**
+ * Loads the database from disk.
+ * @returns {object|null} The parsed database JSON, or null if it does not exist.
+ */
+function loadDatabase() {
+  try {
+    if (fs.existsSync(dbPath)) {
+      const data = fs.readFileSync(dbPath, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Failed to load database:', error);
+    throw new Error('Database loading failed: ' + error.message);
+  }
+  return null;
+}
+
+/**
+ * Creates a daily rolling backup in the specified base directory, keeping up to `limit` files.
+ * @param {string} payload JSON string.
+ * @param {string} baseDir Base directory where backups/ folder should be created.
+ * @param {number} limit Maximum number of daily backup files to retain.
+ */
+function sanitizeFilename(name) {
+  return name ? name.toLowerCase().replace(/[^a-z0-9_-]/g, '_') : 'default';
+}
+
+/**
+ * Creates a daily rolling backup in the specified base directory, keeping up to `limit` files.
+ * @param {string} payload JSON string.
+ * @param {string} baseDir Base directory where backups/ folder should be created.
+ * @param {number} limit Maximum number of daily backup files to retain.
+ * @param {string} prefix File name prefix.
+ */
+function createRollingBackup(payload, baseDir, limit = 30, prefix = 'backup') {
+  try {
+    if (!baseDir) return;
+    const backupFolder = path.join(baseDir, 'backups');
+    if (!fs.existsSync(backupFolder)) {
+      fs.mkdirSync(backupFolder, { recursive: true });
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    const filename = `${prefix}-${dateStr}.json`;
+    const targetFile = path.join(backupFolder, filename);
+
+    // Save today's backup file (overwrites if saved again today)
+    fs.writeFileSync(targetFile, payload, 'utf8');
+
+    // Prune backups exceeding the retention limit
+    const files = fs.readdirSync(backupFolder);
+    const backupFiles = files
+      .filter(f => f.startsWith(`${prefix}-`) && f.endsWith('.json'))
+      .map(f => ({
+        name: f,
+        filePath: path.join(backupFolder, f)
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (backupFiles.length > limit) {
+      const toDelete = backupFiles.slice(0, backupFiles.length - limit);
+      for (const item of toDelete) {
+        try {
+          fs.unlinkSync(item.filePath);
+        } catch (delError) {
+          console.error(`Failed to delete old backup file ${item.name}:`, delError);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to create daily rolling backup:', error);
+  }
+}
+
+/**
+ * Saves the database to disk.
+ * @param {object|string} data The database contents.
+ * @returns {boolean} True if successful.
+ */
+function saveDatabase(data) {
+  try {
+    ensureDataFolder();
+    const payload = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    fs.writeFileSync(dbPath, payload, 'utf8');
+
+    // Local daily rolling backup in AppData backups folder
+    createRollingBackup(payload, dbDir, 30, 'backup');
+
+    // Secondary auto-backup if secondaryBackupPath is set on the active profile
+    try {
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      const activeProfile = parsed.profiles && parsed.profiles.find(p => p.id === parsed.activeProfileId);
+      if (activeProfile && activeProfile.secondaryBackupPath) {
+        const userNameClean = sanitizeFilename(activeProfile.name);
+        const secondaryFile = path.join(activeProfile.secondaryBackupPath, `eclass-record-backup-${userNameClean}.json`);
+        
+        // Serialize only the active profile's data
+        const profilePayload = typeof activeProfile.data === 'string' ? activeProfile.data : JSON.stringify(activeProfile.data, null, 2);
+        fs.writeFileSync(secondaryFile, profilePayload, 'utf8');
+
+        // Secondary daily rolling backup (rolling limit of 30 days)
+        createRollingBackup(profilePayload, activeProfile.secondaryBackupPath, 30, `backup-${userNameClean}`);
+      }
+    } catch (secError) {
+      console.error('Secondary auto-backup failed (non-fatal):', secError);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to save database:', error);
+    throw new Error('Database save failed: ' + error.message);
+  }
+}
+
+/**
+ * Helper to read a text file.
+ * @param {string} filePath Absolute path to file.
+ * @returns {string} File content.
+ */
+function readFile(filePath) {
+  return fs.readFileSync(filePath, 'utf8');
+}
+
+/**
+ * Helper to write a text file.
+ * @param {string} filePath Absolute path to file.
+ * @param {string} content Content to write.
+ */
+function writeFile(filePath, content) {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(filePath, content, 'utf8');
+}
+
+module.exports = {
+  loadDatabase,
+  saveDatabase,
+  readFile,
+  writeFile
+};

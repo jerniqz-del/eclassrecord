@@ -1,1 +1,639 @@
-const _0x4f355c=_0x5a4b;(function(_0x1bc11d,_0x732963){const _0x1a7fde=_0x5a4b,_0x4f74ce=_0x1bc11d();while(!![]){try{const _0x48e28f=-parseInt(_0x1a7fde(0x110))/(0x31e*0x9+0x199a*0x1+-0x35a7)+parseInt(_0x1a7fde(0x11b))/(-0xd*-0x1d+-0x25f*-0x8+-0x1*0x146f)+parseInt(_0x1a7fde(0x179))/(0x132e+-0x63+-0x12c8)*(parseInt(_0x1a7fde(0x1d0))/(0x1*-0x7cd+-0x711*-0x3+0x1*-0xd62))+parseInt(_0x1a7fde(0x281))/(0xc41*0x3+0x23a5+-0x4863)*(parseInt(_0x1a7fde(0x1a9))/(0x18d*-0x2+-0x1d1c+0x203c))+-parseInt(_0x1a7fde(0x239))/(-0xb22+0x57c+-0x5ad*-0x1)*(parseInt(_0x1a7fde(0x2a0))/(0x1*0x48e+-0x1440+0xfba))+-parseInt(_0x1a7fde(0x193))/(0x1dbc+0x9*-0x3+0x3b3*-0x8)+parseInt(_0x1a7fde(0x147))/(-0xac6+-0x6*0x3c1+0x2156)*(parseInt(_0x1a7fde(0x1dd))/(-0x243d+-0x1ea1+0x42e9));if(_0x48e28f===_0x732963)break;else _0x4f74ce['push'](_0x4f74ce['shift']());}catch(_0x149cf8){_0x4f74ce['push'](_0x4f74ce['shift']());}}}(_0x1e60,-0x15e936*0x1+-0x105ca+0x24c9e6));const DB_VERSION=0x10fc+-0x25*-0xab+0x335*-0xd,ROOT_DB_VERSION=0x1fb7+0x1*0x6c4+0x1*-0x2678;let dbRoot={'version':ROOT_DB_VERSION,'profiles':[],'activeProfileId':''},legacyDataToMigrate=null,currentProfilePin='',db={'version':DB_VERSION,'teacherName':'','schoolName':'','schoolYear':'2026-2027','currentAssignmentId':'','currentTerm':'1','activeView':_0x4f355c(0x263),'autoBlur':![],'assignments':[]},currentView=_0x4f355c(0x263),recordTab='1',importMode='';function normalizeDatabase(){const _0x6ac3e2=_0x4f355c,_0x5dc37a={'kdJLw':_0x6ac3e2(0x29e),'vpDGj':_0x6ac3e2(0xc9),'rBsDP':function(_0x5b4200,_0x13f980){return _0x5b4200===_0x13f980;},'RNgck':function(_0x22732b,_0x1c2285){return _0x22732b<_0x1c2285;},'yJYCD':function(_0x7c1316,_0x4c514e){return _0x7c1316<_0x4c514e;},'whPBM':function(_0x2cda36,_0x50b26f){return _0x2cda36===_0x50b26f;},'zJfwq':_0x6ac3e2(0x1ea)+_0x6ac3e2(0x228),'HQDRK':_0x6ac3e2(0x10c),'pVOBY':_0x6ac3e2(0x256),'isRzx':function(_0x217aff,_0x2d4ebc,_0x6fe29,_0x2d4a83){return _0x217aff(_0x2d4ebc,_0x6fe29,_0x2d4a83);},'mpvEN':function(_0x593ee2,_0xa22f24){return _0x593ee2(_0xa22f24);}};if(!db['assignment'+'s'])db['assignment'+'s']=[];if(!db['activeView'])db[_0x6ac3e2(0x124)]=_0x6ac3e2(0x263);if(!db[_0x6ac3e2(0x118)+'m'])db[_0x6ac3e2(0x118)+'m']='1';if(_0x5dc37a[_0x6ac3e2(0x269)](db['schoolId'],undefined))db[_0x6ac3e2(0xe8)]='';if(db[_0x6ac3e2(0x22a)]===undefined)db['region']='';if(_0x5dc37a[_0x6ac3e2(0x269)](db[_0x6ac3e2(0x289)],undefined))db[_0x6ac3e2(0x289)]='';if(_0x5dc37a[_0x6ac3e2(0x269)](db[_0x6ac3e2(0x18b)],undefined))db[_0x6ac3e2(0x18b)]=![];if(!db[_0x6ac3e2(0x1c9)]||_0x5dc37a[_0x6ac3e2(0xfe)](db['version'],DB_VERSION))db[_0x6ac3e2(0x1c9)]=DB_VERSION;for(let _0x5d4e66=0x4*0x3b7+-0x62f*0x2+-0x27e;_0x5dc37a['yJYCD'](_0x5d4e66,db[_0x6ac3e2(0x199)+'s']['length']);_0x5d4e66++){const _0xf30776=db[_0x6ac3e2(0x199)+'s'][_0x5d4e66];if(_0x5dc37a[_0x6ac3e2(0x12e)](_0xf30776['subject'],_0x5dc37a['zJfwq']))_0xf30776[_0x6ac3e2(0xd8)+'s']&&_0xf30776[_0x6ac3e2(0xd8)+'s'][_0x6ac3e2(0x26b)](_0x54fccb=>{const _0x1dcb6b=_0x6ac3e2;if(!_0x54fccb[_0x1dcb6b(0x1e5)])_0x54fccb[_0x1dcb6b(0x1e5)]=_0x5dc37a[_0x1dcb6b(0xf6)];}),_0xf30776['subject']=_0x5dc37a[_0x6ac3e2(0xdd)];else{if(_0xf30776[_0x6ac3e2(0x291)]===_0x6ac3e2(0x17d)+_0x6ac3e2(0x1b2)+'nd\x20Health\x20'+_0x6ac3e2(0x156)+'th)')_0xf30776['assessment'+'s']&&_0xf30776[_0x6ac3e2(0xd8)+'s'][_0x6ac3e2(0x26b)](_0x274c69=>{const _0x2c8309=_0x6ac3e2;if(!_0x274c69[_0x2c8309(0x1e5)])_0x274c69[_0x2c8309(0x1e5)]=_0x5dc37a[_0x2c8309(0x184)];}),_0xf30776[_0x6ac3e2(0x291)]='MAPEH';else isMapehSubject(_0xf30776[_0x6ac3e2(0x291)])&&_0xf30776[_0x6ac3e2(0x291)]!==_0x6ac3e2(0x10c)&&(_0xf30776[_0x6ac3e2(0xd8)+'s']&&_0xf30776[_0x6ac3e2(0xd8)+'s'][_0x6ac3e2(0x26b)](_0x1994a5=>{const _0x49edb8=_0x6ac3e2;if(!_0x1994a5[_0x49edb8(0x1e5)])_0x1994a5['mapePart']=_0x49edb8(0x29e);}),_0xf30776[_0x6ac3e2(0x291)]=_0x5dc37a['HQDRK']);}!_0xf30776[_0x6ac3e2(0x16c)]&&(_0xf30776['schoolYear']=db[_0x6ac3e2(0x16c)]||_0x5dc37a[_0x6ac3e2(0x12b)]);_0xf30776['policy']=determinePolicy(_0xf30776[_0x6ac3e2(0x11e)],_0xf30776[_0x6ac3e2(0x291)],_0xf30776[_0x6ac3e2(0x16c)]),_0xf30776[_0x6ac3e2(0x13f)+'up']=_0x5dc37a[_0x6ac3e2(0x222)](determineSubjectGroup,_0xf30776[_0x6ac3e2(0x11e)],_0xf30776['subject'],_0xf30776['policy']);if(!_0xf30776[_0x6ac3e2(0xd8)+'s'])_0xf30776[_0x6ac3e2(0xd8)+'s']=[];if(!_0xf30776[_0x6ac3e2(0x1cd)])_0xf30776[_0x6ac3e2(0x1cd)]={};_0x5dc37a['mpvEN'](normalizeAssessmentComponents,_0xf30776),_0x5dc37a[_0x6ac3e2(0x1be)](ensureTemplateAssessments,_0xf30776);}}async function loadDatabase(){const _0x1b2cdd=_0x4f355c,_0x305eb9={'GCMAx':function(_0x55ddbd,_0x1f522b){return _0x55ddbd<_0x1f522b;},'AsUJG':_0x1b2cdd(0x257)+'load\x20datab'+'ase:','FWhfN':function(_0x2cc21e,_0xf9beb){return _0x2cc21e+_0xf9beb;},'OCZSF':_0x1b2cdd(0x16d)+_0x1b2cdd(0x194)+'\x20database:'+'\x20','sXytW':'error'};try{const _0x47126a=await window[_0x1b2cdd(0x227)+'I'][_0x1b2cdd(0x1fd)+'se']();if(_0x47126a){if(_0x47126a[_0x1b2cdd(0x237)]&&Array[_0x1b2cdd(0x119)](_0x47126a['profiles']))dbRoot=_0x47126a,_0x305eb9[_0x1b2cdd(0x2a6)](dbRoot[_0x1b2cdd(0x1c9)],ROOT_DB_VERSION)&&(dbRoot[_0x1b2cdd(0x1c9)]=ROOT_DB_VERSION);else _0x47126a[_0x1b2cdd(0x199)+'s']||_0x47126a['teacherNam'+'e']?(legacyDataToMigrate=_0x47126a,dbRoot={'version':ROOT_DB_VERSION,'profiles':[],'activeProfileId':''}):dbRoot={'version':ROOT_DB_VERSION,'profiles':[],'activeProfileId':''};}else dbRoot={'version':ROOT_DB_VERSION,'profiles':[],'activeProfileId':''};}catch(_0x1cbbe0){console[_0x1b2cdd(0x21f)](_0x305eb9[_0x1b2cdd(0x24f)],_0x1cbbe0),toast(_0x305eb9[_0x1b2cdd(0x125)](_0x305eb9[_0x1b2cdd(0x1e7)],_0x1cbbe0[_0x1b2cdd(0x25f)]),_0x305eb9[_0x1b2cdd(0x23d)]);}}async function saveDatabase(){const _0xa067b1=_0x4f355c,_0x3513db={'JqRyJ':function(_0x8b1c55){return _0x8b1c55();},'rlOqe':'Cannot\x20sav'+_0xa067b1(0x1d3)+_0xa067b1(0xff)+_0xa067b1(0x230)+'in\x20session'+'.','jVrRu':function(_0x6d14c8,_0xc48eee,_0x307475){return _0x6d14c8(_0xc48eee,_0x307475);}};_0x3513db[_0xa067b1(0x21e)](updateProfile),db[_0xa067b1(0x124)]=currentView,db['recordTab']=recordTab;if(dbRoot&&dbRoot['activeProf'+_0xa067b1(0x130)]){const _0x4c6e89=dbRoot['profiles'][_0xa067b1(0x13d)](_0x103d38=>_0x103d38['id']===dbRoot[_0xa067b1(0x249)+'ileId']);if(_0x4c6e89){_0x4c6e89[_0xa067b1(0x1cb)+_0xa067b1(0x115)]=db[_0xa067b1(0x1cb)+'ackupPath']||'';if(_0x4c6e89[_0xa067b1(0x231)]){if(!currentProfilePin){console[_0xa067b1(0x21f)](_0x3513db[_0xa067b1(0x20b)]);return;}const _0x1575cb=await _0x3513db['jVrRu'](encryptPayload,JSON[_0xa067b1(0x15e)](db),currentProfilePin);_0x4c6e89[_0xa067b1(0x233)]=_0x1575cb;}else _0x4c6e89[_0xa067b1(0x233)]=db;_0x4c6e89['name']=db[_0xa067b1(0x155)+'e']||_0x4c6e89[_0xa067b1(0x1f5)];}}await saveRootDatabase();}async function saveRootDatabase(){const _0x59b89b=_0x4f355c,_0x8017bf={'yDjzW':function(_0x100d0c,_0x40e39d){return _0x100d0c(_0x40e39d);},'yMDFk':function(_0x48fcb0,_0x2cb7c4){return _0x48fcb0+_0x2cb7c4;},'ZYUZW':_0x59b89b(0x27a)+_0x59b89b(0x16b),'XOqdr':function(_0x5d5e4b){return _0x5d5e4b();},'WwGgR':'Failed\x20to\x20'+_0x59b89b(0x183)+_0x59b89b(0x1c5),'iSYwE':function(_0x4731e2,_0x83996,_0x37bc49){return _0x4731e2(_0x83996,_0x37bc49);},'jpXNv':_0x59b89b(0x16d)+_0x59b89b(0xbe)+'\x20'};try{const _0x1f32b2=await window[_0x59b89b(0x227)+'I'][_0x59b89b(0x186)+'se'](dbRoot);_0x1f32b2&&(_0x8017bf[_0x59b89b(0xdf)](setStatus,_0x8017bf[_0x59b89b(0x1d8)](_0x8017bf[_0x59b89b(0x2a7)],new Date()[_0x59b89b(0x288)+_0x59b89b(0x217)]())),_0x8017bf[_0x59b89b(0x159)](showAutoSaveIndicator));}catch(_0x572e80){console[_0x59b89b(0x21f)](_0x8017bf['WwGgR'],_0x572e80),_0x8017bf[_0x59b89b(0x1d2)](toast,_0x8017bf[_0x59b89b(0x27c)]+_0x572e80['message'],_0x59b89b(0x21f));}}function showAutoSaveIndicator(){const _0x50c9fe=_0x4f355c,_0x11de1f={'VSkcL':_0x50c9fe(0x1e4),'oWrWu':'autoSaveIn'+'dicator','vBZUl':function(_0x81246f,_0x2b99f6){return _0x81246f(_0x2b99f6);},'yOoUp':function(_0x278fda,_0x2d89dc,_0x229920){return _0x278fda(_0x2d89dc,_0x229920);}},_0x465f4b=document[_0x50c9fe(0x160)+'ById'](_0x11de1f[_0x50c9fe(0x14c)]);if(!_0x465f4b)return;_0x465f4b[_0x50c9fe(0x258)][_0x50c9fe(0x271)](_0x11de1f[_0x50c9fe(0x146)]),window[_0x50c9fe(0x1a2)+_0x50c9fe(0x229)]&&_0x11de1f[_0x50c9fe(0x190)](clearTimeout,window['autoSaveTi'+'meout']),window[_0x50c9fe(0x1a2)+_0x50c9fe(0x229)]=_0x11de1f[_0x50c9fe(0x2a5)](setTimeout,()=>{const _0x3817e2=_0x50c9fe;_0x465f4b[_0x3817e2(0x258)]['remove'](_0x11de1f[_0x3817e2(0x146)]);},0x231d+0x1809+0x18b1*-0x2);}function setStatus(_0x2dfbe4){const _0x277744=_0x4f355c,_0x10a5d4={'lzzgY':_0x277744(0xd7),'Dmpis':function(_0x391433,_0x24d3c3){return _0x391433(_0x24d3c3);}},_0x280fed=document[_0x277744(0x160)+_0x277744(0x242)](_0x10a5d4['lzzgY']);_0x280fed&&(_0x280fed[_0x277744(0x105)]=_0x2dfbe4?_0x277744(0x142)+_0x277744(0x104)+_0x277744(0x20a)+_0x277744(0x164)+_0x277744(0x26e)+_0x277744(0xd4)+_0x10a5d4[_0x277744(0x211)](esc,_0x2dfbe4)+'</span>':'');}function _0x5a4b(_0x4165e1,_0x9ea010){_0x4165e1=_0x4165e1-(0x1a50+0x17ef*0x1+0x27*-0x145);const _0x28896b=_0x1e60();let _0x1d5a05=_0x28896b[_0x4165e1];if(_0x5a4b['ZOJsEb']===undefined){var _0x302c5c=function(_0x4d229a){const _0x35f01a='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let _0x4f5316='',_0x42dfac='';for(let _0x4ab7a5=0x696*0x5+-0x5*0x3a5+-0xeb5,_0x4e3b34,_0x8ddb1f,_0x552d54=0xee*-0x6+-0x5*-0x1b2+-0x2e6;_0x8ddb1f=_0x4d229a['charAt'](_0x552d54++);~_0x8ddb1f&&(_0x4e3b34=_0x4ab7a5%(-0x5*0x6b3+0xe33+0x1350)?_0x4e3b34*(0x1461+-0x3*-0x53d+-0x23d8)+_0x8ddb1f:_0x8ddb1f,_0x4ab7a5++%(0x587+-0x44*-0x25+-0xf57))?_0x4f5316+=String['fromCharCode'](0x23*-0xef+-0x1*-0x138a+0xe22&_0x4e3b34>>(-(0x267b+-0x2056+-0x623)*_0x4ab7a5&0x3e*0xc+-0xb67+-0x3*-0x2d7)):0x2*-0xeed+-0xb81+0x295b){_0x8ddb1f=_0x35f01a['indexOf'](_0x8ddb1f);}for(let _0x448be4=0x171b+0x15d7*0x1+0x20b*-0x16,_0x58fa01=_0x4f5316['length'];_0x448be4<_0x58fa01;_0x448be4++){_0x42dfac+='%'+('00'+_0x4f5316['charCodeAt'](_0x448be4)['toString'](-0x1d96+-0x2322+0x6*0xacc))['slice'](-(0x1*-0x22d+-0x48f*-0x3+-0x1*0xb7e));}return decodeURIComponent(_0x42dfac);};_0x5a4b['EAfOqd']=_0x302c5c,_0x5a4b['fHUPGA']={},_0x5a4b['ZOJsEb']=!![];}const _0x27297b=_0x28896b[0x1*-0x1bd7+-0x1*-0x177d+0x45a],_0x588c02=_0x4165e1+_0x27297b,_0x3e5018=_0x5a4b['fHUPGA'][_0x588c02];return!_0x3e5018?(_0x1d5a05=_0x5a4b['EAfOqd'](_0x1d5a05),_0x5a4b['fHUPGA'][_0x588c02]=_0x1d5a05):_0x1d5a05=_0x3e5018,_0x1d5a05;}function currentAssignment(){const _0x5caea5=_0x4f355c,_0x3fb4d6={'NufSh':function(_0x3cc846,_0x553302){return _0x3cc846<_0x553302;},'OsEZQ':function(_0x3f7a21,_0x3635e1){return _0x3f7a21===_0x3635e1;},'MvDsb':function(_0x5a24fe,_0x555770){return _0x5a24fe>_0x555770;}},_0x74fe64=db[_0x5caea5(0x16c)]||'2026-2027',_0x181730=db[_0x5caea5(0x199)+'s'][_0x5caea5(0x114)](_0x4acbdd=>_0x4acbdd['schoolYear']===_0x74fe64);for(let _0x16ea4e=0x2*0xfdd+0xb*-0x4b+-0x1c81;_0x3fb4d6[_0x5caea5(0x255)](_0x16ea4e,_0x181730[_0x5caea5(0x236)]);_0x16ea4e++){if(_0x3fb4d6[_0x5caea5(0x292)](_0x181730[_0x16ea4e]['id'],db[_0x5caea5(0x1c3)+_0x5caea5(0x109)]))return _0x181730[_0x16ea4e];}if(_0x3fb4d6[_0x5caea5(0x1ee)](_0x181730['length'],-0x1*0x871+0x1a6e+-0x11fd))return db['currentAss'+_0x5caea5(0x109)]=_0x181730[0xceb+-0x1065*0x2+0x13df]['id'],_0x181730[0x196e+-0x3*0x595+-0xab*0xd];return null;}function _0x1e60(){const _0x29cc42=['CcbKAxjLy3rVCG','AwXLswq','tu5crKe','BuvzAu0','iIbTyxHSzw5NDa','zgL2pGOGia','zwn0igLKpsjLza','EsbJBgvHCMvKlG','vKDlAhK','A3mGD2LSBcbIzq','yNrUigj0BI1WCG','tw5eyxG','y2HPBMCGtg9Hza','yLjoAei','zMLUza','Bvn1yMPLy3rjBG','C3vIAMvJDeDYBW','i2vKAxrdDxn0BW','Defpvu4','phnWyw4Gy2XHCW','De9pugy','C3m9iMzPzwXKlq','wfL4uwG','vLnRy0W','mtu3mePtvgDcsW','pc9VChrPB24+','BgqTBgfIzwWIpG','yxnZpsjMAwvSza','ywWGBw9KywWTlq','B1DYv3u','Ag9VBfLLyxi','y2XHC3m9iMzPzq','C2vSzwn0zwq','BwfW','zxmGyw5Kig1HCG','oJaIpLbSzwfZzq','CvDYruS','BKLdufG','DgvHy2HLCK5HBq','kfbficyGsgvHBa','zuPSyxu','l2XHyMvSpGOGia','we9Xzhi','BNrLCIbqsu48lW','zxi9iUkaOUkaOUkaOUkaOUkaOUkaOG','sw5JB3jYzwn0ia','y2XHC3m','C3rYAw5NAwz5','zxiGEw91CIa2lq','z2v0rwXLBwvUDa','veLACKG','zgL0ifrLywnOAq','rNDNtha','y2XHC3m9iNnHDG','x190AxrSzsi+rq','zw50','l3a+cIaGicaGia','q3vZDg9Tifn1yG','Awz5ugLU','svjozve','BgX5igf0ia','C2nOB29SwwvHCG','q291BgqGBM90ia','u3PosvK','D0TPCwK','B1PVA2K','n3W2Fdv8mW','D2fYBMLUzW','u2vJB25Kyxj5ia','mJaYos0YmdmW','zwn0sw5WDxq','uLfOweW','igvUDgvYihLVDq','BgfIzwW+cIaGia','mtC2otf3zg5jvfa','qwn0Aw9UvMvYAq','ExjkCfy','ueLoihrVigf1Da','ugH5C2LJywWGrq','AxmGy29TChv0zq','zNKIpKnHBMnLBa','Bgf5','cIaGica8zgL2ia','B2zMiIaVpGOGia','C2f2zsbKyxrHyG','DNber2O','Bw9KywWTB3zLCG','C2f2zurHDgfIyq','zM5Ky0u','zcbZDwjQzwn0ia','q2vjzu8','iIbJBgfZCZ0IzG','yxv0B0jSDxi','y09zD2q','sMTKzLC','BgfZCZ0IC3bSAq','CZ0IyNrUigj0BG','DKjAvwW','CYbHBMqGChjVzG','CMXHEq','mJaYmdC1mMTQyMDnzW','Bg9HzcbSB2nHBa','zMXLEa','C3bSyxK6BM9Uzq','q2fUy2vS','Dg9Tu3vIAMvJDa','yxnZAwDUBwvUDa','C3rLBMvY','twTuBwi','ignSyxnZpsjIDa','AxvNtvu','yxbWzw5Kq2HPBa','zsbhCMfKzsa','cIaGicaGidWVza','Cg9SAwn5','yxv0B1nHDMvuAq','vhvxuxi','vgvHy2HPBMCGBa','yxnZpsjIDg4GyG','iMj0BKnVBMzPCG','i2j0BKnHBMnLBa','DgvZDa','mtGXnZuYnMnnwefYEa','y29TCgXLDgu9iG','D3Pdz0G','z0L2t3K','BxbjDe8','DgL0BguIpKnVBG','yLDzzwy','r213CKC','sNzrAeO','zhvJyxrPB24Gyq','zw1WDhKU','pJWVC2vSzwn0pG','BNmIpGOGicaGia','AwXLCYbJBgvHCG','Bw5ItvK','zwn0Aw9Upc9Syq','uu5Rswi','B2fKigrLBgv0zq','ChvZAa','whL2s3G','DMfSDwu','Bxb2ru4','B2rLpc9KAxy+cG','B2r5iJ4kicaGia','psj1BMXVy2STzq','EKLUzgv4','y3vYCMvUDefZCW','psjLzgL0u2nOBW','yxnLoG','AuPHyxm','Aw5MBW','C3r5Bgu','DMvYC2LVBG','y2vZC2z1BgX5lG','C2vJB25Kyxj5qG','txnNiIbJBgfZCW','C2nVCMvZ','Ad0InIiGAw5WDq','Ber2EeS','ndi0CMD2zefb','zdWVyNv0Dg9UpG','AvnzD0u','zsbZzwn1CMuGCa','icaGicaGica8za','C0Hcy0C','Cuz6rhy','re12q2q','Eu1erMS','wMzpv3O','r0rYtxG','icaGicaGicaGpa','phaGC3r5Bgu9iG','mti2mdq5CLrzwM1X','B2fczM4','CgfYzw50tM9Kzq','sgPrr2i','zgfSx19Hy3rPBW','pGOGicaGicaGia','icaGpgrPDIbJBa','C2HVDW','BwfWzvbHCNq','y2XHC3m9iM1Vza','t0nAu0y','q0fwDfK','icaGicaGica8lW','txvZAwmGyw5Kia','A3HVC3e','DezxExe','C2nOB29SrgL2Aq','txzeC2i','vwzmuMS','m3WYFdf8mhW0','zc1SywjLBci+rq','Aw1HCNKGyNrUlq','icaGicaGidXPBG','zMLLBgqTAw5WDq','BMfTzq','i2vKAxrtDwjQzq','CgfZC3DVCMqIia','CgvYBwfUzw50Ba','igfKzgvKihn1yW','pgj1DhrVBIbJBa','BMXQyKu','AxrtDwjQzwn0iG','Bg9HzerHDgfIyq','BIbIDg4Tz2HVCW','y29UzMLNDxjLia','ywn0Aw9UvMvYAq','C3vJy2vZCW','ywWIpGOGicaGia','DciGCgXHy2vOBW','BMLzrg8','s1z1qui','rNfdqLO','zwPzBMy','CMLJifbjtI4','BgrLCJ0Izs5NlG','BgWIpJXZCgfUia','CMXpCwu','y2XHC3noyw1L','zNLqAw5fCNjVCG','qvL0Du8','ywLUihrOAxmGAq','ica8BgfIzwWGyW','rg1WAxm','ueHjqxu','pgrPDIbJBgfZCW','CYWGy2XHC3nLCW','C2LVBG','zwXKlwLUChv0iG','BwvtDhjPBMC','vMvYAwz5ugLUiG','B2XzzwfYiIbJBa','C2nOB29SuMvNAq','yw5Nzxm8l2j1Da','icaGicaGphnLBa','DciGy2XHC3m9iG','sNfsEuO','zxjYB3i','D2LKzsi+cIaGia','y2XHC3nLCW','AxnsENG','C1fRtxC','AwXLzc4','Aw5UzxjuzxH0','yMXVy2S','zwXLy3rYB25bua','qxj0CW','BwvVDxq','CMvNAw9U','t3rOzxiGlYbdDq','zgfSx19IB2r5iG','Chv0ihr5Cgu9iG','i2j0BKnVBMzPCG','DgfYz2v0','C3nPBMCGueLoia','CgLUrw5HyMXLza','y2XPy2S','zgf0yq','mJaYnY0Ymdi4','BMCGtg9HzdWVza','BgvUz3rO','ChjVzMLSzxm','u2f2zq','ndLKqNntzxq','iMvKAxrhCMfKzq','yM9KEq','C2uGy29UDgvUDa','C1H5DfC','wxvov2m','pc9IDxr0B24+cG','tMzvCNK','psjMAwvSzci+cG','qNLjza','C1rfEMK','zgLZCgXHEq','v0jOwg0','yvzeu3C','zMLLBgqIpGOGia','yxnZpsjTB2rHBa','ywn0AxzLuhjVzG','yxfZt0O','zxmGzNjVBsb0Aa','Dg4TC20IigLKpq','yMfJA3vWigzVBa','lwXHyMvSiJ5tyW','qxnvsKC','Axy+cIaGicaGia','mteWmda','wLrVwMq','q0DSDhG','q2XHC3mGBg9Hza','tNvMu2G','mJaYnI0Ymdi3','rMfPBgvKihrVia','y2XHC3nmAxn0','zguGtgv2zwW8lW','y2HHBMDL','zwvKihrVihjLDa','wMDwyuu','i2vKAxrty2HVBW','sfrovfa','BwvZC2fNzq','ihn0EwXLpsjKAq','A3vWigzVBgrLCG','iMzPzwXKiJ4kia','zgfZAgjVyxjK','iJ4kicaGicaGia','rgvSzxrLifrLyq','AxrnB2rHBfnHDG','zwqGC3vJy2vZCW','BgfIzwWIpKDYyq','CKjZrfa','C20IigLKpsjLza','zM9YrwfJAa','BLD6zLq','yxv0BY1IywnRDq','zs1WAwXSx19KBW','ihbLCM1HBMvUDa','BwfYz2LUlxrVCa','ywrK','renRtNy','BM9Uzq','AMvJDcboyw1Lpa','ifnJAwvUy2uGrq','BMv3r3jHzgu','x19Hy3rPB25ZiG','mJaYns0Ymdi2','i2fJDgLVBLzLCG','u2f2zwqGBg9Jyq','CgP0CLa','ANbytNy','mJaZmc0YmdmX','AvLbrLm','uhDXEMe','q3vZDg9T','mtvozhbozuu','zwXK','uKfLBxO','BMv3u2vJDgLVBG','qwXSigrHDgfIyq','C3m9iMzPzwXKiG','icaGicaGicaGia','Dg9mB2nHBgvuAq','zgL2AxnPB24','EsaMifbYB2nLzq','lxbYAw1HCNKGyG','pc9KAxy+cIaGia','Ew91igHHDMuGzq','mJaZmY0Ymdm0','y3jLyxrLrwXLBq','zgvUDcbLBNrYAq','C3vIAMvJDa','t3nfwLe','BufJDgLVBLzLCG','qMHxBvG','C2fSDa','v0vuuMm','C2vJDgLVBG','ltyWmcKIpJWVza','uM1KzgG','zgL2','BfLLyxi','Axrtzwn0Aw9UiG','pgXHyMvSignSyq','BxvZAwnFyxj0CW','z3f0Bxy','mtu5ntCYoeruq0DssG','A2v5','zMLYBsbqsu4GqW','ywrKrxzLBNrmAq','ihbSywnLAg9Sza','Eu9Vvxa','r0nnqxG','wLLvwLC','idXSywjLBcbJBa','C2vSzwn0ihnLyW','C2f2zsbKyxrHoG','phnLBgvJDcbPza','zgfSq2fUy2vSiG','mJaYoc0Ymdi5','idWVzgL2pGOGia','uNrqug8','EsbJB25MAwD1CG','B25Kyxj5igjHyW','pg9WDgLVBIb2yq','CNjVCI1TC2CIia','cIaGicaGicaGia','CgvFAgvHBhrO','mJaZnc0Ymdm1','DuHqC1a','EhbVCNrLzcbHia','DcbIDg4TC20Iia','Ag9VBcbzzwfYpa','idXKAxyGy2XHCW','zgL2pGOGicaGia','ignSyxnZpsjTBW','B3i6DMfYkc0TyW','yMfJA3vWiePttW','Dci+pc9ZCgfUpG','sMrttKK','tIbPzIb5B3uGBG','C2f2zvn0yxr1CW','yxnZzxnZBwvUDa','ica8zgL2ignSyq','i2vKAxrhCMfKzq','ChjVzMLSzu92zq','wMTSr3y','sffeuKS','zMLLBgrZigfYzq','EurQELC','BNb1DcbPzd0Izq','Dg9Y','CxvLCNLtzwXLyW','Duzkr2u','icaGicaGpgrPDG','lcbHBMqGz3jHza','Axy+cIaGica8lW','tvvttLm','C2nOB29Sswq','C2vSzwn0igLKpq','nhWYFdf8ohWWFa','C3bSAxq','Awz5iJ5wzxjPzG','Awz5ugLUrxjYBW','icaG','B2XVCI1LCNjVCG','ueLolIbwzxjPzG','zc1SywjLBci+uW','i2vKAxrnB2rHBa','Dg1Vzgu9iM51Bq','i2vKAxrtzwn0Aq','Bvn1yMPLy3rgAq','A2rkthC','BhvLpsi','BgWGChjVzMLSzq','q0DJyKy','BMzVCM1HDgLVBG','r09lveG','ignSyxnZpsjMAq','BgfZCZ0IzMLLBa','uK5Ny2S','CM9MAwXLoIbTAq','BhKGBg9ZDc4','zsi+u2f2zsbdAa','EM1tDKy','qxbWierHDge','CZ0IC2f2zs1WAq','Aw5Uzxjive1m','AwvSzc1PBNb1Da','zNvSBhKU','DwjQzwn0sw5WDq','AwDUBwvUDeLK','A2v5zg93BG','uLPuB0O','tufqruG','BgvJDgL2zsiGlW','B3b0Aw9U','icaGpc9ZzwXLyW','mtm1mJe1mxvAzwzgqW','rw50zxi','vgHPCYb3AwXSia','ihzHBhvLpsi','zMLSDgvY','ywnRDxbqyxrO','zsbHy3rPB24Upa','tfjKwNy','y3vYCMvUDfrLCG','AxnbCNjHEq','EsbKzwXLDguGyq','mta5nJa3oejoCMrxAq','tKzZEwK','zd0IzwrPDen1CW','z3jHzgvmzxzLBa','lcbSzwfYBMvYCW','v05sq1G','zgL2ignSyxnZpq','C2nOB29StMfTzq','rNzXrNi','ywn0AxzLvMLLDW','rLDOzK4','zNvUy3rPB24','yu1oyNG','icaGica8yNv0Da','s2rlq3G','iIbWBgfJzwHVBa','CfzpqLK','icaGpc9KAxy+cG','wMHAyva','D2HqqK0'];_0x1e60=function(){return _0x29cc42;};return _0x1e60();}function addAssignment(){const _0x377ca0=_0x4f355c,_0x2d35df={'ejYnf':function(_0x403790,_0x17e48e){return _0x403790(_0x17e48e);},'mnbMY':_0x377ca0(0x284),'bWYef':function(_0x3a0f9,_0x2ec147){return _0x3a0f9(_0x2ec147);},'zmSvF':'newSubject','tAOUN':'newClassSc'+_0x377ca0(0x14d),'sHBcG':_0x377ca0(0x256),'YuNWc':function(_0x29c22d,_0x4145ce){return _0x29c22d===_0x4145ce;},'wzCgH':_0x377ca0(0x280),'TBtVw':function(_0x3fa8cb,_0x6bf6b1){return _0x3fa8cb(_0x6bf6b1);},'NfUry':'customSubj'+_0x377ca0(0x175),'tQyKO':function(_0x3553bd,_0x41da39,_0x5a79e3){return _0x3553bd(_0x41da39,_0x5a79e3);},'YyOMw':'warning','Rmddh':function(_0x3676a6,_0x2f6bee,_0x5138a9,_0x3c5228){return _0x3676a6(_0x2f6bee,_0x5138a9,_0x3c5228);},'RQhXL':_0x377ca0(0x15d),'VYFVN':function(_0x2a7533,_0x201056,_0x46a59f){return _0x2a7533(_0x201056,_0x46a59f);},'AYtuO':function(_0x53bde1){return _0x53bde1();},'VGKhy':function(_0x475609){return _0x475609();},'MnDax':function(_0x388b82,_0x3e5122,_0xafe41a){return _0x388b82(_0x3e5122,_0xafe41a);},'nWzfT':_0x377ca0(0x201)},_0x31c7e1=document['getElement'+'ById'](_0x377ca0(0x276))['value'],_0x1eb8cf=_0x2d35df[_0x377ca0(0x207)](trim,document['getElement'+'ById'](_0x2d35df[_0x377ca0(0x1b7)])[_0x377ca0(0x1bd)]);let _0xe5aba1=_0x2d35df[_0x377ca0(0x1af)](trim,document[_0x377ca0(0x160)+_0x377ca0(0x242)](_0x2d35df[_0x377ca0(0x102)])[_0x377ca0(0x1bd)]);const _0x34848a=document[_0x377ca0(0x160)+'ById'](_0x2d35df[_0x377ca0(0x141)])&&document[_0x377ca0(0x160)+_0x377ca0(0x242)](_0x2d35df[_0x377ca0(0x141)])[_0x377ca0(0x1bd)]||db['schoolYear']||_0x2d35df[_0x377ca0(0x1d5)];_0x2d35df[_0x377ca0(0x23e)](_0xe5aba1,_0x2d35df[_0x377ca0(0x1ab)])&&(_0xe5aba1=_0x2d35df['TBtVw'](trim,document[_0x377ca0(0x160)+_0x377ca0(0x242)](_0x2d35df['NfUry'])[_0x377ca0(0x1bd)]));if(!_0x1eb8cf||!_0xe5aba1){_0x2d35df['tQyKO'](toast,'Section\x20an'+_0x377ca0(0x188)+_0x377ca0(0xde)+'\x20required.',_0x2d35df['YyOMw']);return;}const _0x4f9ca2=_0x2d35df[_0x377ca0(0x299)](determinePolicy,_0x31c7e1,_0xe5aba1,_0x34848a),_0x2faf1b=_0x2d35df['Rmddh'](determineSubjectGroup,_0x31c7e1,_0xe5aba1,_0x4f9ca2),_0xfd7d2e={'id':uid(_0x2d35df[_0x377ca0(0x176)]),'gradeLevel':_0x31c7e1,'section':_0x1eb8cf,'subject':_0xe5aba1,'subjectGroup':_0x2faf1b,'policy':_0x4f9ca2,'schoolYear':_0x34848a,'learners':[],'assessments':[],'scores':{}};_0x2d35df['VYFVN'](seedTemplateAssessments,_0xfd7d2e,_0x2d35df[_0x377ca0(0x207)](templateForGrade,_0x31c7e1)),db[_0x377ca0(0x199)+'s'][_0x377ca0(0x1bb)](_0xfd7d2e),db[_0x377ca0(0x1c3)+_0x377ca0(0x109)]=_0xfd7d2e['id'],db[_0x377ca0(0x16c)]=_0x34848a;const _0x26d041=document[_0x377ca0(0x160)+_0x377ca0(0x242)]('schoolYear');_0x26d041&&(_0x26d041[_0x377ca0(0x1bd)]=_0x34848a);document[_0x377ca0(0x160)+_0x377ca0(0x242)](_0x2d35df['mnbMY'])[_0x377ca0(0x1bd)]='';const _0x44da25=document[_0x377ca0(0x160)+_0x377ca0(0x242)](_0x2d35df[_0x377ca0(0x240)]);if(_0x44da25)_0x44da25['value']='';_0x2d35df[_0x377ca0(0x20e)](saveDatabase),_0x2d35df[_0x377ca0(0x20e)](render),_0x2d35df['YuNWc'](typeof hideAddClassLoadModal,_0x377ca0(0x126))&&_0x2d35df[_0x377ca0(0x137)](hideAddClassLoadModal),_0x2d35df[_0x377ca0(0x13a)](toast,_0x377ca0(0x254)+_0x377ca0(0x1f9)+_0x377ca0(0x1ca),_0x2d35df[_0x377ca0(0x26c)]);}function selectAssignment(_0xd68ed3){const _0x2c0541=_0x4f355c,_0x3d926e={'RZToJ':function(_0x34b9ee){return _0x34b9ee();},'RtPPo':function(_0x1dd38a,_0x16f56e){return _0x1dd38a===_0x16f56e;},'QNkIb':'function','ZfOWz':_0x2c0541(0x221),'lCVGU':'record'};db[_0x2c0541(0x1c3)+_0x2c0541(0x109)]=_0xd68ed3,_0x3d926e[_0x2c0541(0x10b)](saveDatabase);if(_0x3d926e[_0x2c0541(0xc3)](typeof setView,_0x3d926e[_0x2c0541(0x1b9)])){const _0x56d5c5=_0x3d926e[_0x2c0541(0xc3)](currentView,_0x3d926e[_0x2c0541(0x1d9)])?_0x3d926e[_0x2c0541(0x1d9)]:_0x3d926e['lCVGU'];setView(_0x56d5c5);}render();}function removeCurrentAssignment(){const _0x1960d0=_0x4f355c,_0x432f6e={'gqtmv':function(_0xa8394b){return _0xa8394b();},'CYiiW':function(_0x846f35){return _0x846f35();},'TuWQr':function(_0x54a22e,_0x1f7a3a){return _0x54a22e>_0x1f7a3a;},'XyvKx':function(_0x3a0683,_0x12789c,_0x474aad){return _0x3a0683(_0x12789c,_0x474aad);},'XHcAj':_0x1960d0(0x1a4)+_0x1960d0(0x1ba)+'d.','CGltx':_0x1960d0(0x201),'cOYwd':function(_0x17b650){return _0x17b650();},'ZToZd':function(_0x26f9e8,_0x5208a5,_0x15d9d9,_0x24a3a6){return _0x26f9e8(_0x5208a5,_0x15d9d9,_0x24a3a6);},'bRNhB':_0x1960d0(0x265)+_0x1960d0(0x13b)},_0x29774c=_0x432f6e[_0x1960d0(0x18c)](currentAssignment);if(!_0x29774c)return;_0x432f6e[_0x1960d0(0x252)](confirmModal,_0x432f6e[_0x1960d0(0x13c)],'Are\x20you\x20su'+'re\x20you\x20wan'+'t\x20to\x20delet'+_0x1960d0(0x19f)+_0x29774c['gradeLevel']+'\x20-\x20'+_0x29774c[_0x1960d0(0x297)]+'\x20('+_0x29774c[_0x1960d0(0x291)]+(')?\x20All\x20stu'+_0x1960d0(0x290)+_0x1960d0(0x151)+_0x1960d0(0x138)+_0x1960d0(0x26f)+_0x1960d0(0x100)),()=>{const _0x2da215=_0x1960d0,_0x4ec9d5=_0x2da215(0x1f0)[_0x2da215(0xeb)]('|');let _0x27ce44=-0x1724+0x2*0x1262+0x10*-0xda;while(!![]){switch(_0x4ec9d5[_0x27ce44++]){case'0':_0x432f6e[_0x2da215(0x29f)](render);continue;case'1':_0x432f6e['CYiiW'](saveDatabase);continue;case'2':db[_0x2da215(0x1c3)+_0x2da215(0x109)]=_0x432f6e[_0x2da215(0x1a3)](db[_0x2da215(0x199)+'s'][_0x2da215(0x236)],0xc79+-0xa*0x1ef+0x6dd)?db[_0x2da215(0x199)+'s'][-0x13*0x163+0x15d*-0xf+0x2*0x1766]['id']:'';continue;case'3':db['assignment'+'s']=db[_0x2da215(0x199)+'s'][_0x2da215(0x114)](_0x52dc62=>_0x52dc62['id']!==_0x29774c['id']);continue;case'4':_0x432f6e[_0x2da215(0x1bc)](toast,_0x432f6e['XHcAj'],_0x432f6e[_0x2da215(0x253)]);continue;}break;}});}function updateProfile(){const _0x3b9359=_0x4f355c,_0x479cac={'tFWyq':_0x3b9359(0xe8),'oaBfn':_0x3b9359(0x21a)+'on','KdKCx':_0x3b9359(0x16c)},_0x45a30d=document[_0x3b9359(0x160)+_0x3b9359(0x242)]('teacherNam'+'e'),_0x264011=document[_0x3b9359(0x160)+'ById'](_0x3b9359(0x122)),_0x4506b5=document[_0x3b9359(0x160)+_0x3b9359(0x242)](_0x479cac[_0x3b9359(0x1ec)]),_0x1c16d2=document[_0x3b9359(0x160)+'ById'](_0x479cac[_0x3b9359(0x1de)]),_0x22bfea=document[_0x3b9359(0x160)+_0x3b9359(0x242)](_0x3b9359(0x1ed)+_0x3b9359(0x215)),_0x37b5d9=document[_0x3b9359(0x160)+'ById'](_0x479cac[_0x3b9359(0x129)]);if(_0x45a30d)db[_0x3b9359(0x155)+'e']=_0x45a30d['value'];if(_0x264011)db[_0x3b9359(0x122)]=_0x264011[_0x3b9359(0x1bd)];if(_0x4506b5)db[_0x3b9359(0xe8)]=_0x4506b5[_0x3b9359(0x1bd)];if(_0x1c16d2)db[_0x3b9359(0x22a)]=_0x1c16d2[_0x3b9359(0x1bd)];if(_0x22bfea)db['division']=_0x22bfea[_0x3b9359(0x1bd)];if(_0x37b5d9)db[_0x3b9359(0x16c)]=_0x37b5d9[_0x3b9359(0x1bd)];}function promptPinVerification(_0x51bb44){const _0x50a97f=_0x4f355c,_0x23d866={'cFosx':function(_0x491d1d,_0x3fbc42){return _0x491d1d<_0x3fbc42;},'KOwff':'Please\x20ent'+_0x50a97f(0x15f)+'digit\x20nume'+_0x50a97f(0x208),'IVZxQ':function(_0x31d56b,_0x54ffa4,_0x35f05f,_0x3a7d64){return _0x31d56b(_0x54ffa4,_0x35f05f,_0x3a7d64);},'UfLRk':function(_0xbef3cf){return _0xbef3cf();},'uHPsP':_0x50a97f(0x15c)+_0x50a97f(0xf0)+'ication\x20fa'+_0x50a97f(0x224),'tOOPf':function(_0x5c766a,_0x11f853){return _0x5c766a===_0x11f853;},'lDvxK':_0x50a97f(0x111),'MNBFA':_0x50a97f(0x29a),'HTNTP':_0x50a97f(0x279)+_0x50a97f(0x169),'KVuAB':_0x50a97f(0x279)+_0x50a97f(0xed)+'rMsg','muRaZ':_0x50a97f(0x1a7)+_0x50a97f(0x17a)+'fy','ZklGv':_0x50a97f(0x22e)+_0x50a97f(0x293)+'ify','WETRc':_0x50a97f(0x10a)},_0x3a4625=dbRoot[_0x50a97f(0x237)][_0x50a97f(0x13d)](_0x993b0f=>_0x993b0f['id']===dbRoot[_0x50a97f(0x249)+_0x50a97f(0x130)]);if(!_0x3a4625||!_0x3a4625[_0x50a97f(0x231)]){_0x23d866['UfLRk'](_0x51bb44);return;}const _0x44b172=document['createElem'+_0x50a97f(0x166)](_0x23d866[_0x50a97f(0x131)]);_0x44b172['className']='modal-over'+_0x50a97f(0x180),_0x44b172[_0x50a97f(0x1c8)][_0x50a97f(0x1c2)]=_0x50a97f(0x251),_0x44b172['innerHTML']=_0x50a97f(0x181)+_0x50a97f(0x1e6)+_0x50a97f(0x202)+_0x50a97f(0xcf)+'s=\x22modal__'+_0x50a97f(0x1ae)+_0x50a97f(0x2a2)+_0x50a97f(0x1bf)+_0x50a97f(0xe4)+_0x50a97f(0xd1)+_0x50a97f(0x22c)+_0x50a97f(0x1e2)+_0x50a97f(0x1dc)+_0x50a97f(0x270)+_0x50a97f(0x152)+_0x50a97f(0x177)+'r\x206-digit\x20'+_0x50a97f(0x17c)+'horize\x20thi'+'s\x20sensitiv'+_0x50a97f(0x116)+_0x50a97f(0x167)+_0x50a97f(0xd9)+_0x50a97f(0x286)+'>\x0a\x20\x20\x20\x20\x20\x20\x20\x20'+_0x50a97f(0x210)+_0x50a97f(0xfd)+_0x50a97f(0x1f1)+_0x50a97f(0x15a)+'label>\x0a\x20\x20\x20'+'\x20\x20\x20\x20\x20\x20\x20<in'+_0x50a97f(0x22d)+_0x50a97f(0x1f7)+'id=\x22action'+_0x50a97f(0x218)+_0x50a97f(0xfc)+_0x50a97f(0x216)+_0x50a97f(0x2a4)+_0x50a97f(0x15b)+_0x50a97f(0x133)+_0x50a97f(0x1ce)+_0x50a97f(0xf3)+'eric\x22\x20auto'+_0x50a97f(0x1aa)+_0x50a97f(0x182)+'\x20\x20\x20\x20\x20\x20</di'+'v>\x0a\x20\x20\x20\x20\x20\x20\x20'+'\x20<div\x20id=\x22'+_0x50a97f(0x200)+_0x50a97f(0x20d)+_0x50a97f(0x1cc)+_0x50a97f(0x1c1)+_0x50a97f(0xc7)+'style=\x22col'+_0x50a97f(0xd2)+_0x50a97f(0xef)+_0x50a97f(0x298)+_0x50a97f(0x250)+_0x50a97f(0x28c)+'\x20\x20\x20<div\x20cl'+_0x50a97f(0x248)+_0x50a97f(0x277)+_0x50a97f(0x1e2)+_0x50a97f(0x1fa)+_0x50a97f(0x1a5)+'tn-ghost\x20b'+_0x50a97f(0x24c)+'\x22btnCancel'+_0x50a97f(0x17a)+_0x50a97f(0x17f)+_0x50a97f(0x23f)+'\x20\x20\x20\x20\x20\x20\x20\x20<b'+'utton\x20clas'+_0x50a97f(0x18f)+_0x50a97f(0x28b)+'tn-sm\x22\x20id='+_0x50a97f(0x1a6)+_0x50a97f(0x293)+_0x50a97f(0xec)+_0x50a97f(0x28a)+_0x50a97f(0x1d1)+_0x50a97f(0x1a0)+_0x50a97f(0xe6)+_0x50a97f(0x134),document[_0x50a97f(0x23b)][_0x50a97f(0x19e)+'d'](_0x44b172);const _0xe9d80d=()=>{const _0x46f603=_0x50a97f;if(_0x44b172['parentNode'])_0x44b172[_0x46f603(0x1df)]['removeChil'+'d'](_0x44b172);},_0x3f53c7=_0x44b172[_0x50a97f(0xe2)+_0x50a97f(0xe1)](_0x23d866[_0x50a97f(0x25e)]),_0x43cd17=_0x44b172[_0x50a97f(0xe2)+_0x50a97f(0xe1)](_0x23d866[_0x50a97f(0x205)]),_0x562cdf=async()=>{const _0x211767=_0x50a97f,_0x1acccc=_0x3f53c7[_0x211767(0x1bd)];if(!_0x1acccc||_0x23d866['cFosx'](_0x1acccc['length'],0x171*0xf+-0x5*0x93+0x3*-0x63e)||!/^\d+$/[_0x211767(0x1a8)](_0x1acccc)){_0x43cd17[_0x211767(0x225)]=_0x23d866['KOwff'];return;}const _0x5e904e=await _0x23d866['IVZxQ'](verifyPin,_0x1acccc,_0x3a4625[_0x211767(0x295)],_0x3a4625['pinHash']);_0x5e904e?(_0x23d866[_0x211767(0x1ef)](_0xe9d80d),_0x23d866[_0x211767(0x1ef)](_0x51bb44)):(_0x43cd17[_0x211767(0x225)]=_0x23d866[_0x211767(0xcb)],_0x3f53c7[_0x211767(0x1bd)]='',_0x3f53c7['focus']());};_0x44b172[_0x50a97f(0xe2)+'tor'](_0x23d866['muRaZ'])[_0x50a97f(0x2a3)+_0x50a97f(0x19a)]('click',_0xe9d80d),_0x44b172[_0x50a97f(0xe2)+_0x50a97f(0xe1)](_0x23d866[_0x50a97f(0xdc)])[_0x50a97f(0x2a3)+'stener'](_0x50a97f(0x232),_0x562cdf),_0x3f53c7['addEventLi'+_0x50a97f(0x19a)](_0x23d866[_0x50a97f(0x296)],_0x298acd=>{const _0x256970=_0x50a97f;if(_0x23d866[_0x256970(0x143)](_0x298acd[_0x256970(0x2a1)],_0x23d866[_0x256970(0x1cf)]))_0x23d866['UfLRk'](_0x562cdf);}),setTimeout(()=>_0x3f53c7['focus'](),0x1a46+-0x27f+-0x1*0x1777);}async function selectSecondaryBackupFolder(){const _0x346ccb=_0x4f355c,_0x860798={'CAVtY':function(_0x4565b7){return _0x4565b7();},'YVNMQ':function(_0x4ac272,_0x385c3f,_0xe7225f){return _0x4ac272(_0x385c3f,_0xe7225f);},'aVDSw':_0x346ccb(0x173)+_0x346ccb(0x26d)+_0x346ccb(0x12f)+_0x346ccb(0xc4)+_0x346ccb(0x267)+_0x346ccb(0x107),'TIZrH':_0x346ccb(0x201),'FsROy':_0x346ccb(0x257)+_0x346ccb(0xbd)+_0x346ccb(0xc5)+_0x346ccb(0x261)+':','grcNw':function(_0x1fbd22,_0x438194,_0x4a3d10){return _0x1fbd22(_0x438194,_0x4a3d10);},'CKayj':_0x346ccb(0x16d)+_0x346ccb(0x1ff)+_0x346ccb(0x24d)+'der:\x20','aMNbx':_0x346ccb(0x21f),'qFzDv':function(_0x89baa2,_0x2da558){return _0x89baa2(_0x2da558);}};_0x860798[_0x346ccb(0x1d6)](promptPinVerification,async()=>{const _0x490b33=_0x346ccb;try{const _0x8f505=await window[_0x490b33(0x227)+'I']['selectFold'+'er']();_0x8f505&&(db[_0x490b33(0x1cb)+_0x490b33(0x115)]=_0x8f505,await _0x860798[_0x490b33(0x1e8)](saveDatabase),_0x860798[_0x490b33(0x1e8)](render),_0x860798['YVNMQ'](toast,_0x860798[_0x490b33(0x246)],_0x860798[_0x490b33(0x161)]));}catch(_0x147abe){console['error'](_0x860798['FsROy'],_0x147abe),_0x860798['grcNw'](toast,_0x860798['CKayj']+_0x147abe[_0x490b33(0x25f)],_0x860798[_0x490b33(0x127)]);}});}async function clearSecondaryBackupFolder(){const _0x16e287=_0x4f355c,_0x4e7446={'aqsOJ':function(_0x4f646a){return _0x4f646a();},'CGcbF':function(_0x479265,_0x510539,_0x34b760){return _0x479265(_0x510539,_0x34b760);},'MUSNS':_0x16e287(0x173)+'auto-backu'+_0x16e287(0x12f)+_0x16e287(0x136),'Cnwwe':_0x16e287(0x1c7),'fndcE':function(_0x59d369,_0x2b43be){return _0x59d369(_0x2b43be);}};_0x4e7446[_0x16e287(0x187)](promptPinVerification,async()=>{const _0x3d8c46=_0x16e287;db[_0x3d8c46(0x1cb)+_0x3d8c46(0x115)]='',await _0x4e7446[_0x3d8c46(0x24a)](saveDatabase),render(),_0x4e7446[_0x3d8c46(0xf9)](toast,_0x4e7446[_0x3d8c46(0xe7)],_0x4e7446['Cnwwe']);});}function clearLocalData(){const _0x1dc439=_0x4f355c,_0x314b64={'CeIeO':_0x1dc439(0xea)+_0x1dc439(0x171),'GDrMx':'dashboard','MkTmb':function(_0x8f5625,_0x1aa326,_0x1a282f){return _0x8f5625(_0x1aa326,_0x1a282f);},'XcBOf':_0x1dc439(0x285)+_0x1dc439(0x23c)+_0x1dc439(0x191)+_0x1dc439(0x1b6)+'ed.','HjQGb':'success','BhWmX':function(_0x743206){return _0x743206();},'uFJGe':function(_0x11938f,_0x2d1a1a,_0x4c62a1,_0x17a1ea){return _0x11938f(_0x2d1a1a,_0x4c62a1,_0x17a1ea);},'kxosq':_0x1dc439(0xdb)+_0x1dc439(0x192),'JkdfW':_0x1dc439(0x112)+_0x1dc439(0x1f8)+_0x1dc439(0x11a)+_0x1dc439(0xf8)+_0x1dc439(0x214)+_0x1dc439(0x11f)+_0x1dc439(0xe5)+_0x1dc439(0x24b)+_0x1dc439(0x17e)+'r.\x20Ensure\x20'+_0x1dc439(0x28d)+_0x1dc439(0xcc)+_0x1dc439(0xd3)+_0x1dc439(0xd6)+_0x1dc439(0x25b)+_0x1dc439(0x20f)+_0x1dc439(0xfa)+'.','Rqcmi':function(_0x2689c4,_0x116b59){return _0x2689c4(_0x116b59);}};_0x314b64['Rqcmi'](promptPinVerification,()=>{const _0x2b64d5=_0x1dc439,_0x2dbc42={'LRdZv':_0x314b64[_0x2b64d5(0x189)],'SzNIY':_0x314b64[_0x2b64d5(0x1da)],'RAemz':function(_0x4df8fb,_0x19c314,_0x5de215){const _0x44739a=_0x2b64d5;return _0x314b64[_0x44739a(0x19b)](_0x4df8fb,_0x19c314,_0x5de215);},'DCkNv':_0x314b64['XcBOf'],'niYDo':_0x314b64[_0x2b64d5(0x1e0)],'pjtrP':function(_0x35316c){const _0x59f956=_0x2b64d5;return _0x314b64[_0x59f956(0x294)](_0x35316c);},'WEkyc':function(_0x47f9de,_0x46f743,_0x3708d6,_0x2f7fc8){const _0x55646b=_0x2b64d5;return _0x314b64[_0x55646b(0xe3)](_0x47f9de,_0x46f743,_0x3708d6,_0x2f7fc8);},'yrJpV':_0x314b64[_0x2b64d5(0x1eb)],'FoiOQ':_0x2b64d5(0x195)};_0x314b64[_0x2b64d5(0xe3)](confirmModal,'Clear\x20All\x20'+_0x2b64d5(0x103),_0x314b64[_0x2b64d5(0x18d)],async()=>{const _0x39e5ea=_0x2b64d5,_0xe704e9=_0x2dbc42[_0x39e5ea(0x117)]['split']('|');let _0xccb9fc=-0x8b*0x3b+0xd4*-0x13+0x2fc5*0x1;while(!![]){switch(_0xe704e9[_0xccb9fc++]){case'0':recordTab='1';continue;case'1':currentProfilePin='';continue;case'2':db={'version':DB_VERSION,'teacherName':'','schoolName':'','schoolId':'','region':'','division':'','schoolYear':'2026-2027','currentAssignmentId':'','currentTerm':'1','activeView':_0x2dbc42[_0x39e5ea(0x16e)],'autoBlur':![],'assignments':[]};continue;case'3':_0x2dbc42[_0x39e5ea(0x283)](toast,_0x2dbc42[_0x39e5ea(0x272)],_0x2dbc42[_0x39e5ea(0x204)]);continue;case'4':dbRoot={'version':ROOT_DB_VERSION,'profiles':[],'activeProfileId':''};continue;case'5':_0x2dbc42['pjtrP'](showCreateProfileForm);continue;case'6':_0x2dbc42['WEkyc'](showEl,_0x2dbc42[_0x39e5ea(0x17b)],!![],_0x2dbc42['FoiOQ']);continue;case'7':await _0x2dbc42[_0x39e5ea(0x27b)](saveRootDatabase);continue;case'8':currentView=_0x2dbc42['SzNIY'];continue;}break;}});});}function editAssignmentModal(_0x104774){const _0x26b14f=_0x4f355c,_0x5d2385={'iJaas':function(_0x1d2e96,_0xe82f1a){return _0x1d2e96(_0xe82f1a);},'mEYiM':function(_0x4b9ad3,_0x1932e8){return _0x4b9ad3<_0x1932e8;},'GmwrG':function(_0x170e7d,_0x16825b){return _0x170e7d>_0x16825b;},'GOKTH':_0x26b14f(0x10e),'FqCBZ':'Custom','eJlau':_0x26b14f(0x22b)+'stom\x20Subje'+'ct…','WBhXm':function(_0x3113dd,_0x48cac9){return _0x3113dd===_0x48cac9;},'FvqFr':_0x26b14f(0x226),'IRNeQ':_0x26b14f(0x273),'sTEzi':function(_0x451e90){return _0x451e90();},'JvQhJ':function(_0xe8520c){return _0xe8520c();},'NFsyi':_0x26b14f(0xf4)+'on','WMhPk':_0x26b14f(0x25d)+_0x26b14f(0x29b),'nljbE':function(_0x465230,_0x4f6039){return _0x465230||_0x4f6039;},'iugMU':function(_0x8c3612,_0x514bf2,_0x44fc86){return _0x8c3612(_0x514bf2,_0x44fc86);},'qWrEK':_0x26b14f(0x172),'JdSNI':function(_0x2167d5,_0x31bc9c,_0x232a2d,_0x38028e){return _0x2167d5(_0x31bc9c,_0x232a2d,_0x38028e);},'ZhZaP':_0x26b14f(0x16c),'ZgVaE':function(_0xde8bae){return _0xde8bae();},'sQkMw':function(_0x332603,_0x57bd8f,_0x1bd223){return _0x332603(_0x57bd8f,_0x1bd223);},'tXGbP':_0x26b14f(0x1a4)+'oad\x20update'+'d.','cxKJX':_0x26b14f(0x201),'WNRCX':_0x26b14f(0x278),'wKiqi':_0x26b14f(0x256),'nICPX':_0x26b14f(0x234),'PHIAu':_0x26b14f(0xc1),'XYxQh':_0x26b14f(0x174),'Pwqza':_0x26b14f(0x27d),'WAlCm':'2031-2032','gIvOy':'2032-2033','MDqhM':_0x26b14f(0x28e),'mpItO':_0x26b14f(0xda),'oNfTr':_0x26b14f(0x1f6)+'ct','ElIlO':_0x26b14f(0x140)+_0x26b14f(0xf5)+_0x26b14f(0x282),'JQHRN':_0x26b14f(0x140)+_0x26b14f(0x13e)+'put','LJSZq':_0x26b14f(0x25a),'FwgLp':function(_0x4fa3de,_0x5a3e5f){return _0x4fa3de(_0x5a3e5f);},'oZoki':_0x26b14f(0xf2)+_0x26b14f(0x197),'iYAFS':_0x26b14f(0x232),'DMvCd':'#editModal'+_0x26b14f(0x238)},_0x40522c=db['assignment'+'s'][_0x26b14f(0x13d)](_0x1fb2ca=>_0x1fb2ca['id']===_0x104774);if(!_0x40522c)return;const _0x6544c1=document[_0x26b14f(0x28f)+'ent']('div');_0x6544c1[_0x26b14f(0x20c)]=_0x26b14f(0x185)+'lay',_0x6544c1[_0x26b14f(0x105)]=_0x26b14f(0x181)+'class=\x22mod'+_0x26b14f(0x14b)+_0x26b14f(0x220)+_0x26b14f(0x1e3)+_0x26b14f(0x248)+_0x26b14f(0x165)+_0x26b14f(0x162)+_0x26b14f(0x235)+_0x26b14f(0x250)+_0x26b14f(0x213)+'=\x22modal__b'+_0x26b14f(0x1c0)+'\x20\x20\x20\x20<div\x20c'+_0x26b14f(0x18e)+'t-row\x22>\x0a\x20\x20'+_0x26b14f(0x1d4)+'iv\x20class=\x22'+_0x26b14f(0x247)+_0x26b14f(0x287)+_0x26b14f(0x29d)+_0x26b14f(0x144)+_0x26b14f(0x268)+_0x26b14f(0x259)+_0x26b14f(0x178)+_0x26b14f(0x1db)+_0x26b14f(0xe9)+_0x26b14f(0x23a)+_0x26b14f(0x18a)+_0x26b14f(0x106)+'\x22>\x0a\x20\x20\x20\x20\x20\x20\x20'+'\x20\x20\x20\x20\x20\x20\x20'+[0x2688+-0x6*-0x58f+-0x47e1*0x1,-0x164*0x1+0x939+-0x7d3,-0x1708+0x22d*0x2+-0x1d*-0xa5,0x751*-0x1+0x829+-0x1*0xd4,-0x3*-0xc5b+0x6a6+-0x2bb2,-0x1176*0x2+-0xd5*-0x27+-0x47*-0x9,-0x1*0x2037+0x16b*-0x7+0x2a2b,-0x18e3*0x1+-0xb03*0x1+0x1b6*0x15,0x3*0xcd5+0x7fb+-0x9*0x529,0x7*-0x311+0x1*0xa4c+0xb35][_0x26b14f(0x150)](_0x55033c=>_0x26b14f(0xc6)+_0x26b14f(0xf7)+_0x55033c+'\x22\x20'+(String(_0x55033c)===String(_0x40522c[_0x26b14f(0x11e)])?'selected':'')+'>'+_0x55033c+_0x26b14f(0x148))['join']('')+('\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20'+'\x20\x20\x20</selec'+'t>\x0a\x20\x20\x20\x20\x20\x20\x20'+'\x20\x20\x20</div>\x0a'+'\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20'+_0x26b14f(0x213)+_0x26b14f(0x241)+'\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20'+_0x26b14f(0x210)+_0x26b14f(0xfd)+_0x26b14f(0xf1)+_0x26b14f(0x1b8)+'bel>\x0a\x20\x20\x20\x20\x20'+_0x26b14f(0x1f3)+'put\x20id=\x22ed'+_0x26b14f(0x29c)+_0x26b14f(0xfc)+_0x26b14f(0x216)+_0x26b14f(0x113))+esc(_0x40522c['section'])+(_0x26b14f(0x12a)+'der=\x22Secti'+'on\x20name\x22\x20/'+_0x26b14f(0x1e2)+'\x20\x20</div>\x0a\x20'+_0x26b14f(0x1db)+_0x26b14f(0x121)+_0x26b14f(0x262)+'\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20'+_0x26b14f(0xbc)+_0x26b14f(0x14a)+_0x26b14f(0x24e)+_0x26b14f(0xce)+_0x26b14f(0x158)+_0x26b14f(0x287)+_0x26b14f(0xbf)+_0x26b14f(0x1c4)+_0x26b14f(0x219)+_0x26b14f(0x14a)+'-input\x22>\x0a\x20'+_0x26b14f(0x287)+_0x26b14f(0xee))+[_0x5d2385[_0x26b14f(0x120)],_0x5d2385[_0x26b14f(0x16f)],_0x5d2385[_0x26b14f(0x154)],_0x5d2385[_0x26b14f(0x212)],_0x5d2385[_0x26b14f(0x145)],_0x5d2385[_0x26b14f(0x27f)],_0x5d2385['WAlCm'],_0x5d2385[_0x26b14f(0x1ac)],_0x5d2385['MDqhM'],_0x26b14f(0xca),'2035-2036'][_0x26b14f(0x150)](_0x37f56a=>_0x26b14f(0xc6)+_0x26b14f(0xf7)+_0x37f56a+'\x22\x20'+(_0x37f56a===(_0x40522c[_0x26b14f(0x16c)]||db[_0x26b14f(0x16c)]||_0x26b14f(0x256))?_0x26b14f(0x14f):'')+'>'+_0x37f56a+_0x26b14f(0x148))['join']('')+(_0x26b14f(0xc8)+_0x26b14f(0x10f)+'t>\x0a\x20\x20\x20\x20\x20\x20\x20'+'\x20\x20\x20</div>\x0a'+_0x26b14f(0x1e9)+_0x26b14f(0xd0)+_0x26b14f(0x1e3)+_0x26b14f(0x14a)+_0x26b14f(0x264)+'\x20\x20\x20<label\x20'+_0x26b14f(0x14e)+_0x26b14f(0x149)+'Subject</l'+'abel>\x0a\x20\x20\x20\x20'+_0x26b14f(0x21c)+_0x26b14f(0x135)+_0x26b14f(0x1fc)+'\x20class=\x22fi'+_0x26b14f(0x216)+_0x26b14f(0x1b4)+'\x0a\x20\x20\x20\x20\x20\x20\x20\x20<'+'/div>\x0a\x20\x20\x20\x20'+'\x20\x20\x20\x20<div\x20i'+_0x26b14f(0x11d)+_0x26b14f(0x198)+'Field\x22\x20cla'+_0x26b14f(0x286)+_0x26b14f(0x260)+_0x26b14f(0x196)+_0x26b14f(0x264)+'\x20\x20\x20<label\x20'+'class=\x22fie'+_0x26b14f(0x149)+_0x26b14f(0x168)+_0x26b14f(0x274)+_0x26b14f(0x158)+'\x20\x20\x20\x20\x20\x20\x20\x20<i'+_0x26b14f(0xe0)+'ditCustomS'+_0x26b14f(0x108)+_0x26b14f(0x21d)+_0x26b14f(0x1f4)+_0x26b14f(0x203)+_0x26b14f(0x209)+_0x26b14f(0x275)+_0x26b14f(0x10d)+_0x26b14f(0x1e2)+_0x26b14f(0x28c)+_0x26b14f(0x12c)+_0x26b14f(0xe4)+_0x26b14f(0xd1)+_0x26b14f(0x1e1)+_0x26b14f(0x1b5)+'\x20\x20\x20<button'+_0x26b14f(0x19c)+_0x26b14f(0x1fe)+_0x26b14f(0xcd)+'id=\x22editMo'+_0x26b14f(0xc0)+'>Cancel</b'+'utton>\x0a\x20\x20\x20'+_0x26b14f(0x128)+'on\x20class=\x22'+_0x26b14f(0x139)+_0x26b14f(0x1f2)+_0x26b14f(0x26a)+_0x26b14f(0x266)+_0x26b14f(0x101)+_0x26b14f(0x21b)+'ton>\x0a\x20\x20\x20\x20\x20'+_0x26b14f(0xc2)+'\x20\x20</div>\x0a\x20'+'\x20'),document[_0x26b14f(0x23b)][_0x26b14f(0x19e)+'d'](_0x6544c1);const _0x43cc30=()=>{const _0x578672=_0x26b14f;if(_0x6544c1[_0x578672(0x1df)])_0x6544c1['parentNode']['removeChil'+'d'](_0x6544c1);},_0x1ea579=_0x6544c1[_0x26b14f(0xe2)+'tor'](_0x5d2385[_0x26b14f(0x1ad)]),_0x1e7355=_0x6544c1['querySelec'+_0x26b14f(0xe1)](_0x5d2385['oNfTr']),_0x5e1e95=_0x6544c1[_0x26b14f(0xe2)+_0x26b14f(0xe1)](_0x5d2385['ElIlO']),_0x1c0ca4=_0x6544c1[_0x26b14f(0xe2)+_0x26b14f(0xe1)](_0x5d2385['JQHRN']),_0x1025fc=()=>{const _0x522e21=_0x26b14f,_0x1b8d3e=_0x5d2385[_0x522e21(0x1c6)](parseInt,_0x1ea579[_0x522e21(0x1bd)]),_0x20ec6d=_0x5d2385[_0x522e21(0x1c6)](getSubjectsForGrade,_0x1b8d3e);_0x1e7355[_0x522e21(0x105)]='',_0x20ec6d[_0x522e21(0x26b)](_0x30cce0=>{const _0x3c0716=_0x522e21,_0x2e92ac=document['createElem'+_0x3c0716(0x166)]('option');_0x2e92ac['value']=_0x30cce0,_0x2e92ac[_0x3c0716(0x225)]=_0x30cce0,_0x1e7355[_0x3c0716(0x19e)+'d'](_0x2e92ac);});if(isNaN(_0x1b8d3e)||_0x5d2385[_0x522e21(0x132)](_0x1b8d3e,0x11a6+0x337+-0x3c*0x59)||_0x5d2385[_0x522e21(0x1b0)](_0x1b8d3e,-0x865+0x6*0x538+-0x16e1)){const _0x22b3b0=document['createElem'+_0x522e21(0x166)](_0x5d2385[_0x522e21(0xfb)]);_0x22b3b0[_0x522e21(0x1bd)]=_0x5d2385[_0x522e21(0x206)],_0x22b3b0['innerText']=_0x5d2385[_0x522e21(0x157)],_0x1e7355[_0x522e21(0x19e)+'d'](_0x22b3b0);}},_0x23cc5e=()=>{const _0x4229bf=_0x26b14f;_0x5d2385[_0x4229bf(0x245)](_0x1e7355['value'],_0x5d2385[_0x4229bf(0x206)])?_0x5e1e95[_0x4229bf(0x1c8)][_0x4229bf(0x244)]=_0x5d2385[_0x4229bf(0x123)]:_0x5e1e95[_0x4229bf(0x1c8)][_0x4229bf(0x244)]=_0x5d2385[_0x4229bf(0x16a)];};_0x1e7355['addEventLi'+_0x26b14f(0x19a)](_0x5d2385['LJSZq'],_0x23cc5e),_0x5d2385[_0x26b14f(0x243)](_0x1025fc);const _0x71e22b=_0x5d2385[_0x26b14f(0x163)](getSubjectsForGrade,_0x40522c[_0x26b14f(0x11e)]);_0x71e22b['includes'](_0x40522c['subject'])?(_0x1e7355['value']=_0x40522c[_0x26b14f(0x291)],_0x5e1e95[_0x26b14f(0x1c8)]['display']=_0x5d2385['IRNeQ'],_0x1c0ca4[_0x26b14f(0x1bd)]=''):(_0x1e7355['value']=_0x5d2385[_0x26b14f(0x206)],_0x5e1e95[_0x26b14f(0x1c8)][_0x26b14f(0x244)]=_0x5d2385[_0x26b14f(0x123)],_0x1c0ca4['value']=_0x40522c[_0x26b14f(0x291)]),_0x1ea579[_0x26b14f(0x2a3)+_0x26b14f(0x19a)](_0x5d2385['LJSZq'],()=>{const _0x3cb93b=_0x26b14f;_0x5d2385[_0x3cb93b(0x243)](_0x1025fc),_0x5d2385[_0x3cb93b(0x1b1)](_0x23cc5e);}),_0x6544c1['querySelec'+_0x26b14f(0xe1)](_0x5d2385[_0x26b14f(0x170)])[_0x26b14f(0x2a3)+_0x26b14f(0x19a)](_0x5d2385[_0x26b14f(0x27e)],_0x43cc30),_0x6544c1['querySelec'+_0x26b14f(0xe1)](_0x5d2385[_0x26b14f(0x1d7)])['addEventLi'+'stener'](_0x5d2385[_0x26b14f(0x27e)],()=>{const _0x5a5515=_0x26b14f,_0x28231c=trim(_0x6544c1[_0x5a5515(0xe2)+_0x5a5515(0xe1)](_0x5d2385[_0x5a5515(0x11c)])[_0x5a5515(0x1bd)]),_0x42939f=_0x6544c1[_0x5a5515(0xe2)+_0x5a5515(0xe1)](_0x5d2385['WMhPk'])[_0x5a5515(0x1bd)];let _0x2fa6e1=_0x1e7355[_0x5a5515(0x1bd)];_0x5d2385['WBhXm'](_0x2fa6e1,_0x5d2385[_0x5a5515(0x206)])&&(_0x2fa6e1=trim(_0x1c0ca4[_0x5a5515(0x1bd)]));if(_0x5d2385[_0x5a5515(0x1fb)](!_0x28231c,!_0x2fa6e1)){_0x5d2385[_0x5a5515(0x19d)](toast,'Section\x20an'+_0x5a5515(0x188)+'cannot\x20be\x20'+_0x5a5515(0x1b3),_0x5d2385[_0x5a5515(0x153)]);return;}const _0x53b8f2=_0x1ea579['value'],_0x24c89a=_0x5d2385[_0x5a5515(0xd5)](determinePolicy,_0x53b8f2,_0x2fa6e1,_0x42939f);_0x40522c[_0x5a5515(0x11e)]=_0x53b8f2,_0x40522c[_0x5a5515(0x297)]=_0x28231c,_0x40522c[_0x5a5515(0x291)]=_0x2fa6e1,_0x40522c[_0x5a5515(0x16c)]=_0x42939f,_0x40522c[_0x5a5515(0x1a1)]=_0x24c89a,_0x40522c['subjectGro'+'up']=determineSubjectGroup(_0x40522c[_0x5a5515(0x11e)],_0x40522c[_0x5a5515(0x291)],_0x40522c['policy']),db[_0x5a5515(0x16c)]=_0x42939f;const _0x2c5694=document[_0x5a5515(0x160)+_0x5a5515(0x242)](_0x5d2385[_0x5a5515(0x12d)]);_0x2c5694&&(_0x2c5694[_0x5a5515(0x1bd)]=_0x42939f),ensureTemplateAssessments(_0x40522c),_0x5d2385[_0x5a5515(0x243)](_0x43cc30),_0x5d2385[_0x5a5515(0x1b1)](saveDatabase),_0x5d2385[_0x5a5515(0x25c)](render),_0x5d2385['sQkMw'](toast,_0x5d2385['tXGbP'],_0x5d2385['cxKJX']);}),_0x6544c1[_0x26b14f(0x2a3)+'stener'](_0x5d2385[_0x26b14f(0x27e)],_0x1f73bc=>{const _0x4938ac=_0x26b14f;if(_0x5d2385[_0x4938ac(0x245)](_0x1f73bc[_0x4938ac(0x22f)],_0x6544c1))_0x5d2385[_0x4938ac(0x243)](_0x43cc30);}),_0x5d2385[_0x26b14f(0x223)](setTimeout,()=>_0x6544c1[_0x26b14f(0xe2)+'tor']('#editSecti'+'on')['focus'](),-0x52*0x21+0x698+0x3*0x16e);}
+/**
+ * E-Class Record — Local Database Management Script
+ *
+ * Coordinates reading and writing of teacher assignments, settings,
+ * scores, and configuration through Electron IPC bridge.
+ */
+
+const DB_VERSION = 2;
+const ROOT_DB_VERSION = 3;
+
+// Entire database loaded from file
+let dbRoot = {
+  version: ROOT_DB_VERSION,
+  profiles: [],
+  activeProfileId: ''
+};
+
+// Global reference for legacy data to migrate
+let legacyDataToMigrate = null;
+let currentProfilePin = '';
+let sessionActive = false;
+
+// In-memory application state copy (active profile)
+let db = {
+  version: DB_VERSION,
+  teacherName: '',
+  schoolName: '',
+  schoolYear: '2026-2027',
+  currentAssignmentId: '',
+  currentTerm: '1',
+  activeView: 'dashboard',
+  autoBlur: false,
+  assignments: []
+};
+
+let currentView = 'dashboard';
+let recordTab = '1';
+let importMode = '';
+
+/**
+ * Ensures structure compatibility across version updates.
+ */
+function normalizeDatabase() {
+  if (!db.assignments) db.assignments = [];
+  if (!db.activeView) db.activeView = 'dashboard';
+  if (!db.currentTerm) db.currentTerm = '1';
+  if (db.schoolId === undefined) db.schoolId = '';
+  if (db.region === undefined) db.region = '';
+  if (db.division === undefined) db.division = '';
+  if (db.autoBlur === undefined) db.autoBlur = false;
+  if (!db.version || db.version < DB_VERSION) db.version = DB_VERSION;
+  
+  for (let i = 0; i < db.assignments.length; i++) {
+    const a = db.assignments[i];
+    
+    // Normalize split MAPEH subjects into single MAPEH subject
+    if (a.subject === 'Music and Arts') {
+      if (a.assessments) {
+        a.assessments.forEach(ast => {
+          if (!ast.mapePart) ast.mapePart = 'music_arts';
+        });
+      }
+      a.subject = 'MAPEH';
+    } else if (a.subject === 'Physical Education and Health (PE & Health)') {
+      if (a.assessments) {
+        a.assessments.forEach(ast => {
+          if (!ast.mapePart) ast.mapePart = 'pe_health';
+        });
+      }
+      a.subject = 'MAPEH';
+    } else if (isMapehSubject(a.subject) && a.subject !== 'MAPEH') {
+      if (a.assessments) {
+        a.assessments.forEach(ast => {
+          if (!ast.mapePart) ast.mapePart = 'music_arts';
+        });
+      }
+      a.subject = 'MAPEH';
+    }
+    
+    // Legacy migration to default schoolYear
+    if (!a.schoolYear) {
+      a.schoolYear = db.schoolYear || '2026-2027';
+    }
+
+    // Automatically set policy and subjectGroup based on grade, subject, and school year
+    a.policy = determinePolicy(a.gradeLevel, a.subject, a.schoolYear);
+    a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy);
+
+    if (!a.assessments) a.assessments = [];
+    if (!a.scores) a.scores = {};
+    
+    normalizeAssessmentComponents(a);
+    ensureTemplateAssessments(a);
+  }
+}
+
+/**
+ * Asynchronously loads the JSON database via the Electron IPC API.
+ */
+async function loadDatabase() {
+  try {
+    const localData = await window.electronAPI.loadDatabase();
+    if (localData) {
+      if (localData.profiles && Array.isArray(localData.profiles)) {
+        // This is a profile-based database
+        dbRoot = localData;
+        if (dbRoot.version < ROOT_DB_VERSION) {
+          dbRoot.version = ROOT_DB_VERSION;
+        }
+      } else if (localData.assignments || localData.teacherName) {
+        // This is a legacy database (version 2)
+        // Store legacy data for migration
+        legacyDataToMigrate = localData;
+        dbRoot = {
+          version: ROOT_DB_VERSION,
+          profiles: [],
+          activeProfileId: ''
+        };
+      } else {
+        // Brand new database file or empty object
+        dbRoot = {
+          version: ROOT_DB_VERSION,
+          profiles: [],
+          activeProfileId: ''
+        };
+      }
+    } else {
+      // No database exists yet
+      dbRoot = {
+        version: ROOT_DB_VERSION,
+        profiles: [],
+        activeProfileId: ''
+      };
+    }
+  } catch (error) {
+    console.error('Failed to load database:', error);
+    toast('Could not load local database: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Saves current application data to file via Electron IPC.
+ */
+async function saveDatabase() {
+  updateProfile();
+  db.activeView = currentView;
+  db.recordTab = recordTab;
+  
+  if (dbRoot && dbRoot.activeProfileId) {
+    const p = dbRoot.profiles.find(x => x.id === dbRoot.activeProfileId);
+    if (p) {
+      p.secondaryBackupPath = db.secondaryBackupPath || '';
+      if (p.pinEnabled) {
+        if (!currentProfilePin) {
+          console.error("Cannot save secure profile: missing PIN in session.");
+          return;
+        }
+        const encryptedObj = await encryptPayload(JSON.stringify(db), currentProfilePin);
+        p.data = encryptedObj;
+      } else {
+        p.data = db;
+      }
+      p.name = db.teacherName || p.name;
+    }
+  }
+  
+  await saveRootDatabase();
+}
+
+/**
+ * Saves the entire multi-profile root database to file via Electron IPC.
+ */
+async function saveRootDatabase() {
+  try {
+    const success = await window.electronAPI.saveDatabase(dbRoot);
+    if (success) {
+      setStatus('Saved locally at ' + new Date().toLocaleTimeString());
+      showAutoSaveIndicator();
+    }
+  } catch (error) {
+    console.error('Failed to save database:', error);
+    toast('Could not save data: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Triggers the UI fade-in/fade-out animation for the auto-save indicator.
+ */
+function showAutoSaveIndicator() {
+  const el = document.getElementById('autoSaveIndicator');
+  if (!el) return;
+
+  el.classList.add('show');
+
+  if (window.autoSaveTimeout) {
+    clearTimeout(window.autoSaveTimeout);
+  }
+
+  window.autoSaveTimeout = setTimeout(() => {
+    el.classList.remove('show');
+  }, 2500);
+}
+
+/**
+ * Updates status text in the bottom header bar.
+ */
+function setStatus(message) {
+  const el = document.getElementById('saveStatus');
+  if (el) {
+    el.innerHTML = message
+      ? `<span class="save-pill"><span class="save-pill__dot"></span>${esc(message)}</span>`
+      : '';
+  }
+}
+
+/**
+ * Gets currently selected class teaching load.
+ */
+function currentAssignment() {
+  const activeYear = db.schoolYear || '2026-2027';
+  const filtered = db.assignments.filter(a => a.schoolYear === activeYear);
+
+  for (let i = 0; i < filtered.length; i++) {
+    if (filtered[i].id === db.currentAssignmentId) {
+      return filtered[i];
+    }
+  }
+  if (filtered.length > 0) {
+    db.currentAssignmentId = filtered[0].id;
+    return filtered[0];
+  }
+  return null;
+}
+
+/**
+ * Creates and registers a new class teaching load.
+ */
+function addAssignment() {
+  const gradeLevel = document.getElementById('newGrade').value;
+  const section = trim(document.getElementById('newSection').value);
+  let subject = trim(document.getElementById('newSubject').value);
+  const classSchoolYear = (document.getElementById('newClassSchoolYear') && document.getElementById('newClassSchoolYear').value) || db.schoolYear || '2026-2027';
+
+  if (subject === 'Custom') {
+    subject = trim(document.getElementById('customSubjectInput').value);
+  }
+
+  if (!section || !subject) {
+    toast('Section and subject fields are required.', 'warning');
+    return;
+  }
+
+  const policy = determinePolicy(gradeLevel, subject, classSchoolYear);
+  const subjectGroup = determineSubjectGroup(gradeLevel, subject, policy);
+
+  const assignment = {
+    id: uid('class'),
+    gradeLevel,
+    section,
+    subject,
+    subjectGroup,
+    policy,
+    schoolYear: classSchoolYear,
+    learners: [],
+    assessments: [],
+    scores: {}
+  };
+
+  seedTemplateAssessments(assignment, templateForGrade(gradeLevel));
+
+  db.assignments.push(assignment);
+  db.currentAssignmentId = assignment.id;
+  db.schoolYear = classSchoolYear;
+
+  const headerYearEl = document.getElementById('schoolYear');
+  if (headerYearEl) {
+    headerYearEl.value = classSchoolYear;
+  }
+  
+  // Clean inputs
+  document.getElementById('newSection').value = '';
+  const customSubInput = document.getElementById('customSubjectInput');
+  if (customSubInput) customSubInput.value = '';
+
+  saveDatabase();
+  render();
+  if (typeof hideAddClassLoadModal === 'function') {
+    hideAddClassLoadModal();
+  }
+  toast('Class load added successfully.', 'success');
+}
+
+/**
+ * Selects a load from the sidebar listing.
+ */
+function selectAssignment(id) {
+  db.currentAssignmentId = id;
+  saveDatabase();
+  if (typeof setView === 'function') {
+    const targetView = (currentView === 'classes') ? 'classes' : 'record';
+    setView(targetView);
+  }
+  render();
+}
+
+/**
+ * Deletes current load after modal validation.
+ */
+function removeCurrentAssignment() {
+  const a = currentAssignment();
+  if (!a) return;
+
+  confirmModal(
+    'Delete Teaching Load',
+    `Are you sure you want to delete Grade ${a.gradeLevel} - ${a.section} (${a.subject})? All student entries and marks will be permanently lost.`,
+    () => {
+      db.assignments = db.assignments.filter(item => item.id !== a.id);
+      db.currentAssignmentId = db.assignments.length > 0 ? db.assignments[0].id : '';
+      saveDatabase();
+      render();
+      toast('Teaching load deleted.', 'success');
+    }
+  );
+}
+
+/**
+ * Fetches input values and updates global profile properties.
+ */
+function updateProfile() {
+  const teacherEl = document.getElementById('teacherName');
+  const schoolEl = document.getElementById('schoolName');
+  const schoolIdEl = document.getElementById('schoolId');
+  const regionEl = document.getElementById('schoolRegion');
+  const divisionEl = document.getElementById('schoolDivision');
+  const yearEl = document.getElementById('schoolYear');
+  
+  if (teacherEl) db.teacherName = teacherEl.value;
+  if (schoolEl) db.schoolName = schoolEl.value;
+  if (schoolIdEl) db.schoolId = schoolIdEl.value;
+  if (regionEl) db.region = regionEl.value;
+  if (divisionEl) db.division = divisionEl.value;
+  if (yearEl) db.schoolYear = yearEl.value;
+}
+
+/**
+ * Triggers native folder selector and updates the secondary auto-backup directory path.
+ */
+/**
+ * Displays a PIN input modal to verify the user's identity before sensitive actions.
+ * @param {function} onSuccess Callback function executed on successful verification.
+ */
+function promptPinVerification(onSuccess) {
+  const activeProfile = dbRoot.profiles.find(p => p.id === dbRoot.activeProfileId);
+  if (!activeProfile || !activeProfile.pinEnabled) {
+    onSuccess();
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '11000';
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal__title">Confirm PIN Code</div>
+      <div class="modal__body">
+        <p style="margin-top:0">Please enter your 6-digit PIN to authorize this sensitive action.</p>
+        <div class="field">
+          <label class="field-label">Enter PIN</label>
+          <input type="password" id="actionVerifyPin" class="field-input" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="off" />
+        </div>
+        <div id="actionVerifyPinErrorMsg" class="unlock-error-msg" style="color:var(--color-error-600)"></div>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-ghost btn-sm" id="btnCancelActionVerify">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="btnConfirmActionVerify">Verify & Proceed</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  
+  const close = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+  
+  const pinInput = overlay.querySelector('#actionVerifyPin');
+  const errorEl = overlay.querySelector('#actionVerifyPinErrorMsg');
+  
+  const submit = async () => {
+    const pin = pinInput.value;
+    if (!pin || pin.length < 6 || !/^\d+$/.test(pin)) {
+      errorEl.innerText = 'Please enter your 6-digit numeric PIN.';
+      return;
+    }
+    const verified = await verifyPin(pin, activeProfile.salt, activeProfile.pinHash);
+    if (verified) {
+      close();
+      onSuccess();
+    } else {
+      errorEl.innerText = 'Incorrect PIN. Verification failed.';
+      pinInput.value = '';
+      pinInput.focus();
+    }
+  };
+  
+  overlay.querySelector('#btnCancelActionVerify').addEventListener('click', close);
+  overlay.querySelector('#btnConfirmActionVerify').addEventListener('click', submit);
+  pinInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submit();
+  });
+  setTimeout(() => pinInput.focus(), 80);
+}
+
+async function selectSecondaryBackupFolder() {
+  promptPinVerification(async () => {
+    try {
+      const folderPath = await window.electronAPI.selectFolder();
+      if (folderPath) {
+        db.secondaryBackupPath = folderPath;
+        await saveDatabase();
+        render();
+        toast('Secondary auto-backup directory configured successfully.', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to select secondary backup folder:', error);
+      toast('Could not configure backup folder: ' + error.message, 'error');
+    }
+  });
+}
+
+/**
+ * Resets secondary auto-backup directory configuration.
+ */
+async function clearSecondaryBackupFolder() {
+  promptPinVerification(async () => {
+    db.secondaryBackupPath = '';
+    await saveDatabase();
+    render();
+    toast('Secondary auto-backup directory cleared.', 'info');
+  });
+}
+
+/**
+ * Erases local state database completely after confirmation.
+ */
+function clearLocalData() {
+  promptPinVerification(() => {
+    confirmModal(
+      'Clear All App Data',
+      'This will permanently delete all profiles, classes, learners, and grades from this computer. Ensure you have exported a backup JSON if you need to retain this information.',
+      async () => {
+        dbRoot = {
+          version: ROOT_DB_VERSION,
+          profiles: [],
+          activeProfileId: ''
+        };
+        db = {
+          version: DB_VERSION,
+          teacherName: '',
+          schoolName: '',
+          schoolId: '',
+          region: '',
+          division: '',
+          schoolYear: '2026-2027',
+          currentAssignmentId: '',
+          currentTerm: '1',
+          activeView: 'dashboard',
+          autoBlur: false,
+          assignments: []
+        };
+        currentProfilePin = '';
+        currentView = 'dashboard';
+        recordTab = '1';
+        
+        await saveRootDatabase();
+        
+        // Force return to profile screen
+        showEl('profileOverlay', true, 'flex');
+        showCreateProfileForm();
+        
+        toast('All database contents and profiles cleared.', 'success');
+      }
+    );
+  });
+}
+
+/**
+ * Opens an edit modal for an existing teaching load assignment.
+ * @param {string} id Assignment ID to edit.
+ */
+function editAssignmentModal(id) {
+  const a = db.assignments.find(x => x.id === id);
+  if (!a) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal modal--wide">
+      <div class="modal__title">Edit Teaching Load</div>
+      <div class="modal__body">
+        <div class="split-row">
+          <div class="field">
+            <label class="field-label">Grade Level</label>
+            <select id="editGrade" class="field-input">
+              ${[1,2,3,4,5,6,7,8,9,10].map(g =>
+                `<option value="${g}" ${String(g) === String(a.gradeLevel) ? 'selected' : ''}>${g}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Section</label>
+            <input id="editSection" class="field-input" value="${esc(a.section)}" placeholder="Section name" />
+          </div>
+          <div class="field">
+            <label class="field-label">School Year</label>
+            <select id="editSchoolYear" class="field-input">
+              ${[
+                '2025-2026', '2026-2027', '2027-2028',
+                '2028-2029', '2029-2030', '2030-2031', '2031-2032',
+                '2032-2033', '2033-2034', '2034-2035', '2035-2036'
+              ].map(sy =>
+                `<option value="${sy}" ${sy === (a.schoolYear || db.schoolYear || '2026-2027') ? 'selected' : ''}>${sy}</option>`
+              ).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Subject</label>
+          <select id="editSubject" class="field-input"></select>
+        </div>
+        <div id="editCustomSubjectField" class="field" style="display:none">
+          <label class="field-label">Custom Subject Name</label>
+          <input id="editCustomSubjectInput" class="field-input" placeholder="e.g. Science Elective" />
+        </div>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-ghost btn-sm" id="editModalCancel">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="editModalSave">Save Changes</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
+
+  const editGradeSelect = overlay.querySelector('#editGrade');
+  const editSubjectSelect = overlay.querySelector('#editSubject');
+  const editCustomField = overlay.querySelector('#editCustomSubjectField');
+  const editCustomInput = overlay.querySelector('#editCustomSubjectInput');
+
+  const populateEditSubjects = () => {
+    const grade = parseInt(editGradeSelect.value);
+    const subjects = getSubjectsForGrade(grade);
+    
+    editSubjectSelect.innerHTML = '';
+    subjects.forEach(sub => {
+      const opt = document.createElement('option');
+      opt.value = sub;
+      opt.innerText = sub;
+      editSubjectSelect.appendChild(opt);
+    });
+    
+    if (isNaN(grade) || grade < 1 || grade > 10) {
+      const otherOpt = document.createElement('option');
+      otherOpt.value = 'Custom';
+      otherOpt.innerText = 'Other / Custom Subject…';
+      editSubjectSelect.appendChild(otherOpt);
+    }
+  };
+
+  const handleEditSubjectChange = () => {
+    if (editSubjectSelect.value === 'Custom') {
+      editCustomField.style.display = 'block';
+    } else {
+      editCustomField.style.display = 'none';
+    }
+  };
+
+  editSubjectSelect.addEventListener('change', handleEditSubjectChange);
+
+  // Populate initial state
+  populateEditSubjects();
+  const subjectsForInitialGrade = getSubjectsForGrade(a.gradeLevel);
+  if (subjectsForInitialGrade.includes(a.subject)) {
+    editSubjectSelect.value = a.subject;
+    editCustomField.style.display = 'none';
+    editCustomInput.value = '';
+  } else {
+    editSubjectSelect.value = 'Custom';
+    editCustomField.style.display = 'block';
+    editCustomInput.value = a.subject;
+  }
+
+  editGradeSelect.addEventListener('change', () => {
+    populateEditSubjects();
+    handleEditSubjectChange();
+  });
+
+  overlay.querySelector('#editModalCancel').addEventListener('click', close);
+  overlay.querySelector('#editModalSave').addEventListener('click', () => {
+    const newSection = trim(overlay.querySelector('#editSection').value);
+    const newSchoolYear = overlay.querySelector('#editSchoolYear').value;
+    let newSubject = editSubjectSelect.value;
+    if (newSubject === 'Custom') {
+      newSubject = trim(editCustomInput.value);
+    }
+    if (!newSection || !newSubject) {
+      toast('Section and subject cannot be empty.', 'warning');
+      return;
+    }
+    const newGrade = editGradeSelect.value;
+    const newPolicy = determinePolicy(newGrade, newSubject, newSchoolYear);
+
+    a.gradeLevel   = newGrade;
+    a.section      = newSection;
+    a.subject      = newSubject;
+    a.schoolYear   = newSchoolYear;
+    a.policy       = newPolicy;
+    a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy);
+
+    db.schoolYear = newSchoolYear;
+    const headerYearEl = document.getElementById('schoolYear');
+    if (headerYearEl) {
+      headerYearEl.value = newSchoolYear;
+    }
+
+    // Apply template assessments for new grade level
+    ensureTemplateAssessments(a);
+
+    close();
+    saveDatabase();
+    render();
+    toast('Teaching load updated.', 'success');
+  });
+
+  // Close on backdrop click
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  // Auto-focus section input
+  setTimeout(() => overlay.querySelector('#editSection').focus(), 80);
+}

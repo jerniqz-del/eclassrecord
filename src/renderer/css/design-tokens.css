@@ -151,7 +151,7 @@
   --z-header:   30;
   --z-dropdown: 40;
   --z-modal:    50;
-  --z-toast:    60;
+  --z-toast:    99999;
 
   /* ── Semantic Aliases ────────────────────────────────── */
   --bg-app:             #e2e8f0;

@@ -438,10 +438,11 @@ html, body {
   top: var(--header-height);
   left: var(--sidebar-width);
   right: 0;
-  bottom: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: var(--space-5) var(--space-6) 100px;
+  bottom: 54px; /* Align exactly with footer top */
+  overflow: hidden; /* Do not scroll main window scrollbar */
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Content fade-in on view switch */
@@ -529,6 +530,14 @@ html, body {
 
 .view-section {
   display: none;
+  height: 100%;
+  overflow-y: auto; /* Default fallback scrollable container */
+}
+
+.view-section--flex {
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden; /* Do not scroll classes and records outer views */
 }
 
 /* ── Table Base ────────────────────────────────────────── */

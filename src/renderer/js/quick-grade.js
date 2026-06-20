@@ -1,1 +1,385 @@
-const _0xc3bf79=_0x1530;(function(_0x432db4,_0x57a1df){const _0x17d4a8=_0x1530,_0xdb42fc=_0x432db4();while(!![]){try{const _0x1dac24=-parseInt(_0x17d4a8(0x184))/(0x1fb0+-0x823+-0x178c)*(-parseInt(_0x17d4a8(0x207))/(0x21b3+0x4cf*-0x1+-0x1ce2*0x1))+parseInt(_0x17d4a8(0x180))/(-0x1*0x6a1+0x2*-0xa0d+0x1abe)+parseInt(_0x17d4a8(0x1c6))/(-0xadf+0x12*-0x209+0x2f85)*(-parseInt(_0x17d4a8(0x218))/(-0x14*-0xf+0x62c+0xf*-0x7d))+parseInt(_0x17d4a8(0x1ca))/(0x1*0x1ded+0x264c+-0x4433)+parseInt(_0x17d4a8(0x1b8))/(-0x25b9+-0x1c5e+-0x111*-0x3e)*(-parseInt(_0x17d4a8(0x19c))/(-0x16a3+0x148c+0x1*0x21f))+-parseInt(_0x17d4a8(0x1ba))/(-0x852+0xc1*0x2b+-0x1810)+parseInt(_0x17d4a8(0x1e4))/(0x264f+-0xcb*-0x2f+-0x4b8a)*(parseInt(_0x17d4a8(0x1f5))/(0xda5*0x1+0x290*-0x1+-0xb0a));if(_0x1dac24===_0x57a1df)break;else _0xdb42fc['push'](_0xdb42fc['shift']());}catch(_0x191b4f){_0xdb42fc['push'](_0xdb42fc['shift']());}}}(_0x2e8a,0x8cd4+-0x21731+0x7c65f));let quickGradeLearnerIndex=0x1*-0xb30+0x1*0xf57+-0x427*0x1,quickGradeAssessmentId='';function showQuickGradeModal(){const _0x1a14d8=_0x1530,_0x40fb99={'zbsYJ':function(_0x516240,_0x5354b1){return _0x516240(_0x5354b1);},'xXpYg':_0x1a14d8(0x1a6)+'et','irdPQ':function(_0x5a8ae9,_0x2c765f){return _0x5a8ae9===_0x2c765f;},'AuoUy':function(_0x58a4cb,_0x52f816,_0x2b0132){return _0x58a4cb(_0x52f816,_0x2b0132);},'TWntb':'No\x20class\x20l'+_0x1a14d8(0x210)+_0x1a14d8(0x1cc),'dHLbH':_0x1a14d8(0x237),'GZCYW':function(_0x920a84,_0x480cae){return _0x920a84===_0x480cae;},'BbOMp':_0x1a14d8(0x201)+'\x20learners\x20'+_0x1a14d8(0x1f4)+_0x1a14d8(0x235)+_0x1a14d8(0x21b),'UliyV':function(_0x3d7192,_0x4a0e53,_0x10bae0,_0x6767e6){return _0x3d7192(_0x4a0e53,_0x10bae0,_0x6767e6);},'XkXxM':function(_0x4a5736,_0x4f2ef3){return _0x4a5736!==_0x4f2ef3;},'kIbTi':function(_0x4567c9,_0x4485e5){return _0x4567c9>=_0x4485e5;},'HFPNo':function(_0x46a6d7,_0x397762){return _0x46a6d7<_0x397762;},'jLiTT':_0x1a14d8(0x1e5)+_0x1a14d8(0x17b)+_0x1a14d8(0x175),'pXGOW':function(_0x2fd070,_0xc57c67,_0x21a32c,_0x20dd55){return _0x2fd070(_0xc57c67,_0x21a32c,_0x20dd55);},'MUAbf':'quickGrade'+_0x1a14d8(0x1f2),'EKtUd':_0x1a14d8(0x192),'PuvqE':function(_0x43fe3e){return _0x43fe3e();}},_0xee1192=currentAssignment();if(!_0xee1192){_0x40fb99[_0x1a14d8(0x1ee)](toast,_0x40fb99['TWntb'],_0x40fb99[_0x1a14d8(0x231)]);return;}if(_0x40fb99[_0x1a14d8(0x1a9)](_0xee1192[_0x1a14d8(0x1ce)]['length'],-0x1*0xc89+0x1*-0x57d+0x301*0x6)){_0x40fb99[_0x1a14d8(0x1ee)](toast,_0x40fb99['BbOMp'],_0x40fb99[_0x1a14d8(0x231)]);return;}const _0x1d6902=isMapehSubject(_0xee1192[_0x1a14d8(0x18b)]),_0x50fdc0=_0x1d6902?currentMapehSubTab:undefined,_0x4d1bd9=_0x40fb99[_0x1a14d8(0x1c1)](termAssessments,_0xee1192,db[_0x1a14d8(0x1ea)+'m'],_0x50fdc0);if(_0x40fb99['GZCYW'](_0x4d1bd9[_0x1a14d8(0x22c)],-0x1a90+0x1e19+-0xb5*0x5)){toast(_0x1a14d8(0x1a7)+_0x1a14d8(0x23c)+_0x1a14d8(0x1cd)+'urrent\x20gra'+_0x1a14d8(0x181)+'.',_0x40fb99[_0x1a14d8(0x231)]);return;}let _0x64792=_0x4d1bd9[-0x1*0x94b+-0x6*0x161+0x3*0x5db]['id'];if(window['lastFocuse'+'dAssessmen'+_0x1a14d8(0x1f7)]){const _0x4e1b98=_0x4d1bd9[_0x1a14d8(0x1b2)](_0xd7e40a=>_0xd7e40a['id']===window['lastFocuse'+'dAssessmen'+_0x1a14d8(0x1f7)]);_0x4e1b98&&(_0x64792=_0x4e1b98['id']);}quickGradeAssessmentId=_0x64792;let _0x28de7f=-0x1bd0+-0xa0e+0x25de;_0x40fb99[_0x1a14d8(0x194)](window['lastFocuse'+_0x1a14d8(0x22b)+_0x1a14d8(0x1a0)],undefined)&&_0x40fb99[_0x1a14d8(0x1fa)](window[_0x1a14d8(0x1d9)+_0x1a14d8(0x22b)+_0x1a14d8(0x1a0)],0x82c*0x1+0xb4e*-0x3+0x19be)&&_0x40fb99[_0x1a14d8(0x22a)](window['lastFocuse'+'dLearnerIn'+_0x1a14d8(0x1a0)],_0xee1192[_0x1a14d8(0x1ce)][_0x1a14d8(0x22c)])&&(_0x28de7f=window[_0x1a14d8(0x1d9)+_0x1a14d8(0x22b)+_0x1a14d8(0x1a0)]);quickGradeLearnerIndex=_0x28de7f;const _0x1caa30=document[_0x1a14d8(0x1c9)+_0x1a14d8(0x214)](_0x40fb99[_0x1a14d8(0x174)]);_0x1caa30&&(_0x1caa30[_0x1a14d8(0x1fe)]='',_0x4d1bd9[_0x1a14d8(0x1cb)](_0x59083a=>{const _0x4eed69=_0x1a14d8,_0x29c093=document[_0x4eed69(0x176)+_0x4eed69(0x228)]('option');_0x29c093['value']=_0x59083a['id'];const _0x19d499=_0x40fb99[_0x4eed69(0x1db)](isKeyStage2,_0xee1192)?compactAssessmentLabel(_0x59083a):_0x40fb99[_0x4eed69(0x1db)](componentLabel,_0x59083a[_0x4eed69(0x1ed)])+'\x20'+(_0x59083a[_0x4eed69(0x17c)]||''),_0x58706b=_0x59083a['maxScore']?_0x4eed69(0x23b)+_0x59083a['maxScore']:_0x40fb99[_0x4eed69(0x20f)];_0x29c093[_0x4eed69(0x193)+'t']=_0x19d499+'\x20('+_0x58706b+')',_0x40fb99[_0x4eed69(0x221)](_0x59083a['id'],quickGradeAssessmentId)&&(_0x29c093[_0x4eed69(0x1c4)]=!![]),_0x1caa30['appendChil'+'d'](_0x29c093);})),_0x40fb99[_0x1a14d8(0x206)](showEl,_0x40fb99[_0x1a14d8(0x20c)],!![],_0x40fb99[_0x1a14d8(0x1b3)]),_0x40fb99[_0x1a14d8(0x216)](onQuickGradeAssessmentChanged);}function hideQuickGradeModal(){const _0x4a2fb1=_0x1530,_0x1e89e9={'fAgfS':_0x4a2fb1(0x1e5)+'Modal','zcwtA':function(_0x5942eb,_0x5ed7db){return _0x5942eb!==_0x5ed7db;},'hTIFW':function(_0x318e3d){return _0x318e3d();},'jibAJ':function(_0x525bf0,_0x26e3e4){return _0x525bf0(_0x26e3e4);},'KsUSK':function(_0x21cc3e,_0x59d14a,_0x2dec53,_0x44e9df){return _0x21cc3e(_0x59d14a,_0x2dec53,_0x44e9df);},'acLlX':function(_0x91b2a4,_0x219c54){return _0x91b2a4!==_0x219c54;},'ilzEC':function(_0x1a8c4f,_0x4f61a7,_0x3a06f3){return _0x1a8c4f(_0x4f61a7,_0x3a06f3);}};saveActiveScore(),showEl(_0x1e89e9[_0x4a2fb1(0x1ad)],![]);if(_0x1e89e9['zcwtA'](window[_0x4a2fb1(0x1d9)+_0x4a2fb1(0x22b)+'dex'],undefined)&&window[_0x4a2fb1(0x1d9)+_0x4a2fb1(0x233)+_0x4a2fb1(0x1f7)]){const _0x530e69=_0x1e89e9[_0x4a2fb1(0x229)](currentAssignment);if(_0x530e69){const _0x5d97a5=_0x1e89e9[_0x4a2fb1(0x186)](isMapehSubject,_0x530e69[_0x4a2fb1(0x18b)]),_0xfb3875=_0x5d97a5?currentMapehSubTab:undefined,_0x3627db=_0x1e89e9['KsUSK'](termAssessments,_0x530e69,db[_0x4a2fb1(0x1ea)+'m'],_0xfb3875),_0x265ef9=_0x3627db[_0x4a2fb1(0x20b)](_0x2a669d=>_0x2a669d['id']===window[_0x4a2fb1(0x1d9)+_0x4a2fb1(0x233)+_0x4a2fb1(0x1f7)]);if(_0x1e89e9[_0x4a2fb1(0x1e0)](_0x265ef9,-(0x199*-0x2+0x4ae*-0x4+0x1*0x15eb))){const _0x9d8dbd=document[_0x4a2fb1(0x1c9)+_0x4a2fb1(0x214)](_0x4a2fb1(0x1bf)+window[_0x4a2fb1(0x1d9)+_0x4a2fb1(0x22b)+'dex']+'-'+_0x265ef9);_0x9d8dbd&&_0x1e89e9[_0x4a2fb1(0x183)](setTimeout,()=>{const _0x583efa=_0x4a2fb1;_0x9d8dbd[_0x583efa(0x1c2)]();if(_0x9d8dbd['select'])_0x9d8dbd[_0x583efa(0x1fc)]();},-0x2182*0x1+0x1*-0x211a+0x42ce);}}}}function onQuickGradeAssessmentChanged(){const _0xd2a5d9=_0x1530,_0x18b223={'wughS':_0xd2a5d9(0x1e5)+_0xd2a5d9(0x17b)+'Select','EEWCd':function(_0x79b7ae){return _0x79b7ae();}},_0x466a0d=document[_0xd2a5d9(0x1c9)+'ById'](_0x18b223[_0xd2a5d9(0x1ff)]);if(!_0x466a0d)return;quickGradeAssessmentId=_0x466a0d[_0xd2a5d9(0x21f)],renderQuickGradeRoster(),_0x18b223[_0xd2a5d9(0x18f)](updateQuickGradeActiveLearner);}function renderQuickGradeRoster(){const _0x3aa633=_0x1530,_0x28c548={'dMowk':function(_0x27e53d,_0xe2f678){return _0x27e53d!==_0xe2f678;},'YwxxG':function(_0x165d98,_0x481a9c){return _0x165d98!==_0x481a9c;},'xtlsf':_0x3aa633(0x1d1),'ZDlFb':function(_0x465a0a,_0x408147){return _0x465a0a+_0x408147;},'uZRSK':'quick-grad'+_0x3aa633(0x23a)+_0x3aa633(0x1c0),'XTzFW':_0x3aa633(0x1b5)+_0x3aa633(0x1f8)+_0x3aa633(0x196)+'ve','cBOds':function(_0x429fee,_0x394bdf){return _0x429fee+_0x394bdf;},'vAFpc':function(_0x1c612d,_0x3d60fc){return _0x1c612d(_0x3d60fc);},'CgaTI':function(_0x27a7fc,_0x168375){return _0x27a7fc(_0x168375);},'BltzO':function(_0x4ca2ae){return _0x4ca2ae();},'BceUv':_0x3aa633(0x1e5)+_0x3aa633(0x1be),'KtteF':_0x3aa633(0x1e5)+_0x3aa633(0x20d),'XMJrd':function(_0x8512ae,_0xc708b){return _0x8512ae>_0xc708b;},'IvLyg':function(_0x4c1771,_0x3a230a){return _0x4c1771/_0x3a230a;}},_0x2d257a=_0x28c548[_0x3aa633(0x1ac)](currentAssignment);if(!_0x2d257a)return;const _0x5c0c8d=document[_0x3aa633(0x1c9)+_0x3aa633(0x214)](_0x28c548[_0x3aa633(0x1ec)]);if(!_0x5c0c8d)return;_0x5c0c8d[_0x3aa633(0x1fe)]='';let _0x498119=0x2*0x10bb+-0xbcf*-0x1+-0x2d45;_0x2d257a[_0x3aa633(0x1ce)][_0x3aa633(0x1cb)]((_0x28f6f8,_0x235b01)=>{const _0x184260=_0x3aa633,_0x5bd3b1=_0x28f6f8['id']+'|'+quickGradeAssessmentId,_0x193324=_0x2d257a[_0x184260(0x209)][_0x5bd3b1],_0x4f9b32=_0x28c548[_0x184260(0x1d5)](_0x193324,undefined)&&_0x28c548[_0x184260(0x22e)](_0x193324,'');if(_0x4f9b32)_0x498119++;const _0x697173=document[_0x184260(0x176)+_0x184260(0x228)](_0x28c548[_0x184260(0x230)]);_0x697173['id']='qg-roster-'+_0x184260(0x177)+_0x235b01,_0x697173['className']=_0x28c548[_0x184260(0x191)](_0x28c548[_0x184260(0x19f)],_0x235b01===quickGradeLearnerIndex?_0x28c548['XTzFW']:''),_0x697173[_0x184260(0x202)]=()=>quickGradeJumpToLearner(_0x235b01);const _0x483e1c=learnerDisplayName(_0x28f6f8);_0x697173[_0x184260(0x1fe)]=_0x184260(0x1ab)+'an\x20class=\x22'+_0x184260(0x232)+'e-roster-i'+'tem__name\x22'+'>'+_0x28c548[_0x184260(0x1c5)](_0x235b01,-0x447*-0x2+0xd43+0x15d*-0x10)+'.\x20'+_0x28c548[_0x184260(0x1b7)](esc,_0x483e1c)+(_0x184260(0x22d)+'\x20\x20\x20\x20<span\x20'+_0x184260(0x172)+_0x184260(0x20a)+_0x184260(0x19b)+_0x184260(0x1de))+(_0x4f9b32?_0x28c548[_0x184260(0x220)](esc,_0x193324):'—')+(_0x184260(0x22d)+'\x20\x20'),_0x5c0c8d[_0x184260(0x22f)+'d'](_0x697173);});const _0x193ef1=document['getElement'+_0x3aa633(0x214)](_0x28c548[_0x3aa633(0x1c3)]);if(_0x193ef1){const _0x360843=_0x28c548[_0x3aa633(0x199)](_0x2d257a[_0x3aa633(0x1ce)][_0x3aa633(0x22c)],-0x90f+-0x4ca+0xdd9)?Math[_0x3aa633(0x18c)](_0x28c548[_0x3aa633(0x1fb)](_0x498119,_0x2d257a['learners'][_0x3aa633(0x22c)])*(0x1577+0x19d*0x5+0x749*-0x4)):0x1be9+0xff5+-0x2bde;_0x193ef1[_0x3aa633(0x193)+'t']=_0x3aa633(0x1c8)+_0x498119+'\x20/\x20'+_0x2d257a[_0x3aa633(0x1ce)]['length']+'\x20('+_0x360843+'%)';}}function updateQuickGradeActiveLearner(){const _0x3b9646=_0x1530,_0xea193d={'puurG':_0x3b9646(0x232)+_0x3b9646(0x23a)+_0x3b9646(0x1d2)+'e','CmdZS':_0x3b9646(0x1e5)+_0x3b9646(0x1f9)+'e','iyigC':function(_0x5a574d,_0x346c9f){return _0x5a574d(_0x346c9f);},'Ozjun':_0x3b9646(0x1e5)+'LearnerMet'+'a','IQbNP':function(_0x1c4433,_0x5e6e7a){return _0x1c4433>_0x5e6e7a;},'rIiTL':'/\x20—','GbZGJ':_0x3b9646(0x1e5)+_0x3b9646(0x224),'veiik':function(_0x2dc1ed,_0xc959bb){return _0x2dc1ed!==_0xc959bb;},'GNcnn':_0x3b9646(0x1e5)+_0x3b9646(0x1be),'WgMYP':function(_0x3c648d,_0x10b024){return _0x3c648d<_0x10b024;},'wOuTn':_0x3b9646(0x1f1),'jBGVn':function(_0x121281,_0x44490b){return _0x121281>_0x44490b;},'uqifk':function(_0x22028d,_0x7e4379){return _0x22028d+_0x7e4379;},'rzQPF':function(_0x107b47,_0x1280fd){return _0x107b47-_0x1280fd;},'mmesn':function(_0x3a09af,_0x394883,_0x32d0f2){return _0x3a09af(_0x394883,_0x32d0f2);}},_0x4289d6=currentAssignment();if(!_0x4289d6)return;const _0x35651c=_0x4289d6['learners'][quickGradeLearnerIndex];if(!_0x35651c)return;const _0x29c41b=document['getElement'+_0x3b9646(0x214)](_0xea193d[_0x3b9646(0x1d0)]);if(_0x29c41b)_0x29c41b[_0x3b9646(0x193)+'t']=_0xea193d[_0x3b9646(0x17e)](learnerDisplayName,_0x35651c);const _0x4f1c43=document[_0x3b9646(0x1c9)+'ById'](_0xea193d[_0x3b9646(0x1f3)]);_0x4f1c43&&(_0x4f1c43[_0x3b9646(0x193)+'t']=_0x3b9646(0x1e7)+esc(_0x35651c[_0x3b9646(0x234)]||'—')+'\x20|\x20Sex:\x20'+_0xea193d['iyigC'](esc,_0x35651c[_0x3b9646(0x189)]||'—'));const _0x3b3ab7=_0x4289d6[_0x3b9646(0x1eb)+'s'][_0x3b9646(0x1b2)](_0x3e12db=>_0x3e12db['id']===quickGradeAssessmentId),_0x2e1c6f=_0x3b3ab7?_0xea193d[_0x3b9646(0x17e)](number,_0x3b3ab7[_0x3b9646(0x1d7)]):-0x13d0+-0x117+0x14e7,_0xcf27b9=document[_0x3b9646(0x1c9)+_0x3b9646(0x214)]('quickGrade'+'HpsLabel');_0xcf27b9&&(_0xcf27b9[_0x3b9646(0x193)+'t']=_0xea193d[_0x3b9646(0x1fd)](_0x2e1c6f,0x473+-0x2498+0x2025)?'/\x20'+_0x2e1c6f:_0xea193d['rIiTL']);const _0x9d79bf=_0x35651c['id']+'|'+quickGradeAssessmentId,_0x3cbbac=_0x4289d6[_0x3b9646(0x209)][_0x9d79bf],_0x566cfc=document[_0x3b9646(0x1c9)+_0x3b9646(0x214)](_0xea193d['GbZGJ']);_0x566cfc&&(_0x566cfc['value']=_0xea193d[_0x3b9646(0x236)](_0x3cbbac,undefined)?_0x3cbbac:'');_0x4289d6['learners'][_0x3b9646(0x1cb)]((_0x3d052c,_0x1ba1a7)=>{const _0x45a0ad=_0x3b9646,_0x5c320e=document['getElement'+'ById'](_0x45a0ad(0x1a8)+_0x45a0ad(0x177)+_0x1ba1a7);_0x5c320e&&(_0x1ba1a7===quickGradeLearnerIndex?_0x5c320e[_0x45a0ad(0x211)]['add'](_0xea193d[_0x45a0ad(0x217)]):_0x5c320e[_0x45a0ad(0x211)]['remove'](_0xea193d[_0x45a0ad(0x217)]));});const _0x39a0cb=document['getElement'+_0x3b9646(0x214)](_0xea193d[_0x3b9646(0x1e6)]),_0x146ad1=document[_0x3b9646(0x1c9)+_0x3b9646(0x214)](_0x3b9646(0x1a8)+_0x3b9646(0x177)+quickGradeLearnerIndex);if(_0x39a0cb&&_0x146ad1){const _0x457fcf=_0x39a0cb[_0x3b9646(0x195)+'ht'],_0x27664b=_0x146ad1[_0x3b9646(0x1d3)],_0xabd86f=_0x146ad1[_0x3b9646(0x19a)+'ht'];if(_0xea193d[_0x3b9646(0x1f6)](_0x27664b,_0x39a0cb['scrollTop']))_0x39a0cb['scrollTo']({'top':_0x27664b,'behavior':_0xea193d['wOuTn']});else _0xea193d[_0x3b9646(0x1a3)](_0x27664b+_0xabd86f,_0xea193d[_0x3b9646(0x1cf)](_0x39a0cb[_0x3b9646(0x21a)],_0x457fcf))&&_0x39a0cb[_0x3b9646(0x1b4)]({'top':_0xea193d['rzQPF'](_0xea193d[_0x3b9646(0x1cf)](_0x27664b,_0xabd86f),_0x457fcf),'behavior':_0xea193d[_0x3b9646(0x204)]});}_0xea193d[_0x3b9646(0x17a)](validateScoreInput,_0x566cfc?_0x566cfc['value']:'',_0x2e1c6f),_0x566cfc&&(_0x566cfc[_0x3b9646(0x1c2)](),_0x566cfc[_0x3b9646(0x21f)]!==''&&_0x566cfc[_0x3b9646(0x1fc)]());}function validateScoreInput(_0x39c60e,_0x23fe79){const _0x4223d6=_0x1530,_0x36a12c={'nOXuE':'quickGrade'+_0x4223d6(0x16f)+_0x4223d6(0x182),'TrChB':_0x4223d6(0x1e5)+_0x4223d6(0x171),'jDMbd':'invalid','BVYry':function(_0x1b07e4,_0xe00d8c){return _0x1b07e4!==_0xe00d8c;},'UgAbk':_0x4223d6(0x205)+_0x4223d6(0x1df)+_0x4223d6(0x1a2)+_0x4223d6(0x173)+_0x4223d6(0x17f)+_0x4223d6(0x1b9),'FsGOU':function(_0x45cffb,_0x264012){return _0x45cffb>_0x264012;}},_0x480449=document[_0x4223d6(0x1c9)+_0x4223d6(0x214)](_0x36a12c[_0x4223d6(0x208)]),_0x2e799e=document[_0x4223d6(0x1c9)+_0x4223d6(0x214)](_0x36a12c[_0x4223d6(0x170)]);if(!_0x480449||!_0x2e799e)return;_0x480449['innerHTML']='',_0x2e799e[_0x4223d6(0x211)]['remove'](_0x36a12c[_0x4223d6(0x187)]);const _0x6fa40a=trim(_0x39c60e);if(_0x36a12c[_0x4223d6(0x17d)](_0x6fa40a,'')){const _0x5b6cad=parseFloat(_0x6fa40a);if(isNaN(_0x5b6cad))_0x480449[_0x4223d6(0x1fe)]=_0x36a12c['UgAbk'],_0x2e799e[_0x4223d6(0x211)][_0x4223d6(0x223)](_0x36a12c['jDMbd']);else _0x36a12c[_0x4223d6(0x1a1)](_0x23fe79,-0x25f0+0x11ba+0x1436)&&_0x36a12c[_0x4223d6(0x1a1)](_0x5b6cad,_0x23fe79)&&(_0x480449['innerHTML']=_0x4223d6(0x205)+_0x4223d6(0x1df)+_0x4223d6(0x1da)+'ing\x22>Warni'+_0x4223d6(0x1e8)+'exceeds\x20HP'+_0x4223d6(0x203)+_0x23fe79+'</span>',_0x2e799e[_0x4223d6(0x211)][_0x4223d6(0x223)](_0x36a12c[_0x4223d6(0x187)]));}}function _0x1530(_0x2808df,_0x24614d){_0x2808df=_0x2808df-(-0x1b93+-0x252d+0x1*0x422f);const _0x434efc=_0x2e8a();let _0x293c8b=_0x434efc[_0x2808df];if(_0x1530['dPQWUA']===undefined){var _0x2c6c9a=function(_0x45f14c){const _0x1bf1ad='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let _0x3395ff='',_0x1ed79c='';for(let _0x2d7e71=0xa*0xb5+0xeb*-0x13+0x1*0xa5f,_0x4fc04d,_0x3c7f1e,_0x3daf68=0xf82+-0xf77+0xb*-0x1;_0x3c7f1e=_0x45f14c['charAt'](_0x3daf68++);~_0x3c7f1e&&(_0x4fc04d=_0x2d7e71%(0x138e+-0x1ff5+0xc6b)?_0x4fc04d*(-0x1fb5+-0x1*-0x16c8+0x92d)+_0x3c7f1e:_0x3c7f1e,_0x2d7e71++%(0xb1*-0x10+0x2437+-0x1923))?_0x3395ff+=String['fromCharCode'](0x73f+-0x22dc+0x1c9c&_0x4fc04d>>(-(-0x463+-0x2b5*-0xd+0x291*-0xc)*_0x2d7e71&-0x1a33+0x7e*-0x1b+-0x7*-0x5a5)):0x3*0x191+0x2665+-0x7*0x628){_0x3c7f1e=_0x1bf1ad['indexOf'](_0x3c7f1e);}for(let _0x55a8f8=-0x10a7+0x1eb5+0x202*-0x7,_0x1492be=_0x3395ff['length'];_0x55a8f8<_0x1492be;_0x55a8f8++){_0x1ed79c+='%'+('00'+_0x3395ff['charCodeAt'](_0x55a8f8)['toString'](0x2209+-0x1366+-0xe93))['slice'](-(0x5*0x3ad+-0x21c4+-0x7*-0x233));}return decodeURIComponent(_0x1ed79c);};_0x1530['PrVTSc']=_0x2c6c9a,_0x1530['aaZHSC']={},_0x1530['dPQWUA']=!![];}const _0x32b6a8=_0x434efc[0x1*0x692+0x4c4*0x2+-0x101a],_0x24f910=_0x2808df+_0x32b6a8,_0x4a7564=_0x1530['aaZHSC'][_0x24f910];return!_0x4a7564?(_0x293c8b=_0x1530['PrVTSc'](_0x293c8b),_0x1530['aaZHSC'][_0x24f910]=_0x293c8b):_0x293c8b=_0x4a7564,_0x293c8b;}function saveActiveScore(){const _0x3a2210=_0x1530,_0x54f892={'ikMPP':_0x3a2210(0x1e5)+'ScoreInput','OJCkN':function(_0x28d1d9,_0x2064da){return _0x28d1d9(_0x2064da);},'zepTr':function(_0x4e8126,_0x1711a3){return _0x4e8126===_0x1711a3;},'zjpJs':function(_0x25781d,_0x2edc04){return _0x25781d!==_0x2edc04;},'nkHnL':function(_0x5d7f9b,_0x13f850){return _0x5d7f9b(_0x13f850);}},_0x19df0d=currentAssignment();if(!_0x19df0d)return;const _0x59bb23=_0x19df0d[_0x3a2210(0x1ce)][quickGradeLearnerIndex];if(!_0x59bb23)return;const _0x5aa9ff=document['getElement'+_0x3a2210(0x214)](_0x54f892['ikMPP']);if(!_0x5aa9ff)return;const _0x1c504d=_0x54f892[_0x3a2210(0x188)](trim,_0x5aa9ff[_0x3a2210(0x21f)]),_0x5a0dc0=_0x59bb23['id']+'|'+quickGradeAssessmentId,_0xbefe31=_0x54f892['zepTr'](_0x19df0d['scores'][_0x5a0dc0],undefined)?'':String(_0x19df0d[_0x3a2210(0x209)][_0x5a0dc0]),_0x1ee2b6=_0x54f892[_0x3a2210(0x197)](_0x1c504d,'')?'':_0x54f892['OJCkN'](String,parseFloat(_0x1c504d));if(_0xbefe31===_0x1ee2b6||_0x54f892[_0x3a2210(0x238)](_0x1c504d,'')&&_0x54f892[_0x3a2210(0x188)](isNaN,_0x54f892[_0x3a2210(0x1a4)](parseFloat,_0x1c504d)))return;updateScore(_0x59bb23['id'],quickGradeAssessmentId,_0x1c504d);const _0x1bf9a7=document['querySelec'+_0x3a2210(0x178)]('#qg-roster'+_0x3a2210(0x1bc)+quickGradeLearnerIndex+(_0x3a2210(0x1bd)+'ade-roster'+_0x3a2210(0x227)+'re'));_0x1bf9a7&&(_0x1bf9a7[_0x3a2210(0x193)+'t']=_0x54f892[_0x3a2210(0x238)](_0x1c504d,'')?_0x1c504d:'—');}function quickGradeNext(){const _0x4104cb=_0x1530,_0x4e01ec={'qUWCg':function(_0x562d40){return _0x562d40();},'nIPSC':function(_0x1aa16c,_0x15b3f3){return _0x1aa16c<_0x15b3f3;},'RVmup':function(_0x53bbdd,_0x35e9ba){return _0x53bbdd-_0x35e9ba;},'mStII':function(_0x280d9e){return _0x280d9e();},'BoJxx':function(_0xe67000,_0x394ac7,_0xbd131c){return _0xe67000(_0x394ac7,_0xbd131c);},'aMomN':'Roster\x20com'+_0x4104cb(0x1b0)+_0x4104cb(0x239)+_0x4104cb(0x18d),'punnl':function(_0x20a637,_0x492160){return _0x20a637!==_0x492160;}},_0x4912dc=_0x4e01ec['qUWCg'](currentAssignment);if(!_0x4912dc)return;saveActiveScore();if(_0x4e01ec[_0x4104cb(0x1e1)](quickGradeLearnerIndex,_0x4e01ec['RVmup'](_0x4912dc[_0x4104cb(0x1ce)][_0x4104cb(0x22c)],-0xf5f+0x405*0x5+-0x4b9)))quickGradeLearnerIndex++,_0x4e01ec['mStII'](updateQuickGradeActiveLearner);else{_0x4e01ec[_0x4104cb(0x1a5)](toast,_0x4e01ec[_0x4104cb(0x222)],'success');const _0xb1cfa3=document[_0x4104cb(0x1c9)+_0x4104cb(0x214)](_0x4104cb(0x1e5)+_0x4104cb(0x224));_0xb1cfa3&&(_0xb1cfa3[_0x4104cb(0x1c2)](),_0x4e01ec[_0x4104cb(0x212)](_0xb1cfa3[_0x4104cb(0x21f)],'')&&_0xb1cfa3[_0x4104cb(0x1fc)]());}}function _0x2e8a(){const _0x545b7c=['BMC6ifnJB3jLia','ywrKrxzLBNrmAq','y3vYCMvUDfrLCG','yxnZzxnZBwvUDa','qMnLvxy','y29TCg9Uzw50','qxvVvxK','uuDVvgq','ihrOzsbMAxjZDa','C21VB3rO','tw9KywW','t3PQDw4','Dg8GDgHPCYbJBa','nda3ndm2n0Der011ra','v2Dnwva','DeLK','zguTCM9ZDgvYlq','tgvHCM5LCK5HBq','A0LIvgK','sxzmEwC','C2vSzwn0','svfItLa','Aw5Uzxjive1m','D3vNAfm','ChjLDMvUDerLzG','ugXLyxnLigfKza','B25JBgLJAW','uYbVzIa','D091vg4','phnWyw4Gy2XHCW','CfHht1C','mZK5mZbzzgvquuC','BK9yDuu','C2nVCMvZ','y2STz3jHzguTCG','zMLUzeLUzgv4','tvvbyMy','uhjVz3jLC3m','q3zns04','EfHWwwC','B2fKihnLBgvJDa','y2XHC3nmAxn0','ChvUBMW','qwXYzwfKEsbHDa','qNLjza','uxzPA3q','uhv2Cuu','Chv1CKC','mtbKBxfiD2u','rw50zxi','C2nYB2XSvg9W','AxjZDc4','qxzxwK8','igXLyxjUzxiU','y21Rre0','DMfSDwu','q2DHveK','AxjKufe','yu1VBu4','ywrK','u2nVCMvjBNb1Da','A2v5','wgvoAKK','lwL0zw1Fx3nJBW','zw50','AfrjrLC','sezqtM8','zeXLyxjUzxjjBG','BgvUz3rO','pc9ZCgfUpGOGia','wxD4EeC','yxbWzw5Kq2HPBa','EhrSC2y','zeHmyKG','CxvPy2STz3jHza','zefZC2vZC21LBG','BhjU','yxnZigXVywqGzG','DMvPAwS','D2fYBMLUzW','EMPWsNm','ihrOAxmGyxnZzq','zs1YB3n0zxiTAq','sfbtoIa','zw50CYbMB3vUza','vMfSAwrHDgLVBG','vhjdAei','sw5WDxrxCMfW','y2XHC3m9iNf1Aq','iJ5jBNzHBgLKia','AKXPvfq','u2vSzwn0','y3jLyxrLrwXLBq','AxrLBs0','Dg9Y','DNHmv2G','Bw1LC24','qxnZzxnZBwvUDa','DgL0Bgu','qLzzCNK','AxLPz0m','BNvTyMvYigzVCG','mJm2nJK3mgDcEwrLEG','zgLUzYbZAgvLDa','txnN','AwX6rum','ouXls2nWua','Aw5MBW','AMLIquO','AKrnyMq','t0PdA04','C2v4','tg9HzgvK','C3vIAMvJDa','CM91BMq','C3nTzw50iq','uxvovuu','ruvxq2q','z1HjzNm','wKrSrMi','zMXLEa','Dgv4DenVBNrLBG','wgTyEe0','y2XPzw50sgvPzW','AxrLBs0Tywn0Aq','EMvWvhi','AwzvAwK','we1kCMq','B2zMC2v0sgvPzW','B3n0zxiTAxrLBq','mJK4mteYoeHUEe5Ywa','uwzoALO','DgfYz2v0','DvPsu0S','zgv4','rNnht1u','ywrNzs0TzMfPBa','AKjhvM4','BMTiBKW','qM9kEhG','sfbtoIboB3qGuW','tM8GyxnZzxnZBq','CwCTCM9ZDgvYlq','r1PdwvC','re9nq29UDgvUDa','cIaGicaGidXZCa','qMX0EK8','zKfNzLm','A2v5zg93BG','v2jisuG','CgXLDgvKigzVCG','yxvSDa','zMLUza','ruT0vwq','C2nYB2XSvg8','ihf1AwnRlwDYyq','qxjYB3DvCa','DKfgCgm','n2Hrse9gyG','Bwf0pc9ZCgfUpG','mtGZnZi1muHNz1bHAa','C3r5Bgu','lwL0zw0T','ic5XDwLJAY1NCG','uM9ZDgvYtgLZDa','C2mT','DgvT','vwXPEvy','zM9JDxm','s3r0zuy','C2vSzwn0zwq','y0jpzhm','mta1mZuZmK52CxrrAG','rxnJyxbL','r3jHzgvKoIa','z2v0rwXLBwvUDa','mtaZodmXmNLnAuvssa','zM9YrwfJAa','zwqU','igzVCIb0AguGyW','BgvHCM5LCNm','DxfPzMS','q21KwLm','zgL2','DgvTls1Hy3rPDG','B2zMC2v0vg9W','qxjYB3DeB3DU','ze1VD2S','ExPMBMq','Bwf4u2nVCMu','DhPwDKO','BgfZDezVy3vZzq','ywrNzs0TD2fYBG','EMjZwuO','DhLoChq','rw1fu3q','x19Zy29Yzsi+','CZ0IyMfKz2uGyG','ywnmBfG','BKLqu0m','C3rLBMvY','y0jSsxG','mtbIEMv2tNK','CxvPy2ThCMfKzq','r05JBM4','tfjooIa'];_0x2e8a=function(){return _0x545b7c;};return _0x2e8a();}function quickGradePrev(){const _0x59fe3e=_0x1530,_0x3c3640={'yzfnd':function(_0x313208){return _0x313208();},'gZrZc':function(_0x2b7366,_0x133a84){return _0x2b7366>_0x133a84;},'vxLWh':function(_0x131427,_0x2fa127,_0x455cc9){return _0x131427(_0x2fa127,_0x455cc9);},'cmkDM':_0x59fe3e(0x185),'gXIfs':'quickGrade'+'ScoreInput','AvWZO':function(_0x4a7f17,_0x5c6f6d){return _0x4a7f17!==_0x5c6f6d;}},_0x2b64fd=_0x3c3640['yzfnd'](currentAssignment);if(!_0x2b64fd)return;_0x3c3640['yzfnd'](saveActiveScore);if(_0x3c3640['gZrZc'](quickGradeLearnerIndex,0xdf3*0x1+0x68*0x59+-0x321b))quickGradeLearnerIndex--,_0x3c3640[_0x59fe3e(0x1d6)](updateQuickGradeActiveLearner);else{_0x3c3640[_0x59fe3e(0x179)](toast,_0x59fe3e(0x213)+_0x59fe3e(0x1f0)+_0x59fe3e(0x21d),_0x3c3640[_0x59fe3e(0x21e)]);const _0x4f4ed0=document['getElement'+_0x59fe3e(0x214)](_0x3c3640[_0x59fe3e(0x190)]);_0x4f4ed0&&(_0x4f4ed0['focus'](),_0x3c3640[_0x59fe3e(0x21c)](_0x4f4ed0[_0x59fe3e(0x21f)],'')&&_0x4f4ed0[_0x59fe3e(0x1fc)]());}}function quickGradeJumpToLearner(_0x197eaf){const _0x375ace=_0x1530,_0x53d7cf={'CvMKN':function(_0x311c5d){return _0x311c5d();},'tyNpt':function(_0x176db0){return _0x176db0();}},_0x92e187=_0x53d7cf[_0x375ace(0x20e)](currentAssignment);if(!_0x92e187||_0x197eaf<0x1a70+-0x258e+0xb1e||_0x197eaf>=_0x92e187['learners'][_0x375ace(0x22c)])return;_0x53d7cf[_0x375ace(0x1dc)](saveActiveScore),quickGradeLearnerIndex=_0x197eaf,updateQuickGradeActiveLearner();}document[_0xc3bf79(0x1e9)+'stener'](_0xc3bf79(0x1aa)+_0xc3bf79(0x18a),()=>{const _0x2bf4cc=_0xc3bf79,_0x491f54={'XeNjI':function(_0x1843ca){return _0x1843ca();},'cBlIx':function(_0x3df334,_0x2c491e){return _0x3df334===_0x2c491e;},'EmESt':_0x2bf4cc(0x1e5)+_0x2bf4cc(0x1f2),'ouboC':'none','QuNUE':function(_0x4f0560,_0x208f49){return _0x4f0560===_0x208f49;},'Qvikt':_0x2bf4cc(0x1c7),'QfNjZ':function(_0x214b31){return _0x214b31();},'ifUii':_0x2bf4cc(0x1b6),'tzVvJ':function(_0x3835a1){return _0x3835a1();},'QGoTd':function(_0x4514c1,_0x14a71c){return _0x4514c1===_0x14a71c;},'WbHIH':'quickGrade'+'ScoreInput','TRiMe':'input','MmwHw':_0x2bf4cc(0x1ae)},_0x3cb0f3=document['getElement'+_0x2bf4cc(0x214)](_0x491f54[_0x2bf4cc(0x1af)]);_0x3cb0f3&&(_0x3cb0f3[_0x2bf4cc(0x1e9)+_0x2bf4cc(0x1e2)](_0x491f54['TRiMe'],_0x201d04=>{const _0x9ff06f=_0x2bf4cc,_0x331393=_0x491f54[_0x9ff06f(0x226)](currentAssignment),_0x55bf3d=_0x331393?_0x331393[_0x9ff06f(0x1eb)+'s'][_0x9ff06f(0x1b2)](_0x453582=>_0x453582['id']===quickGradeAssessmentId):null,_0x12bd69=_0x55bf3d?number(_0x55bf3d['maxScore']):-0x81c*0x1+0x492*-0x8+0x2cac;validateScoreInput(_0x201d04[_0x9ff06f(0x19e)][_0x9ff06f(0x21f)],_0x12bd69);}),_0x3cb0f3[_0x2bf4cc(0x1e9)+_0x2bf4cc(0x1e2)](_0x491f54['MmwHw'],_0x42a828=>{const _0x486e8a=_0x2bf4cc;_0x491f54[_0x486e8a(0x1e3)](_0x42a828[_0x486e8a(0x225)],_0x486e8a(0x219))&&(_0x42a828['preventDef'+_0x486e8a(0x1b1)](),quickGradeNext());})),window[_0x2bf4cc(0x1e9)+'stener'](_0x2bf4cc(0x1ae),_0xec1aff=>{const _0x5b5300=_0x2bf4cc,_0xff2245=document['getElement'+_0x5b5300(0x214)](_0x491f54[_0x5b5300(0x1dd)]);if(!_0xff2245||_0xff2245[_0x5b5300(0x1bb)]['display']===_0x491f54['ouboC'])return;if(_0x491f54['QuNUE'](_0xec1aff['key'],_0x491f54[_0x5b5300(0x215)]))_0xec1aff[_0x5b5300(0x200)+'ault'](),_0x491f54[_0x5b5300(0x19d)](hideQuickGradeModal);else{if(_0x491f54[_0x5b5300(0x18e)](_0xec1aff[_0x5b5300(0x225)],_0x491f54[_0x5b5300(0x198)]))_0xec1aff[_0x5b5300(0x200)+'ault'](),_0x491f54[_0x5b5300(0x1d8)](quickGradePrev);else _0x491f54[_0x5b5300(0x1ef)](_0xec1aff[_0x5b5300(0x225)],_0x5b5300(0x1d4))&&(_0xec1aff['preventDef'+_0x5b5300(0x1b1)](),_0x491f54[_0x5b5300(0x1d8)](quickGradeNext));}});});
+/**
+ * E-Class Record — Quick Grade Entry Module
+ *
+ * Implements the sequential grading modal allowing teachers to enter scores
+ * student-by-student with instant saving and keyboard navigation.
+ */
+
+let quickGradeLearnerIndex = 0;
+let quickGradeAssessmentId = '';
+
+/**
+ * Shows the Quick Grade Entry modal, initializing select list and active indices.
+ */
+function showQuickGradeModal() {
+  const a = currentAssignment();
+  if (!a) {
+    toast('No class load selected.', 'warning');
+    return;
+  }
+  
+  if (a.learners.length === 0) {
+    toast('Please add learners to this class load first.', 'warning');
+    return;
+  }
+  
+  const isMapeh = isMapehSubject(a.subject);
+  const mapePart = isMapeh ? currentMapehSubTab : undefined;
+  const assessments = termAssessments(a, db.currentTerm, mapePart);
+  
+  if (assessments.length === 0) {
+    toast('No assessments found for the current grading sheet.', 'warning');
+    return;
+  }
+  
+  // Default to previously focused cell/column details if valid
+  let defaultAstId = assessments[0].id;
+  if (window.lastFocusedAssessmentId) {
+    const found = assessments.find(x => x.id === window.lastFocusedAssessmentId);
+    if (found) {
+      defaultAstId = found.id;
+    }
+  }
+  quickGradeAssessmentId = defaultAstId;
+  
+  let defaultLearnerIdx = 0;
+  if (window.lastFocusedLearnerIndex !== undefined && window.lastFocusedLearnerIndex >= 0 && window.lastFocusedLearnerIndex < a.learners.length) {
+    defaultLearnerIdx = window.lastFocusedLearnerIndex;
+  }
+  quickGradeLearnerIndex = defaultLearnerIdx;
+  
+  // Populate the assessment drop-down selector
+  const select = document.getElementById('quickGradeAssessmentSelect');
+  if (select) {
+    select.innerHTML = '';
+    assessments.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      const compLabel = isKeyStage2(a) 
+        ? compactAssessmentLabel(item) 
+        : `${componentLabel(item.component)} ${item.title || ''}`;
+      const hps = item.maxScore ? `HPS: ${item.maxScore}` : 'HPS: Not Set';
+      opt.textContent = `${compLabel} (${hps})`;
+      if (item.id === quickGradeAssessmentId) {
+        opt.selected = true;
+      }
+      select.appendChild(opt);
+    });
+  }
+  
+  // Open modal overlay
+  showEl('quickGradeModal', true, 'flex');
+  
+  // Initial population of modal fields
+  onQuickGradeAssessmentChanged();
+}
+
+/**
+ * Hides the Quick Grade Entry modal, saving any unsaved scores.
+ */
+function hideQuickGradeModal() {
+  saveActiveScore();
+  showEl('quickGradeModal', false);
+  
+  // Re-focus the cell in the record table if last active indices are known
+  if (window.lastFocusedLearnerIndex !== undefined && window.lastFocusedAssessmentId) {
+    const a = currentAssignment();
+    if (a) {
+      const isMapeh = isMapehSubject(a.subject);
+      const mapePart = isMapeh ? currentMapehSubTab : undefined;
+      const items = termAssessments(a, db.currentTerm, mapePart);
+      const colIndex = items.findIndex(it => it.id === window.lastFocusedAssessmentId);
+      if (colIndex !== -1) {
+        const cellEl = document.getElementById(`sc-${window.lastFocusedLearnerIndex}-${colIndex}`);
+        if (cellEl) {
+          setTimeout(() => {
+            cellEl.focus();
+            if (cellEl.select) cellEl.select();
+          }, 50);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Event handler triggered when the selected assessment dropdown option changes.
+ */
+function onQuickGradeAssessmentChanged() {
+  const select = document.getElementById('quickGradeAssessmentSelect');
+  if (!select) return;
+  quickGradeAssessmentId = select.value;
+  
+  renderQuickGradeRoster();
+  updateQuickGradeActiveLearner();
+}
+
+/**
+ * Renders the sidebar student roster list with real-time score indicators.
+ */
+function renderQuickGradeRoster() {
+  const a = currentAssignment();
+  if (!a) return;
+  
+  const rosterList = document.getElementById('quickGradeRosterList');
+  if (!rosterList) return;
+  rosterList.innerHTML = '';
+  
+  let gradedCount = 0;
+  a.learners.forEach((learner, index) => {
+    const scoreKey = `${learner.id}|${quickGradeAssessmentId}`;
+    const score = a.scores[scoreKey];
+    const hasScore = score !== undefined && score !== '';
+    if (hasScore) gradedCount++;
+    
+    const item = document.createElement('div');
+    item.id = `qg-roster-item-${index}`;
+    item.className = 'quick-grade-roster-item' + (index === quickGradeLearnerIndex ? ' quick-grade-roster-item--active' : '');
+    item.onclick = () => quickGradeJumpToLearner(index);
+    
+    const displayName = learnerDisplayName(learner);
+    item.innerHTML = `
+      <span class="quick-grade-roster-item__name">${index + 1}. ${esc(displayName)}</span>
+      <span class="quick-grade-roster-item__score">${hasScore ? esc(score) : '—'}</span>
+    `;
+    rosterList.appendChild(item);
+  });
+  
+  // Update overall progression label
+  const progressEl = document.getElementById('quickGradeProgress');
+  if (progressEl) {
+    const pct = a.learners.length > 0 ? Math.round((gradedCount / a.learners.length) * 100) : 0;
+    progressEl.textContent = `Graded: ${gradedCount} / ${a.learners.length} (${pct}%)`;
+  }
+}
+
+/**
+ * Updates the active student details card in the center panel.
+ */
+function updateQuickGradeActiveLearner() {
+  const a = currentAssignment();
+  if (!a) return;
+  
+  const learner = a.learners[quickGradeLearnerIndex];
+  if (!learner) return;
+  
+  const nameEl = document.getElementById('quickGradeLearnerName');
+  if (nameEl) nameEl.textContent = learnerDisplayName(learner);
+  
+  const metaEl = document.getElementById('quickGradeLearnerMeta');
+  if (metaEl) {
+    metaEl.textContent = `LRN: ${esc(learner.lrn || '—')} | Sex: ${esc(learner.sex || '—')}`;
+  }
+  
+  const assessment = a.assessments.find(x => x.id === quickGradeAssessmentId);
+  const maxScore = assessment ? number(assessment.maxScore) : 0;
+  
+  const hpsEl = document.getElementById('quickGradeHpsLabel');
+  if (hpsEl) {
+    hpsEl.textContent = maxScore > 0 ? `/ ${maxScore}` : '/ —';
+  }
+  
+  const scoreKey = `${learner.id}|${quickGradeAssessmentId}`;
+  const score = a.scores[scoreKey];
+  
+  const input = document.getElementById('quickGradeScoreInput');
+  if (input) {
+    input.value = score !== undefined ? score : '';
+  }
+  
+  // Highlight active row in roster list
+  a.learners.forEach((_, index) => {
+    const item = document.getElementById(`qg-roster-item-${index}`);
+    if (item) {
+      if (index === quickGradeLearnerIndex) {
+        item.classList.add('quick-grade-roster-item--active');
+      } else {
+        item.classList.remove('quick-grade-roster-item--active');
+      }
+    }
+  });
+  
+  // Custom container auto-scroll
+  const listContainer = document.getElementById('quickGradeRosterList');
+  const activeItem = document.getElementById(`qg-roster-item-${quickGradeLearnerIndex}`);
+  if (listContainer && activeItem) {
+    const containerHeight = listContainer.clientHeight;
+    const itemTop = activeItem.offsetTop;
+    const itemHeight = activeItem.offsetHeight;
+    
+    if (itemTop < listContainer.scrollTop) {
+      listContainer.scrollTo({ top: itemTop, behavior: 'smooth' });
+    } else if (itemTop + itemHeight > listContainer.scrollTop + containerHeight) {
+      listContainer.scrollTo({ top: itemTop + itemHeight - containerHeight, behavior: 'smooth' });
+    }
+  }
+  
+  // Refresh validation messages
+  validateScoreInput(input ? input.value : '', maxScore);
+  
+  // Focus input
+  if (input) {
+    input.focus();
+    if (input.value !== '') {
+      input.select();
+    }
+  }
+}
+
+/**
+ * Performs real-time verification of scores against boundaries.
+ */
+function validateScoreInput(val, maxScore) {
+  const msgEl = document.getElementById('quickGradeValidationMsg');
+  const inputWrap = document.getElementById('quickGradeInputWrap');
+  if (!msgEl || !inputWrap) return;
+  
+  msgEl.innerHTML = '';
+  inputWrap.classList.remove('invalid');
+  
+  const clean = trim(val);
+  if (clean !== '') {
+    const numVal = parseFloat(clean);
+    if (isNaN(numVal)) {
+      msgEl.innerHTML = '<span class="badge badge--fail">Invalid number format</span>';
+      inputWrap.classList.add('invalid');
+    } else if (maxScore > 0 && numVal > maxScore) {
+      msgEl.innerHTML = `<span class="badge badge--warning">Warning: Score exceeds HPS of ${maxScore}</span>`;
+      inputWrap.classList.add('invalid');
+    }
+  }
+}
+
+/**
+ * Saves the score entered in the input field to database storage memory.
+ */
+function saveActiveScore() {
+  const a = currentAssignment();
+  if (!a) return;
+  
+  const learner = a.learners[quickGradeLearnerIndex];
+  if (!learner) return;
+  
+  const input = document.getElementById('quickGradeScoreInput');
+  if (!input) return;
+  
+  const val = trim(input.value);
+  const key = `${learner.id}|${quickGradeAssessmentId}`;
+  
+  const oldValue = a.scores[key] === undefined ? '' : String(a.scores[key]);
+  const newValue = val === '' ? '' : String(parseFloat(val));
+  
+  // Return if identical or invalid non-empty string
+  if (oldValue === newValue || (val !== '' && isNaN(parseFloat(val)))) {
+    return;
+  }
+  
+  // Invoke central updateScore (handles history pushes, autosave debouncing, grid updates)
+  updateScore(learner.id, quickGradeAssessmentId, val);
+  
+  // Update sidebar list score indicator directly
+  const scoreDisplay = document.querySelector(`#qg-roster-item-${quickGradeLearnerIndex} .quick-grade-roster-item__score`);
+  if (scoreDisplay) {
+    scoreDisplay.textContent = val !== '' ? val : '—';
+  }
+}
+
+/**
+ * Selects the next learner in sequence.
+ */
+function quickGradeNext() {
+  const a = currentAssignment();
+  if (!a) return;
+  
+  saveActiveScore();
+  
+  if (quickGradeLearnerIndex < a.learners.length - 1) {
+    quickGradeLearnerIndex++;
+    updateQuickGradeActiveLearner();
+  } else {
+    toast('Roster completed for this assessment!', 'success');
+    // Stay on current and ensure focused/selected
+    const input = document.getElementById('quickGradeScoreInput');
+    if (input) {
+      input.focus();
+      if (input.value !== '') {
+        input.select();
+      }
+    }
+  }
+}
+
+/**
+ * Selects the previous learner in sequence.
+ */
+function quickGradePrev() {
+  const a = currentAssignment();
+  if (!a) return;
+  
+  saveActiveScore();
+  
+  if (quickGradeLearnerIndex > 0) {
+    quickGradeLearnerIndex--;
+    updateQuickGradeActiveLearner();
+  } else {
+    toast('Already at the first learner.', 'info');
+    const input = document.getElementById('quickGradeScoreInput');
+    if (input) {
+      input.focus();
+      if (input.value !== '') {
+        input.select();
+      }
+    }
+  }
+}
+
+/**
+ * Jumps selection to the learner index selected.
+ */
+function quickGradeJumpToLearner(index) {
+  const a = currentAssignment();
+  if (!a || index < 0 || index >= a.learners.length) return;
+  
+  saveActiveScore();
+  quickGradeLearnerIndex = index;
+  updateQuickGradeActiveLearner();
+}
+
+/**
+ * Setup keyboard inputs event listeners.
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('quickGradeScoreInput');
+  if (input) {
+    input.addEventListener('input', (e) => {
+      const a = currentAssignment();
+      const assessment = a ? a.assessments.find(x => x.id === quickGradeAssessmentId) : null;
+      const maxScore = assessment ? number(assessment.maxScore) : 0;
+      validateScoreInput(e.target.value, maxScore);
+    });
+    
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        quickGradeNext();
+      }
+    });
+  }
+  
+  // Handle escape/arrows across window context when modal is active
+  window.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('quickGradeModal');
+    if (!modal || modal.style.display === 'none') return;
+    
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      hideQuickGradeModal();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      quickGradePrev();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      quickGradeNext();
+    }
+  });
+});

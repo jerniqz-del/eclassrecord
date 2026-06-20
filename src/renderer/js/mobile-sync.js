@@ -1,1 +1,402 @@
-const _0x176c80=_0x210f;(function(_0x2f585c,_0x4374c3){const _0x121b15=_0x210f,_0x4b16ad=_0x2f585c();while(!![]){try{const _0x3ebaa2=-parseInt(_0x121b15(0x248))/(-0x9*0x163+0x13b5+-0x1*0x739)+parseInt(_0x121b15(0x27e))/(-0xf8*0x1+-0x1*0x1c8d+0x1d87*0x1)*(parseInt(_0x121b15(0x2d0))/(-0x361*0x1+0x171a+-0x13b6))+-parseInt(_0x121b15(0x2d4))/(0x25c+0x25f0+-0x2848)+-parseInt(_0x121b15(0x22e))/(0x15*-0x8d+-0x1ee8+-0x7*-0x612)+parseInt(_0x121b15(0x1d6))/(-0x623*-0x4+0xb75*-0x3+-0x9d9*-0x1)+parseInt(_0x121b15(0x254))/(0x653*-0x3+0x47*0x3+0x122b)+-parseInt(_0x121b15(0x1d5))/(-0x11d*-0x13+-0x1085+-0x49a*0x1);if(_0x3ebaa2===_0x4374c3)break;else _0x4b16ad['push'](_0x4b16ad['shift']());}catch(_0x55aad5){_0x4b16ad['push'](_0x4b16ad['shift']());}}}(_0x1bd5,-0x36e52+-0x281b*0x7+0x6bf16));function _0x1bd5(){const _0xdd55ca=['y3rPB24UlI4','AwnLCYbICM9Hza','wwv6C2W','zwn0qMXL','Esb1C2vYlG','zuHpCfu','ztnJmwe4zteTma','zMLSDgvY','EhfqsNm','q3PzsfO','zvj0DfK','BMfTzq','ugHVBMuGy29UBG','CYbTB2jPBguGyq','mJuXltqXmMuTyq','C3LUy1bPBKLUCa','mte4wKjxrhHW','BgXLzc4','qxn1vMq','y21Hrhy','EwTOr1y','yxbWzw5Kq2HPBa','AgLUzYbJB25Uzq','yxnZAwDUBwvUDa','BMXXzwu','ugXLyxnLigvUDa','BgfZCYbMAwXLCW','z2v0q2HHCMfJDa','u1r6CeK','v3jPDgLUzYb0CG','u2vUzgLUzYbJAa','BwvZC2fNzq','EuLdCuq','lI4U','CYbMB3iGC3LUyW','rgv2AwnLihnLBa','EMu6ia','BNnMzxiGy29TCa','ywLSzwq6ia','tgfIzwW','zMLSzxmGzgLYzq','CI0TzxjYB3i','y2XHC3nmAxn0','ienVBM5Ly3rPBW','y29YzxmGDxbSBW','zwqGC2L6zsa','y29TCgfUAw9Uia','swnJwM0','A2fgChK','AKjNu1C','y3rLCMLZDgLJCW','CgfUAw9UCY4UlG','zxrPB24GAgvHza','lunSyxnZignVBq','EMjXDKO','q2XVC2LUzYbHyW','B3zLCNLqyw5LBa','B3zLCMLUzYbqCG','z2f0Da','qMX1zxrVB3rOia','AM9PBG','Dhb1Da','zgv2AwnLrgLZyW','C3vJy2vZCW','u3rHCNrPBMCGqG','Cg9SAwn5','AKTiB2O','B24GzMfPBgvKlG','C3LUy0XVz3npDq','yNrUrgLZy29UBG','zdOG','C2nYB2XSsgvPzW','zw5JB2rL','qNnMEhm','AerLDMLJzuXPCW','r3neAwS','ztnJmwe4ztaTma','u3vIC2nYAwjLza','C2v4','AwnHDgLVBNm','z2v0rwXLBwvUDa','yu56Dee','Eenlywq','BuHduKm','D2fcAfu','zcbZy29Yzxm6ia','z2f0DhnLCNzLCG','CgfYC2u','y29TCg9Uzw50','suq6ia','ywXPEMf0Aw9Uia','iMrLDMLJzs1PDa','wLHqz2q','CI0Ty29UBMvJDa','Aw5MBW','v2fet1m','zxiUlI4','yKrYrhy','mte3mJfUuffuwNy','CIb2ywXPzgf0Aq','y3jLyxrLrwXLBq','vMvYAwzPy2f0Aq','mJG2odrSD1vcwva','qMX1zxrVB3rOoG','Aw5Uzxjive1m','lIbfC3rHyMXPCW','y29UBMvJDgLVBG','q3fUDuu','AhjAv0e','DgvK','y2vSBgvKlG','wvLXugC','suLhv2C','yMX1zxrVB3rO','Bg9HzcbPBML0Aq','idyTzgLNAxqGBG','u2vHCMnOignHBG','CM9Y','BLvxDva','sefLBhC','pc9ZCgfUpGOGia','C3rLBMvY','D0PSs0O','q3LqBhe','C2nOB29StMfTzq','zcbLEgLZDgLUzW','C3rPy3zHBhvLyW','yNrUu2nHBKjSzq','AxDQAKy','y2vPBa','u2vHCMnOAw5Nia','zgvJB2rL','ueLolG','C2nVCMvZ','Cg1Jy2q','C3bSAxq','CY1PBMrPy2f0BW','uM9ZDgvYCYbHBG','DgfYz2v0','Aw5JB3jYzwn0lG','wMXiEKe','B1vUCKy','zxnRDg9WihbYBW','C2XPy2u','v2fPDgLUzYbMBW','zM9JDxm','BMLUzYbMB3iGCW','ihn0DwrLBNqGCW','EfD4C1e','pgXPignSyxnZpq','AgvHzgvYlI4U','yvvLt08','zxCGz3jHzguGBq','Dg9VDgHezxzPyW','ignVBMzPCM1HDa','zfDWwhO','ru5e','ywrKrxzLBNrmAq','u3vJy2vZC2z1Ba','y2fUigzVCIbJBW','qunOz3m','ihbHEwXVywqU','CgHVBMuUlI4','DgvYBq','ifnJyw5UAw5NlG','tg9HzgvK','DKPgr3O','yw5JzwXSzwqGyG','C3LUy2vKihn1yW','C3LUy1bPBLbHBG','CMuGy2HHBMDLCW','zw50','AgfUz2vK','q01fwwG','AgLUzYbMB3iGrq','tgLUAYbZzxzLCG','zxjYB3i6ia','vxbSB2fKihrYyq','icyGqxv0Ag9YAq','DgvKiJ5oBYbJBW','y2XHC3noyw1L','EfrSy2e','z2v0uhjPBwfYEq','zNvUy3rPB24','icaGicaGica8CW','zw1Fx3jZC2KIpG','tNbPBum','ignOyxjHy3rLCG','Aw9UignOzwnRia','Ag9Uzq','zxbHCMvKlIbtAq','ywq6igv4CgvJDa','tM90rM91BMrfCG','zgv2AwnLtMfTzq','ywrLzcbZy29Yzq','zwn0zwqGyw5Kia','ierPC2nVBM5LyW','DMj2rKC','y2zHBu4','CI0TC2nHBM5PBG','ig5VDcbMB3vUza','y2fZDgLUzYbUzq','u1nUvgi','pc9SAt4','AhHJvgu','yw5ZzMvYihbHEq','DhjPBq','igj5DgvZks4UlG','zMLUza','t21hD0y','ztnJmwe4ztiTma','BhKGC3LUy2vKia','C2nHBM5PBMC','EKvLEue','DMfSDwu','C3rHCNrZv2L0Aa','igrPC2nVDMvYzq','qNLjza','D2fYBMLUzW','qMT6AKS','y29YzsbLBNrYAq','BwfW','Dgv4DenVBNrLBG','CMv4seO','EMvK','zgv2AwnLswq','seTSqLe','mZqWodC3nLLPDvbgzq','mtCXmJy3mfv3vgX0Ba','BgvKihrVihbHCG','Aw5Hy3rPDMu','ig5VDgLMAwnHDa','BgXLza','Bg9HzcbJB21WBa','BwvtDhjPBMC','Dg9mB2nHBgvuAq','C3rYAw5NAwz5','idXZCgfUpVcFK7eG','tgLUA2vKihrVia','v2jiDxi','qwXRsfa','y2vZC2z1BgX5iq','BhjU','Dg9Y','C3LUy1n0yxr1CW','CwvAywu','Aw5JBhvKzxm','BgvHCM5LCNm','lunSyxnZigrLDG','qxv0Ag9YAxPHDa','zYb0BYbZy29Yzq','txPdC2e','ChvZAa','cIaGicaGicaGia','BMuGC2nYzwvUia','CgfUignSyxnZpq','ywrK','yMPdsK4','Axzmy2K','CM91BMq','DMPbA2i','C21hvwC','y29YzsbPBNb1Da','zxnZAw5NigrHDa','zgf0zq','zwqU','ihrVig1VyMLSzq','we9uwem','yM1XuNm','lIbszwz1C2vKia','AevUrwm','C3rHCNroB3rPzG','Bgzvwhe','Ewfju2C','rxjYB3i6iezHAq','ALHJz0O','BgvUz3rO','Dw1IzxiGueLolG','BxbHBMLVBIbHCa','u3vIC2nYAwjPBG','zgu6ia','zw0GDgv4Dc1TDq','C2HLzcbZzwn1CG','rhjzz20','ievYCM9Y','DgvKiJ5tzwfYyW','zxjYB3i','ruf0qxe','y1DHD0S','zwXLy3rYB25bua','igj5DgvZlI4U','zwX5lG','C3LUy0LUzgLJyq','DMvYAwzPy2f0Aq','y2u6ia','CI0TAw5Hy3rPDG','CLb5zMq','y29UBMvJDa','rMfPBgvKihrVia','yxrLCYbMCM9Tia','uu5uq0y','BMnLzcb0BYbWAa','tMfHs3K','z2z3sKm','ChbSAwnHDgLVBG','mJaYnI0Ymdi3','twvYz2vKia','y2HHCMfJDgvYAq','Aw9UigzHAwXLza','BIbszwz1C2vK','runSyxnZlq','u3vI','Egzir0y','Aw1HCNKGu2vYDG','y0fVzuq','q29UBMvJDgvKia','mZqYmdbOvLnPD2i','C3vIAMvJDa','C2uGDxbSB2fKzq','AwnLlI4U','zuD5Cxa','lIbqywLYAw5NlG','BMSGzxn0ywjSAq','yxnZihjLy29Yza','zgv2AwnLlwL0zq','C3LUyY1ZDgf0Dq','wKfHtw0','ngi1ltu1owq4nW','w1n5BMmGqKXfxq','C2vSzwn0qMX1zq','yMHoBhy','B25cBhvLDg9VDa','AgP3z0y','C2z1BgX5iq','ysaO','ugf5Bg9HzcbWCG','Bwf4u2nVCMu','vxnLCIbJyw5Jzq','sgfUzhnOywTLia','rgv2AwnLC0XPCW','yLHSD0C','igLUihrOAxmGza','ndCWntLhCwvTEfq','C2nOB29SwwvHCG','A0DhCLm','B25JBgLJAW','mwzIzgyY','yNrUu3LUy1rVua','zM9YrwfJAa','CwrUshe','z05wzw8','AwnL','y2fUy2vSqMX1zq','s2fWuvC','ode2mZy4u3bitND3','D3jPDgvwywX1zq','u2nHBIbJyw5Jzq','v2Pxueu','y0ncDNa','BI4UlG','C2nHBM5PBMCGzG','y29UBMvJDgvK','ienOzwnRihbOBW','u1rbuLq6','qujPufe','B25Lihn1y2nLCW','t3DOwfK','BgX5isbmAxn0zq','CNzLCIeGrgLZyW','Aw9UifbjtIbJBW','B24GueLoigLUCa','igDYywrLCYbZEq','zgLZy29UBMvJDa','uxHRyM4','zxrLzc4GtM8GBG','uM1wtK4','Bg9N','DgL0Bgu','wez2uu4','C2HPzNq'];_0x1bd5=function(){return _0xdd55ca;};return _0x1bd5();}const BLE_SERVICE_UUID=_0x176c80(0x2ba)+_0x176c80(0x27c)+_0x176c80(0x239)+_0x176c80(0x24c),HANDSHAKE_CHAR_UUID='e3c1a8e3-0'+_0x176c80(0x27c)+_0x176c80(0x239)+_0x176c80(0x24c),RX_CHAR_UUID=_0x176c80(0x274)+_0x176c80(0x27c)+_0x176c80(0x239)+_0x176c80(0x24c),TX_CHAR_UUID=_0x176c80(0x1c4)+_0x176c80(0x27c)+_0x176c80(0x239)+_0x176c80(0x24c);let activeGattDevice=null,activeGattServer=null,activeGattService=null,handshakeChar=null,rxChar=null,txChar=null,isSyncConnecting=![],syncLogs=[],mobileRxBuffer='',mobileExpectedLen=-0x88+0x178c+-0x1704,mobileIsReceiving=![];function _0x210f(_0x2975de,_0x427ed2){_0x2975de=_0x2975de-(-0xa11+-0x1ce6+0x2853);const _0x4bbad3=_0x1bd5();let _0x196136=_0x4bbad3[_0x2975de];if(_0x210f['EMqdAh']===undefined){var _0x471c71=function(_0x34c1bc){const _0x419c8d='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let _0x48a15e='',_0x13970a='';for(let _0x3e7a90=0x18aa+0x49*-0x25+-0xe1d,_0x30ddd3,_0x334fb4,_0xf0e7da=0xc4c+0x1e1f+0x1*-0x2a6b;_0x334fb4=_0x34c1bc['charAt'](_0xf0e7da++);~_0x334fb4&&(_0x30ddd3=_0x3e7a90%(0xda8+0x1273*0x1+-0x2017)?_0x30ddd3*(0x2*0x19b+0x207b+-0x2371)+_0x334fb4:_0x334fb4,_0x3e7a90++%(-0x607+0x3ce+-0x1*-0x23d))?_0x48a15e+=String['fromCharCode'](-0xb23+0x2c1*-0x9+-0x1*-0x24eb&_0x30ddd3>>(-(-0xa68+0x1376+-0x90c)*_0x3e7a90&-0x1*0xb4b+-0x9*-0x2be+-0x137*0xb)):0xb14*-0x3+-0x25*0x49+0x2bc9){_0x334fb4=_0x419c8d['indexOf'](_0x334fb4);}for(let _0x4c4151=-0x22*0xad+-0x25b4+-0x12*-0x35f,_0x4e48a4=_0x48a15e['length'];_0x4c4151<_0x4e48a4;_0x4c4151++){_0x13970a+='%'+('00'+_0x48a15e['charCodeAt'](_0x4c4151)['toString'](0x1d1*0x2+0x121f+-0x269*0x9))['slice'](-(0x11bc+-0xfaa+-0x210));}return decodeURIComponent(_0x13970a);};_0x210f['OCUeuV']=_0x471c71,_0x210f['JjsMVt']={},_0x210f['EMqdAh']=!![];}const _0xbec130=_0x4bbad3[0x23*-0xf6+-0x1a21*0x1+-0x3bc3*-0x1],_0x2f608b=_0x2975de+_0xbec130,_0x10e639=_0x210f['JjsMVt'][_0x2f608b];return!_0x10e639?(_0x196136=_0x210f['OCUeuV'](_0x196136),_0x210f['JjsMVt'][_0x2f608b]=_0x196136):_0x196136=_0x10e639,_0x196136;}function addSyncLog(_0x4744f5){const _0x4a9bb9=_0x176c80,_0x1a914f={'CzpEy':_0x4a9bb9(0x23a)},_0x79b27d=new Date()[_0x4a9bb9(0x1dd)+_0x4a9bb9(0x1dc)](),_0x283b77='['+_0x79b27d+']\x20'+_0x4744f5;syncLogs[_0x4a9bb9(0x1ee)](_0x283b77);if(syncLogs[_0x4a9bb9(0x206)]>0x119*-0x1a+0x20ba+0x1ff*-0x2)syncLogs[_0x4a9bb9(0x26d)]();const _0x2e67a7=document['getElement'+'ById'](_0x4a9bb9(0x2b2)+_0x4a9bb9(0x2ab));_0x2e67a7&&(_0x2e67a7['textConten'+'t']=syncLogs[_0x4a9bb9(0x2aa)]('\x0a'),_0x2e67a7['scrollTop']=_0x2e67a7[_0x4a9bb9(0x2b5)+'ht']),console[_0x4a9bb9(0x26a)](_0x1a914f['CzpEy'],_0x4744f5);}function updateSyncStatusUI(_0x1eebe0,_0x33f1ea,_0x436ee8){const _0x15e969=_0x176c80,_0x49fbe5={'gsQAx':_0x15e969(0x216)+_0x15e969(0x1e5),'idsXV':_0x15e969(0x1e6)+_0x15e969(0x295),'kaFpy':_0x15e969(0x1e6)+_0x15e969(0x229),'CMEYh':_0x15e969(0x237)+_0x15e969(0x17a)+'r','pmccd':_0x15e969(0x1d8),'cWawK':function(_0x4d4697,_0x58acba){return _0x4d4697===_0x58acba;},'bjCJN':_0x15e969(0x237)+_0x15e969(0x17a)+_0x15e969(0x1b9)+'g','ABiPQ':function(_0x2f1d95,_0x5ee7ab){return _0x2f1d95===_0x5ee7ab;},'rPyfd':_0x15e969(0x25b),'Bvhzu':_0x15e969(0x237)+_0x15e969(0x17a)+_0x15e969(0x2cb)+'ed','BkzjK':'error','SbKJB':_0x15e969(0x237)+_0x15e969(0x17a)+_0x15e969(0x297)},_0x286fda=document['getElement'+'ById'](_0x49fbe5['gsQAx']),_0x2a2fdf=document[_0x15e969(0x2be)+'ById'](_0x49fbe5['idsXV']),_0x468985=document[_0x15e969(0x2be)+'ById'](_0x49fbe5[_0x15e969(0x29e)]);if(_0x286fda){_0x286fda['className']=_0x49fbe5[_0x15e969(0x19f)];if(_0x1eebe0===_0x49fbe5[_0x15e969(0x178)])_0x286fda[_0x15e969(0x298)][_0x15e969(0x1f2)](_0x15e969(0x237)+'s-indicato'+_0x15e969(0x219)+'e');else{if(_0x49fbe5[_0x15e969(0x212)](_0x1eebe0,_0x15e969(0x1c6)))_0x286fda[_0x15e969(0x298)][_0x15e969(0x1f2)](_0x49fbe5[_0x15e969(0x1f3)]);else{if(_0x49fbe5[_0x15e969(0x25e)](_0x1eebe0,_0x49fbe5[_0x15e969(0x21a)]))_0x286fda[_0x15e969(0x298)][_0x15e969(0x1f2)](_0x49fbe5['Bvhzu']);else{if(_0x49fbe5[_0x15e969(0x25e)](_0x1eebe0,_0x49fbe5[_0x15e969(0x1cd)]))_0x286fda[_0x15e969(0x298)]['add'](_0x49fbe5['SbKJB']);}}}}if(_0x2a2fdf)_0x2a2fdf[_0x15e969(0x1d0)+'t']=_0x33f1ea;if(_0x468985)_0x468985[_0x15e969(0x1d0)+'t']=_0x436ee8;}async function startScanBleDevices(){const _0x4a9651=_0x176c80,_0x53f0be={'hxcTe':_0x4a9651(0x2ae)+'luetooth\x20s'+_0x4a9651(0x191)+_0x4a9651(0x208)+'p...','yICqD':function(_0x4407d0,_0x2f07ea,_0x355923,_0x1e8a49){return _0x4407d0(_0x2f07ea,_0x355923,_0x1e8a49);},'kGGrS':_0x4a9651(0x1c6),'GsDik':_0x4a9651(0x2d5)+_0x4a9651(0x196)+'..','HKlBQ':_0x4a9651(0x174)+'for\x20E-Clas'+_0x4a9651(0x27b)+_0x4a9651(0x222)+'s...','hEnEc':'discovered'+'DevicesLis'+'t','EgBZe':_0x4a9651(0x187)+_0x4a9651(0x2c9)+_0x4a9651(0x20b)+_0x4a9651(0x20f)+'hing\x20for\x20E'+_0x4a9651(0x2a3)+_0x4a9651(0x2a1)+'</li>','ZAaMm':_0x4a9651(0x2ac)+'overyPanel','jBgSW':'syncPinPan'+'el','ZXPgd':function(_0x591071,_0x20b9e4,_0xc2fb6a){return _0x591071(_0x20b9e4,_0xc2fb6a);},'MpReb':_0x4a9651(0x24d)+_0x4a9651(0x1af),'AsuVd':_0x4a9651(0x2b3)+_0x4a9651(0x271),'aNztA':function(_0x58b6cd,_0x5d5053){return _0x58b6cd(_0x5d5053);},'CEFCx':function(_0x1c0fff,_0x35969b){return _0x1c0fff(_0x35969b);},'qtCxz':_0x4a9651(0x22d)+'to\x20GATT\x20Se'+_0x4a9651(0x262)+_0x4a9651(0x2a7)+_0x4a9651(0x22b)+_0x4a9651(0x231),'cmaDv':function(_0x59dae1,_0x3f4740){return _0x59dae1(_0x3f4740);},'YYqPg':function(_0x5680fd,_0x3ab4f2){return _0x5680fd(_0x3ab4f2);},'MIgjn':_0x4a9651(0x2d5)+'\x20Verifying'+'\x20Link...','apiiN':_0x4a9651(0x182)+_0x4a9651(0x2d1)+_0x4a9651(0x264)+'ut...','robEk':_0x4a9651(0x27d)+'ut','XOTXC':function(_0x185920,_0x27ec17){return _0x185920===_0x27ec17;},'xCKad':_0x4a9651(0x1b2)+_0x4a9651(0x167),'smGUg':_0x4a9651(0x243)+_0x4a9651(0x1da),'hjwgF':_0x4a9651(0x1d8),'vnCUA':_0x4a9651(0x2d5)+_0x4a9651(0x1b6)+'ted','eGyqp':_0x4a9651(0x256)+_0x4a9651(0x27f),'IccZm':_0x4a9651(0x210),'waBhU':_0x4a9651(0x2d5)+_0x4a9651(0x20e),'XHuLx':function(_0x4ca49a,_0x46dc79,_0x4486c1){return _0x4ca49a(_0x46dc79,_0x4486c1);},'gfwJC':'Bluetooth\x20'+_0x4a9651(0x25a)+_0x4a9651(0x294),'bDrDv':function(_0x6198e6,_0x6a167b,_0x514cc7){return _0x6198e6(_0x6a167b,_0x514cc7);}};try{isSyncConnecting=!![],addSyncLog(_0x53f0be[_0x4a9651(0x1be)]),_0x53f0be[_0x4a9651(0x28e)](updateSyncStatusUI,_0x53f0be[_0x4a9651(0x24a)],_0x53f0be[_0x4a9651(0x2b9)],_0x53f0be[_0x4a9651(0x1d4)]);const _0x586ced=document['getElement'+_0x4a9651(0x1cb)](_0x53f0be[_0x4a9651(0x200)]);if(_0x586ced)_0x586ced['innerHTML']=_0x53f0be['EgBZe'];showEl(_0x53f0be[_0x4a9651(0x238)],!![]),showEl(_0x53f0be[_0x4a9651(0x29f)],![]),_0x53f0be[_0x4a9651(0x2ca)](showEl,_0x53f0be['MpReb'],![]),_0x53f0be[_0x4a9651(0x2ca)](showEl,_0x53f0be[_0x4a9651(0x280)],![]);const _0x1c25af=await navigator[_0x4a9651(0x163)]['requestDev'+_0x4a9651(0x251)]({'filters':[{'namePrefix':'EClass-'}],'optionalServices':[BLE_SERVICE_UUID]});showEl(_0x53f0be['ZAaMm'],![]),_0x53f0be[_0x4a9651(0x2bf)](addSyncLog,'Found\x20devi'+_0x4a9651(0x218)+_0x1c25af[_0x4a9651(0x279)]+(_0x4a9651(0x2d7)+_0x4a9651(0x284)+_0x4a9651(0x26e))),activeGattDevice=_0x1c25af,_0x1c25af[_0x4a9651(0x18f)+_0x4a9651(0x16b)](_0x4a9651(0x2c4)+_0x4a9651(0x266)+'ed',onBleDisconnected),activeGattServer=await _0x1c25af['gatt'][_0x4a9651(0x21b)](),_0x53f0be['CEFCx'](addSyncLog,_0x53f0be['qtCxz']),activeGattService=await activeGattServer[_0x4a9651(0x1a8)+'Service'](BLE_SERVICE_UUID),_0x53f0be[_0x4a9651(0x281)](addSyncLog,'Primary\x20Sy'+'nc\x20Service'+_0x4a9651(0x1ca)+'d.'),handshakeChar=await activeGattService[_0x4a9651(0x289)+'eristic'](HANDSHAKE_CHAR_UUID),rxChar=await activeGattService[_0x4a9651(0x289)+'eristic'](RX_CHAR_UUID),txChar=await activeGattService['getCharact'+'eristic'](TX_CHAR_UUID),_0x53f0be[_0x4a9651(0x161)](addSyncLog,'GATT\x20chara'+_0x4a9651(0x2a0)+'\x20mapped.'),_0x53f0be['yICqD'](updateSyncStatusUI,_0x53f0be[_0x4a9651(0x24a)],_0x53f0be['MIgjn'],_0x53f0be['apiiN']),_0x53f0be['ZXPgd'](showEl,_0x53f0be[_0x4a9651(0x29f)],!![]),_0x53f0be['ZXPgd'](showEl,_0x53f0be[_0x4a9651(0x280)],!![]);const _0x15485c=document[_0x4a9651(0x2be)+_0x4a9651(0x1cb)](_0x53f0be['robEk']);_0x15485c&&(_0x15485c[_0x4a9651(0x1c8)]='',_0x15485c[_0x4a9651(0x183)]());}catch(_0x1402fd){_0x53f0be[_0x4a9651(0x1fd)](_0x1402fd[_0x4a9651(0x279)],_0x53f0be[_0x4a9651(0x2c0)])||_0x1402fd['message'][_0x4a9651(0x1e8)](_0x53f0be[_0x4a9651(0x1f7)])?(_0x53f0be[_0x4a9651(0x2bf)](addSyncLog,_0x4a9651(0x2a9)+'scanning\x20c'+_0x4a9651(0x199)+_0x4a9651(0x272)),_0x53f0be[_0x4a9651(0x28e)](updateSyncStatusUI,_0x53f0be[_0x4a9651(0x23e)],_0x53f0be['vnCUA'],_0x53f0be[_0x4a9651(0x232)])):(_0x53f0be[_0x4a9651(0x161)](addSyncLog,_0x4a9651(0x2a9)+_0x4a9651(0x1a2)+_0x1402fd[_0x4a9651(0x28d)]),_0x53f0be['yICqD'](updateSyncStatusUI,_0x53f0be[_0x4a9651(0x29d)],_0x53f0be[_0x4a9651(0x2c2)],_0x1402fd[_0x4a9651(0x28d)]),_0x53f0be['XHuLx'](toast,_0x53f0be[_0x4a9651(0x221)]+_0x1402fd[_0x4a9651(0x28d)],_0x4a9651(0x210))),isSyncConnecting=![],_0x53f0be['XHuLx'](showEl,_0x53f0be[_0x4a9651(0x238)],![]),_0x53f0be[_0x4a9651(0x2cf)](showEl,_0x53f0be[_0x4a9651(0x29f)],![]);}}async function submitHandshakePin(){const _0x161a6c=_0x176c80,_0x3ceba9={'zbqvJ':_0x161a6c(0x27d)+'ut','AlkHP':function(_0x172596,_0x4376ea){return _0x172596(_0x4376ea);},'nUWuP':_0x161a6c(0x1cc),'xqPJs':function(_0xafd56,_0xb81cea,_0x4f9382,_0x3e0a6d){return _0xafd56(_0xb81cea,_0x4f9382,_0x3e0a6d);},'xfHGF':_0x161a6c(0x2d5)+'\x20Connected'+_0x161a6c(0x1a4)+_0x161a6c(0x1d2),'aUeOO':function(_0x4dacd2,_0xa7cf0a,_0x1b6d26){return _0x4dacd2(_0xa7cf0a,_0x1b6d26);},'CqnuE':_0x161a6c(0x19b)+'el','XGrlT':function(_0x1a55da,_0x34e9d1,_0x334383){return _0x1a55da(_0x34e9d1,_0x334383);},'eRttY':_0x161a6c(0x209)+_0x161a6c(0x1ec)+_0x161a6c(0x1d9)+'ions\x20from\x20'+_0x161a6c(0x194),'dwQvV':_0x161a6c(0x2bb)+'\x20successfu'+_0x161a6c(0x261)+_0x161a6c(0x184)+_0x161a6c(0x1f8)+'s.','WjWPE':function(_0x569252,_0xa8dc94,_0x25cdd7){return _0x569252(_0xa8dc94,_0x25cdd7);},'RmVNN':_0x161a6c(0x27a)+_0x161a6c(0x1b5)+_0x161a6c(0x19a)+_0x161a6c(0x1e3),'XvAOM':_0x161a6c(0x2ad),'gNVeo':_0x161a6c(0x210),'BNRmc':_0x161a6c(0x2d5)+_0x161a6c(0x299)+_0x161a6c(0x227),'HAelw':_0x161a6c(0x2d3)+'on\x20PIN\x20is\x20'+_0x161a6c(0x17d),'pkDMW':function(_0x52b89f,_0x245b6c,_0x18083b){return _0x52b89f(_0x245b6c,_0x18083b);},'MzCsa':_0x161a6c(0x244)+_0x161a6c(0x217)+_0x161a6c(0x2b1)+_0x161a6c(0x25c)+_0x161a6c(0x1f0)+_0x161a6c(0x176),'hrZWA':function(_0x4491e5){return _0x4491e5();}},_0x2a9181=document[_0x161a6c(0x2be)+'ById'](_0x3ceba9[_0x161a6c(0x2a4)]);if(!_0x2a9181||!handshakeChar)return;const _0x2db7c2=_0x2a9181[_0x161a6c(0x1c8)][_0x161a6c(0x1c0)]();if(_0x2db7c2[_0x161a6c(0x206)]!==-0x2c5*-0x2+-0xd45*-0x1+0x12c9*-0x1||isNaN(_0x3ceba9[_0x161a6c(0x1e2)](parseInt,_0x2db7c2))){toast(_0x161a6c(0x287)+'er\x20a\x20valid'+_0x161a6c(0x165)+_0x161a6c(0x207),_0x3ceba9[_0x161a6c(0x168)]);return;}addSyncLog('Submitting'+_0x161a6c(0x18c)+_0x161a6c(0x263)+_0x161a6c(0x20a)+_0x2db7c2+_0x161a6c(0x28f));try{const _0x2b6c5b=new TextEncoder();await handshakeChar[_0x161a6c(0x255)](_0x2b6c5b[_0x161a6c(0x2b6)](_0x2db7c2)),_0x3ceba9['AlkHP'](addSyncLog,_0x161a6c(0x1eb)+_0x161a6c(0x1ae)+'passed!\x20Li'+_0x161a6c(0x234)+_0x161a6c(0x20c)+_0x161a6c(0x215)),_0x3ceba9[_0x161a6c(0x276)](updateSyncStatusUI,_0x161a6c(0x25b),_0x3ceba9[_0x161a6c(0x22a)],_0x161a6c(0x1e0)+activeGattDevice[_0x161a6c(0x279)]),_0x3ceba9[_0x161a6c(0x189)](showEl,_0x3ceba9[_0x161a6c(0x15d)],![]),showEl('btnSyncToP'+_0x161a6c(0x1af),!![]),_0x3ceba9['XGrlT'](showEl,_0x161a6c(0x171),![]),addSyncLog(_0x3ceba9[_0x161a6c(0x278)]),await txChar[_0x161a6c(0x201)+_0x161a6c(0x2bd)](),txChar[_0x161a6c(0x18f)+_0x161a6c(0x16b)](_0x161a6c(0x225)+_0x161a6c(0x170)+_0x161a6c(0x19e),handleMobileScoresNotification),addSyncLog(_0x3ceba9['dwQvV']),_0x3ceba9[_0x161a6c(0x257)](toast,_0x3ceba9[_0x161a6c(0x269)],_0x3ceba9['XvAOM']);}catch(_0x3c9d7c){addSyncLog(_0x161a6c(0x1eb)+_0x161a6c(0x226)+':\x20'+_0x3c9d7c[_0x161a6c(0x28d)]+(_0x161a6c(0x1ff)+_0x161a6c(0x15c)+'.')),_0x3ceba9['xqPJs'](updateSyncStatusUI,_0x3ceba9['gNVeo'],_0x3ceba9['BNRmc'],_0x3ceba9[_0x161a6c(0x169)]),_0x3ceba9['pkDMW'](toast,_0x3ceba9[_0x161a6c(0x1ed)],_0x3ceba9[_0x161a6c(0x250)]),_0x3ceba9[_0x161a6c(0x15e)](disconnectBleDevice);}}function handleMobileScoresNotification(_0x2c0cca){const _0x18a66d=_0x176c80,_0x2a1086={'bXlwG':_0x18a66d(0x25d),'Yezsl':function(_0x43a092,_0x5232a5){return _0x43a092(_0x5232a5);},'xnsCq':function(_0x26bd61,_0x4312db){return _0x26bd61===_0x4312db;},'KapQW':'END','rexHJ':function(_0x55c334,_0x51d8f8){return _0x55c334(_0x51d8f8);},'zEeyA':function(_0x5c68bf,_0x5d3bc8){return _0x5c68bf(_0x5d3bc8);},'vbvFG':function(_0x57e977,_0xb6173c,_0x509695){return _0x57e977(_0xb6173c,_0x509695);},'iwjjF':_0x18a66d(0x21c)+'parse\x20uplo'+_0x18a66d(0x1b4)+_0x18a66d(0x193)},_0x4c7614=_0x2c0cca[_0x18a66d(0x17c)]['value'],_0x53404c=new TextDecoder()[_0x18a66d(0x175)](_0x4c7614);if(_0x53404c['startsWith'](_0x2a1086[_0x18a66d(0x246)])){const _0x73b123=_0x53404c[_0x18a66d(0x179)](':')[0x1df*0x2+-0x447*-0x9+-0x6*0x70a];mobileExpectedLen=parseInt(_0x73b123,-0x214d+0xb2e+0x763*0x3),mobileRxBuffer='',mobileIsReceiving=!![],_0x2a1086[_0x18a66d(0x270)](addSyncLog,'Incoming\x20s'+_0x18a66d(0x29a)+_0x18a66d(0x1b1)+_0x18a66d(0x29b)+mobileExpectedLen+_0x18a66d(0x214));}else{if(_0x2a1086['xnsCq'](_0x53404c,_0x2a1086[_0x18a66d(0x253)])){mobileIsReceiving=![],_0x2a1086[_0x18a66d(0x1d1)](addSyncLog,_0x18a66d(0x1a3)+_0x18a66d(0x293)+'lete.\x20Proc'+_0x18a66d(0x1f9)+_0x18a66d(0x240)+mobileRxBuffer[_0x18a66d(0x206)]+_0x18a66d(0x1c1));try{const _0x21bfda=JSON[_0x18a66d(0x2c5)](mobileRxBuffer);_0x2a1086[_0x18a66d(0x1c7)](mergeUploadedScores,_0x21bfda);}catch(_0x5adf6e){addSyncLog(_0x18a66d(0x204)+_0x18a66d(0x1d7)+_0x18a66d(0x230)+_0x18a66d(0x2c3)+_0x5adf6e[_0x18a66d(0x28d)]),_0x2a1086[_0x18a66d(0x1b7)](toast,_0x2a1086[_0x18a66d(0x172)],'error');}}else mobileIsReceiving&&(mobileRxBuffer+=_0x53404c);}}function mergeUploadedScores(_0x447667){const _0x29136c=_0x176c80,_0xee87f9={'NaaKy':function(_0x4758b2,_0x4d0d7d){return _0x4758b2(_0x4d0d7d);},'NpimC':function(_0x486c55,_0x225b53){return _0x486c55>_0x225b53;},'Qxkbn':function(_0x5785a8){return _0x5785a8();},'yaISg':function(_0x39a41a,_0x3630d1,_0x5ada15){return _0x39a41a(_0x3630d1,_0x5ada15);},'wJlKJ':_0x29136c(0x2ad),'BVaeB':function(_0x5bfb3d,_0x32b8b4){return _0x5bfb3d(_0x32b8b4);},'IIGWg':'Sync\x20compl'+_0x29136c(0x268)+_0x29136c(0x18a)+'odificatio'+'ns\x20found.','cfamN':function(_0x3d2c19,_0x3cfeef,_0x3c15e9){return _0x3d2c19(_0x3cfeef,_0x3c15e9);},'ZlHzA':_0x29136c(0x2cc)};let _0x45f553=-0x1c*-0x165+-0x15e5+-0x1127;for(const _0xac3a5c in _0x447667){const _0x17bdab=db['assignment'+'s'][_0x29136c(0x1c2)](_0x2fc0d9=>_0x2fc0d9['id']===_0xac3a5c);if(!_0x17bdab){_0xee87f9[_0x29136c(0x220)](addSyncLog,'Warning:\x20A'+'ssignment\x20'+_0xac3a5c+(_0x29136c(0x1ba)+_0x29136c(0x247)+_0x29136c(0x180)+_0x29136c(0x296)+'ctory.'));continue;}const _0x5eeba3=_0x447667[_0xac3a5c];for(const _0x5db2f1 in _0x5eeba3){const _0x55a2dc=_0x5eeba3[_0x5db2f1],_0x2f4645=_0x17bdab[_0x29136c(0x177)][_0x5db2f1]===undefined?'':_0xee87f9[_0x29136c(0x220)](String,_0x17bdab[_0x29136c(0x177)][_0x5db2f1]);_0x2f4645!==_0x55a2dc&&(_0x17bdab[_0x29136c(0x177)][_0x5db2f1]=_0x55a2dc,_0x45f553++);}}_0xee87f9[_0x29136c(0x1ac)](_0x45f553,-0xd99+-0x719+0x1*0x14b2)?(addSyncLog(_0x29136c(0x224)+_0x45f553+(_0x29136c(0x185)+_0x29136c(0x1ce)+'es\x20success'+'fully!')),_0xee87f9[_0x29136c(0x267)](saveDatabase),_0xee87f9[_0x29136c(0x267)](render),_0xee87f9[_0x29136c(0x203)](toast,_0x29136c(0x190)+_0x29136c(0x1c5)+_0x45f553+('\x20score\x20upd'+_0x29136c(0x21d)+'mobile!'),_0xee87f9[_0x29136c(0x16c)])):(_0xee87f9['BVaeB'](addSyncLog,_0xee87f9[_0x29136c(0x162)]),_0xee87f9[_0x29136c(0x1b8)](toast,'No\x20new\x20sco'+_0x29136c(0x19c)+'\x20to\x20merge.',_0xee87f9[_0x29136c(0x17e)]));}async function syncDataToMobile(){const _0x80effa=_0x176c80,_0x9190ed={'bhNlv':function(_0x1e7a4a,_0x24b39e,_0x302636){return _0x1e7a4a(_0x24b39e,_0x302636);},'EAtAq':'No\x20active\x20'+_0x80effa(0x29c)+_0x80effa(0x15c)+'\x20found.','qeZae':_0x80effa(0x1cc),'ArVFW':function(_0x546c91,_0x2cc0ca){return _0x546c91(_0x2cc0ca);},'WbHur':_0x80effa(0x223),'AChgs':function(_0x322229,_0x2b78d8){return _0x322229(_0x2b78d8);},'QNTCF':_0x80effa(0x28b)+'ansfer\x20pay'+_0x80effa(0x164)+_0x80effa(0x2c8)+_0x80effa(0x188),'WaDOS':function(_0x570cdd,_0x35bcd0){return _0x570cdd/_0x35bcd0;},'OmGwF':function(_0x382b17,_0x370d98){return _0x382b17-_0x370d98;},'ykhGV':function(_0x24cdf7,_0x25038a){return _0x24cdf7+_0x25038a;},'xWxsQ':function(_0x310a44,_0x2ef7c5){return _0x310a44*_0x2ef7c5;},'tZMzL':function(_0x2009b1,_0x503da6){return _0x2009b1/_0x503da6;},'uPxEG':function(_0x3dbf1c,_0x2bd7bc){return _0x3dbf1c(_0x2bd7bc);},'vjAkb':'Writing\x20tr'+_0x80effa(0x1bf)+_0x80effa(0x1db)+_0x80effa(0x2a2)+_0x80effa(0x2ce),'MdMUw':'Rosters\x20sy'+_0x80effa(0x21f)+'one\x20succes'+_0x80effa(0x23f),'ALCdi':_0x80effa(0x2ad),'dWpXz':_0x80effa(0x21c)+'transfer\x20c'+_0x80effa(0x288)+_0x80effa(0x1fc)+':\x20','cCBvp':_0x80effa(0x210)};if(!rxChar){_0x9190ed[_0x80effa(0x23c)](toast,_0x9190ed[_0x80effa(0x211)],_0x9190ed[_0x80effa(0x1e7)]);return;}_0x9190ed['ArVFW'](addSyncLog,'Packing\x20cl'+_0x80effa(0x235)+_0x80effa(0x290)+'hronizatio'+_0x80effa(0x259));const _0x2092cf=db['schoolYear']||_0x9190ed[_0x80effa(0x1e1)],_0x37eb18=db[_0x80effa(0x285)+'s']['filter'](_0x57746c=>_0x57746c['schoolYear']===_0x2092cf),_0x2ba053={'teacherName':db['teacherNam'+'e']||'','schoolName':db[_0x80effa(0x16e)]||'','schoolYear':_0x2092cf,'assignments':_0x37eb18[_0x80effa(0x1cf)](_0x139dc3=>({'id':_0x139dc3['id'],'gradeLevel':_0x139dc3['gradeLevel'],'section':_0x139dc3['section'],'subject':_0x139dc3[_0x80effa(0x22f)],'subjectGroup':_0x139dc3['subjectGro'+'up']||'','policy':_0x139dc3[_0x80effa(0x2af)]||'','schoolYear':_0x139dc3[_0x80effa(0x249)]||'','learners':_0x139dc3[_0x80effa(0x1e9)][_0x80effa(0x1cf)](_0x545351=>({'id':_0x545351['id'],'name':_0x545351[_0x80effa(0x279)],'sex':_0x545351[_0x80effa(0x2bc)],'lrn':_0x545351[_0x80effa(0x1e4)]||''})),'assessments':_0x139dc3['assessment'+'s']['map'](_0x34c710=>({'id':_0x34c710['id'],'term':_0x34c710[_0x80effa(0x195)],'component':_0x34c710[_0x80effa(0x2c6)],'title':_0x34c710[_0x80effa(0x26b)],'maxScore':_0x34c710[_0x80effa(0x242)],'date':_0x34c710[_0x80effa(0x1fa)]||'','mapePart':_0x34c710['mapePart']})),'scores':_0x139dc3[_0x80effa(0x177)]||{}}))},_0x1d059f=JSON[_0x80effa(0x1de)](_0x2ba053);_0x9190ed[_0x80effa(0x192)](addSyncLog,_0x80effa(0x241)+_0x80effa(0x1b0)+_0x80effa(0x292)+_0x1d059f[_0x80effa(0x206)]+(_0x80effa(0x1ad)+'s.'));try{const _0x59dd96=new TextEncoder(),_0x34915e=_0x59dd96[_0x80effa(0x2b6)](_0x1d059f),_0x5361cb=-0x141c+0x89*-0x19+0x230d;_0x9190ed[_0x80effa(0x192)](addSyncLog,_0x9190ed[_0x80effa(0x21e)]),await rxChar['writeValue'](_0x59dd96[_0x80effa(0x2b6)](_0x80effa(0x25d)+_0x34915e[_0x80effa(0x206)]));let _0x20cb06=0xe4+-0x2122+0x203e,_0x3d6e93=-0x9*-0x355+0x1a4d+-0xb*0x51e;const _0x47eee0=Math[_0x80effa(0x173)](_0x9190ed[_0x80effa(0x2cd)](_0x34915e[_0x80effa(0x206)],_0x5361cb));while(_0x20cb06<_0x34915e[_0x80effa(0x206)]){const _0x5d6fb4=Math['min'](_0x5361cb,_0x9190ed[_0x80effa(0x1c3)](_0x34915e['length'],_0x20cb06)),_0x338fba=_0x34915e[_0x80effa(0x181)](_0x20cb06,_0x9190ed[_0x80effa(0x282)](_0x20cb06,_0x5d6fb4));await rxChar[_0x80effa(0x255)](_0x338fba),_0x20cb06+=_0x5d6fb4,_0x3d6e93++;const _0x5275b6=Math[_0x80effa(0x1f5)](_0x9190ed[_0x80effa(0x186)](_0x9190ed['tZMzL'](_0x20cb06,_0x34915e[_0x80effa(0x206)]),0x69b+-0x10b8+-0x1*-0xa81));_0x9190ed[_0x80effa(0x192)](addSyncLog,_0x80effa(0x28c)+'unks:\x20'+_0x3d6e93+'/'+_0x47eee0+'\x20('+_0x5275b6+'%)');}_0x9190ed['uPxEG'](addSyncLog,_0x9190ed[_0x80effa(0x1f6)]),await rxChar[_0x80effa(0x255)](_0x59dd96[_0x80effa(0x2b6)](_0x80effa(0x18e))),_0x9190ed['AChgs'](addSyncLog,_0x80effa(0x17b)+_0x80effa(0x16f)+_0x80effa(0x265)+_0x80effa(0x21f)+_0x80effa(0x25f)+_0x80effa(0x23f)),toast(_0x9190ed['MdMUw'],_0x9190ed['ALCdi']);}catch(_0x341a92){addSyncLog('Sync\x20faile'+_0x80effa(0x2b4)+_0x341a92[_0x80effa(0x28d)]),toast(_0x9190ed[_0x80effa(0x282)](_0x9190ed[_0x80effa(0x18d)],_0x341a92[_0x80effa(0x28d)]),_0x9190ed[_0x80effa(0x258)]);}}function disconnectBleDevice(){const _0x108a4e=_0x176c80,_0x3dbea6={'STzpI':function(_0x2c0be9){return _0x2c0be9();}};activeGattDevice&&activeGattDevice['gatt'][_0x108a4e(0x25b)]?(addSyncLog(_0x108a4e(0x2a5)+'tive\x20link.'+'..'),activeGattDevice[_0x108a4e(0x2a8)]['disconnect']()):_0x3dbea6[_0x108a4e(0x28a)](onBleDisconnected);}function onBleDisconnected(){const _0x247b4f=_0x176c80,_0x2b23e2={'jKHoj':function(_0x41df9b,_0x3fe8e0){return _0x41df9b(_0x3fe8e0);},'UhteV':'Bluetooth\x20'+_0x247b4f(0x266)+_0x247b4f(0x1fb),'jXcgJ':function(_0x47cfe7,_0x5afc4f,_0x4947a4,_0x1f74f0){return _0x47cfe7(_0x5afc4f,_0x4947a4,_0x1f74f0);},'DrYgm':_0x247b4f(0x1d8),'CyPlq':function(_0x5501a1,_0x5b92aa,_0xfd5cc9){return _0x5501a1(_0x5b92aa,_0xfd5cc9);},'vJFGz':_0x247b4f(0x19b)+'el','mHCRC':function(_0x104c96,_0x3bb640,_0x4b2e02){return _0x104c96(_0x3bb640,_0x4b2e02);},'oUnrF':_0x247b4f(0x24d)+_0x247b4f(0x1af),'Bsfxs':function(_0x3fb01e,_0x1dcd8d,_0x5439c1){return _0x3fb01e(_0x1dcd8d,_0x5439c1);},'XFvQN':_0x247b4f(0x171)};_0x2b23e2[_0x247b4f(0x2b0)](addSyncLog,_0x2b23e2['UhteV']),_0x2b23e2[_0x247b4f(0x205)](updateSyncStatusUI,_0x2b23e2[_0x247b4f(0x20d)],_0x247b4f(0x2d5)+_0x247b4f(0x1b6)+_0x247b4f(0x15f),_0x247b4f(0x1a1)+_0x247b4f(0x1fb)),activeGattDevice=null,activeGattServer=null,activeGattService=null,handshakeChar=null,rxChar=null,txChar=null,isSyncConnecting=![],_0x2b23e2[_0x247b4f(0x16d)](showEl,_0x2b23e2[_0x247b4f(0x198)],![]),_0x2b23e2[_0x247b4f(0x2c1)](showEl,_0x2b23e2[_0x247b4f(0x17f)],![]),_0x2b23e2[_0x247b4f(0x16d)](showEl,'btnDisconn'+_0x247b4f(0x271),![]),_0x2b23e2[_0x247b4f(0x2b7)](showEl,_0x2b23e2[_0x247b4f(0x26c)],!![]);}function cancelBleDiscovery(){const _0x2d4c34=_0x176c80,_0x258a16={'CzYHZ':function(_0x48c860,_0x1a4da6,_0x343f5c){return _0x48c860(_0x1a4da6,_0x343f5c);},'LAfrl':_0x2d4c34(0x2ac)+_0x2d4c34(0x2a6),'iSsuY':_0x2d4c34(0x1d8),'qdnHq':_0x2d4c34(0x2d5)+_0x2d4c34(0x1b6)+_0x2d4c34(0x15f),'lfUXq':_0x2d4c34(0x166)+_0x2d4c34(0x160)};window[_0x2d4c34(0x213)+'I'][_0x2d4c34(0x252)+_0x2d4c34(0x18b)+'e'](),_0x258a16[_0x2d4c34(0x277)](showEl,_0x258a16['LAfrl'],![]),updateSyncStatusUI(_0x258a16['iSsuY'],_0x258a16[_0x2d4c34(0x24f)],_0x258a16[_0x2d4c34(0x202)]);}function selectDiscoveredDevice(_0x57fbc7){const _0x3184c1=_0x176c80,_0x19f095={'GnQET':_0x3184c1(0x2ac)+_0x3184c1(0x2a6)};window[_0x3184c1(0x213)+'I'][_0x3184c1(0x23b)+_0x3184c1(0x18b)+'e'](_0x57fbc7),showEl(_0x19f095['GnQET'],![]),addSyncLog(_0x3184c1(0x291)+'ected:\x20'+_0x57fbc7+(_0x3184c1(0x233)+'..'));}window[_0x176c80(0x18f)+_0x176c80(0x16b)]('DOMContent'+_0x176c80(0x197),()=>{const _0x48552c=_0x176c80,_0x5b0620={'xTlca':_0x48552c(0x236)+'m','cAoeD':function(_0x52a97d,_0x3d1db3){return _0x52a97d(_0x3d1db3);},'OwhXY':'discovered'+_0x48552c(0x245)+'t','SSnTb':function(_0x4aba9c,_0x143135){return _0x4aba9c===_0x143135;},'bmqRs':_0x48552c(0x187)+_0x48552c(0x2c9)+_0x48552c(0x20b)+_0x48552c(0x20f)+_0x48552c(0x1a0)+_0x48552c(0x2a3)+_0x48552c(0x2a1)+_0x48552c(0x1bd),'ivLci':'<li\x20class='+_0x48552c(0x2c9)+_0x48552c(0x20b)+_0x48552c(0x1a5)+'mpatible\x20E'+_0x48552c(0x1ea)+_0x48552c(0x26f)+_0x48552c(0x1bb)+'arby.</li>','nlqee':_0x48552c(0x1a9)};window[_0x48552c(0x213)+'I']&&_0x5b0620[_0x48552c(0x1bc)](typeof window[_0x48552c(0x213)+'I'][_0x48552c(0x23d)+_0x48552c(0x2b8)+'t'],_0x5b0620[_0x48552c(0x286)])&&window[_0x48552c(0x213)+'I']['onBluetoot'+_0x48552c(0x2b8)+'t'](_0x4d996f=>{const _0xdf2f9f=_0x48552c,_0x364620={'mkfqs':_0x5b0620[_0xdf2f9f(0x1a7)],'eHOpU':function(_0xccee5b,_0x4aa823){const _0x3fd5c1=_0xdf2f9f;return _0x5b0620[_0x3fd5c1(0x22c)](_0xccee5b,_0x4aa823);}},_0x7b426e=document['getElement'+_0xdf2f9f(0x1cb)](_0x5b0620[_0xdf2f9f(0x260)]);if(!_0x7b426e)return;_0x7b426e[_0xdf2f9f(0x2d6)]='';if(!_0x4d996f||_0x5b0620[_0xdf2f9f(0x1bc)](_0x4d996f[_0xdf2f9f(0x206)],0x12a1*0x1+0x24e3+-0x3784)){_0x7b426e[_0xdf2f9f(0x2d6)]=_0x5b0620[_0xdf2f9f(0x1fe)];return;}const _0x212064=_0x4d996f[_0xdf2f9f(0x275)](_0x4e8f39=>_0x4e8f39['deviceName']&&_0x4e8f39[_0xdf2f9f(0x1b3)][_0xdf2f9f(0x1c9)](_0xdf2f9f(0x228)));if(_0x212064[_0xdf2f9f(0x206)]===-0x15bd+-0x259f+-0x1d*-0x20c){_0x7b426e['innerHTML']=_0x5b0620[_0xdf2f9f(0x1f4)];return;}_0x212064[_0xdf2f9f(0x24e)](_0x1b7a03=>{const _0x2db277=_0xdf2f9f,_0x312a20=document[_0x2db277(0x2d2)+_0x2db277(0x19d)]('li');_0x312a20[_0x2db277(0x1a6)]=_0x364620['mkfqs'],_0x312a20[_0x2db277(0x2d6)]=_0x2db277(0x1ef)+_0x2db277(0x1df)+_0x364620[_0x2db277(0x273)](esc,_0x1b7a03[_0x2db277(0x1b3)])+(_0x2db277(0x16a)+_0x2db277(0x1aa)+_0x2db277(0x1f1)+_0x2db277(0x2c9)+_0x2db277(0x1ab)+_0x2db277(0x2c7))+_0x364620[_0x2db277(0x273)](esc,_0x1b7a03[_0x2db277(0x1d3)])+(_0x2db277(0x16a)+'\x20\x20\x20\x20\x20\x20'),_0x312a20[_0x2db277(0x24b)]=()=>selectDiscoveredDevice(_0x1b7a03[_0x2db277(0x1d3)]),_0x7b426e[_0x2db277(0x283)+'d'](_0x312a20);});});});
+/**
+ * E-Class Record — Web Bluetooth Companion Controller
+ *
+ * Implements standard Web Bluetooth Central client APIs to pair with the
+ * Android app, exchange class records, and receive score updates in real-time.
+ */
+
+const BLE_SERVICE_UUID = 'e3c1a8e0-0251-412e-a4b5-559d871fbdf2';
+const HANDSHAKE_CHAR_UUID = 'e3c1a8e3-0251-412e-a4b5-559d871fbdf2';
+const RX_CHAR_UUID = 'e3c1a8e1-0251-412e-a4b5-559d871fbdf2';
+const TX_CHAR_UUID = 'e3c1a8e2-0251-412e-a4b5-559d871fbdf2';
+
+let activeGattDevice = null;
+let activeGattServer = null;
+let activeGattService = null;
+let handshakeChar = null;
+let rxChar = null;
+let txChar = null;
+
+let isSyncConnecting = false;
+let syncLogs = [];
+
+// Reassembly buffer (Mobile -> Desktop)
+let mobileRxBuffer = '';
+let mobileExpectedLen = 0;
+let mobileIsReceiving = false;
+
+function addSyncLog(message) {
+  const timestamp = new Date().toLocaleTimeString();
+  const entry = `[${timestamp}] ${message}`;
+  syncLogs.push(entry);
+  if (syncLogs.length > 50) syncLogs.shift();
+  
+  const logContainer = document.getElementById('syncLogsOutput');
+  if (logContainer) {
+    logContainer.textContent = syncLogs.join('\n');
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
+  console.log('[Sync BLE]', message);
+}
+
+function updateSyncStatusUI(status, label, details) {
+  const indicator = document.getElementById('syncIndicator');
+  const labelEl = document.getElementById('syncStatusLabel');
+  const subEl = document.getElementById('syncStatusSub');
+  
+  if (indicator) {
+    indicator.className = 'sync-status-indicator';
+    if (status === 'inactive') indicator.classList.add('sync-status-indicator--inactive');
+    else if (status === 'scanning') indicator.classList.add('sync-status-indicator--scanning');
+    else if (status === 'connected') indicator.classList.add('sync-status-indicator--connected');
+    else if (status === 'error') indicator.classList.add('sync-status-indicator--error');
+  }
+  
+  if (labelEl) labelEl.textContent = label;
+  if (subEl) subEl.textContent = details;
+}
+
+/**
+ * Initiates BLE scanning using Chromium Web Bluetooth API.
+ * In Electron, this will emit 'select-bluetooth-device' in main process.
+ */
+async function startScanBleDevices() {
+  try {
+    isSyncConnecting = true;
+    addSyncLog('Starting Bluetooth scan for companion app...');
+    updateSyncStatusUI('scanning', 'Bluetooth: Scanning...', 'Searching for E-Class mobile applications...');
+    
+    // Clear list and display discovery panel
+    const list = document.getElementById('discoveredDevicesList');
+    if (list) list.innerHTML = '<li class="device-item text-muted">Searching for E-Class companions...</li>';
+    showEl('deviceDiscoveryPanel', true);
+    showEl('syncPinPanel', false);
+    showEl('btnSyncToPhone', false);
+    showEl('btnDisconnectBle', false);
+
+    // Call navigator.bluetooth.requestDevice. 
+    // This blocks until main process calls the callback via selectBluetoothDevice.
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: 'EClass-' }],
+      optionalServices: [BLE_SERVICE_UUID]
+    });
+    
+    // Discovered and selected!
+    showEl('deviceDiscoveryPanel', false);
+    addSyncLog(`Found device: ${device.name}. Establishing connection...`);
+    
+    activeGattDevice = device;
+    device.addEventListener('gattserverdisconnected', onBleDisconnected);
+    
+    // Connect to GATT Server
+    activeGattServer = await device.gatt.connect();
+    addSyncLog('Connected to GATT Server! Discovering Primary Service...');
+    
+    // Get Primary Service
+    activeGattService = await activeGattServer.getPrimaryService(BLE_SERVICE_UUID);
+    addSyncLog('Primary Sync Service discovered.');
+
+    // Get Characteristics
+    handshakeChar = await activeGattService.getCharacteristic(HANDSHAKE_CHAR_UUID);
+    rxChar = await activeGattService.getCharacteristic(RX_CHAR_UUID);
+    txChar = await activeGattService.getCharacteristic(TX_CHAR_UUID);
+    
+    addSyncLog('GATT characteristics mapped.');
+    
+    // Connection established but needs authorization code
+    updateSyncStatusUI('scanning', 'Bluetooth: Verifying Link...', 'Waiting for validation PIN input...');
+    showEl('syncPinPanel', true);
+    showEl('btnDisconnectBle', true);
+    
+    const pinInput = document.getElementById('syncPinInput');
+    if (pinInput) {
+      pinInput.value = '';
+      pinInput.focus();
+    }
+  } catch (error) {
+    if (error.name === 'NotFoundError' || error.message.includes('User cancelled')) {
+      addSyncLog('Bluetooth scanning cancelled by user.');
+      updateSyncStatusUI('inactive', 'Bluetooth: Disconnected', 'Scan cancelled.');
+    } else {
+      addSyncLog(`Bluetooth error: ${error.message}`);
+      updateSyncStatusUI('error', 'Bluetooth: Error', error.message);
+      toast('Bluetooth scanning failed: ' + error.message, 'error');
+    }
+    isSyncConnecting = false;
+    showEl('deviceDiscoveryPanel', false);
+    showEl('syncPinPanel', false);
+  }
+}
+
+/**
+ * Submits the application-level PIN code handshake to authorize the link.
+ */
+async function submitHandshakePin() {
+  const pinInput = document.getElementById('syncPinInput');
+  if (!pinInput || !handshakeChar) return;
+  
+  const pin = pinInput.value.trim();
+  if (pin.length !== 6 || isNaN(parseInt(pin))) {
+    toast('Please enter a valid 6-digit number PIN.', 'warning');
+    return;
+  }
+  
+  addSyncLog(`Submitting confirmation PIN code: ${pin}...`);
+  
+  try {
+    const encoder = new TextEncoder();
+    await handshakeChar.writeValue(encoder.encode(pin));
+    
+    // PIN validated successfully!
+    addSyncLog('Authorization check passed! Link established securely.');
+    updateSyncStatusUI('connected', 'Bluetooth: Connected & Authorized', `Linked to ${activeGattDevice.name}`);
+    
+    showEl('syncPinPanel', false);
+    showEl('btnSyncToPhone', true);
+    showEl('btnScanBle', false);
+    
+    // Subscribe to TX notifications (scores notifications)
+    addSyncLog('Subscribing to score notifications from phone...');
+    await txChar.startNotifications();
+    txChar.addEventListener('characteristicvaluechanged', handleMobileScoresNotification);
+    addSyncLog('Subscribed successfully! Listening for score inputs.');
+    
+    toast('Phone connected and synced successfully!', 'success');
+  } catch (err) {
+    addSyncLog(`Authorization failed: ${err.message}. Refused connection.`);
+    updateSyncStatusUI('error', 'Bluetooth: Connection Refused', 'Verification PIN is incorrect.');
+    toast('Handshake verification failed. Check phone screen PIN.', 'error');
+    disconnectBleDevice();
+  }
+}
+
+/**
+ * Handles incoming Bluetooth notifications containing scores chunk packages.
+ */
+function handleMobileScoresNotification(event) {
+  const value = event.target.value;
+  const chunk = new TextDecoder().decode(value);
+  
+  if (chunk.startsWith('START:')) {
+    const lenStr = chunk.split(':')[1];
+    mobileExpectedLen = parseInt(lenStr, 10);
+    mobileRxBuffer = '';
+    mobileIsReceiving = true;
+    addSyncLog(`Incoming scores upload: expected size ${mobileExpectedLen} bytes...`);
+  } else if (chunk === 'END') {
+    mobileIsReceiving = false;
+    addSyncLog(`Upload transfer complete. Processing data (${mobileRxBuffer.length} bytes)...`);
+    
+    try {
+      const scoresPayload = JSON.parse(mobileRxBuffer);
+      mergeUploadedScores(scoresPayload);
+    } catch (parseErr) {
+      addSyncLog(`Error: Failed to parse uploaded scores: ${parseErr.message}`);
+      toast('Failed to parse uploaded score payload.', 'error');
+    }
+  } else {
+    if (mobileIsReceiving) {
+      mobileRxBuffer += chunk;
+    }
+  }
+}
+
+/**
+ * Safely merges synced scores back into the desktop DB assignments.
+ */
+function mergeUploadedScores(payload) {
+  // Payload format: { "assignmentId": { "learnerId|assessmentId": "scoreValue" } }
+  let updateCount = 0;
+  
+  for (const assignmentId in payload) {
+    const targetAssignment = db.assignments.find(a => a.id === assignmentId);
+    if (!targetAssignment) {
+      addSyncLog(`Warning: Assignment ${assignmentId} not found in this desktop profiles directory.`);
+      continue;
+    }
+    
+    const scoreMap = payload[assignmentId];
+    for (const scoreKey in scoreMap) {
+      const newValue = scoreMap[scoreKey];
+      const oldValue = targetAssignment.scores[scoreKey] === undefined ? '' : String(targetAssignment.scores[scoreKey]);
+      
+      if (oldValue !== newValue) {
+        targetAssignment.scores[scoreKey] = newValue;
+        updateCount++;
+      }
+    }
+  }
+  
+  if (updateCount > 0) {
+    addSyncLog(`Merged ${updateCount} student score entries successfully!`);
+    saveDatabase();
+    render();
+    toast(`Successfully synced ${updateCount} score updates from mobile!`, 'success');
+  } else {
+    addSyncLog('Sync completed. No new grade modifications found.');
+    toast('No new score changes to merge.', 'info');
+  }
+}
+
+/**
+ * Packs active class loads and sends them in chunks to the mobile app.
+ */
+async function syncDataToMobile() {
+  if (!rxChar) {
+    toast('No active companion connection found.', 'warning');
+    return;
+  }
+  
+  addSyncLog('Packing class records for synchronization...');
+  
+  // Extract and send ONLY assignments belonging to active year
+  const activeYear = db.schoolYear || '2026-2027';
+  const filteredAssignments = db.assignments.filter(a => a.schoolYear === activeYear);
+  
+  const payload = {
+    teacherName: db.teacherName || '',
+    schoolName: db.schoolName || '',
+    schoolYear: activeYear,
+    assignments: filteredAssignments.map(a => ({
+      id: a.id,
+      gradeLevel: a.gradeLevel,
+      section: a.section,
+      subject: a.subject,
+      subjectGroup: a.subjectGroup || '',
+      policy: a.policy || '',
+      schoolYear: a.schoolYear || '',
+      learners: a.learners.map(l => ({
+        id: l.id,
+        name: l.name,
+        sex: l.sex,
+        lrn: l.lrn || ''
+      })),
+      assessments: a.assessments.map(ast => ({
+        id: ast.id,
+        term: ast.term,
+        component: ast.component,
+        title: ast.title,
+        maxScore: ast.maxScore,
+        date: ast.date || '',
+        mapePart: ast.mapePart
+      })),
+      scores: a.scores || {}
+    }))
+  };
+  
+  const dataStr = JSON.stringify(payload);
+  addSyncLog(`Payload prepared. Size: ${dataStr.length} characters.`);
+  
+  try {
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(dataStr);
+    const mtu = 400; // Safe chunk size for write
+    
+    addSyncLog('Writing transfer payload initialization header...');
+    await rxChar.writeValue(encoder.encode(`START:${bytes.length}`));
+    
+    // Write chunks
+    let offset = 0;
+    let chunkIndex = 0;
+    const totalChunks = Math.ceil(bytes.length / mtu);
+    
+    while (offset < bytes.length) {
+      const size = Math.min(mtu, bytes.length - offset);
+      const chunk = bytes.slice(offset, offset + size);
+      
+      await rxChar.writeValue(chunk);
+      offset += size;
+      chunkIndex++;
+      
+      const pct = Math.round((offset / bytes.length) * 100);
+      addSyncLog(`Sending chunks: ${chunkIndex}/${totalChunks} (${pct}%)`);
+    }
+    
+    addSyncLog('Writing transfer payload completion header...');
+    await rxChar.writeValue(encoder.encode('END'));
+    
+    addSyncLog('Rosters and existing grades synced to phone successfully!');
+    toast('Rosters synced to phone successfully!', 'success');
+  } catch (err) {
+    addSyncLog(`Sync failed: ${err.message}`);
+    toast('Failed to transfer class files to mobile: ' + err.message, 'error');
+  }
+}
+
+/**
+ * Disconnects the active BLE connection.
+ */
+function disconnectBleDevice() {
+  if (activeGattDevice && activeGattDevice.gatt.connected) {
+    addSyncLog('Closing active link...');
+    activeGattDevice.gatt.disconnect();
+  } else {
+    onBleDisconnected();
+  }
+}
+
+function onBleDisconnected() {
+  addSyncLog('Bluetooth disconnected.');
+  updateSyncStatusUI('inactive', 'Bluetooth: Disconnected', 'Link severed.');
+  
+  activeGattDevice = null;
+  activeGattServer = null;
+  activeGattService = null;
+  handshakeChar = null;
+  rxChar = null;
+  txChar = null;
+  isSyncConnecting = false;
+  
+  showEl('syncPinPanel', false);
+  showEl('btnSyncToPhone', false);
+  showEl('btnDisconnectBle', false);
+  showEl('btnScanBle', true);
+}
+
+// ── Electron main process device listing callbacks ──
+
+function cancelBleDiscovery() {
+  window.electronAPI.cancelBluetoothDevice();
+  showEl('deviceDiscoveryPanel', false);
+  updateSyncStatusUI('inactive', 'Bluetooth: Disconnected', 'Search cancelled.');
+}
+
+function selectDiscoveredDevice(deviceId) {
+  window.electronAPI.selectBluetoothDevice(deviceId);
+  showEl('deviceDiscoveryPanel', false);
+  addSyncLog(`Device selected: ${deviceId}. Pairing...`);
+}
+
+// Handle incoming bluetooth device selection lists from main process
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.electronAPI && typeof window.electronAPI.onBluetoothDeviceList === 'function') {
+    window.electronAPI.onBluetoothDeviceList((deviceList) => {
+      const list = document.getElementById('discoveredDevicesList');
+      if (!list) return;
+      
+      list.innerHTML = '';
+      if (!deviceList || deviceList.length === 0) {
+        list.innerHTML = '<li class="device-item text-muted">Searching for E-Class companions...</li>';
+        return;
+      }
+      
+      // Filter out empty names or non-matching names
+      const companions = deviceList.filter(d => d.deviceName && d.deviceName.startsWith('EClass-'));
+      if (companions.length === 0) {
+        list.innerHTML = '<li class="device-item text-muted">No compatible E-Class devices broadcasting nearby.</li>';
+        return;
+      }
+      
+      companions.forEach(device => {
+        const li = document.createElement('li');
+        li.className = 'device-item';
+        li.innerHTML = `
+          <span>📱 ${esc(device.deviceName)}</span>
+          <span class="device-item__rssi">ID: ${esc(device.deviceId)}</span>
+        `;
+        li.onclick = () => selectDiscoveredDevice(device.deviceId);
+        list.appendChild(li);
+      });
+    });
+  }
+});

@@ -1,3 +1,4 @@
 provider: github
 owner: jerniqz-del
 repo: eclassrecord
+private: true
