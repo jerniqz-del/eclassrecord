@@ -356,9 +356,33 @@ function alertModal(title, message) {
  * Called during DOMContentLoaded.
  */
 function checkWelcomeModal() {
+  // Populate dynamically if changelog exists
+  if (typeof APP_CHANGELOG !== 'undefined' && APP_CHANGELOG && APP_CHANGELOG.points && APP_CHANGELOG.points.length > 0) {
+    const versionEl = document.getElementById('whatsNewVersion');
+    const listEl = document.getElementById('whatsNewList');
+    const sectionEl = document.getElementById('welcomeWhatsNew');
+    
+    if (versionEl) versionEl.textContent = APP_CHANGELOG.version;
+    if (listEl) {
+      listEl.innerHTML = APP_CHANGELOG.points.map(p => `<li>${esc(p)}</li>`).join('');
+    }
+    if (sectionEl) sectionEl.style.display = 'block';
+  }
+
+  // Determine whether to force show due to new version
+  let forceShow = false;
+  if (typeof APP_CHANGELOG !== 'undefined' && APP_CHANGELOG && APP_CHANGELOG.version) {
+    const lastSeenVersion = localStorage.getItem('welcome_last_seen_version');
+    if (lastSeenVersion !== APP_CHANGELOG.version) {
+      forceShow = true;
+      // Reset dismissed settings to allow daily display rules for the new version
+      localStorage.removeItem('welcome_modal_dismissed_until');
+    }
+  }
+
   const dismissedUntil = localStorage.getItem('welcome_modal_dismissed_until');
   const todayString = new Date().toDateString();
-  if (dismissedUntil !== todayString) {
+  if (forceShow || dismissedUntil !== todayString) {
     showEl('welcomeModal', true, 'flex');
   }
 }
@@ -372,6 +396,12 @@ function closeWelcomeModal() {
     const todayString = new Date().toDateString();
     localStorage.setItem('welcome_modal_dismissed_until', todayString);
   }
+  
+  // Record that user has seen this version's welcome modal
+  if (typeof APP_CHANGELOG !== 'undefined' && APP_CHANGELOG && APP_CHANGELOG.version) {
+    localStorage.setItem('welcome_last_seen_version', APP_CHANGELOG.version);
+  }
+
   showEl('welcomeModal', false);
 
   // If the profile overlay is currently hidden (e.g., during startup when welcome modal is active),
