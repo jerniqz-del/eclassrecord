@@ -111,7 +111,7 @@ const HELP_TOPICS = [
       <h5>How to Clone a Roster:</h5>
       <ol>
         <li>Open your target class load under <strong>Teaching Load</strong>.</li>
-        <li>Click the <strong>Import Roster from Class</strong> action button.</li>
+        <li>Click the <strong>Import Roster from Other Class</strong> action button.</li>
         <li>A modal will list all other classes configured in your profile. Select the source class.</li>
         <li>Choose a Mode:
           <ul>

@@ -159,7 +159,9 @@ function renderRecordTable() {
       'Add student rosters under the Classes tab, upload an SF1, or paste a CSV list.',
       'Upload SF1',
       'proceedToUploadSf1()',
-      'Import Roster from Class',
+      'Bulk Add Learners',
+      'showBulkAddLearnersModal()',
+      'Import Roster from Other Class',
       'showImportRosterModal()'
     );
     return;
@@ -425,7 +427,9 @@ function renderFinalOnly() {
       'Final grades will appear once class lists are populated.',
       'Upload SF1',
       'proceedToUploadSf1()',
-      'Import Roster from Class',
+      'Bulk Add Learners',
+      'showBulkAddLearnersModal()',
+      'Import Roster from Other Class',
       'showImportRosterModal()'
     );
     return;

@@ -100,7 +100,7 @@ function uid(prefix = 'id') {
  * @param {string=} actionLabel Optional CTA button label.
  * @param {string=} actionCallback Optional JS expression to call on click.
  */
-function emptyState(title, hint, actionLabel, actionCallback, secondActionLabel, secondActionCallback) {
+function emptyState(title, hint, actionLabel, actionCallback, secondActionLabel, secondActionCallback, thirdActionLabel, thirdActionCallback) {
   let buttonsHtml = '';
   if (actionLabel) {
     buttonsHtml += `<button class="btn btn-primary" style="padding: 8px 20px; font-size: var(--font-size-md);" onclick="${esc(actionCallback)}">${esc(actionLabel)}</button>`;
@@ -108,8 +108,11 @@ function emptyState(title, hint, actionLabel, actionCallback, secondActionLabel,
   if (secondActionLabel) {
     buttonsHtml += `<button class="btn btn-olive" style="padding: 8px 20px; font-size: var(--font-size-md);" onclick="${esc(secondActionCallback)}">${esc(secondActionLabel)}</button>`;
   }
+  if (thirdActionLabel) {
+    buttonsHtml += `<button class="btn btn-olive" style="padding: 8px 20px; font-size: var(--font-size-md);" onclick="${esc(thirdActionCallback)}">${esc(thirdActionLabel)}</button>`;
+  }
   
-  const container = buttonsHtml ? `<div style="display:flex; justify-content:center; align-items:center; gap:var(--space-3); margin-top:var(--space-5);">${buttonsHtml}</div>` : '';
+  const container = buttonsHtml ? `<div style="display:flex; justify-content:center; align-items:center; gap:var(--space-3); margin-top:var(--space-5); flex-wrap:wrap;">${buttonsHtml}</div>` : '';
 
   return `
     <div class="empty-state animate-fade-in">

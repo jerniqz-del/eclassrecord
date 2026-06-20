@@ -244,7 +244,7 @@ console.log('Building local release assets...');
 runCmd('npm run build');
 
 console.log('Uploading release assets to GitHub...');
-runCmd(`gh release upload v${nextVersion} "dist/E-Class Record Setup ${nextVersion}.exe" "dist/E-Class Record Setup ${nextVersion}.exe.blockmap" "dist/latest.yml" --clobber`);
+runCmd(`gh release upload v${nextVersion} "dist/E-Class-Record-Setup-${nextVersion}.exe" "dist/E-Class-Record-Setup-${nextVersion}.exe.blockmap" "dist/latest.yml" --clobber`);
 
 // 8. Make the Release Public/Stable
 console.log('Publishing the draft release to make the update live...');

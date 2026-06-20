@@ -1,6 +1,6 @@
 {
   "name": "eclass-record",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Local, teacher-owned class record for DepEd three-term and legacy grading workflows",
   "author": "E-Class Record App",
   "license": "MIT",

@@ -1411,7 +1411,7 @@ function showImportRosterModal() {
   overlay.style.zIndex = '12000';
   overlay.innerHTML = `
     <div class="modal" style="max-width: 500px; width: 90%;">
-      <div class="modal__title">Import Roster from Class</div>
+      <div class="modal__title">Import Roster from Other Class</div>
       <div class="modal__body">
         <p style="margin-top:0">Import learners from another class load in this profile into the active class roster.</p>
         

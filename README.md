@@ -48,7 +48,7 @@ eclassrecord/
    ```
 
 3. **Build Installer locally**:
-   Produces a Windows NSIS installer under `dist/E-Class Record Setup <version>.exe`:
+   Produces a Windows NSIS installer under `dist/E-Class-Record-Setup-<version>.exe`:
    ```bash
    npm run build
    ```

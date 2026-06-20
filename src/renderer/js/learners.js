@@ -640,3 +640,337 @@ function removeLearner(learnerId) {
     );
   });
 }
+
+/**
+ * Displays a modal allowing teachers to bulk-paste a list of learners,
+ * parse them in real-time, preview gender/LRN assignments, and import them.
+ */
+function showBulkAddLearnersModal() {
+  const a = currentAssignment();
+  if (!a) {
+    toast('Add a teaching load first.', 'warning');
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '12000';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width: 850px; width: 95%;">
+      <div class="modal__title">Bulk Add Learners</div>
+      <div class="modal__body">
+        <div class="bulk-modal-grid">
+          <!-- Left Column: Input and Settings -->
+          <div class="bulk-textarea-wrap">
+            <div class="field" style="margin-bottom: var(--space-3); display: flex; flex-direction: column; flex: 1;">
+              <label class="field-label">Copy-paste Learner List (one per line)</label>
+              <div class="text-xs text-muted" style="margin-bottom: var(--space-2); line-height: 1.4;">
+                Accepted formats:<br>
+                • <code>Last Name, First Name Middle Name</code> (e.g. <code>Dela Cruz, Juan Abad</code>)<br>
+                • <code>First Name Middle Name Last Name</code> (e.g. <code>Juan Abad Dela Cruz</code>)<br>
+                • Delimited (CSV/Excel copy): <code>LRN, Last, First, Sex, Middle</code>
+              </div>
+              <textarea id="bulkLearnersText" class="field-textarea bulk-textarea" placeholder="Paste student names/list here..."></textarea>
+            </div>
+            
+            <div class="field" style="margin-bottom: 0;">
+              <label class="field-label">Assign Sex (Gender)</label>
+              <select id="bulkLearnersGenderDefault" class="field-select">
+                <option value="auto">Auto-detect from pasted row (CSV/Delimited)</option>
+                <option value="M">All Males / Boys</option>
+                <option value="F">All Females / Girls</option>
+              </select>
+              <div class="text-xs text-muted" style="margin-top: 4px;">
+                Selecting "All Males" or "All Females" will assign that gender to all parsed students, ignoring auto-detection.
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right Column: Live Preview -->
+          <div class="bulk-preview-wrap">
+            <div class="bulk-preview-header">
+              <label class="field-label" style="margin-bottom: 0;">Parse Preview</label>
+              <div class="bulk-preview-summary-badges" id="bulkPreviewSummaryBadges" style="display: none;">
+                <span class="bulk-badge bulk-badge--male" id="bulkCountMale">0 Boys</span>
+                <span class="bulk-badge bulk-badge--female" id="bulkCountFemale">0 Girls</span>
+              </div>
+            </div>
+            <div class="bulk-preview-pane" id="bulkPreviewPane">
+              <div class="bulk-preview-empty" id="bulkPreviewEmpty">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.5; margin-bottom: 8px;">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                <div>No students parsed yet. Start typing or pasting to see a live preview.</div>
+              </div>
+              <ul class="bulk-preview-list" id="bulkPreviewList" style="display: none;"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-ghost btn-sm" id="btnCancelBulkAdd">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="btnConfirmBulkAdd" disabled>Add Learners (0)</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+
+  overlay.querySelector('#btnCancelBulkAdd').addEventListener('click', close);
+
+  const textInput = overlay.querySelector('#bulkLearnersText');
+  const genderSelect = overlay.querySelector('#bulkLearnersGenderDefault');
+  const previewPane = overlay.querySelector('#bulkPreviewPane');
+  const previewEmpty = overlay.querySelector('#bulkPreviewEmpty');
+  const previewList = overlay.querySelector('#bulkPreviewList');
+  const badgesWrap = overlay.querySelector('#bulkPreviewSummaryBadges');
+  const countMaleEl = overlay.querySelector('#bulkCountMale');
+  const countFemaleEl = overlay.querySelector('#bulkCountFemale');
+  const confirmBtn = overlay.querySelector('#btnConfirmBulkAdd');
+
+  let parsedLearners = [];
+
+  const parseInput = () => {
+    const rawText = textInput.value;
+    const genderMode = genderSelect.value;
+    const lines = rawText.split('\n');
+    parsedLearners = [];
+
+    let boyCount = 0;
+    let girlCount = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const rawLine = lines[i].trim();
+      if (!rawLine) continue;
+
+      // Skip common table headers if pasted with columns
+      if (i === 0 && (rawLine.toLowerCase().includes('lrn') || rawLine.toLowerCase().includes('name') || rawLine.toLowerCase().includes('last name'))) {
+        continue;
+      }
+
+      // Detect if it is a delimited line (Tab or CSV)
+      let cols = [];
+      if (rawLine.includes('\t')) {
+        cols = rawLine.split('\t').map(x => x.trim());
+      } else if (rawLine.includes(',')) {
+        // Safe CSV parser invocation fallback
+        const tempCols = (typeof parseCsvLine === 'function') ? parseCsvLine(rawLine) : rawLine.split(',').map(x => x.trim());
+        if (tempCols.length > 2) {
+          cols = tempCols;
+        }
+      }
+
+      let lrn = '';
+      let last = '';
+      let first = '';
+      let middle = '';
+      let sex = '';
+
+      if (cols.length >= 2) {
+        // Delimited row parsing
+        // Extract 12-digit LRN
+        const lrnIdx = cols.findIndex(col => /^\d{12}$/.test(col));
+        if (lrnIdx !== -1) {
+          lrn = cols[lrnIdx];
+          cols.splice(lrnIdx, 1);
+        }
+
+        // Extract gender (M, F, Male, Female)
+        const sexIdx = cols.findIndex(col => {
+          const lower = col.toLowerCase();
+          return lower === 'm' || lower === 'f' || lower === 'male' || lower === 'female';
+        });
+        if (sexIdx !== -1) {
+          const foundSex = cols[sexIdx].toLowerCase();
+          sex = foundSex.startsWith('m') ? 'M' : 'F';
+          cols.splice(sexIdx, 1);
+        }
+
+        // Parse remaining columns for names
+        if (cols.length >= 2) {
+          last = normalizeNamePart(cols[0]);
+          first = normalizeNamePart(cols[1]);
+          middle = cols.length > 2 ? normalizeNamePart(cols[2]) : '';
+        } else if (cols.length === 1) {
+          const nameObj = parseNameString(cols[0]);
+          last = nameObj.last;
+          first = nameObj.first;
+          middle = nameObj.middle;
+        }
+      } else {
+        // Parse single name string
+        const nameObj = parseNameString(rawLine);
+        last = nameObj.last;
+        first = nameObj.first;
+        middle = nameObj.middle;
+      }
+
+      // Gender overrides
+      if (genderMode === 'M') {
+        sex = 'M';
+      } else if (genderMode === 'F') {
+        sex = 'F';
+      } else {
+        if (!sex) sex = ''; // default empty / unassigned
+      }
+
+      if (!last && !first) continue;
+
+      if (sex === 'M') boyCount++;
+      if (sex === 'F') girlCount++;
+
+      parsedLearners.push({
+        lrn: lrn,
+        lastName: last,
+        firstName: first,
+        middleName: middle,
+        sex: sex,
+        displayName: formatLearnerName(last, first, middle)
+      });
+    }
+
+    // Render Preview panel list
+    if (parsedLearners.length === 0) {
+      previewEmpty.style.display = 'flex';
+      previewList.style.display = 'none';
+      badgesWrap.style.display = 'none';
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Add Learners (0)';
+    } else {
+      previewEmpty.style.display = 'none';
+      previewList.style.display = 'block';
+      badgesWrap.style.display = 'flex';
+      countMaleEl.textContent = `${boyCount} Boys`;
+      countFemaleEl.textContent = `${girlCount} Girls`;
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = `Add Learners (${parsedLearners.length})`;
+
+      previewList.innerHTML = parsedLearners.map((l, index) => {
+        let genderBadge = '';
+        if (l.sex === 'M') {
+          genderBadge = `<span class="bulk-badge bulk-badge--male">Boy</span>`;
+        } else if (l.sex === 'F') {
+          genderBadge = `<span class="bulk-badge bulk-badge--female">Girl</span>`;
+        } else {
+          genderBadge = `<span class="bulk-badge" style="background:var(--border-default);color:var(--text-secondary);">Unknown</span>`;
+        }
+
+        return `
+          <li class="bulk-preview-item">
+            <div class="bulk-preview-item__name">${index + 1}. ${esc(l.displayName)}</div>
+            <div class="bulk-preview-item__meta">
+              <span style="font-family:monospace;color:var(--text-tertiary);">${esc(l.lrn || '—')}</span>
+              ${genderBadge}
+            </div>
+          </li>
+        `;
+      }).join('');
+    }
+  };
+
+  // Parses unstructured name string to extract Last, First, and Middle name
+  const parseNameString = (str) => {
+    let last = '';
+    let first = '';
+    let middle = '';
+
+    if (str.includes(',')) {
+      // Last Name, First Name Middle Name
+      const parts = str.split(',').map(x => x.trim());
+      last = normalizeNamePart(parts[0]);
+      if (parts.length > 1) {
+        const remaining = parts[1].split(/\s+/).map(x => x.trim()).filter(Boolean);
+        if (remaining.length > 1) {
+          middle = normalizeNamePart(remaining.pop());
+          first = remaining.map(normalizeNamePart).join(' ');
+        } else if (remaining.length === 1) {
+          first = normalizeNamePart(remaining[0]);
+        }
+      }
+    } else {
+      // First Name Middle Name Last Name
+      const words = str.split(/\s+/).map(x => x.trim()).filter(Boolean);
+      if (words.length === 1) {
+        last = normalizeNamePart(words[0]);
+      } else if (words.length === 2) {
+        first = normalizeNamePart(words[0]);
+        last = normalizeNamePart(words[1]);
+      } else if (words.length >= 3) {
+        last = normalizeNamePart(words.pop());
+        middle = normalizeNamePart(words.pop());
+        first = words.map(normalizeNamePart).join(' ');
+      }
+    }
+
+    return { last, first, middle };
+  };
+
+  // Bind input listeners
+  textInput.addEventListener('input', parseInput);
+  genderSelect.addEventListener('change', parseInput);
+
+  // Submit / Save actions
+  confirmBtn.addEventListener('click', () => {
+    if (parsedLearners.length === 0) return;
+
+    let added = 0;
+    let duplicates = [];
+
+    parsedLearners.forEach(l => {
+      // Check for duplicates
+      const isDuplicate = a.learners.some(existing => {
+        const lrnMatch = l.lrn && existing.lrn && l.lrn === existing.lrn;
+        const nameMatch = existing.lastName.toLowerCase() === l.lastName.toLowerCase() &&
+                          existing.firstName.toLowerCase() === l.firstName.toLowerCase();
+        return lrnMatch || nameMatch;
+      });
+
+      if (isDuplicate) {
+        duplicates.push(l.displayName);
+      } else {
+        a.learners.push({
+          id: uid('learner'),
+          lrn: l.lrn,
+          lastName: l.lastName,
+          firstName: l.firstName,
+          middleName: l.middleName,
+          sex: l.sex,
+          displayName: l.displayName
+        });
+        added++;
+      }
+    });
+
+    if (added > 0) {
+      saveDatabase();
+      sortLearners();
+      render();
+    }
+
+    close();
+
+    if (duplicates.length > 0) {
+      if (added > 0) {
+        alertModal(
+          'Import Partially Complete',
+          `Successfully added ${added} learners. ${duplicates.length} duplicate(s) were skipped: ${duplicates.join(', ')}`
+        );
+      } else {
+        alertModal(
+          'Import Failed',
+          `No learners were added. All ${duplicates.length} parsed learners are already registered in the class roster.`
+        );
+      }
+    } else {
+      toast(`Successfully added ${added} learners to roster!`, 'success');
+    }
+  });
+
+  setTimeout(() => textInput.focus(), 80);
+}
