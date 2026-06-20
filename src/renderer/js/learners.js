@@ -239,17 +239,49 @@ function renderLearnersRoster() {
   
   for (let i = 0; i < a.learners.length; i++) {
     const l = a.learners[i];
+    
+    let badgeHtml = '';
+    let exportBtnHtml = '';
+    if (l.transferredOutTerm) {
+      badgeHtml = ` <span style="font-size:10px; padding:2px 6px; margin-left:6px; border-radius:4px; font-weight:600; background: rgba(255, 193, 7, 0.15); color: #ffb703; border: 1px solid #ffb703;">T/O (Term ${l.transferredOutTerm})</span>`;
+      exportBtnHtml = `
+        <button class="btn btn-olive btn-sm" style="padding:var(--space-1) var(--space-2); margin-right: 4px;" 
+          title="Export Learner Transfer File" 
+          onclick="exportLearnerTransferFile('${esc(l.id)}')">
+          Export
+        </button>
+      `;
+    } else if (l.transferredInGrades) {
+      badgeHtml = ` <span style="font-size:10px; padding:2px 6px; margin-left:6px; border-radius:4px; font-weight:600; background: rgba(46, 125, 50, 0.15); color: #81c784; border: 1px solid #81c784;" title="Grades imported for Term(s): ${Object.keys(l.transferredInGrades).join(', ')}">T/I</span>`;
+      exportBtnHtml = `
+        <button class="btn btn-olive btn-sm" style="padding:var(--space-1) var(--space-2); margin-right: 4px;" 
+          title="Export Learner Transfer File" 
+          onclick="exportLearnerTransferFile('${esc(l.id)}')">
+          Export
+        </button>
+      `;
+    } else {
+      exportBtnHtml = `
+        <button class="btn btn-ghost btn-sm" style="padding:var(--space-1) var(--space-2); margin-right: 4px; border: 1px solid var(--border-color);" 
+          title="Export Learner Transfer File" 
+          onclick="exportLearnerTransferFile('${esc(l.id)}')">
+          Export
+        </button>
+      `;
+    }
+
     html += `
-      <tr style="border-bottom:1px solid var(--border-color)">
+      <tr style="border-bottom:1px solid var(--border-color); ${l.transferredOutTerm ? 'opacity: 0.65;' : ''}">
         <td style="padding:var(--space-2)">${i + 1}</td>
         <td style="padding:var(--space-2)">${esc(l.lrn || '—')}</td>
-        <td style="padding:var(--space-2)"><strong>${esc(learnerDisplayName(l))}</strong></td>
+        <td style="padding:var(--space-2)"><strong>${esc(learnerDisplayName(l))}</strong>${badgeHtml}</td>
         <td style="padding:var(--space-2)">${esc(l.sex || '—')}</td>
         <td style="padding:var(--space-2);text-align:center">
+          ${exportBtnHtml}
           <button class="btn btn-warn btn-sm" style="padding:var(--space-1) var(--space-2)" 
-            title="Remove student" 
+            title="Manage status and removal" 
             onclick="removeLearner('${esc(l.id)}')">
-            Remove
+            Manage
           </button>
         </td>
       </tr>
@@ -261,7 +293,7 @@ function renderLearnersRoster() {
 }
 
 /**
- * Removes an individual student from the roster list with confirmation.
+ * Removes an individual student from the roster list with confirmation or options to mark as Transferred Out.
  */
 function removeLearner(learnerId) {
   const a = currentAssignment();
@@ -270,19 +302,109 @@ function removeLearner(learnerId) {
   const learner = a.learners.find(x => x.id === learnerId);
   if (!learner) return;
   
-  confirmModal(
-    'Remove Learner',
-    `Are you sure you want to remove ${learnerDisplayName(learner)}? All associated scores will be permanently deleted.`,
-    () => {
-      a.learners = a.learners.filter(x => x.id !== learnerId);
-      for (const key in a.scores) {
-        if (key.startsWith(learnerId + '|')) {
-          delete a.scores[key];
-        }
-      }
+  const isTransferredOut = !!learner.transferredOutTerm;
+  const isTransferredIn = !!learner.transferredInGrades;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '12000';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width: 500px; width: 90%;">
+      <div class="modal__title">Manage Learner: ${esc(learnerDisplayName(learner))}</div>
+      <div class="modal__body">
+        ${(isTransferredOut || isTransferredIn) ? `
+          <div style="background: rgba(255, 193, 7, 0.1); border: 1px solid var(--color-warning-600); padding: var(--space-2); border-radius: 4px; margin-bottom: var(--space-3); display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600; color: var(--color-warning-600);">
+              Status: ${isTransferredOut ? `Transferred Out (Term ${learner.transferredOutTerm})` : 'Transferred In'}
+            </span>
+            <button class="btn btn-sm btn-ghost" id="btnRestoreActive" style="padding: var(--space-1) var(--space-2);">Restore to Active</button>
+          </div>
+        ` : ''}
+        <p style="margin-top:0">Choose an action for this student. If the student has transferred out mid-year, mark them as Transferred Out to preserve completed term grades.</p>
+        
+        <div class="field" style="margin-top: var(--space-4);">
+          <label class="field-label">Exit/Transfer Term</label>
+          <select id="transferOutTermSelect" class="field-select">
+            <option value="1">Transferred Out after Term 1 (Term 1 grade is preserved)</option>
+            <option value="2">Transferred Out after Term 2 (Term 1 & 2 grades are preserved)</option>
+            <option value="3">Transferred Out after Term 3 (Term 1, 2 & 3 grades are preserved)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal__actions" style="display: flex; flex-direction: column; gap: var(--space-2); width: 100%;">
+        <div style="display: flex; gap: var(--space-2); width: 100%;">
+          <button class="btn btn-primary" id="btnMarkTransferredOut" style="flex: 1;">
+            Mark as Transferred Out
+          </button>
+          <button class="btn btn-ghost" id="btnCancelTransfer" style="width: 100px;">
+            Cancel
+          </button>
+        </div>
+        <div style="border-top: 1px solid var(--border-color); margin: var(--space-2) 0; padding-top: var(--space-2); display: flex; justify-content: flex-end; width: 100%;">
+          <button class="btn btn-warn btn-sm" id="btnDeletePermanently">
+            Delete Student Permanently
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+
+  overlay.querySelector('#btnCancelTransfer').addEventListener('click', close);
+
+  if (isTransferredOut || isTransferredIn) {
+    overlay.querySelector('#btnRestoreActive').addEventListener('click', () => {
+      delete learner.transferredOutTerm;
+      delete learner.transferredInGrades;
       saveDatabase();
       render();
-      toast('Learner removed.', 'success');
-    }
-  );
+      close();
+      toast(`${learnerDisplayName(learner)} status reset to active.`, 'success');
+    });
+  }
+
+  overlay.querySelector('#btnMarkTransferredOut').addEventListener('click', () => {
+    const term = overlay.querySelector('#transferOutTermSelect').value;
+    close();
+    
+    // Mark as transferred out
+    learner.transferredOutTerm = term;
+    
+    saveDatabase();
+    render();
+    
+    toast(`${learnerDisplayName(learner)} marked as Transferred Out in Term ${term}.`, 'success');
+    
+    // Prompt to export transfer file
+    confirmModal(
+      'Export Transfer File',
+      `Would you like to export the transfer file for ${learnerDisplayName(learner)} now?`,
+      () => {
+        exportLearnerTransferFile(learner.id);
+      }
+    );
+  });
+
+  overlay.querySelector('#btnDeletePermanently').addEventListener('click', () => {
+    close();
+    confirmModal(
+      'Delete Permanently',
+      `Are you sure you want to permanently delete ${learnerDisplayName(learner)} and all associated scores? This action cannot be undone.`,
+      () => {
+        a.learners = a.learners.filter(x => x.id !== learnerId);
+        for (const key in a.scores) {
+          if (key.startsWith(learnerId + '|')) {
+            delete a.scores[key];
+          }
+        }
+        saveDatabase();
+        render();
+        toast('Learner permanently deleted.', 'success');
+      }
+    );
+  });
 }

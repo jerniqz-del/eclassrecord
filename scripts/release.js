@@ -7,6 +7,39 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+// ── PRE-RELEASE INTEGRITY & SYNTAX CHECK ──────────────────────────
+console.log('Running pre-release file integrity syntax checks...');
+const jsFiles = [];
+
+function collectJsFiles(dir) {
+  if (!fs.existsSync(dir)) return;
+  const items = fs.readdirSync(dir, { withFileTypes: true });
+  for (const item of items) {
+    const fullPath = path.join(dir, item.name);
+    if (item.isDirectory()) {
+      collectJsFiles(fullPath);
+    } else if (item.isFile() && item.name.endsWith('.js')) {
+      jsFiles.push(fullPath);
+    }
+  }
+}
+
+collectJsFiles(path.join(__dirname, '../src/main'));
+collectJsFiles(path.join(__dirname, '../src/renderer/js'));
+
+console.log(`Verifying syntax for ${jsFiles.length} JavaScript files...`);
+for (const file of jsFiles) {
+  try {
+    execSync(`node -c "${file}"`, { stdio: 'pipe' });
+  } catch (error) {
+    console.error(`\n❌ Pre-release integrity check failed in: ${file}`);
+    console.error(error.stderr ? error.stderr.toString() : error.message);
+    console.error('Release process aborted.\n');
+    process.exit(1);
+  }
+}
+console.log('✅ All JavaScript files passed syntax integrity check.\n');
+
 const packageJsonPath = path.join(__dirname, '../package.json');
 const changelogFilePath = path.join(__dirname, '../src/renderer/js/changelog.js');
 

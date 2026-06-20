@@ -260,7 +260,11 @@ function renderRecordTable() {
     const learner = a.learners[r];
     const result = computeTerm(a, learner.id, db.currentTerm, mapePart);
     
-    html += `<tr>
+    const isRowTO = result.isTransferredOut;
+    const isRowTI = result.isTransferredIn;
+    const isDisabled = isRowTO || isRowTI;
+    
+    html += `<tr class="${isRowTO ? 'row-transferred-out' : ''} ${isRowTI ? 'row-transferred-in' : ''}" style="${isRowTO ? 'opacity: 0.6; background: rgba(255, 193, 7, 0.03);' : ''} ${isRowTI ? 'background: rgba(46, 125, 50, 0.02);' : ''}">
       <td class="c-no">${r + 1}</td>
       <td class="c-learner learner-cell" title="${esc(learnerDisplayName(learner))}">${esc(learnerDisplayName(learner))}</td>
       <td class="c-sex">${esc(learner.sex)}</td>`;
@@ -276,8 +280,9 @@ function renderRecordTable() {
       const scoreTitle = `${learnerDisplayName(learner)} - ${componentLabel(items[j].component)} ${items[j].title || ''} ${maxNum > 0 ? '(max ' + maxNum + ')' : ''}`;
       
       html += `<td class="c-score">
-        <input id="sc-${r}-${j}" class="score-input${overMax ? ' invalid' : ''}${isPerfect ? ' perfect' : ''}${isSimilar ? ' similar' : ''}" title="${esc(scoreTitle)}" value="${esc(val)}"
+        <input id="sc-${r}-${j}" class="score-input${overMax ? ' invalid' : ''}${isPerfect ? ' perfect' : ''}${isSimilar ? ' similar' : ''}" title="${esc(scoreTitle)}" value="${isDisabled ? '' : esc(val)}"
           data-learner-index="${r}" data-assessment-id="${esc(items[j].id)}"
+          ${isDisabled ? 'disabled style="cursor: not-allowed; opacity: 0.5;"' : ''}
           onkeydown="return scoreNav(event, ${r}, ${j}, '${esc(learner.id)}', '${esc(items[j].id)}')"
           onchange="updateScore('${esc(learner.id)}', '${esc(items[j].id)}', this.value)" />
       </td>`;
@@ -298,22 +303,26 @@ function renderRecordTable() {
           };
         }
         const weight = j === 4 ? w[0] : j === 7 ? w[1] : w[2];
-        html += `<td class="c-calc">${blankZero(block.raw)}</td>
-                 <td class="c-calc">${block.hasData ? fmt(block.ps) : ''}</td>
-                 <td class="c-calc">${block.hasData ? fmt(block.ps * weight / 100) : ''}</td>`;
+        html += `<td class="c-calc">${isDisabled ? '' : blankZero(block.raw)}</td>
+                 <td class="c-calc">${(!isDisabled && block.hasData) ? fmt(block.ps) : ''}</td>
+                 <td class="c-calc">${(!isDisabled && block.hasData) ? fmt(block.ps * weight / 100) : ''}</td>`;
       }
     }
     
     if (!isKeyStage2(a)) {
       html += `<td class="c-spacer"></td>
-               <td class="c-calc">${fmt(result.ww.ps)}</td>
-               <td class="c-calc">${fmt(result.pt.ps)}</td>
-               <td class="c-calc">${fmt(result.examPS)}</td>`;
+               <td class="c-calc">${isDisabled ? '' : fmt(result.ww.ps)}</td>
+               <td class="c-calc">${isDisabled ? '' : fmt(result.pt.ps)}</td>
+               <td class="c-calc">${isDisabled ? '' : fmt(result.examPS)}</td>`;
     }
     
-    html += `<td class="c-grade">${result.hasData ? fmt(result.initialGrade) : ''}</td>
-             <td class="c-grade">${result.termGrade === null ? '' : formatGradeForDisplay(result.termGrade, a.policy)}</td>
-             <td class="c-desc">${esc(termDescription(a, result.termGrade))}</td>
+    const igDisplay = isRowTO ? 'T/O' : (isRowTI ? 'T/I' : (result.hasData ? fmt(result.initialGrade) : ''));
+    const tgDisplay = result.termGrade === null ? '' : formatGradeForDisplay(result.termGrade, a.policy);
+    const descDisplay = esc(termDescription(a, result.termGrade));
+
+    html += `<td class="c-grade">${igDisplay}</td>
+             <td class="c-grade" style="${isRowTO ? 'color: #ffb703; font-weight: bold;' : ''} ${isRowTI ? 'color: #81c784; font-weight: bold;' : ''}"><strong>${tgDisplay}</strong></td>
+             <td class="c-desc">${descDisplay}</td>
              </tr>`;
   }
   
@@ -460,36 +469,55 @@ function renderFinalOnly() {
     let sumIg = 0;
     let countIg = 0;
     
+    const isTO = !!learner.transferredOutTerm;
+    
     for (let t = 1; t <= 3; t++) {
-      const res = computeTerm(a, learner.id, String(t), mapePart);
-      terms.push(res.termGrade);
-      
-      if (isDescriptive) {
-        if (res.hasData) {
-          sumIg += res.initialGrade;
-          countIg++;
-        }
+      if (isTO && t > parseInt(learner.transferredOutTerm)) {
+        terms.push('T/O');
       } else {
-        if (res.termGrade !== null) {
-          sum += res.termGrade;
-          count++;
+        const res = computeTerm(a, learner.id, String(t), mapePart);
+        terms.push(res.termGrade);
+        
+        if (isDescriptive) {
+          if (res.hasData) {
+            sumIg += res.initialGrade;
+            countIg++;
+          }
+        } else {
+          if (res.termGrade !== null && typeof res.termGrade === 'number') {
+            sum += res.termGrade;
+            count++;
+          }
         }
       }
     }
     
-    const fg = isDescriptive
-      ? (countIg > 0 ? transmute(a, sumIg / countIg) : null)
-      : (count > 0 ? Math.round(sum / count) : null);
+    let fg = null;
+    let remarks = '';
+    if (isTO) {
+      fg = 'T/O';
+      remarks = '<span style="color:#ffb703; font-weight:600;">Transferred Out</span>';
+    } else {
+      fg = isDescriptive
+        ? (countIg > 0 ? transmute(a, sumIg / countIg) : null)
+        : (count > 0 ? Math.round(sum / count) : null);
+      remarks = finalRemark(a, fg);
+    }
     
+    const t1Display = terms[0] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(terms[0], a.policy));
+    const t2Display = terms[1] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(terms[1], a.policy));
+    const t3Display = terms[2] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(terms[2], a.policy));
+    const fgDisplay = fg === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(fg, a.policy));
+
     html += `<tr>
       <td>${r + 1}</td>
       <td>${esc(learner.lrn)}</td>
       <td>${esc(learnerDisplayName(learner))}</td>
-      <td>${blankNull(formatGradeForDisplay(terms[0], a.policy))}</td>
-      <td>${blankNull(formatGradeForDisplay(terms[1], a.policy))}</td>
-      <td>${blankNull(formatGradeForDisplay(terms[2], a.policy))}</td>
-      <td><strong>${blankNull(formatGradeForDisplay(fg, a.policy))}</strong></td>
-      <td>${finalRemark(a, fg)}</td>
+      <td>${t1Display}</td>
+      <td>${t2Display}</td>
+      <td>${t3Display}</td>
+      <td><strong>${fgDisplay}</strong></td>
+      <td>${remarks}</td>
     </tr>`;
   }
   
@@ -602,7 +630,6 @@ function renderConsolidatedMapehSummary(a) {
         <th>Remarks</th>
       </tr>
     </thead><tbody>`;
-
   const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
   for (let r = 0; r < a.learners.length; r++) {
     const learner = a.learners[r];
@@ -614,99 +641,122 @@ function renderConsolidatedMapehSummary(a) {
     let sumMusicIg = 0, countMusicIg = 0;
     let sumPEIg = 0, countPEIg = 0;
 
-    for (let t = 1; t <= 3; t++) {
-      const resMusic = computeTerm(a, learner.id, String(t), 'music_arts');
-      const resPE = computeTerm(a, learner.id, String(t), 'pe_health');
+    const isTO = !!learner.transferredOutTerm;
 
-      const gm = resMusic.termGrade;
-      const gp = resPE.termGrade;
+    for (let t = 1; t <= 3; t++) {
+      if (isTO && t > parseInt(learner.transferredOutTerm)) {
+        consGrades.push('T/O');
+      } else {
+        const resMusic = computeTerm(a, learner.id, String(t), 'music_arts');
+        const resPE = computeTerm(a, learner.id, String(t), 'pe_health');
+
+        const gm = resMusic.termGrade;
+        const gp = resPE.termGrade;
+
+        if (isDescriptive) {
+          if (resMusic.hasData) {
+            sumMusicIg += resMusic.initialGrade;
+            countMusicIg++;
+          }
+          if (resPE.hasData) {
+            sumPEIg += resPE.initialGrade;
+            countPEIg++;
+          }
+          
+          let sumTermIg = 0;
+          let countTermIg = 0;
+          if (resMusic.hasData) {
+            sumTermIg += resMusic.initialGrade;
+            countTermIg++;
+          }
+          if (resPE.hasData) {
+            sumTermIg += resPE.initialGrade;
+            countTermIg++;
+          }
+          consGrades.push(countTermIg > 0 ? transmute(a, sumTermIg / countTermIg) : null);
+        } else {
+          if (gm !== null && typeof gm === 'number') {
+            sumMusic += gm;
+            countMusic++;
+          }
+
+          if (gp !== null && typeof gp === 'number') {
+            sumPE += gp;
+            countPE++;
+          }
+
+          let gc = null;
+          if (gm !== null && gp !== null) {
+            gc = Math.round((gm + gp) / 2);
+          } else if (gm !== null) {
+            gc = gm;
+          } else if (gp !== null) {
+            gc = gp;
+          }
+          consGrades.push(gc);
+        }
+      }
+    }
+
+    let musicFinal = null, peFinal = null, finalConsolidated = null;
+    let remarks = '';
+    
+    if (isTO) {
+      musicFinal = 'T/O';
+      peFinal = 'T/O';
+      finalConsolidated = 'T/O';
+      remarks = '<span style="color:#ffb703; font-weight:600;">Transferred Out</span>';
+    } else {
+      musicFinal = isDescriptive
+        ? (countMusicIg > 0 ? transmute(a, sumMusicIg / countMusicIg) : null)
+        : (countMusic > 0 ? Math.round(sumMusic / countMusic) : null);
+        
+      peFinal = isDescriptive
+        ? (countPEIg > 0 ? transmute(a, sumPEIg / countPEIg) : null)
+        : (countPE > 0 ? Math.round(sumPE / countPE) : null);
 
       if (isDescriptive) {
-        if (resMusic.hasData) {
-          sumMusicIg += resMusic.initialGrade;
-          countMusicIg++;
+        let sumFinalIg = 0;
+        let countFinalIg = 0;
+        if (countMusicIg > 0) {
+          sumFinalIg += (sumMusicIg / countMusicIg);
+          countFinalIg++;
         }
-        if (resPE.hasData) {
-          sumPEIg += resPE.initialGrade;
-          countPEIg++;
+        if (countPEIg > 0) {
+          sumFinalIg += (sumPEIg / countPEIg);
+          countFinalIg++;
         }
-        
-        let sumTermIg = 0;
-        let countTermIg = 0;
-        if (resMusic.hasData) {
-          sumTermIg += resMusic.initialGrade;
-          countTermIg++;
-        }
-        if (resPE.hasData) {
-          sumTermIg += resPE.initialGrade;
-          countTermIg++;
-        }
-        consGrades.push(countTermIg > 0 ? transmute(a, sumTermIg / countTermIg) : null);
+        finalConsolidated = countFinalIg > 0 ? transmute(a, sumFinalIg / countFinalIg) : null;
       } else {
-        if (gm !== null) {
-          sumMusic += gm;
-          countMusic++;
+        if (musicFinal !== null && peFinal !== null) {
+          finalConsolidated = Math.round((musicFinal + peFinal) / 2);
+        } else if (musicFinal !== null) {
+          finalConsolidated = musicFinal;
+        } else if (peFinal !== null) {
+          finalConsolidated = peFinal;
         }
-
-        if (gp !== null) {
-          sumPE += gp;
-          countPE++;
-        }
-
-        let gc = null;
-        if (gm !== null && gp !== null) {
-          gc = Math.round((gm + gp) / 2);
-        } else if (gm !== null) {
-          gc = gm;
-        } else if (gp !== null) {
-          gc = gp;
-        }
-        consGrades.push(gc);
       }
+      remarks = finalRemark(a, finalConsolidated);
     }
-
-    const musicFinal = isDescriptive
-      ? (countMusicIg > 0 ? transmute(a, sumMusicIg / countMusicIg) : null)
-      : (countMusic > 0 ? Math.round(sumMusic / countMusic) : null);
-      
-    const peFinal = isDescriptive
-      ? (countPEIg > 0 ? transmute(a, sumPEIg / countPEIg) : null)
-      : (countPE > 0 ? Math.round(sumPE / countPE) : null);
-
-    let finalConsolidated = null;
-    if (isDescriptive) {
-      let sumFinalIg = 0;
-      let countFinalIg = 0;
-      if (countMusicIg > 0) {
-        sumFinalIg += (sumMusicIg / countMusicIg);
-        countFinalIg++;
-      }
-      if (countPEIg > 0) {
-        sumFinalIg += (sumPEIg / countPEIg);
-        countFinalIg++;
-      }
-      finalConsolidated = countFinalIg > 0 ? transmute(a, sumFinalIg / countFinalIg) : null;
-    } else {
-      if (musicFinal !== null && peFinal !== null) {
-        finalConsolidated = Math.round((musicFinal + peFinal) / 2);
-      } else if (musicFinal !== null) {
-        finalConsolidated = musicFinal;
-      } else if (peFinal !== null) {
-        finalConsolidated = peFinal;
-      }
-    }
+    
+    const mfDisplay = musicFinal === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(musicFinal, a.policy));
+    const pfDisplay = peFinal === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(peFinal, a.policy));
+    const t1Display = consGrades[0] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(consGrades[0], a.policy));
+    const t2Display = consGrades[1] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(consGrades[1], a.policy));
+    const t3Display = consGrades[2] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(consGrades[2], a.policy));
+    const fcDisplay = finalConsolidated === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(finalConsolidated, a.policy));
 
     html += `<tr>
       <td>${r + 1}</td>
       <td>${esc(learner.lrn)}</td>
       <td>${esc(learnerDisplayName(learner))}</td>
-      <td>${blankNull(formatGradeForDisplay(musicFinal, a.policy))}</td>
-      <td>${blankNull(formatGradeForDisplay(peFinal, a.policy))}</td>
-      <td>${blankNull(formatGradeForDisplay(consGrades[0], a.policy))}</td>
-      <td>${blankNull(formatGradeForDisplay(consGrades[1], a.policy))}</td>
-      <td>${blankNull(formatGradeForDisplay(consGrades[2], a.policy))}</td>
-      <td><strong>${blankNull(formatGradeForDisplay(finalConsolidated, a.policy))}</strong></td>
-      <td>${finalRemark(a, finalConsolidated)}</td>
+      <td>${mfDisplay}</td>
+      <td>${pfDisplay}</td>
+      <td>${t1Display}</td>
+      <td>${t2Display}</td>
+      <td>${t3Display}</td>
+      <td><strong>${fcDisplay}</strong></td>
+      <td>${remarks}</td>
     </tr>`;
   }
   

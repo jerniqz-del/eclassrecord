@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveDatabase: (data) => ipcRenderer.invoke('db:save', data),
 
   // File Backup & Migration Dialogs
-  exportJson: (jsonString) => ipcRenderer.invoke('dialog:export-json', jsonString),
+  exportJson: (jsonString, defaultFileName) => ipcRenderer.invoke('dialog:export-json', jsonString, defaultFileName),
   importJson: () => ipcRenderer.invoke('dialog:import-json'),
   selectFolder: () => ipcRenderer.invoke('dialog:select-folder'),
   importSf1: () => ipcRenderer.invoke('dialog:import-sf1'),

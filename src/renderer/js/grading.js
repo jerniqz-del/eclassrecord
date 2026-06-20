@@ -446,6 +446,39 @@ function componentScore(a, learnerId, term, components, mapePart) {
  * Computes complete term scores for a learner.
  */
 function computeTerm(a, learnerId, term, mapePart) {
+  const learner = a.learners.find(x => x.id === learnerId);
+  if (learner) {
+    if (learner.transferredOutTerm && parseInt(term) > parseInt(learner.transferredOutTerm)) {
+      return {
+        ww: { raw: 0, max: 0, ps: 0, hasData: false },
+        pt: { raw: 0, max: 0, ps: 0, hasData: false },
+        st1: { raw: 0, max: 0, ps: 0, hasData: false },
+        st2: { raw: 0, max: 0, ps: 0, hasData: false },
+        te: { raw: 0, max: 0, ps: 0, hasData: false },
+        examPS: 0,
+        initialGrade: 0,
+        termGrade: 'T/O',
+        hasData: false,
+        isTransferredOut: true
+      };
+    }
+    if (learner.transferredInGrades && learner.transferredInGrades[term] !== undefined) {
+      const overriddenGrade = learner.transferredInGrades[term];
+      return {
+        ww: { raw: 0, max: 0, ps: 0, hasData: false },
+        pt: { raw: 0, max: 0, ps: 0, hasData: false },
+        st1: { raw: 0, max: 0, ps: 0, hasData: false },
+        st2: { raw: 0, max: 0, ps: 0, hasData: false },
+        te: { raw: 0, max: 0, ps: 0, hasData: false },
+        examPS: 0,
+        initialGrade: 0,
+        termGrade: overriddenGrade,
+        hasData: true,
+        isTransferredIn: true
+      };
+    }
+  }
+
   const w = weightsFor(a.subjectGroup);
   const ww = componentScore(a, learnerId, term, ['WW'], mapePart);
   const pt = componentScore(a, learnerId, term, ['PT'], mapePart);
@@ -519,6 +552,7 @@ function termDescription(a, grade) {
 function descriptor(grade) {
   if (grade === null || grade === undefined || grade === '') return '';
   const g = String(grade).toUpperCase();
+  if (g === 'T/O' || g === 'TRANSFERRED OUT') return 'Transferred Out';
   if (g === 'A') return 'Advancing (Namumukod-tangi)';
   if (g === 'B') return 'Benchmarking (Napamamalas)';
   if (g === 'C') return 'Connecting (Natutungo)';

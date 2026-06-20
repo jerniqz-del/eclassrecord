@@ -796,66 +796,87 @@ function compileStudentExcelData(a, student, mapePart) {
   const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
   let sumIg = 0;
   let countIg = 0;
+  
+  const isTO = !!student.transferredOutTerm;
 
   for (let t = 1; t <= 3; t++) {
     const termStr = String(t);
-    const result = computeTerm(a, student.id, termStr, mapePart);
-    const wwAssessments = termAssessments(a, termStr, mapePart).filter(x => x.component === 'WW');
-    const ptAssessments = termAssessments(a, termStr, mapePart).filter(x => x.component === 'PT');
-    const sa1Ast = termAssessments(a, termStr, mapePart).find(x => x.component === 'SA1' || x.component === 'ST1');
-    const sa2Ast = termAssessments(a, termStr, mapePart).find(x => x.component === 'SA2' || x.component === 'ST2');
-    const teAst = termAssessments(a, termStr, mapePart).find(x => x.component === 'TE');
     
-    const wwScores = wwAssessments.map(ast => {
-      const val = a.scores[`${student.id}|${ast.id}`];
-      return (val !== undefined && val !== '') ? parseFloat(val) : '';
-    });
-    const ptScores = ptAssessments.map(ast => {
-      const val = a.scores[`${student.id}|${ast.id}`];
-      return (val !== undefined && val !== '') ? parseFloat(val) : '';
-    });
-    const sa1Score = sa1Ast ? a.scores[`${student.id}|${sa1Ast.id}`] : '';
-    const sa2Score = sa2Ast ? a.scores[`${student.id}|${sa2Ast.id}`] : '';
-    const teScore = teAst ? a.scores[`${student.id}|${teAst.id}`] : '';
-    
-    terms[termStr] = {
-      ww: wwScores,
-      wwTotal: result.ww.hasData ? result.ww.raw : '',
-      wwPS: result.ww.hasData ? result.ww.ps : '',
-      wwWS: result.ww.hasData ? (result.ww.ps * weightsFor(a.subjectGroup)[0] / 100) : '',
+    if (isTO && t > parseInt(student.transferredOutTerm)) {
+      terms[termStr] = {
+        ww: [], wwTotal: '', wwPS: '', wwWS: '',
+        pt: [], ptTotal: '', ptPS: '', ptWS: '',
+        sa1: '', sa2: '', te: '', saTotal: '', saPS: '', saWS: '',
+        initialGrade: 'T/O',
+        termGrade: 'T/O',
+        desc: 'Transferred Out'
+      };
+      if (t === 1) term1 = 'T/O';
+      if (t === 2) term2 = 'T/O';
+      if (t === 3) term3 = 'T/O';
+    } else {
+      const result = computeTerm(a, student.id, termStr, mapePart);
+      const wwAssessments = termAssessments(a, termStr, mapePart).filter(x => x.component === 'WW');
+      const ptAssessments = termAssessments(a, termStr, mapePart).filter(x => x.component === 'PT');
+      const sa1Ast = termAssessments(a, termStr, mapePart).find(x => x.component === 'SA1' || x.component === 'ST1');
+      const sa2Ast = termAssessments(a, termStr, mapePart).find(x => x.component === 'SA2' || x.component === 'ST2');
+      const teAst = termAssessments(a, termStr, mapePart).find(x => x.component === 'TE');
       
-      pt: ptScores,
-      ptTotal: result.pt.hasData ? result.pt.raw : '',
-      ptPS: result.pt.hasData ? result.pt.ps : '',
-      ptWS: result.pt.hasData ? (result.pt.ps * weightsFor(a.subjectGroup)[1] / 100) : '',
+      const wwScores = wwAssessments.map(ast => {
+        const val = a.scores[`${student.id}|${ast.id}`];
+        return (val !== undefined && val !== '') ? parseFloat(val) : '';
+      });
+      const ptScores = ptAssessments.map(ast => {
+        const val = a.scores[`${student.id}|${ast.id}`];
+        return (val !== undefined && val !== '') ? parseFloat(val) : '';
+      });
+      const sa1Score = sa1Ast ? a.scores[`${student.id}|${sa1Ast.id}`] : '';
+      const sa2Score = sa2Ast ? a.scores[`${student.id}|${sa2Ast.id}`] : '';
+      const teScore = teAst ? a.scores[`${student.id}|${teAst.id}`] : '';
       
-      sa1: (sa1Score !== undefined && sa1Score !== '') ? parseFloat(sa1Score) : '',
-      sa2: (sa2Score !== undefined && sa2Score !== '') ? parseFloat(sa2Score) : '',
-      te: (teScore !== undefined && teScore !== '') ? parseFloat(teScore) : '',
-      saTotal: result.hasData ? (result.st1.raw + result.st2.raw + result.te.raw) : '',
-      saPS: result.hasData ? result.examPS : '',
-      saWS: result.hasData ? (result.examPS * weightsFor(a.subjectGroup)[2] / 100) : '',
+      terms[termStr] = {
+        ww: wwScores,
+        wwTotal: result.ww.hasData ? result.ww.raw : '',
+        wwPS: result.ww.hasData ? result.ww.ps : '',
+        wwWS: result.ww.hasData ? (result.ww.ps * weightsFor(a.subjectGroup)[0] / 100) : '',
+        
+        pt: ptScores,
+        ptTotal: result.pt.hasData ? result.pt.raw : '',
+        ptPS: result.pt.hasData ? result.pt.ps : '',
+        ptWS: result.pt.hasData ? (result.pt.ps * weightsFor(a.subjectGroup)[1] / 100) : '',
+        
+        sa1: (sa1Score !== undefined && sa1Score !== '') ? parseFloat(sa1Score) : '',
+        sa2: (sa2Score !== undefined && sa2Score !== '') ? parseFloat(sa2Score) : '',
+        te: (teScore !== undefined && teScore !== '') ? parseFloat(teScore) : '',
+        saTotal: result.hasData ? (result.st1.raw + result.st2.raw + result.te.raw) : '',
+        saPS: result.hasData ? result.examPS : '',
+        saWS: result.hasData ? (result.examPS * weightsFor(a.subjectGroup)[2] / 100) : '',
+        
+        initialGrade: result.hasData ? result.initialGrade : '',
+        termGrade: result.termGrade !== null ? formatGradeForDisplay(result.termGrade, a.policy) : '',
+        desc: result.termGrade !== null ? termDescription(a, result.termGrade) : ''
+      };
       
-      initialGrade: result.hasData ? result.initialGrade : '',
-      termGrade: result.termGrade !== null ? formatGradeForDisplay(result.termGrade, a.policy) : '',
-      desc: result.termGrade !== null ? termDescription(a, result.termGrade) : ''
-    };
-    
-    if (result.termGrade !== null) {
-      if (isDescriptive) {
-        sumIg += result.initialGrade;
-        countIg++;
-      } else {
-        sum += result.termGrade;
-        termCount++;
+      if (result.termGrade !== null) {
+        if (isDescriptive) {
+          sumIg += result.initialGrade;
+          countIg++;
+        } else {
+          if (typeof result.termGrade === 'number') {
+            sum += result.termGrade;
+            termCount++;
+          }
+        }
+        if (t === 1) term1 = result.termGrade;
+        if (t === 2) term2 = result.termGrade;
+        if (t === 3) term3 = result.termGrade;
       }
-      if (t === 1) term1 = result.termGrade;
-      if (t === 2) term2 = result.termGrade;
-      if (t === 3) term3 = result.termGrade;
     }
   }
   
-  if (isDescriptive) {
+  if (isTO) {
+    finalGrade = 'T/O';
+  } else if (isDescriptive) {
     finalGrade = countIg > 0 ? transmute(a, sumIg / countIg) : '';
   } else {
     if (termCount > 0) {
@@ -871,7 +892,7 @@ function compileStudentExcelData(a, student, mapePart) {
       term2: term2 !== null ? formatGradeForDisplay(term2, a.policy) : '',
       term3: term3 !== null ? formatGradeForDisplay(term3, a.policy) : '',
       finalGrade: finalGrade !== null ? formatGradeForDisplay(finalGrade, a.policy) : '',
-      remarks: finalGrade !== null ? plainFinalRemark(a, finalGrade) : ''
+      remarks: isTO ? 'Transferred Out' : (finalGrade !== null && finalGrade !== '' ? plainFinalRemark(a, finalGrade) : '')
     }
   };
 }
@@ -903,100 +924,133 @@ function compileStudentConsolidatedExcelData(a, student) {
   const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
   const name = formatLearnerName(student.lastName, student.firstName, student.middleName);
   
-  const res1Music = computeTerm(a, student.id, '1', 'music_arts');
-  const res1PE = computeTerm(a, student.id, '1', 'pe_health');
-  const g1Music = res1Music.termGrade;
-  const g1PE = res1PE.termGrade;
+  const isTO = !!student.transferredOutTerm;
+  
+  // Term 1 consolidated grade
   let g1Cons = '';
-  if (isDescriptive) {
-    let sumIg = 0, countIg = 0;
-    if (res1Music.hasData) { sumIg += res1Music.initialGrade; countIg++; }
-    if (res1PE.hasData) { sumIg += res1PE.initialGrade; countIg++; }
-    if (countIg > 0) g1Cons = transmute(a, sumIg / countIg);
+  let g1Music = null, g1PE = null;
+  if (isTO && 1 > parseInt(student.transferredOutTerm)) {
+    g1Cons = 'T/O';
+    g1Music = 'T/O';
+    g1PE = 'T/O';
   } else {
-    if (g1Music !== null && g1PE !== null) g1Cons = Math.round((g1Music + g1PE) / 2);
-    else if (g1Music !== null) g1Cons = g1Music;
-    else if (g1PE !== null) g1Cons = g1PE;
-  }
-  
-  const res2Music = computeTerm(a, student.id, '2', 'music_arts');
-  const res2PE = computeTerm(a, student.id, '2', 'pe_health');
-  const g2Music = res2Music.termGrade;
-  const g2PE = res2PE.termGrade;
-  let g2Cons = '';
-  if (isDescriptive) {
-    let sumIg = 0, countIg = 0;
-    if (res2Music.hasData) { sumIg += res2Music.initialGrade; countIg++; }
-    if (res2PE.hasData) { sumIg += res2PE.initialGrade; countIg++; }
-    if (countIg > 0) g2Cons = transmute(a, sumIg / countIg);
-  } else {
-    if (g2Music !== null && g2PE !== null) g2Cons = Math.round((g2Music + g2PE) / 2);
-    else if (g2Music !== null) g2Cons = g2Music;
-    else if (g2PE !== null) g2Cons = g2PE;
-  }
-  
-  const res3Music = computeTerm(a, student.id, '3', 'music_arts');
-  const res3PE = computeTerm(a, student.id, '3', 'pe_health');
-  const g3Music = res3Music.termGrade;
-  const g3PE = res3PE.termGrade;
-  let g3Cons = '';
-  if (isDescriptive) {
-    let sumIg = 0, countIg = 0;
-    if (res3Music.hasData) { sumIg += res3Music.initialGrade; countIg++; }
-    if (res3PE.hasData) { sumIg += res3PE.initialGrade; countIg++; }
-    if (countIg > 0) g3Cons = transmute(a, sumIg / countIg);
-  } else {
-    if (g3Music !== null && g3PE !== null) g3Cons = Math.round((g3Music + g3PE) / 2);
-    else if (g3Music !== null) g3Cons = g3Music;
-    else if (g3PE !== null) g3Cons = g3PE;
-  }
-  
-  let musicFinal = '', peFinal = '', finalConsolidated = '', remarks = '';
-  let sumMusic = 0, countMusic = 0;
-  let sumPE = 0, countPE = 0;
-  
-  let sumMusicIg = 0, countMusicIg = 0;
-  let sumPEIg = 0, countPEIg = 0;
-  
-  for (let t = 1; t <= 3; t++) {
-    const resMusic = computeTerm(a, student.id, String(t), 'music_arts');
-    const resPE = computeTerm(a, student.id, String(t), 'pe_health');
+    const res1Music = computeTerm(a, student.id, '1', 'music_arts');
+    const res1PE = computeTerm(a, student.id, '1', 'pe_health');
+    g1Music = res1Music.termGrade;
+    g1PE = res1PE.termGrade;
     if (isDescriptive) {
-      if (resMusic.hasData) { sumMusicIg += resMusic.initialGrade; countMusicIg++; }
-      if (resPE.hasData) { sumPEIg += resPE.initialGrade; countPEIg++; }
+      let sumIg = 0, countIg = 0;
+      if (res1Music.hasData) { sumIg += res1Music.initialGrade; countIg++; }
+      if (res1PE.hasData) { sumIg += res1PE.initialGrade; countIg++; }
+      if (countIg > 0) g1Cons = transmute(a, sumIg / countIg);
     } else {
-      const gm = resMusic.termGrade;
-      const gp = resPE.termGrade;
-      if (gm !== null) { sumMusic += gm; countMusic++; }
-      if (gp !== null) { sumPE += gp; countPE++; }
+      if (g1Music !== null && g1PE !== null) g1Cons = Math.round((g1Music + g1PE) / 2);
+      else if (g1Music !== null) g1Cons = g1Music;
+      else if (g1PE !== null) g1Cons = g1PE;
     }
   }
-  
-  if (isDescriptive) {
-    if (countMusicIg > 0) musicFinal = transmute(a, sumMusicIg / countMusicIg);
-    if (countPEIg > 0) peFinal = transmute(a, sumPEIg / countPEIg);
-    
-    let sumFinalIg = 0, countFinalIg = 0;
-    if (countMusicIg > 0) { sumFinalIg += (sumMusicIg / countMusicIg); countFinalIg++; }
-    if (countPEIg > 0) { sumFinalIg += (sumPEIg / countPEIg); countFinalIg++; }
-    if (countFinalIg > 0) finalConsolidated = transmute(a, sumFinalIg / countFinalIg);
+
+  // Term 2 consolidated grade
+  let g2Cons = '';
+  let g2Music = null, g2PE = null;
+  if (isTO && 2 > parseInt(student.transferredOutTerm)) {
+    g2Cons = 'T/O';
+    g2Music = 'T/O';
+    g2PE = 'T/O';
   } else {
-    if (countMusic > 0) musicFinal = Math.round(sumMusic / countMusic);
-    if (countPE > 0) peFinal = Math.round(sumPE / countPE);
-    
-    if (musicFinal !== '' && peFinal !== '') {
-      finalConsolidated = Math.round((musicFinal + peFinal) / 2);
-    } else if (musicFinal !== '') {
-      finalConsolidated = musicFinal;
-    } else if (peFinal !== '') {
-      finalConsolidated = peFinal;
+    const res2Music = computeTerm(a, student.id, '2', 'music_arts');
+    const res2PE = computeTerm(a, student.id, '2', 'pe_health');
+    g2Music = res2Music.termGrade;
+    g2PE = res2PE.termGrade;
+    if (isDescriptive) {
+      let sumIg = 0, countIg = 0;
+      if (res2Music.hasData) { sumIg += res2Music.initialGrade; countIg++; }
+      if (res2PE.hasData) { sumIg += res2PE.initialGrade; countIg++; }
+      if (countIg > 0) g2Cons = transmute(a, sumIg / countIg);
+    } else {
+      if (g2Music !== null && g2PE !== null) g2Cons = Math.round((g2Music + g2PE) / 2);
+      else if (g2Music !== null) g2Cons = g2Music;
+      else if (g2PE !== null) g2Cons = g2PE;
     }
   }
-  
-  if (finalConsolidated !== '') {
-    remarks = plainFinalRemark(a, finalConsolidated);
+
+  // Term 3 consolidated grade
+  let g3Cons = '';
+  let g3Music = null, g3PE = null;
+  if (isTO && 3 > parseInt(student.transferredOutTerm)) {
+    g3Cons = 'T/O';
+    g3Music = 'T/O';
+    g3PE = 'T/O';
+  } else {
+    const res3Music = computeTerm(a, student.id, '3', 'music_arts');
+    const res3PE = computeTerm(a, student.id, '3', 'pe_health');
+    g3Music = res3Music.termGrade;
+    g3PE = res3PE.termGrade;
+    if (isDescriptive) {
+      let sumIg = 0, countIg = 0;
+      if (res3Music.hasData) { sumIg += res3Music.initialGrade; countIg++; }
+      if (res3PE.hasData) { sumIg += res3PE.initialGrade; countIg++; }
+      if (countIg > 0) g3Cons = transmute(a, sumIg / countIg);
+    } else {
+      if (g3Music !== null && g3PE !== null) g3Cons = Math.round((g3Music + g3PE) / 2);
+      else if (g3Music !== null) g3Cons = g3Music;
+      else if (g3PE !== null) g3Cons = g3PE;
+    }
   }
-  
+
+  let musicFinal = '', peFinal = '', finalConsolidated = '', remarks = '';
+  if (isTO) {
+    musicFinal = 'T/O';
+    peFinal = 'T/O';
+    finalConsolidated = 'T/O';
+    remarks = 'Transferred Out';
+  } else {
+    let sumMusic = 0, countMusic = 0;
+    let sumPE = 0, countPE = 0;
+    
+    let sumMusicIg = 0, countMusicIg = 0;
+    let sumPEIg = 0, countPEIg = 0;
+    
+    for (let t = 1; t <= 3; t++) {
+      const resMusic = computeTerm(a, student.id, String(t), 'music_arts');
+      const resPE = computeTerm(a, student.id, String(t), 'pe_health');
+      if (isDescriptive) {
+        if (resMusic.hasData) { sumMusicIg += resMusic.initialGrade; countMusicIg++; }
+        if (resPE.hasData) { sumPEIg += resPE.initialGrade; countPEIg++; }
+      } else {
+        const gm = resMusic.termGrade;
+        const gp = resPE.termGrade;
+        if (gm !== null && typeof gm === 'number') { sumMusic += gm; countMusic++; }
+        if (gp !== null && typeof gp === 'number') { sumPE += gp; countPE++; }
+      }
+    }
+    
+    if (isDescriptive) {
+      if (countMusicIg > 0) musicFinal = transmute(a, sumMusicIg / countMusicIg);
+      if (countPEIg > 0) peFinal = transmute(a, sumPEIg / countPEIg);
+      
+      let sumFinalIg = 0, countFinalIg = 0;
+      if (countMusicIg > 0) { sumFinalIg += (sumMusicIg / countMusicIg); countFinalIg++; }
+      if (countPEIg > 0) { sumFinalIg += (sumPEIg / countPEIg); countFinalIg++; }
+      if (countFinalIg > 0) finalConsolidated = transmute(a, sumFinalIg / countFinalIg);
+    } else {
+      if (countMusic > 0) musicFinal = Math.round(sumMusic / countMusic);
+      if (countPE > 0) peFinal = Math.round(sumPE / countPE);
+      
+      if (musicFinal !== '' && peFinal !== '') {
+        finalConsolidated = Math.round((musicFinal + peFinal) / 2);
+      } else if (musicFinal !== '') {
+        finalConsolidated = musicFinal;
+      } else if (peFinal !== '') {
+        finalConsolidated = peFinal;
+      }
+    }
+    
+    if (finalConsolidated !== '') {
+      remarks = plainFinalRemark(a, finalConsolidated);
+    }
+  }
+
   return {
     name,
     t1Music: g1Music !== null ? formatGradeForDisplay(g1Music, a.policy) : '',
@@ -1022,4 +1076,318 @@ function plainFinalRemark(a, grade) {
   if (isKeyStage2(a)) return desc;
   return isPass ? `Passed - ${desc}` : `For Intervention - ${desc}`;
 }
+
+/**
+ * Calculates a consolidated term grade for export (handles MAPEH consolidated calculations).
+ */
+function getLearnerTermGradeForExport(a, learnerId, term) {
+  if (isMapehSubject(a.subject)) {
+    const resMusic = computeTerm(a, learnerId, term, 'music_arts');
+    const resPE = computeTerm(a, learnerId, term, 'pe_health');
+    const gMusic = resMusic.termGrade;
+    const gPE = resPE.termGrade;
+    if (a.policy === 'DO15_DESCRIPTIVE') {
+      let sumIg = 0;
+      let countIg = 0;
+      if (resMusic.hasData) { sumIg += resMusic.initialGrade; countIg++; }
+      if (resPE.hasData) { sumIg += resPE.initialGrade; countIg++; }
+      return countIg > 0 ? transmute(a, sumIg / countIg) : null;
+    } else {
+      if (gMusic !== null && gPE !== null) {
+        return Math.round((gMusic + gPE) / 2);
+      } else if (gMusic !== null) {
+        return gMusic;
+      } else if (gPE !== null) {
+        return gPE;
+      }
+      return null;
+    }
+  } else {
+    const res = computeTerm(a, learnerId, term);
+    return res.termGrade;
+  }
+}
+
+/**
+ * Compiles a student's transfer JSON payload and triggers native download dialog.
+ */
+async function exportLearnerTransferFile(learnerId) {
+  const a = currentAssignment();
+  if (!a) return;
+  
+  const learner = a.learners.find(x => x.id === learnerId);
+  if (!learner) return;
+  
+  const compGrades = {};
+  for (let t = 1; t <= 3; t++) {
+    const g = getLearnerTermGradeForExport(a, learnerId, String(t));
+    if (g !== null && g !== undefined && g !== '' && g !== 'T/O') {
+      compGrades[String(t)] = g;
+    }
+  }
+  
+  const payload = {
+    type: 'eclass-learner-transfer',
+    version: 1,
+    learner: {
+      lrn: learner.lrn || '',
+      lastName: learner.lastName,
+      firstName: learner.firstName,
+      sex: learner.sex
+    },
+    completedTermGrades: compGrades
+  };
+  
+  const payloadString = JSON.stringify(payload, null, 2);
+  const defaultFileName = `transfer-${learner.lastName.toLowerCase()}-${learner.firstName.toLowerCase()}.json`.replace(/\s+/g, '-');
+  
+  try {
+    const result = await window.electronAPI.exportJson(payloadString, defaultFileName);
+    if (result.success) {
+      toast('Transfer file exported successfully.', 'success');
+    }
+  } catch (error) {
+    console.error(error);
+    toast('Export failed: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Initiates the learner import flow by displaying a choice modal.
+ */
+function initiateLearnerImport() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '12000';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width: 450px; width: 90%;">
+      <div class="modal__title">Import Transferred Learner</div>
+      <div class="modal__body">
+        <p style="margin-top:0">Choose how you want to import the transferred student's record:</p>
+        
+        <div style="display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-4);">
+          <button class="btn btn-primary" id="btnImportFromFile" style="text-align: left; padding: var(--space-3); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: 100%;">
+            <strong style="font-size: 14px;">Option 1: Upload Transfer JSON File</strong>
+            <span style="font-size: 11px; font-weight: normal; margin-top: 4px; opacity: 0.85;">Select a .json file exported from another teacher's app.</span>
+          </button>
+          
+          <button class="btn btn-olive" id="btnImportFromClass" style="text-align: left; padding: var(--space-3); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: 100%;">
+            <strong style="font-size: 14px;">Option 2: Direct Copy from Class in Profile</strong>
+            <span style="font-size: 11px; font-weight: normal; margin-top: 4px; opacity: 0.85;">Clone a learner directly from another class in your active profile.</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-ghost btn-sm" id="btnCancelImport">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+
+  overlay.querySelector('#btnCancelImport').addEventListener('click', close);
+
+  overlay.querySelector('#btnImportFromFile').addEventListener('click', () => {
+    close();
+    importLearnerTransferFile();
+  });
+
+  overlay.querySelector('#btnImportFromClass').addEventListener('click', () => {
+    close();
+    showDirectClassCopyModal();
+  });
+}
+
+/**
+ * Prompts the user to select and parse a transfer JSON file.
+ */
+async function importLearnerTransferFile() {
+  const activeAssignment = currentAssignment();
+  if (!activeAssignment) {
+    toast('Add a teaching load first.', 'warning');
+    return;
+  }
+  
+  try {
+    const result = await window.electronAPI.importJson();
+    if (!result.success || !result.content) return;
+    
+    const payload = JSON.parse(result.content);
+    if (payload.type !== 'eclass-learner-transfer') {
+      toast('Invalid file: The file is not a valid learner transfer record.', 'error');
+      return;
+    }
+    
+    if (!payload.learner || !payload.learner.lastName || !payload.learner.firstName) {
+      toast('Invalid file structure: Student details are missing.', 'error');
+      return;
+    }
+    
+    const l = payload.learner;
+    const newLearner = {
+      id: uid('learner'),
+      lrn: l.lrn || '',
+      lastName: l.lastName,
+      firstName: l.firstName,
+      sex: normalizeSex(l.sex || ''),
+      transferredInGrades: payload.completedTermGrades || {}
+    };
+    newLearner.displayName = formatLearnerName(newLearner.lastName, newLearner.firstName, '');
+    
+    activeAssignment.learners.push(newLearner);
+    saveDatabase();
+    render();
+    toast(`Successfully imported ${learnerDisplayName(newLearner)} with pre-calculated grades!`, 'success');
+  } catch (error) {
+    console.error(error);
+    toast('Import failed: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Renders direct class-to-class student copying options.
+ */
+function showDirectClassCopyModal() {
+  const a = currentAssignment();
+  if (!a) return;
+  
+  const otherAssignments = (db.assignments || []).filter(x => x.id !== a.id);
+  if (otherAssignments.length === 0) {
+    toast('No other class loads found in this profile to copy from.', 'info');
+    return;
+  }
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '12000';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width: 500px; width: 90%;">
+      <div class="modal__title">Direct Class-to-Class Copy</div>
+      <div class="modal__body">
+        <p style="margin-top:0">Clone a learner from another class load in this profile and import their completed term grades.</p>
+        
+        <div class="field" style="margin-top: var(--space-3);">
+          <label class="field-label">Select Source Class Load</label>
+          <select id="sourceClassSelect" class="field-select">
+            <option value="">-- Choose Class Load --</option>
+            ${otherAssignments.map(asg => `
+              <option value="${esc(asg.id)}">${esc(asg.gradeLevel)} - ${esc(asg.section)} (${esc(asg.subject)})</option>
+            `).join('')}
+          </select>
+        </div>
+        
+        <div class="field" id="sourceLearnerField" style="margin-top: var(--space-3); display: none;">
+          <label class="field-label">Select Learner</label>
+          <select id="sourceLearnerSelect" class="field-select">
+            <option value="">-- Choose Learner --</option>
+          </select>
+        </div>
+
+        <div class="field" id="sourceTermField" style="margin-top: var(--space-3); display: none;">
+          <label class="field-label">Exit/Transfer Term (Include grades up to this term)</label>
+          <select id="sourceExitTermSelect" class="field-select">
+            <option value="1">Include Term 1 grade only</option>
+            <option value="2">Include Term 1 & 2 grades</option>
+            <option value="3">Include Term 1, 2 & 3 grades</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-ghost btn-sm" id="btnCancelCopy">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="btnConfirmCopy" disabled>Copy & Import</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+
+  const classSelect = overlay.querySelector('#sourceClassSelect');
+  const learnerField = overlay.querySelector('#sourceLearnerField');
+  const learnerSelect = overlay.querySelector('#sourceLearnerSelect');
+  const termField = overlay.querySelector('#sourceTermField');
+  const confirmBtn = overlay.querySelector('#btnConfirmCopy');
+
+  classSelect.addEventListener('change', () => {
+    const selectedId = classSelect.value;
+    if (!selectedId) {
+      learnerField.style.display = 'none';
+      termField.style.display = 'none';
+      confirmBtn.disabled = true;
+      return;
+    }
+    
+    const sourceAsg = otherAssignments.find(x => x.id === selectedId);
+    if (!sourceAsg || !sourceAsg.learners || sourceAsg.learners.length === 0) {
+      learnerSelect.innerHTML = '<option value="">-- No Learners in Class --</option>';
+      learnerField.style.display = 'block';
+      termField.style.display = 'none';
+      confirmBtn.disabled = true;
+      return;
+    }
+    
+    learnerSelect.innerHTML = '<option value="">-- Choose Learner --</option>' + sourceAsg.learners.map(l => `
+      <option value="${esc(l.id)}">${esc(learnerDisplayName(l))}</option>
+    `).join('');
+    learnerField.style.display = 'block';
+    termField.style.display = 'none';
+    confirmBtn.disabled = true;
+  });
+
+  learnerSelect.addEventListener('change', () => {
+    const learnerId = learnerSelect.value;
+    if (learnerId) {
+      termField.style.display = 'block';
+      confirmBtn.disabled = false;
+    } else {
+      termField.style.display = 'none';
+      confirmBtn.disabled = true;
+    }
+  });
+
+  overlay.querySelector('#btnCancelCopy').addEventListener('click', close);
+  
+  confirmBtn.addEventListener('click', () => {
+    const sourceId = classSelect.value;
+    const learnerId = learnerSelect.value;
+    const exitTerm = overlay.querySelector('#sourceExitTermSelect').value;
+    
+    const sourceAsg = otherAssignments.find(x => x.id === sourceId);
+    if (!sourceAsg) return;
+    
+    const sourceLearner = sourceAsg.learners.find(x => x.id === learnerId);
+    if (!sourceLearner) return;
+    
+    close();
+    
+    const compGrades = {};
+    for (let t = 1; t <= parseInt(exitTerm); t++) {
+      const g = getLearnerTermGradeForExport(sourceAsg, sourceLearner.id, String(t));
+      if (g !== null && g !== undefined && g !== '') {
+        compGrades[String(t)] = g;
+      }
+    }
+    
+    const targetLearner = {
+      id: uid('learner'),
+      lrn: sourceLearner.lrn || '',
+      lastName: sourceLearner.lastName,
+      firstName: sourceLearner.firstName,
+      sex: sourceLearner.sex,
+      transferredInGrades: compGrades
+    };
+    targetLearner.displayName = formatLearnerName(targetLearner.lastName, targetLearner.firstName, '');
+    
+    a.learners.push(targetLearner);
+    saveDatabase();
+    render();
+    toast(`Successfully cloned ${learnerDisplayName(targetLearner)} and imported grades!`, 'success');
+  });
+}
+
 

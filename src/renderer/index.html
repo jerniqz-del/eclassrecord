@@ -70,7 +70,7 @@
           </svg>
           <span class="nav-btn__label">Grading Sheet</span>
         </button>
-        <button id="navSync" class="nav-btn" onclick="setView('sync')" title="Mobile Sync">
+        <button id="navSync" class="nav-btn" onclick="setView('sync')" title="Mobile Sync" style="display: none;">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
             <line x1="12" y1="18" x2="12.01" y2="18"></line>
@@ -291,6 +291,10 @@
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
               Upload SF1 Spreadsheet
             </button>
+            <button class="btn btn-olive btn-sm" onclick="initiateLearnerImport()">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="16" y1="11" x2="22" y2="11"></line></svg>
+              Import Transferred Learner
+            </button>
             <button class="btn btn-warn btn-sm" onclick="removeCurrentAssignment()">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               Delete This Class
@@ -344,12 +348,23 @@
       <!-- Record & Grading Sheets View -->
       <section class="view-section" data-view="record">
         
-        <!-- Record Grid Tabs -->
-        <div id="recordTabs" class="record-tabs no-print">
-          <button id="recTab1" class="record-tab" onclick="setRecordTab('1')">Term 1</button>
-          <button id="recTab2" class="record-tab" onclick="setRecordTab('2')">Term 2</button>
-          <button id="recTab3" class="record-tab" onclick="setRecordTab('3')">Term 3</button>
-          <button id="recTabSummary" class="record-tab record-tab--summary" onclick="setRecordTab('summary')">Summary</button>
+        <!-- Record Grid Header Row -->
+        <div class="record-header-row no-print">
+          <!-- Record Grid Tabs -->
+          <div id="recordTabs" class="record-tabs" style="margin-bottom: 0;">
+            <button id="recTab1" class="record-tab" onclick="setRecordTab('1')">Term 1</button>
+            <button id="recTab2" class="record-tab" onclick="setRecordTab('2')">Term 2</button>
+            <button id="recTab3" class="record-tab" onclick="setRecordTab('3')">Term 3</button>
+            <button id="recTabSummary" class="record-tab record-tab--summary" onclick="setRecordTab('summary')">Summary</button>
+          </div>
+
+          <!-- Class Selector Dropdown -->
+          <div class="record-class-selector">
+            <span class="record-class-label">Active Class:</span>
+            <select id="recordClassSelect" class="field-select select-class-dropdown" onchange="selectAssignment(this.value); setView('record');">
+              <!-- Dynamically populated options -->
+            </select>
+          </div>
         </div>
 
         <!-- MAPEH Components sub-tabs -->
@@ -602,8 +617,8 @@
       <!-- Footer Info Row -->
       <footer class="app-footer no-print">
         <div class="app-footer__content">
-          <div class="app-footer__text">E-Class Record App</div>
-          <div class="app-footer__info-text">Compliant with DepEd Order No. 15 s. 2026 — Developer: JOHN EDWARD A. ENRIQUEZ, T-II</div>
+          <div class="app-footer__text"><a href="#" onclick="openDonateExternal('https://www.facebook.com/profile.php?id=61591204673647'); return false;" class="app-footer__link">E-Class Record App <span id="footerVersion"></span></a></div>
+          <div class="app-footer__info-text">Compliant with DepEd Order No. 15 s. 2026 — Developer: <a href="#" onclick="openDonateExternal('https://www.facebook.com/marasa.p.man'); return false;" class="app-footer__link">JOHN EDWARD A. ENRIQUEZ</a>, T-II</div>
         </div>
       </footer>
 
@@ -875,6 +890,7 @@
               <div class="welcome-feature-title">Backups & Export</div>
               <div class="welcome-feature-desc">Download secure offline backups of your database, print class records directly, or export premium PDF reports.</div>
             </div>
+          </div>
         </div>
         <!-- What's New Section (Dynamic) -->
         <div id="welcomeWhatsNew" style="display:none; margin-top:var(--space-4); border-top:1px solid var(--border-color); padding-top:var(--space-3)">

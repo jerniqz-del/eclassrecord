@@ -160,10 +160,11 @@ ipcMain.handle('db:save', async (_event, data) => {
   return fileIO.saveDatabase(data);
 });
 
-ipcMain.handle('dialog:export-json', async (_event, jsonString) => {
+ipcMain.handle('dialog:export-json', async (_event, jsonString, defaultFileName) => {
+  const filename = defaultFileName || 'eclass-record-backup.json';
   const result = await dialog.showSaveDialog(mainWindow, {
-    title: 'Export JSON Backup',
-    defaultPath: path.join(app.getPath('desktop'), 'eclass-record-backup.json'),
+    title: 'Export JSON',
+    defaultPath: path.join(app.getPath('desktop'), filename),
     filters: [{ name: 'JSON Files', extensions: ['json'] }]
   });
   if (result.canceled || !result.filePath) return { success: false };

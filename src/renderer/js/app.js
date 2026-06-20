@@ -79,6 +79,7 @@ function render() {
 
   // Render Sub-components
   renderAssignmentsList();
+  renderClassSelectorDropdown();
   renderCurrentHeader();
   renderRecordTable();
   renderFinalOnly();
@@ -154,9 +155,45 @@ function renderAssignmentsList() {
 }
 
 /**
+ * Renders the class load selection dropdown in the grading sheets view.
+ */
+function renderClassSelectorDropdown() {
+  const selectEl = document.getElementById('recordClassSelect');
+  if (!selectEl) return;
+
+  const activeYear = db.schoolYear || '2026-2027';
+  const filtered = db.assignments ? db.assignments.filter(a => a.schoolYear === activeYear) : [];
+
+  selectEl.innerHTML = '';
+
+  if (filtered.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No Class Load Configured';
+    selectEl.appendChild(opt);
+    selectEl.disabled = true;
+    return;
+  }
+
+  selectEl.disabled = false;
+  filtered.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.id;
+    opt.textContent = `Grade ${a.gradeLevel} - ${a.section} (${a.subject})`;
+    if (a.id === db.currentAssignmentId) {
+      opt.selected = true;
+    }
+    selectEl.appendChild(opt);
+  });
+}
+
+/**
  * Triggers view routing. Toggles block elements matching 'data-view'.
  */
 function setView(view) {
+  if (view === 'sync') {
+    view = 'dashboard';
+  }
   currentView = view;
   db.activeView = view;
   document.body.setAttribute('data-active-view', view);
@@ -488,12 +525,18 @@ async function downloadPdf() {
  * Initialise App on Launch
  */
 window.addEventListener('DOMContentLoaded', async () => {
+  console.log("DOMContentLoaded: App startup init...");
   // Load local file database
   await loadDatabase();
+  console.log("DOMContentLoaded: Database loaded. Profiles count:", dbRoot.profiles ? dbRoot.profiles.length : 0);
   
   // Set window title dynamically using the actual version
   const appVersion = await window.electronAPI.getVersion();
   document.title = `E-Class Record App v${appVersion}`;
+  const footerVerEl = document.getElementById('footerVersion');
+  if (footerVerEl) {
+    footerVerEl.textContent = 'v' + appVersion.replace(/^v/, '');
+  }
   
   // Populate regions select
   populateRegions();
@@ -611,6 +654,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       );
     }
   });
+
 });
 
 // Register global keyboard shortcuts for Undo (Ctrl+Z) and Redo (Ctrl+Y / Ctrl+Shift+Z)
@@ -1046,9 +1090,14 @@ function showCreateProfileForm() {
  */
 let selectedProfileIdToUnlock = '';
 function selectProfileCard(id) {
+  console.log("selectProfileCard called with ID:", id);
   const p = dbRoot.profiles.find(x => x.id === id);
-  if (!p) return;
+  if (!p) {
+    console.error("selectProfileCard: Profile not found for ID:", id);
+    return;
+  }
   
+  console.log("Found profile to select:", p.name, "pinEnabled:", p.pinEnabled);
   if (!p.pinEnabled) {
     unlockProfileAndEnter(p, '');
   } else {
@@ -1084,27 +1133,36 @@ function showProfileSelect() {
 async function submitPasscode() {
   const pin = document.getElementById('passcodeField').value;
   const errorEl = document.getElementById('unlockErrorMsg');
+  console.log("submitPasscode: PIN entered (length):", pin ? pin.length : 0);
   
   if (!pin || pin.length < 6 || !/^\d+$/.test(pin)) {
+    console.warn("submitPasscode: Invalid PIN format");
     if (errorEl) errorEl.innerText = 'Passcode must be a 6-digit numeric PIN.';
     return;
   }
   
   const p = dbRoot.profiles.find(x => x.id === selectedProfileIdToUnlock);
   if (!p) {
+    console.error("submitPasscode: selectedProfileIdToUnlock not found:", selectedProfileIdToUnlock);
     if (errorEl) errorEl.innerText = 'Profile not found.';
     return;
   }
   
+  console.log("submitPasscode: Verifying PIN for profile:", p.name);
   const verified = await verifyPin(pin, p.salt, p.pinHash);
+  console.log("submitPasscode: PIN verification result:", verified);
   if (verified) {
     p.currentPin = pin; // retain pin in session memory for backup encryption
     try {
+      console.log("submitPasscode: PIN verified. Unlocking profile...");
       await unlockProfileAndEnter(p, pin);
+      console.log("submitPasscode: Profile unlock process finished successfully");
     } catch (e) {
+      console.error("submitPasscode: Error during unlockProfileAndEnter:", e);
       if (errorEl) errorEl.innerText = e.message;
     }
   } else {
+    console.warn("submitPasscode: Incorrect PIN entered");
     if (errorEl) errorEl.innerText = 'Incorrect passcode PIN. Please try again.';
     document.getElementById('passcodeField').value = '';
     document.getElementById('passcodeField').focus();
@@ -1198,27 +1256,36 @@ async function submitCreateProfile() {
  * Loads profile workspace data and switches user interface view.
  */
 async function unlockProfileAndEnter(profile, pin) {
+  console.log("unlockProfileAndEnter: Unlocking profile:", profile.name, "pinEnabled:", profile.pinEnabled);
   let decryptedData;
   if (profile.pinEnabled) {
+    console.log("unlockProfileAndEnter: secureBackup:", !!(profile.data && profile.data.secureBackup), "ciphertext length:", profile.data && profile.data.ciphertext ? profile.data.ciphertext.length : 0);
     if (profile.data && (profile.data.secureBackup || profile.data.ciphertext)) {
       try {
+        console.log("unlockProfileAndEnter: Decrypting payload...");
         decryptedData = JSON.parse(await decryptPayload(profile.data, pin));
+        console.log("unlockProfileAndEnter: Decryption successful!");
       } catch (err) {
+        console.error("unlockProfileAndEnter: Decryption failed!", err);
         throw new Error("Incorrect PIN or corrupted profile data.");
       }
     } else {
       // Legacy PIN-enabled profile stored in plain text, migrate it
+      console.log("unlockProfileAndEnter: Legacy PIN-enabled profile plain text");
       decryptedData = profile.data;
     }
   } else {
+    console.log("unlockProfileAndEnter: PIN not enabled, using plain text data");
     decryptedData = profile.data;
   }
 
+  console.log("unlockProfileAndEnter: Loading decrypted data into state...");
   db = decryptedData;
   db.secondaryBackupPath = profile.secondaryBackupPath || '';
   dbRoot.activeProfileId = profile.id;
   currentProfilePin = pin || '';
   
+  console.log("unlockProfileAndEnter: Normalizing and updating views...");
   normalizeDatabase();
   showEl('profileOverlay', false);
   
@@ -1228,11 +1295,35 @@ async function unlockProfileAndEnter(profile, pin) {
   // Initialize spectator grades blur based on settings
   gradesBlurred = db.autoBlur || false;
   
-  await saveDatabase();
-  
+  console.log("unlockProfileAndEnter: Calling render()...");
   render();
+  
+  console.log("unlockProfileAndEnter: Calling saveDatabase()...");
+  await saveDatabase();
   // checkWelcomeModal(); // Welcome modal is now shown on startup before profile login
+  console.log("unlockProfileAndEnter: Profile loaded completely");
   toast(`Welcome back, ${profile.name}!`, 'success');
+
+  // Validate if at least one of the entry boxes for "Teacher's Profile" is empty
+  const isProfileComplete =
+    db.teacherName && db.teacherName.trim() !== '' &&
+    db.schoolName && db.schoolName.trim() !== '' &&
+    db.schoolId && db.schoolId.trim() !== '' &&
+    db.region && db.region.trim() !== '' &&
+    db.division && db.division.trim() !== '' &&
+    db.schoolYear && db.schoolYear.trim() !== '';
+
+  if (!isProfileComplete) {
+    setTimeout(() => {
+      alertModal(
+        'Profile Incomplete',
+        'At least one of the entry boxes for "Teacher\'s Profile" is empty. Please complete your profile under Settings.',
+        () => {
+          setView('settings');
+        }
+      );
+    }, 500);
+  }
 }
 
 /**

@@ -324,8 +324,9 @@ function adjustFontSize(dir) {
  * Modern modal-based alert popup.
  * @param {string} title Header title.
  * @param {string} message Description.
+ * @param {function=} onOk Optional callback function executed on confirmation.
  */
-function alertModal(title, message) {
+function alertModal(title, message, onOk) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
@@ -343,6 +344,7 @@ function alertModal(title, message) {
   
   const close = () => {
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    if (typeof onOk === 'function') onOk();
   };
   
   okBtn.addEventListener('click', close);
@@ -484,6 +486,7 @@ function triggerWelcomeUpdate() {
  * Saves preference and closes the welcome modal on click of the Close button.
  */
 function closeWelcomeModal() {
+  console.log("closeWelcomeModal called");
   const checkbox = document.getElementById('welcomeDoNotShowCheckbox');
   if (checkbox && checkbox.checked) {
     const todayString = new Date().toDateString();
@@ -500,17 +503,24 @@ function closeWelcomeModal() {
   // If the profile overlay is currently hidden (e.g., during startup when welcome modal is active),
   // we now show the profile overlay / login screen.
   const profileOverlay = document.getElementById('profileOverlay');
-  if (profileOverlay && profileOverlay.style.display === 'none') {
+  console.log("closeWelcomeModal: profileOverlay display style is:", profileOverlay ? profileOverlay.style.display : "null");
+  
+  if (profileOverlay && (profileOverlay.style.display === 'none' || profileOverlay.style.display === '')) {
+    console.log("closeWelcomeModal: Showing profileOverlay");
     showEl('profileOverlay', true, 'flex');
+    console.log("closeWelcomeModal: functions defined:", typeof showProfileSelect === 'function', typeof showCreateProfileForm === 'function');
     if (typeof showProfileSelect === 'function' && typeof showCreateProfileForm === 'function') {
       const hasProfiles = (typeof dbRoot !== 'undefined' && dbRoot.profiles && dbRoot.profiles.length > 0);
       const hasLegacy = (typeof legacyDataToMigrate !== 'undefined' && legacyDataToMigrate !== null);
+      console.log("closeWelcomeModal: hasProfiles:", hasProfiles, "hasLegacy:", hasLegacy);
       if (hasLegacy || !hasProfiles) {
         showCreateProfileForm();
       } else {
         showProfileSelect();
       }
     }
+  } else {
+    console.log("closeWelcomeModal: Condition display === 'none' not met");
   }
 }
 
