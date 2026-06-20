@@ -522,21 +522,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Handle Profile Overlay / Welcome Modal on Startup
-  const dismissedUntil = localStorage.getItem('welcome_modal_dismissed_until');
-  const todayString = new Date().toDateString();
-  const welcomeActive = dismissedUntil !== todayString;
-
-  if (welcomeActive) {
-    showEl('profileOverlay', false);
-    showEl('welcomeModal', true, 'flex');
-  } else {
-    showEl('profileOverlay', true, 'flex');
-    if (legacyDataToMigrate !== null || dbRoot.profiles.length === 0) {
-      showCreateProfileForm();
-    } else {
-      showProfileSelect();
-    }
-  }
+  await checkWelcomeModal();
 
   // Set up delegation for cell row & column highlights on score input focus
   document.addEventListener('focusin', (e) => {

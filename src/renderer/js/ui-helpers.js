@@ -355,8 +355,18 @@ function alertModal(title, message) {
  * Checks if the welcome modal should be shown on startup.
  * Called during DOMContentLoaded.
  */
-function checkWelcomeModal() {
-  // Populate dynamically if changelog exists
+async function checkWelcomeModal() {
+  // 1. Get current version and populate title version badge
+  let currentVersion = '1.0.0';
+  if (window.electronAPI && window.electronAPI.getVersion) {
+    currentVersion = await window.electronAPI.getVersion();
+  }
+  const currentVerEl = document.getElementById('welcomeCurrentVersion');
+  if (currentVerEl) {
+    currentVerEl.textContent = currentVersion;
+  }
+
+  // 2. Populate dynamically if changelog exists
   if (typeof APP_CHANGELOG !== 'undefined' && APP_CHANGELOG && APP_CHANGELOG.points && APP_CHANGELOG.points.length > 0) {
     const versionEl = document.getElementById('whatsNewVersion');
     const listEl = document.getElementById('whatsNewList');
@@ -369,7 +379,7 @@ function checkWelcomeModal() {
     if (sectionEl) sectionEl.style.display = 'block';
   }
 
-  // Determine whether to force show due to new version
+  // 3. Determine whether to force show due to new version
   let forceShow = false;
   if (typeof APP_CHANGELOG !== 'undefined' && APP_CHANGELOG && APP_CHANGELOG.version) {
     const lastSeenVersion = localStorage.getItem('welcome_last_seen_version');
@@ -380,10 +390,93 @@ function checkWelcomeModal() {
     }
   }
 
+  // 4. Check for updates on GitHub (if online)
+  if (navigator.onLine) {
+    fetchLatestGitHubVersion(currentVersion);
+  }
+
   const dismissedUntil = localStorage.getItem('welcome_modal_dismissed_until');
   const todayString = new Date().toDateString();
-  if (forceShow || dismissedUntil !== todayString) {
+  const shouldShow = forceShow || dismissedUntil !== todayString;
+
+  if (shouldShow) {
+    showEl('profileOverlay', false);
     showEl('welcomeModal', true, 'flex');
+  } else {
+    // Show login screen overlay directly if welcome modal is skipped
+    showEl('welcomeModal', false);
+    showEl('profileOverlay', true, 'flex');
+    if (typeof showProfileSelect === 'function' && typeof showCreateProfileForm === 'function') {
+      const hasProfiles = (typeof dbRoot !== 'undefined' && dbRoot.profiles && dbRoot.profiles.length > 0);
+      const hasLegacy = (typeof legacyDataToMigrate !== 'undefined' && legacyDataToMigrate !== null);
+      if (hasLegacy || !hasProfiles) {
+        showCreateProfileForm();
+      } else {
+        showProfileSelect();
+      }
+    }
+  }
+}
+
+/**
+ * Semver comparison helper. Returns true if latest > current.
+ */
+function isNewerVersion(latest, current) {
+  const parse = v => v.replace(/^v/, '').split('.').map(Number);
+  const l = parse(latest);
+  const c = parse(current);
+  for (let i = 0; i < Math.max(l.length, c.length); i++) {
+    const lVal = l[i] || 0;
+    const cVal = c[i] || 0;
+    if (lVal > cVal) return true;
+    if (lVal < cVal) return false;
+  }
+  return false;
+}
+
+/**
+ * Queries GitHub API for the latest release tag.
+ */
+function fetchLatestGitHubVersion(currentVersion) {
+  fetch('https://api.github.com/repos/jerniqz-del/eclassrecord/releases/latest')
+    .then(res => {
+      if (!res.ok) throw new Error('Failed to fetch latest release metadata.');
+      return res.json();
+    })
+    .then(data => {
+      if (data && data.tag_name) {
+        const latestVersion = data.tag_name.replace(/^v/, '');
+        const currentClean = currentVersion.replace(/^v/, '');
+        if (isNewerVersion(latestVersion, currentClean)) {
+          const latestVerEl = document.getElementById('welcomeLatestVersion');
+          if (latestVerEl) latestVerEl.textContent = latestVersion;
+          showEl('welcomeUpdateBanner', true, 'flex');
+        }
+      }
+    })
+    .catch(err => {
+      console.warn('Silent fallback: Welcome modal update check failed:', err);
+    });
+}
+
+/**
+ * Hides the welcome update banner.
+ */
+function dismissWelcomeUpdate() {
+  showEl('welcomeUpdateBanner', false);
+}
+
+/**
+ * Triggers the update downloader, closes welcome modal, and redirects to settings.
+ */
+function triggerWelcomeUpdate() {
+  toast('Checking and downloading update… Go to Settings to view progress.', 'info');
+  if (window.electronAPI && window.electronAPI.checkForUpdates) {
+    window.electronAPI.checkForUpdates();
+  }
+  closeWelcomeModal();
+  if (typeof setView === 'function') {
+    setView('settings');
   }
 }
 

@@ -803,9 +803,21 @@
   <div id="welcomeModal" class="modal-overlay" style="display:none">
     <div class="modal modal--wide welcome-modal">
       <div class="modal__title" style="display:flex; align-items:center; gap:var(--space-2)">
-        <span style="font-size:24px">👋</span> Welcome to E-Class Record
+        <span style="font-size:24px">👋</span> Welcome to E-Class Record App v<span id="welcomeCurrentVersion"></span>
       </div>
       <div class="modal__body">
+        <!-- Dynamic Update Alert Banner -->
+        <div id="welcomeUpdateBanner" class="welcome-update-banner" style="display:none; margin-bottom:var(--space-4); background:var(--color-primary-50); border:1px solid var(--color-primary-200); border-radius:var(--border-radius-md); padding:var(--space-3); justify-content:space-between; align-items:center; gap:var(--space-3)">
+          <div style="font-size:var(--font-size-sm); color:var(--text-primary); text-align:left">
+            <strong style="color:var(--color-primary-600)">🚀 New Version Available: v<span id="welcomeLatestVersion"></span></strong><br>
+            <span style="font-size:var(--font-size-xs); color:var(--text-secondary)">A new update is ready. Would you like to update now? You can also update later via Settings.</span>
+          </div>
+          <div style="display:flex; gap:var(--space-2); flex-shrink:0">
+            <button class="btn btn-ghost btn-sm" onclick="dismissWelcomeUpdate()" style="padding:4px 8px; font-size:var(--font-size-xs)">Later</button>
+            <button class="btn btn-primary btn-sm" onclick="triggerWelcomeUpdate()" style="padding:4px 10px; font-size:var(--font-size-xs)">Update Now</button>
+          </div>
+        </div>
+
         <p style="margin-top:0; font-size:var(--font-size-md); color:var(--text-secondary)">
           Your local, secure, and teacher-owned grading assistant. Here are the core features of the application:
         </p>
@@ -874,6 +886,7 @@
         </div>
       </div>
       <div class="modal__actions welcome-modal-footer" style="display:flex; justify-content:space-between; align-items:center; width:100%">
+        <!-- Checkbox on the left -->
         <!-- Checkbox on the left -->
         <label class="welcome-checkbox-label" style="display:flex; align-items:center; gap:var(--space-2); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-secondary)">
           <input type="checkbox" id="welcomeDoNotShowCheckbox" style="cursor:pointer; width:16px; height:16px" />
