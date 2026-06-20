@@ -363,7 +363,7 @@ async function checkWelcomeModal() {
   }
   const currentVerEl = document.getElementById('welcomeCurrentVersion');
   if (currentVerEl) {
-    currentVerEl.textContent = currentVersion;
+    currentVerEl.textContent = 'v' + currentVersion.replace(/^v/, '');
   }
 
   // 2. Populate dynamically if changelog exists
