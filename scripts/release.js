@@ -67,4 +67,49 @@ runCmd('npm run publish');
 console.log('Publishing the draft release to make the update live...');
 runCmd(`gh release edit v${nextVersion} --draft=false`);
 
+// 7. Generate Facebook Post Template
+console.log('Generating Facebook Post description...');
+const facebookPostPath = path.join(__dirname, `../dist/facebook-post-v${nextVersion}.txt`);
+
+let changelogPoints = '';
+try {
+  const tags = execSync('git tag --sort=-v:refname', { encoding: 'utf8' }).trim().split('\n');
+  const currentTag = `v${nextVersion}`;
+  const previousTag = tags.find(t => t !== currentTag && (t.startsWith('v') || t.match(/^\d/)));
+  
+  if (previousTag) {
+    const rawLog = execSync(`git log ${previousTag}..HEAD --oneline`, { encoding: 'utf8' }).trim();
+    changelogPoints = rawLog.split('\n')
+      .map(line => '  • ' + line.replace(/^[a-f0-9]+\s+/, ''))
+      .join('\n');
+  }
+} catch (e) {
+  changelogPoints = '  • General performance and security improvements.';
+}
+
+const facebookPostContent = `📢 E-Class Record Update: Version v${nextVersion} is now LIVE! 🚀
+
+We are excited to announce the release of E-Class Record v${nextVersion}! This update brings key features, optimizations, and improvements to your local teacher class record app.
+
+🌟 What's New in this Version:
+${changelogPoints || '  • General performance and security improvements.'}
+
+💻 How to Get the Update:
+• For New Users: Download the latest setup installer directly from GitHub:
+  👉 https://github.com/jerniqz-del/eclassrecord/releases/download/v${nextVersion}/E-Class-Record-Setup-${nextVersion}.exe
+
+• For Existing Users: No need to reinstall! Simply open your app, go to Settings, and click "Check for Updates" to install the update instantly!
+
+Thank you for using E-Class Record! Help your fellow teachers by sharing this post! 🧑‍🏫👩‍🏫
+
+#EClassRecord #DepEd #GradingSheet #TeacherLife #EdTech #Update #TeacherTools
+`;
+
+fs.writeFileSync(facebookPostPath, facebookPostContent, 'utf8');
+
+console.log(`\n======================================================`);
+console.log(`🎉 FACEBOOK POST GENERATED: ${facebookPostPath}`);
+console.log(`======================================================\n`);
+console.log(facebookPostContent);
+console.log(`======================================================\n`);
 console.log(`Successfully bumped version, pushed to GitHub, and published Release v${nextVersion}!`);
