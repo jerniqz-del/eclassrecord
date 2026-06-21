@@ -169,22 +169,46 @@ try {
 let changelogList = [];
 let changelogPointsStr = '';
 let previousTag = null;
-try {
-  const tags = execSync('git tag --sort=-v:refname', { encoding: 'utf8' }).trim().split('\n');
-  const currentTag = `v${nextVersion}`;
-  previousTag = tags.find(t => t !== currentTag && (t.startsWith('v') || t.match(/^\d/)));
-  
-  if (previousTag) {
-    const rawLog = execSync(`git log ${previousTag}..HEAD --oneline`, { encoding: 'utf8' }).trim();
-    if (rawLog) {
-      changelogList = rawLog.split('\n')
-        .map(line => line.replace(/^[a-f0-9]+\s+/, '').trim())
-        .filter(Boolean);
-      changelogPointsStr = changelogList.map(line => '  • ' + line).join('\n');
-    }
+let loadedFromPending = false;
+
+const pendingChangelogPath = path.join(__dirname, '../changelog-pending.txt');
+if (fs.existsSync(pendingChangelogPath)) {
+  const content = fs.readFileSync(pendingChangelogPath, 'utf8');
+  changelogList = content.split(/\r?\n/)
+    .map(line => line.trim().replace(/^[-*•+]\s+/, ''))
+    .filter(Boolean);
+  if (changelogList.length > 0) {
+    changelogPointsStr = changelogList.map(line => '  • ' + line).join('\n');
+    loadedFromPending = true;
+    console.log(`Loaded ${changelogList.length} changelog points from changelog-pending.txt`);
   }
-} catch (e) {
-  console.warn('Could not extract git history. Using fallback changelog.');
+}
+
+if (!loadedFromPending) {
+  try {
+    const tags = execSync('git tag --sort=-v:refname', { encoding: 'utf8' }).trim().split('\n');
+    const currentTag = `v${nextVersion}`;
+    previousTag = tags.find(t => t !== currentTag && (t.startsWith('v') || t.match(/^\d/)));
+    
+    if (previousTag) {
+      const rawLog = execSync(`git log ${previousTag}..HEAD --oneline`, { encoding: 'utf8' }).trim();
+      if (rawLog) {
+        changelogList = rawLog.split('\n')
+          .map(line => line.replace(/^[a-f0-9]+\s+/, '').trim())
+          .filter(line => {
+            const l = line.toLowerCase();
+            return !l.startsWith('release:') && 
+                   !l.startsWith('chore:') && 
+                   !l.startsWith('bump:') && 
+                   !l.startsWith('merge');
+          })
+          .filter(Boolean);
+        changelogPointsStr = changelogList.map(line => '  • ' + line).join('\n');
+      }
+    }
+  } catch (e) {
+    console.warn('Could not extract git history. Using fallback changelog.');
+  }
 }
 
 if (changelogList.length === 0) {
@@ -194,23 +218,36 @@ if (changelogList.length === 0) {
 
 // B. Extract accumulated Git Changelog for Facebook (from the latest posted version up to HEAD)
 let fbChangelogPointsStr = changelogPointsStr;
-const fbBaseTag = findGitTagForVersion(lastFbVersion);
-if (fbBaseTag) {
-  if (fbBaseTag !== `v${nextVersion}`) {
-    console.log(`Accumulating updates starting from Facebook's last posted version tag: ${fbBaseTag}...`);
-    try {
-      const rawFbLog = execSync(`git log ${fbBaseTag}..HEAD --oneline`, { encoding: 'utf8' }).trim();
-      if (rawFbLog) {
-        const fbChangelogList = rawFbLog.split('\n')
-          .map(line => line.replace(/^[a-f0-9]+\s+/, '').trim())
-          .filter(Boolean);
-        fbChangelogPointsStr = fbChangelogList.map(line => '  • ' + line).join('\n');
+
+// If we loaded specific features from pending changelog, we prefer them for the FB post
+if (!loadedFromPending) {
+  const fbBaseTag = findGitTagForVersion(lastFbVersion);
+  if (fbBaseTag) {
+    if (fbBaseTag !== `v${nextVersion}`) {
+      console.log(`Accumulating updates starting from Facebook's last posted version tag: ${fbBaseTag}...`);
+      try {
+        const rawFbLog = execSync(`git log ${fbBaseTag}..HEAD --oneline`, { encoding: 'utf8' }).trim();
+        if (rawFbLog) {
+          const fbChangelogList = rawFbLog.split('\n')
+            .map(line => line.replace(/^[a-f0-9]+\s+/, '').trim())
+            .filter(line => {
+              const l = line.toLowerCase();
+              return !l.startsWith('release:') && 
+                     !l.startsWith('chore:') && 
+                     !l.startsWith('bump:') && 
+                     !l.startsWith('merge');
+            })
+            .filter(Boolean);
+          if (fbChangelogList.length > 0) {
+            fbChangelogPointsStr = fbChangelogList.map(line => '  • ' + line).join('\n');
+          }
+        }
+      } catch (e) {
+        console.warn(`Could not extract accumulated git history since ${fbBaseTag}. Falling back to default changelog.`);
       }
-    } catch (e) {
-      console.warn(`Could not extract accumulated git history since ${fbBaseTag}. Falling back to default changelog.`);
+    } else {
+      console.log(`Facebook page is already up to date with version ${fbBaseTag}. Only including current changes.`);
     }
-  } else {
-    console.log(`Facebook page is already up to date with version ${fbBaseTag}. Only including current changes.`);
   }
 }
 
@@ -224,6 +261,11 @@ const changelogJsContent = `// Autogenerated changelog for v${nextVersion}\ncons
 fs.writeFileSync(changelogFilePath, changelogJsContent, 'utf8');
 console.log(`Generated and updated ${changelogFilePath}`);
 
+// Delete changelog-pending.txt prior to staging to git
+if (fs.existsSync(pendingChangelogPath)) {
+  fs.unlinkSync(pendingChangelogPath);
+  console.log('Cleaned up changelog-pending.txt');
+}
 
 // 4. Git operations
 runCmd('git add .');
