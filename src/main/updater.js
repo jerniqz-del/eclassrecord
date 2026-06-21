@@ -57,6 +57,8 @@ function sendStatus(status, payload) {
 function initAutoUpdater(window) {
   mainAppWindow = window;
 
+  autoUpdater.autoDownload = false;
+
   autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'jerniqz-del',
@@ -132,7 +134,19 @@ function checkForUpdates(window) {
   });
 }
 
+/**
+ * Initiates the update download sequence manually.
+ */
+function downloadUpdate() {
+  sendStatus('downloading', { message: 'Downloading update… 0%', percent: 0 });
+  autoUpdater.downloadUpdate().catch((err) => {
+    console.error('Failed to start download:', err);
+    sendStatus('error', { message: `Download failed: ${err.message || err}` });
+  });
+}
+
 module.exports = {
   initAutoUpdater,
-  checkForUpdates
+  checkForUpdates,
+  downloadUpdate
 };

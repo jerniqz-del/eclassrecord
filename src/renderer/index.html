@@ -874,14 +874,26 @@
       </div>
       <div class="modal__body">
         <!-- Dynamic Update Alert Banner -->
-        <div id="welcomeUpdateBanner" class="welcome-update-banner" style="display:none; margin-bottom:var(--space-4); background:var(--color-primary-50); border:1px solid var(--color-primary-200); border-radius:var(--border-radius-md); padding:var(--space-3); justify-content:space-between; align-items:center; gap:var(--space-3)">
-          <div style="font-size:var(--font-size-sm); color:var(--text-primary); text-align:left">
-            <strong style="color:var(--color-primary-600)">🚀 New Version Available: v<span id="welcomeLatestVersion"></span></strong><br>
-            <span style="font-size:var(--font-size-xs); color:var(--text-secondary)">A new update is ready. Would you like to update now? You can also update later via Settings.</span>
+        <div id="welcomeUpdateBanner" class="welcome-update-banner" style="display:none; flex-direction:column; margin-bottom:var(--space-4); background:var(--color-primary-50); border:1px solid var(--color-primary-200); border-radius:var(--border-radius-md); padding:var(--space-3); gap:var(--space-3)">
+          <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
+            <div style="font-size:var(--font-size-sm); color:var(--text-primary); text-align:left">
+              <strong style="color:var(--color-primary-600)">🚀 New Version Available: v<span id="welcomeLatestVersion"></span></strong><br>
+              <span id="welcomeUpdateNotice" style="font-size:var(--font-size-xs); color:var(--text-secondary)">A new update is ready. Would you like to update now? You can also update later via Settings.</span>
+            </div>
+            <div id="welcomeUpdateActions" style="display:flex; gap:var(--space-2); flex-shrink:0">
+              <button class="btn btn-ghost btn-sm" onclick="dismissWelcomeUpdate()" style="padding:4px 8px; font-size:var(--font-size-xs)">Later</button>
+              <button class="btn btn-primary btn-sm" onclick="triggerWelcomeUpdate()" style="padding:4px 10px; font-size:var(--font-size-xs)">Update Now</button>
+            </div>
           </div>
-          <div style="display:flex; gap:var(--space-2); flex-shrink:0">
-            <button class="btn btn-ghost btn-sm" onclick="dismissWelcomeUpdate()" style="padding:4px 8px; font-size:var(--font-size-xs)">Later</button>
-            <button class="btn btn-primary btn-sm" onclick="triggerWelcomeUpdate()" style="padding:4px 10px; font-size:var(--font-size-xs)">Update Now</button>
+          <!-- Download Progress Container -->
+          <div id="welcomeProgressContainer" style="display:none; width:100%; flex-direction:column; gap:4px">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--font-size-xs); color:var(--text-secondary)">
+              <span id="welcomeProgressText">Preparing download...</span>
+              <span id="welcomeProgressPercent">0%</span>
+            </div>
+            <div class="welcome-progress-bar-bg">
+              <div id="welcomeProgressBar" class="welcome-progress-bar"></div>
+            </div>
           </div>
         </div>
 
@@ -1188,6 +1200,7 @@
         },
         getVersion: async () => '1.0.0-mock',
         checkForUpdates: () => {},
+        downloadUpdate: () => {},
         onMenuSave: () => {},
         onMenuExportJson: () => {},
         onMenuImportJson: () => {},

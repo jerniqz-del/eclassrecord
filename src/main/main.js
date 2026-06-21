@@ -354,6 +354,10 @@ ipcMain.handle('updater:check', async () => {
   return updater.checkForUpdates(mainWindow);
 });
 
+ipcMain.handle('updater:download', async () => {
+  return updater.downloadUpdate();
+});
+
 ipcMain.handle('shell:open-external', async (_event, url) => {
   await shell.openExternal(url);
 });

@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Metadata & System Checks
   getVersion: () => ipcRenderer.invoke('app:version'),
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  downloadUpdate: () => ipcRenderer.invoke('updater:download'),
   openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
 
   // Menu Event Listeners (Main to Renderer)

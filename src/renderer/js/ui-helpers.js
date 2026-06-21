@@ -1,3 +1,8 @@
+// OTA Auto-updater variables
+let latestFetchedRelease = null;
+let updateInitiatedFromWelcome = false;
+let updateInitiatedFromSettings = false;
+
 /**
  * E-Class Record — UI Helper Functions
  *
@@ -454,6 +459,7 @@ function fetchLatestGitHubVersion(currentVersion) {
       return res.json();
     })
     .then(data => {
+      latestFetchedRelease = data; // Cache the release payload
       if (data && data.tag_name) {
         const latestVersion = data.tag_name.replace(/^v/, '');
         const currentClean = currentVersion.replace(/^v/, '');
@@ -470,6 +476,105 @@ function fetchLatestGitHubVersion(currentVersion) {
 }
 
 /**
+ * Semver differences helper. Determines update level.
+ */
+function getUpdateType(current, latest) {
+  const parse = v => v.replace(/^v/, '').split('.').map(Number);
+  const cur = parse(current);
+  const lat = parse(latest);
+  if (lat[0] > cur[0]) return 'Major Update';
+  if (lat[1] > cur[1]) return 'Minor Update';
+  if (lat[2] > cur[2]) return 'Patch Update';
+  return 'Update';
+}
+
+/**
+ * Extracts and formats list items from GitHub releases markdown body.
+ */
+function formatChangelog(body) {
+  if (!body) return '<li>General performance improvements and stability updates.</li>';
+  
+  const lines = body.split(/\r?\n/);
+  const items = [];
+  
+  for (let line of lines) {
+    line = line.trim();
+    if (!line) continue;
+    
+    // Check for standard bullets
+    const match = line.match(/^[-*+]\s+(.*)$/) || line.match(/^\d+\.\s+(.*)$/);
+    if (match) {
+      items.push(`<li>${esc(match[1])}</li>`);
+    } else if (!line.startsWith('#') && !line.startsWith('`')) {
+      // General sentences
+      items.push(`<li>${esc(line)}</li>`);
+    }
+  }
+  
+  return items.length > 0 ? items.join('') : '<li>General performance improvements and stability updates.</li>';
+}
+
+/**
+ * Rich modal confirmation for update downloads.
+ */
+function showUpdateConfirmModal(latestVer, currentVer, changelogText, onConfirm, onCancel) {
+  const updateType = getUpdateType(currentVer, latestVer);
+  const changelogHtml = formatChangelog(changelogText);
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '99999'; // Float above tour overlays
+  overlay.innerHTML = `
+    <div class="modal modal--wide" style="max-width: 480px">
+      <div class="modal__title" style="color: var(--color-primary-600); display:flex; align-items:center; gap:var(--space-2)">
+        🚀 Update Available: v${latestVer}
+      </div>
+      <div class="modal__body" style="display:flex; flex-direction:column; gap:var(--space-4)">
+        <div style="font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 1.4">
+          A new <strong>${updateType}</strong> is available for download. Review the changes below:
+        </div>
+        
+        <div style="max-height: 160px; overflow-y: auto; border: 1px solid var(--border-default); border-radius: var(--border-radius-md); padding: var(--space-3); background: var(--bg-muted); text-align: left">
+          <ul style="margin: 0; padding-left: 20px; font-size: var(--font-size-sm); line-height: 1.5; color: var(--text-primary)">
+            ${changelogHtml}
+          </ul>
+        </div>
+        
+        <div style="display:flex; gap:var(--space-3); align-items:flex-start; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--border-radius-md); padding: var(--space-3); text-align: left">
+          <span style="font-size: 20px; line-height: 1">🛡️</span>
+          <div style="font-size: var(--font-size-xs); color: #166534; line-height: 1.4">
+            <strong>Data Safety Guarantee</strong><br>
+            Your local profiles, student rosters, grading sheets, and offline backups are safe on this device and will not be affected during the update.
+          </div>
+        </div>
+      </div>
+      <div class="modal__actions" style="margin-top: var(--space-4)">
+        <button class="btn btn-ghost btn-sm" id="btnUpdateLater">Later</button>
+        <button class="btn btn-primary btn-sm" id="btnUpdateDownload">Download & Install Now</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  
+  const laterBtn = overlay.querySelector('#btnUpdateLater');
+  const downloadBtn = overlay.querySelector('#btnUpdateDownload');
+  
+  const close = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+  
+  laterBtn.addEventListener('click', () => {
+    close();
+    if (typeof onCancel === 'function') onCancel();
+  });
+  
+  downloadBtn.addEventListener('click', () => {
+    close();
+    if (typeof onConfirm === 'function') onConfirm();
+  });
+}
+
+/**
  * Hides the welcome update banner.
  */
 function dismissWelcomeUpdate() {
@@ -480,13 +585,37 @@ function dismissWelcomeUpdate() {
  * Triggers the update downloader, closes welcome modal, and redirects to settings.
  */
 function triggerWelcomeUpdate() {
-  toast('Checking and downloading update… Go to Settings to view progress.', 'info');
+  toast('Checking and downloading update…', 'info');
+
+  const welcomeUpdateActions = document.getElementById('welcomeUpdateActions');
+  const welcomeProgressContainer = document.getElementById('welcomeProgressContainer');
+  const welcomeProgressText = document.getElementById('welcomeProgressText');
+  const welcomeProgressPercent = document.getElementById('welcomeProgressPercent');
+  const welcomeProgressBar = document.getElementById('welcomeProgressBar');
+
+  if (welcomeUpdateActions) {
+    welcomeUpdateActions.style.display = 'none';
+  }
+  if (welcomeProgressContainer) {
+    welcomeProgressContainer.style.display = 'flex';
+  }
+  if (welcomeProgressText) {
+    welcomeProgressText.innerText = 'Connecting to server...';
+    welcomeProgressText.style.color = 'var(--text-secondary)';
+  }
+  if (welcomeProgressPercent) {
+    welcomeProgressPercent.innerText = '0%';
+  }
+  if (welcomeProgressBar) {
+    welcomeProgressBar.style.width = '0%';
+    welcomeProgressBar.style.backgroundColor = 'var(--color-primary-500)';
+  }
+
+  // Set context flag to bypass manual dialog prompt
+  updateInitiatedFromWelcome = true;
+
   if (window.electronAPI && window.electronAPI.checkForUpdates) {
     window.electronAPI.checkForUpdates();
-  }
-  closeWelcomeModal();
-  if (typeof setView === 'function') {
-    setView('settings');
   }
 }
 

@@ -546,6 +546,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   
   // Set window title dynamically using the actual version
   const appVersion = await window.electronAPI.getVersion();
+  window.runningAppVersion = appVersion;
   document.title = `E-Class Record App v${appVersion}`;
   const footerVerEl = document.getElementById('footerVersion');
   if (footerVerEl) {
@@ -639,7 +640,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   
   // Connect OTA Auto-Updater Updates
-  window.electronAPI.onUpdateStatus((status, details) => {
+  window.electronAPI.onUpdateStatus(async (status, details) => {
     const indicatorEl = document.getElementById('updateIndicator');
     const updateTextEl = document.getElementById('updateText');
     
@@ -656,12 +657,108 @@ window.addEventListener('DOMContentLoaded', async () => {
       else if (status === 'downloaded') indicatorEl.classList.add('update-indicator--downloaded');
       else if (status === 'error') indicatorEl.classList.add('update-indicator--error');
     }
+
+    if (status === 'available') {
+      if (typeof updateInitiatedFromWelcome !== 'undefined' && updateInitiatedFromWelcome) {
+        // Direct download flow (explicit Welcome modal click)
+        window.electronAPI.downloadUpdate();
+        updateInitiatedFromWelcome = false;
+        updateInitiatedFromSettings = false;
+      } else {
+        // Confirmation prompt flow (Settings check or Menu check)
+        const latestVer = details.version;
+        const changelogText = (latestFetchedRelease && latestFetchedRelease.tag_name === 'v' + latestVer)
+          ? latestFetchedRelease.body
+          : 'General performance improvements and stability updates.';
+        
+        const currentVer = typeof window.runningAppVersion !== 'undefined' ? window.runningAppVersion : '1.0.0';
+        
+        if (typeof showUpdateConfirmModal === 'function') {
+          showUpdateConfirmModal(
+            latestVer,
+            currentVer,
+            changelogText,
+            () => {
+              if (updateTextEl) updateTextEl.innerText = 'Downloading update…';
+              window.electronAPI.downloadUpdate();
+            },
+            () => {
+              if (updateTextEl) updateTextEl.innerText = 'Update deferred by user.';
+              if (indicatorEl) {
+                indicatorEl.className = 'update-indicator update-indicator--available';
+              }
+            }
+          );
+        }
+        updateInitiatedFromWelcome = false;
+        updateInitiatedFromSettings = false;
+      }
+    }
+
+    if (status === 'not-available' || status === 'error') {
+      updateInitiatedFromWelcome = false;
+      updateInitiatedFromSettings = false;
+    }
+
+    // Dynamic Welcome Modal Progress Updates
+    const welcomeProgressContainer = document.getElementById('welcomeProgressContainer');
+    const welcomeProgressText = document.getElementById('welcomeProgressText');
+    const welcomeProgressPercent = document.getElementById('welcomeProgressPercent');
+    const welcomeProgressBar = document.getElementById('welcomeProgressBar');
+    const welcomeUpdateActions = document.getElementById('welcomeUpdateActions');
+
+    if (welcomeProgressContainer) {
+      if (status === 'downloading') {
+        welcomeProgressContainer.style.display = 'flex';
+        if (welcomeUpdateActions) welcomeUpdateActions.style.display = 'none';
+        if (welcomeProgressText) {
+          welcomeProgressText.innerText = 'Downloading update...';
+          welcomeProgressText.style.color = 'var(--text-secondary)';
+        }
+        if (welcomeProgressPercent) welcomeProgressPercent.innerText = `${details.percent || 0}%`;
+        if (welcomeProgressBar) {
+          welcomeProgressBar.style.width = `${details.percent || 0}%`;
+          welcomeProgressBar.style.backgroundColor = 'var(--color-primary-500)';
+        }
+      } else if (status === 'downloaded') {
+        welcomeProgressContainer.style.display = 'flex';
+        if (welcomeUpdateActions) welcomeUpdateActions.style.display = 'none';
+        if (welcomeProgressText) {
+          welcomeProgressText.innerText = 'Download complete! Restart to apply.';
+          welcomeProgressText.style.color = 'var(--color-success-600)';
+        }
+        if (welcomeProgressPercent) welcomeProgressPercent.innerText = '100%';
+        if (welcomeProgressBar) {
+          welcomeProgressBar.style.width = '100%';
+          welcomeProgressBar.style.backgroundColor = 'var(--color-success-500)';
+        }
+      } else if (status === 'error') {
+        welcomeProgressContainer.style.display = 'flex';
+        if (welcomeUpdateActions) {
+          welcomeUpdateActions.style.display = 'flex';
+          welcomeUpdateActions.innerHTML = `<button class="btn btn-ghost btn-sm" onclick="dismissWelcomeUpdate()" style="padding:4px 8px; font-size:var(--font-size-xs)">Close</button>`;
+        }
+        if (welcomeProgressText) {
+          welcomeProgressText.innerText = details.message || 'Update failed.';
+          welcomeProgressText.style.color = 'var(--color-danger-600)';
+        }
+        if (welcomeProgressPercent) welcomeProgressPercent.innerText = '';
+        if (welcomeProgressBar) {
+          welcomeProgressBar.style.width = '100%';
+          welcomeProgressBar.style.backgroundColor = 'var(--color-danger-500)';
+        }
+      }
+    }
     
     if (status === 'downloaded') {
       confirmModal(
         'Relaunch to Update',
         `An update to version v${details.version} is ready. Would you like to restart E-Class Record and apply the update now?`,
         () => {
+          // close welcome modal if open
+          if (typeof closeWelcomeModal === 'function') {
+            closeWelcomeModal();
+          }
           // autoUpdater will install on close, so we notify and can close window
           toast('Application will update on relaunch.', 'success');
         }
@@ -1396,6 +1493,9 @@ function handleCheckUpdatesClick() {
   if (indicatorEl) {
     indicatorEl.className = 'update-indicator update-indicator--checking';
   }
+
+  // Flag manual settings update initiation
+  updateInitiatedFromSettings = true;
 
   window.electronAPI.checkForUpdates();
 }
