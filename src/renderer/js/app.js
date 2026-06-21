@@ -724,7 +724,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         welcomeProgressContainer.style.display = 'flex';
         if (welcomeUpdateActions) welcomeUpdateActions.style.display = 'none';
         if (welcomeProgressText) {
-          welcomeProgressText.innerText = 'Download complete! Restart to apply.';
+          welcomeProgressText.innerText = 'Download complete! Restarting to install...';
           welcomeProgressText.style.color = 'var(--color-success-600)';
         }
         if (welcomeProgressPercent) welcomeProgressPercent.innerText = '100%';
@@ -751,18 +751,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     
     if (status === 'downloaded') {
-      confirmModal(
-        'Relaunch to Update',
-        `An update to version v${details.version} is ready. Would you like to restart E-Class Record and apply the update now?`,
-        () => {
-          // close welcome modal if open
-          if (typeof closeWelcomeModal === 'function') {
-            closeWelcomeModal();
-          }
-          // autoUpdater will install on close, so we notify and can close window
-          toast('Application will update on relaunch.', 'success');
+      toast('Update downloaded. Restarting app to install updates...', 'success');
+      setTimeout(() => {
+        if (typeof closeWelcomeModal === 'function') {
+          closeWelcomeModal();
         }
-      );
+        window.electronAPI.quitAndInstall();
+      }, 1500);
     }
   });
 

@@ -358,6 +358,11 @@ ipcMain.handle('updater:download', async () => {
   return updater.downloadUpdate();
 });
 
+ipcMain.handle('updater:quit-and-install', async () => {
+  isConfirmedExit = true;
+  return updater.quitAndInstall();
+});
+
 ipcMain.handle('shell:open-external', async (_event, url) => {
   await shell.openExternal(url);
 });
@@ -386,6 +391,10 @@ ipcMain.on('bluetooth:cancel-device', () => {
 
 app.whenReady().then(() => {
   createWindow();
+});
+
+app.on('before-quit', () => {
+  isConfirmedExit = true;
 });
 
 app.on('window-all-closed', () => {

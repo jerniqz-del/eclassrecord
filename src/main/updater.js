@@ -145,8 +145,17 @@ function downloadUpdate() {
   });
 }
 
+/**
+ * Quits the application and installs the update.
+ */
+function quitAndInstall() {
+  console.log('Quitting and installing update...');
+  autoUpdater.quitAndInstall(false, true);
+}
+
 module.exports = {
   initAutoUpdater,
   checkForUpdates,
-  downloadUpdate
+  downloadUpdate,
+  quitAndInstall
 };
