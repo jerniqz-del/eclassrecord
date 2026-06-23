@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "schoolYear": "",
+  "lastUpdated": "2026-06-23",
+  "source": "",
+  "events": [
+    {
+      "id": "deped-term-1-first-teachermade-summative-2026",
+      "title": "Term 1: First Teacher-made Summative Test",
+      "date": "2026-07-06",
+      "type": "milestone",
+      "schoolYear": "",
+      "official": true
+    },
+    {
+      "id": "deped-term-1-second-teachermade-summative-2026",
+      "title": "Term 1: Second Teacher-made Summative Test",
+      "date": "2026-07-28",
+      "type": "milestone",
+      "schoolYear": "",
+      "official": true
+    },
+    {
+      "id": "deped-term-1-examination-2026",
+      "title": "Term 1 Examination",
+      "date": "2026-08-28",
+      "type": "milestone",
+      "schoolYear": "",
+      "official": true
+    },
+    {
+      "id": "deped-term-1-examination-2026",
+      "title": "Term 1 Examination",
+      "date": "2026-09-01",
+      "type": "milestone",
+      "schoolYear": "",
+      "official": true
+    },
+    {
+      "id": "deped-end-of-term-block-2026",
+      "title": "End of Term Block",
+      "date": "2026-09-02",
+      "type": "milestone",
+      "schoolYear": "",
+      "official": true
+    }
+  ]
+}
