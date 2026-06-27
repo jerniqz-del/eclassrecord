@@ -8,8 +8,8 @@
 .sync-panel {
   margin: var(--space-4) auto;
   max-width: 800px;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-md);
   border: 1px solid var(--border-default);
   background: var(--bg-surface);
   overflow: hidden;
@@ -34,7 +34,7 @@
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-4);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   background: var(--bg-default);
   border: 1px solid var(--border-subtle);
 }
@@ -120,7 +120,7 @@
 /* PIN Verification Panel */
 .sync-pin-panel {
   padding: var(--space-4);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   background: var(--color-primary-50);
   border: 1px solid var(--color-primary-100);
   animation: fadeIn 0.3s ease-out;
@@ -146,7 +146,7 @@
 /* Device Discovery overlay */
 .device-discovery-panel {
   padding: var(--space-4);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   background: var(--bg-default);
   border: 1px solid var(--border-default);
   box-shadow: var(--shadow-md);
@@ -210,9 +210,9 @@
 
 .sync-logs-output {
   padding: var(--space-4);
-  border-radius: var(--radius-lg);
-  background: #1e1e1e;
-  color: #d4d4d4;
+  border-radius: var(--radius-card);
+  background: var(--color-neutral-900);
+  color: var(--color-neutral-100);
   font-family: var(--font-family-mono);
   font-size: var(--font-size-xs);
   line-height: var(--line-height-relaxed);
@@ -220,5 +220,5 @@
   max-height: 240px;
   white-space: pre-wrap;
   margin: 0;
-  border: 1px solid #333;
+  border: 1px solid var(--color-neutral-700);
 }

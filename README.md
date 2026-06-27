@@ -10,6 +10,7 @@ A premium, modern offline desktop application designed for Filipino teachers to 
 - **Final Grades Summary**: Auto-computed averages across terms with remarked pass/fail color-coded badges.
 - **Native File Dialogs**: Backup and recovery in JSON backups, and grades reports exporting in standard CSV files.
 - **Over-the-Air (OTA) Updates**: Automated startup updates check and download from GitHub Releases.
+- **Change History & Patch Notes**: In-app Help Center documentation plus [implementation history](docs/implementation-history.md) covering changes from the first build through the latest restored updates.
 - **Responsive & Printable Layouts**: Dedicated `@media print` styling for clean physical paper reporting.
 
 ## Directory Structure

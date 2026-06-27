@@ -115,7 +115,7 @@ function render() {
 }
 
 /**
- * Renders the list of registered classes in the sidebar.
+ * Renders the registered-class list when that sidebar panel exists.
  */
 function renderAssignmentsList() {
   const listEl = document.getElementById('assignmentList');
@@ -736,7 +736,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         welcomeProgressContainer.style.display = 'flex';
         if (welcomeUpdateActions) {
           welcomeUpdateActions.style.display = 'flex';
-          welcomeUpdateActions.innerHTML = `<button class="btn btn-ghost btn-sm" onclick="dismissWelcomeUpdate()" style="padding:4px 8px; font-size:var(--font-size-xs)">Close</button>`;
+          welcomeUpdateActions.innerHTML = `<button class="btn btn-warn btn-sm" onclick="dismissWelcomeUpdate()" style="padding:4px 8px; font-size:var(--font-size-xs)">Close</button>`;
         }
         if (welcomeProgressText) {
           welcomeProgressText.innerText = details.message || 'Update failed.';

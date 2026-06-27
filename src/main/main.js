@@ -10,10 +10,42 @@ const path = require('path');
 const fs = require('fs');
 const fileIO = require('./file-io');
 const updater = require('./updater');
+const crypto = require('crypto');
 
 let mainWindow = null;
 let isConfirmedExit = false;
 let selectBluetoothDeviceCallback = null;
+
+function attachmentRoot() {
+  return path.join(app.getPath('appData'), 'EClassRecordPortable', 'attachments');
+}
+
+function safePathPart(value) {
+  return String(value || 'item').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'item';
+}
+
+function resolveAttachmentPath(relativePath) {
+  const root = attachmentRoot();
+  const target = path.resolve(root, String(relativePath || ''));
+  const relative = path.relative(root, target);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error('Invalid attachment path.');
+  }
+  return target;
+}
+
+function mimeFromExtension(ext) {
+  const map = {
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.pdf': 'application/pdf',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
+    '.gif': 'image/gif'
+  };
+  return map[String(ext || '').toLowerCase()] || 'application/octet-stream';
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -35,19 +67,25 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   mainWindow.setAutoHideMenuBar(true);
   mainWindow.setMenuBarVisibility(false);
+  mainWindow.setMenu(null);
+  Menu.setApplicationMenu(null);
 
-  // Block DevTools and Reload keyboard shortcuts in production builds
-  if (app.isPackaged) {
-    Menu.setApplicationMenu(null);
-    mainWindow.webContents.on('before-input-event', (event, input) => {
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'Alt') {
+      event.preventDefault();
+      return;
+    }
+
+    // Block DevTools and Reload keyboard shortcuts in production builds
+    if (app.isPackaged) {
       const key = input.key.toLowerCase();
       const isDevTools = (input.key === 'F12') || (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'));
       const isReload = (input.key === 'F5') || (input.control && key === 'r');
       if (isDevTools || isReload) {
         event.preventDefault();
       }
-    });
-  }
+    }
+  });
 
   // Chromium Web Bluetooth device selection handler
   mainWindow.webContents.on('select-bluetooth-device', (event, deviceList, callback) => {
@@ -147,7 +185,7 @@ function createWindow() {
       ]
     }
   ]);
-  Menu.setApplicationMenu(menu);
+  Menu.setApplicationMenu(null);
 }
 
 // ── IPC Handlers ──────────────────────────────────────────
@@ -212,6 +250,59 @@ ipcMain.handle('dialog:import-sf1', async () => {
   } catch (e) {
     return { success: false, error: e.message };
   }
+});
+
+ipcMain.handle('dialog:import-assessment-attachment', async (_event, assignmentId, assessmentId) => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Upload Assessment File',
+    filters: [
+      { name: 'Assessment Files', extensions: ['docx', 'pdf', 'png', 'jpg', 'jpeg', 'webp', 'gif'] }
+    ],
+    properties: ['openFile']
+  });
+  if (result.canceled || result.filePaths.length === 0) return { success: false };
+
+  const sourcePath = result.filePaths[0];
+  const ext = path.extname(sourcePath).toLowerCase();
+  const allowed = new Set(['.docx', '.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif']);
+  if (!allowed.has(ext)) return { success: false, error: 'Unsupported file type.' };
+
+  const stats = fs.statSync(sourcePath);
+  const originalName = path.basename(sourcePath);
+  const folder = path.join(attachmentRoot(), safePathPart(assignmentId), safePathPart(assessmentId));
+  fs.mkdirSync(folder, { recursive: true });
+
+  const id = crypto.randomUUID();
+  const storedName = `${Date.now()}-${id}${ext}`;
+  const targetPath = path.join(folder, storedName);
+  fs.copyFileSync(sourcePath, targetPath);
+
+  const relativePath = path.relative(attachmentRoot(), targetPath).replace(/\\/g, '/');
+  return {
+    success: true,
+    attachment: {
+      id,
+      originalName,
+      storedName,
+      relativePath,
+      mimeType: mimeFromExtension(ext),
+      size: stats.size,
+      createdAt: new Date().toISOString()
+    }
+  };
+});
+
+ipcMain.handle('attachment:open', async (_event, relativePath) => {
+  const targetPath = resolveAttachmentPath(relativePath);
+  if (!fs.existsSync(targetPath)) return { success: false, error: 'Attachment file was not found.' };
+  const error = await shell.openPath(targetPath);
+  return error ? { success: false, error } : { success: true };
+});
+
+ipcMain.handle('attachment:remove', async (_event, relativePath) => {
+  const targetPath = resolveAttachmentPath(relativePath);
+  if (fs.existsSync(targetPath)) fs.unlinkSync(targetPath);
+  return { success: true };
 });
 
 ipcMain.handle('dialog:export-csv', async (_event, csvString) => {

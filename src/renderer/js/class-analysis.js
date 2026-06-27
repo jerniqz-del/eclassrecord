@@ -1,650 +1,541 @@
 /**
- * E-Class Record — Class Analysis Module
+ * E-Class Record - Class Progress Reports
  *
- * Computes and renders per-assessment statistics (mean, median, mode,
- * performance distribution) and per-learner performance details with
- * graphical CSS charts for the Class Analysis modal.
+ * Computes and renders class progress reports with assessment statistics,
+ * total-score item analysis, visual charts, and printable/downloadable output.
  */
 
 let classAnalysisAssignmentId = null;
 let classAnalysisTerm = '1';
+let classAnalysisMapePart = undefined;
 
-// ── Statistical Helpers ──────────────────────────────────────
-
-function calcMean(arr) {
+function reportMean(arr) {
   if (!arr.length) return 0;
-  return arr.reduce((s, v) => s + v, 0) / arr.length;
+  return arr.reduce((sum, value) => sum + value, 0) / arr.length;
 }
 
-function calcMedian(arr) {
+function reportMedian(arr) {
   if (!arr.length) return 0;
   const sorted = [...arr].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-function calcMode(arr) {
+function reportMode(arr) {
   if (!arr.length) return null;
-  const freq = {};
-  arr.forEach(v => { freq[v] = (freq[v] || 0) + 1; });
-  const maxFreq = Math.max(...Object.values(freq));
-  if (maxFreq === 1) return null;
-  const modes = Object.keys(freq).filter(k => freq[k] === maxFreq).map(Number);
-  return modes.length === arr.length ? null : modes[0];
+  const counts = {};
+  arr.forEach(value => { counts[value] = (counts[value] || 0) + 1; });
+  const max = Math.max(...Object.values(counts));
+  if (max <= 1) return null;
+  return Number(Object.keys(counts).find(key => counts[key] === max));
 }
 
-function calcPercentile(arr, value) {
-  if (!arr.length) return 0;
-  const below = arr.filter(v => v < value).length;
-  return Math.round((below / arr.length) * 100);
+function reportStdDev(arr) {
+  if (arr.length < 2) return 0;
+  const mean = reportMean(arr);
+  const variance = arr.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / arr.length;
+  return Math.sqrt(variance);
 }
 
-// ── Core Computation ─────────────────────────────────────────
+function reportPct(value) {
+  return Number.isFinite(value) ? `${Math.round(value)}%` : '--';
+}
+
+function reportNum(value, digits = 1) {
+  return Number.isFinite(value) ? value.toFixed(digits) : '--';
+}
+
+function reportFullName(component) {
+  return typeof componentFullName === 'function' ? componentFullName(component) : component;
+}
+
+function performanceBucket(percent) {
+  if (percent >= 90) return 'advanced';
+  if (percent >= 75) return 'proficient';
+  if (percent >= 50) return 'developing';
+  return 'beginning';
+}
+
+function masteryLabel(mps) {
+  if (mps >= 85) return 'High mastery';
+  if (mps >= 75) return 'Generally mastered';
+  if (mps >= 50) return 'Needs reinforcement';
+  return 'Difficult / reteaching needed';
+}
+
+function computeDiscrimination(scores, hps) {
+  if (scores.length < 6 || hps <= 0) {
+    return { label: 'Insufficient data', value: null, narrative: 'At least six scored learners are needed to compare upper and lower performance groups.' };
+  }
+  const sorted = [...scores].sort((a, b) => b - a);
+  const groupSize = Math.max(1, Math.round(sorted.length * 0.27));
+  const upper = sorted.slice(0, groupSize);
+  const lower = sorted.slice(sorted.length - groupSize);
+  const upperMps = reportMean(upper) / hps * 100;
+  const lowerMps = reportMean(lower) / hps * 100;
+  const gap = upperMps - lowerMps;
+
+  let label = 'Weak separation';
+  if (gap >= 30) label = 'Strong separation';
+  else if (gap >= 15) label = 'Moderate separation';
+
+  return {
+    label,
+    value: gap,
+    narrative: `${label}: upper-group MPS is ${reportPct(upperMps)} and lower-group MPS is ${reportPct(lowerMps)}.`
+  };
+}
 
 function computeClassAnalysis(a, term, mapePart) {
   const isSummary = term === 'summary';
   const isMapeh = typeof isMapehSubject === 'function' && isMapehSubject(a.subject);
   const activePart = mapePart || (isMapeh ? 'music_arts' : undefined);
+  const assessmentItems = [];
 
-  // ── Per-assessment stats ──
-  let items;
   if (isSummary) {
-    items = [];
-    if (typeof termAssessments === 'function') {
-      for (let t = 1; t <= 3; t++) {
-        items.push(...termAssessments(a, String(t), activePart));
-      }
+    for (let t = 1; t <= 3; t++) {
+      assessmentItems.push(...termAssessments(a, String(t), activePart));
     }
   } else {
-    items = typeof termAssessments === 'function' ? termAssessments(a, term, activePart) : [];
+    assessmentItems.push(...termAssessments(a, term, activePart));
   }
 
-  const assessmentStats = items.map(ast => {
+  const assessments = assessmentItems.map(assessment => {
+    const hps = number(assessment.maxScore);
     const scores = [];
-    const hps = parseFloat(ast.maxScore) || 0;
-
-    a.learners.forEach(l => {
-      const key = `${l.id}|${ast.id}`;
-      const val = parseFloat(a.scores[key]);
-      if (!isNaN(val)) scores.push(val);
+    a.learners.forEach(learner => {
+      const value = parseFloat(a.scores[`${learner.id}|${assessment.id}`]);
+      if (!isNaN(value)) scores.push(value);
     });
 
-    const perf = { advanced: 0, proficient: 0, developing: 0, beginning: 0 };
-    const dist = [0, 0, 0, 0, 0];
-    scores.forEach(s => {
-      const pct = hps > 0 ? (s / hps) * 100 : 0;
-      if (pct >= 90) perf.advanced++;
-      else if (pct >= 75) perf.proficient++;
-      else if (pct >= 50) perf.developing++;
-      else perf.beginning++;
+    const mean = reportMean(scores);
+    const median = reportMedian(scores);
+    const mode = reportMode(scores);
+    const stdDev = reportStdDev(scores);
+    const mps = hps > 0 ? mean / hps * 100 : 0;
+    const distribution = [0, 0, 0, 0, 0];
+    const performanceLevel = { advanced: 0, proficient: 0, developing: 0, beginning: 0 };
 
-      const bin = Math.min(Math.floor(pct / 20), 4);
-      dist[bin]++;
+    scores.forEach(score => {
+      const pct = hps > 0 ? score / hps * 100 : 0;
+      const bin = Math.min(4, Math.floor(pct / 20));
+      distribution[bin]++;
+      performanceLevel[performanceBucket(pct)]++;
     });
 
-    let termDistributions = null;
-    if (isSummary) {
-      termDistributions = {};
-      for (let t = 1; t <= 3; t++) {
-        const tDist = [0, 0, 0, 0, 0];
-        a.learners.forEach(l => {
-          const key = `${l.id}|${ast.id}`;
-          const val = parseFloat(a.scores[key]);
-          if (!isNaN(val)) {
-            const pct = hps > 0 ? (val / hps) * 100 : 0;
-            const bin = Math.min(Math.floor(pct / 20), 4);
-            tDist[bin]++;
-          }
-        });
-        termDistributions[t] = tDist;
-      }
-    }
+    const discrimination = computeDiscrimination(scores, hps);
+    const mastery = masteryLabel(mps);
+    const variability = stdDev <= hps * 0.10 ? 'consistent' : (stdDev <= hps * 0.20 ? 'moderately varied' : 'highly varied');
 
     return {
-      assessment: ast,
+      assessment,
       scores,
-      mean: calcMean(scores),
-      median: calcMedian(scores),
-      mode: calcMode(scores),
+      hps,
+      mean,
+      median,
+      mode,
+      stdDev,
+      mps,
       min: scores.length ? Math.min(...scores) : 0,
       max: scores.length ? Math.max(...scores) : 0,
-      passRate: scores.length ? Math.round(scores.filter(s => hps > 0 && s >= hps * 0.75).length / scores.length * 100) : 0,
-      performanceLevel: perf,
-      distribution: dist,
-      termDistributions
+      passRate: scores.length ? scores.filter(score => hps > 0 && score >= hps * 0.75).length / scores.length * 100 : 0,
+      performanceLevel,
+      distribution,
+      itemAnalysis: {
+        mastery,
+        variability,
+        discrimination,
+        narrative: `${assessment.title || reportFullName(assessment.component)} is ${mastery.toLowerCase()} with ${reportPct(mps)} MPS and ${variability} scores. ${discrimination.narrative}`
+      }
     };
   });
 
-  // ── Per-learner stats ──
-  const learnerResults = [];
-  const allTermGrades = [];
+  const learners = [];
+  const termGrades = [];
   const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
 
-  a.learners.forEach(l => {
+  a.learners.forEach(learner => {
     if (typeof computeTerm !== 'function') return;
-
+    let result;
     if (isSummary) {
-      let sum = 0, count = 0, sumIg = 0, countIg = 0;
-      let finalTermGrade = null;
+      let total = 0;
+      let count = 0;
       for (let t = 1; t <= 3; t++) {
-        const res = computeTerm(a, l.id, String(t), activePart);
-        if (isDescriptive) {
-          if (res.hasData) { sumIg += res.initialGrade; countIg++; }
-        } else {
-          if (res.termGrade !== null && typeof res.termGrade === 'number') { sum += res.termGrade; count++; }
+        const termResult = computeTerm(a, learner.id, String(t), activePart);
+        const grade = typeof termResult.termGrade === 'number'
+          ? termResult.termGrade
+          : (isDescriptive && termResult.hasData ? termResult.initialGrade : null);
+        if (typeof grade === 'number') {
+          total += grade;
+          count++;
         }
       }
-      if (isDescriptive) {
-        finalTermGrade = countIg > 0 && typeof transmute === 'function' ? transmute(a, sumIg / countIg) : null;
-      } else {
-        finalTermGrade = count > 0 ? Math.round(sum / count) : null;
-      }
-
-      const term1 = computeTerm(a, l.id, '1', activePart);
-
-      const avgIg = countIg > 0 ? sumIg / countIg : null;
-      const numericGrade = typeof finalTermGrade === 'number' ? finalTermGrade : (isDescriptive && avgIg !== null ? avgIg : null);
-      if (numericGrade !== null) allTermGrades.push(numericGrade);
-
-      let remarks = '—';
-      if (finalTermGrade !== null) {
-        remarks = (typeof isPassing === 'function' && isPassing(finalTermGrade))
-          ? 'Passed'
-          : (a.policy === 'DO15_DESCRIPTIVE' ? 'For Intervention' : 'Failed');
-      }
-
-      learnerResults.push({
-        learner: l,
-        termGrade: finalTermGrade,
-        initialGrade: numericGrade,
-        ww: term1.ww || { raw: 0, max: 0, ps: 0 },
-        pt: term1.pt || { raw: 0, max: 0, ps: 0 },
-        exam: { raw: 0, max: 0, ps: term1.examPS || 0 },
-        remarks
-      });
+      const finalGrade = count ? Math.round(total / count) : null;
+      result = { termGrade: finalGrade, initialGrade: finalGrade, ww: {}, pt: {}, examPS: 0, hasData: count > 0 };
     } else {
-      const result = computeTerm(a, l.id, term, activePart);
-      const tg = result.termGrade;
-      const numericGrade = typeof tg === 'number' ? tg : (isDescriptive && result.hasData ? result.initialGrade : null);
-      if (numericGrade !== null) allTermGrades.push(numericGrade);
-
-      let remarks = '—';
-      if (tg !== null) {
-        remarks = (typeof isPassing === 'function' && isPassing(tg))
-          ? 'Passed'
-          : (a.policy === 'DO15_DESCRIPTIVE' ? 'For Intervention' : 'Failed');
-      }
-      if (tg === 'T/O') remarks = 'Transferred Out';
-      if (result.isTransferredIn) remarks = 'Transferred In';
-
-      learnerResults.push({
-        learner: l,
-        termGrade: tg,
-        initialGrade: numericGrade,
-        ww: result.ww || { raw: 0, max: 0, ps: 0 },
-        pt: result.pt || { raw: 0, max: 0, ps: 0 },
-        exam: { raw: 0, max: 0, ps: result.examPS || 0 },
-        remarks
-      });
+      result = computeTerm(a, learner.id, term, activePart);
     }
+
+    const grade = typeof result.termGrade === 'number'
+      ? result.termGrade
+      : (isDescriptive && result.hasData ? result.initialGrade : null);
+    if (typeof grade === 'number') termGrades.push(grade);
+
+    learners.push({
+      learner,
+      termGrade: result.termGrade,
+      initialGrade: typeof grade === 'number' ? grade : null,
+      ww: result.ww || { ps: 0, hasData: false },
+      pt: result.pt || { ps: 0, hasData: false },
+      exam: { ps: result.examPS || 0 },
+      remarks: result.termGrade === 'T/O'
+        ? 'Transferred Out'
+        : (grade === null ? '--' : (isPassing(grade) ? 'Passed' : (a.policy === 'DO15_DESCRIPTIVE' ? 'For Intervention' : 'Failed')))
+    });
   });
 
-  // Sort by term grade (or initial grade for descriptive) descending for ranking
-  learnerResults.sort((x, y) => {
-    const ga = typeof x.termGrade === 'number' ? x.termGrade : (x.initialGrade !== null ? x.initialGrade : -1);
-    const gb = typeof y.termGrade === 'number' ? y.termGrade : (y.initialGrade !== null ? y.initialGrade : -1);
-    return gb - ga;
-  });
+  learners.sort((left, right) => (right.initialGrade || -1) - (left.initialGrade || -1));
+  learners.forEach((learner, index) => { learner.rank = learner.initialGrade === null ? '' : index + 1; });
 
-  let rank = 0;
-  let prevGrade = null;
-  learnerResults.forEach((lr, i) => {
-    const g = typeof lr.termGrade === 'number' ? lr.termGrade : (lr.initialGrade !== null ? lr.initialGrade : null);
-    if (g !== null && g !== prevGrade) {
-      rank = i + 1;
-      prevGrade = g;
-    }
-    lr.rank = rank;
-    lr.percentile = calcPercentile(allTermGrades, g !== null ? g : 0);
-  });
-
-  // ── Class-level stats ──
+  const averageMps = assessments.length ? reportMean(assessments.map(item => item.mps)) : 0;
   const classStats = {
-    mean: calcMean(allTermGrades),
-    median: calcMedian(allTermGrades),
-    mode: calcMode(allTermGrades),
-    passRate: allTermGrades.length ? Math.round(allTermGrades.filter(g => typeof isPassing === 'function' && isPassing(g)).length / allTermGrades.length * 100) : 0,
+    mean: reportMean(termGrades),
+    median: reportMedian(termGrades),
+    mode: reportMode(termGrades),
+    stdDev: reportStdDev(termGrades),
+    mps: averageMps,
+    passRate: termGrades.length ? termGrades.filter(grade => isPassing(grade)).length / termGrades.length * 100 : 0,
     distribution: { advanced: 0, proficient: 0, developing: 0, beginning: 0 },
     gradeDistribution: [0, 0, 0, 0, 0]
   };
 
-  allTermGrades.forEach(g => {
-    if (g >= 90) { classStats.distribution.advanced++; classStats.gradeDistribution[4]++; }
-    else if (g >= 85) { classStats.distribution.proficient++; classStats.gradeDistribution[3]++; }
-    else if (g >= 80) { classStats.distribution.developing++; classStats.gradeDistribution[2]++; }
-    else if (g >= 75) { classStats.distribution.beginning++; classStats.gradeDistribution[1]++; }
-    else { classStats.distribution.beginning++; classStats.gradeDistribution[0]++; }
+  termGrades.forEach(grade => {
+    classStats.distribution[performanceBucket(grade)]++;
+    if (grade >= 90) classStats.gradeDistribution[4]++;
+    else if (grade >= 85) classStats.gradeDistribution[3]++;
+    else if (grade >= 80) classStats.gradeDistribution[2]++;
+    else if (grade >= 75) classStats.gradeDistribution[1]++;
+    else classStats.gradeDistribution[0]++;
   });
 
-  return { assessments: assessmentStats, learners: learnerResults, classStats };
+  return { assessments, learners, classStats, activePart };
 }
 
-// ── Render: Full Modal ───────────────────────────────────────
-
-function renderClassAnalysisModal(a, term) {
-  const analysis = computeClassAnalysis(a, term);
-  const isMapeh = typeof isMapehSubject === 'function' && isMapehSubject(a.subject);
-  const isSummary = term === 'summary';
-
+function renderClassAnalysisModal(a, term, mapePart) {
+  const analysis = computeClassAnalysis(a, term, mapePart);
   const termLabel = term === 'summary' ? 'Summary' : `Term ${term}`;
+  const strandLabel = analysis.activePart === 'music_arts' ? 'Music & Arts' : (analysis.activePart === 'pe_health' ? 'PE & Health' : '');
 
   return `
-    <div style="margin-bottom:var(--space-4);">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-3);">
+    <div id="classReportPrintable" class="class-report">
+      <div class="class-report-header">
         <div>
-          <div style="font-size:var(--font-size-lg);font-weight:var(--font-weight-bold);">Grade ${esc(a.gradeLevel)} - ${esc(a.section)}</div>
-          <div class="text-muted text-sm">${esc(a.subject)} &middot; SY ${esc(a.schoolYear)}</div>
+          <h2>Class Progress Report</h2>
+          <p>Grade ${esc(a.gradeLevel)} - ${esc(a.section)} &middot; ${esc(a.subject)} &middot; SY ${esc(a.schoolYear)}${strandLabel ? ' &middot; ' + esc(strandLabel) : ''}</p>
         </div>
-        <div class="record-tabs" style="margin-bottom:0;">
+        <div class="record-tabs no-print-modal">
           <button class="record-tab ${term === '1' ? 'record-tab--active' : ''}" onclick="switchClassAnalysisTerm('1')">Term 1</button>
           <button class="record-tab ${term === '2' ? 'record-tab--active' : ''}" onclick="switchClassAnalysisTerm('2')">Term 2</button>
           <button class="record-tab ${term === '3' ? 'record-tab--active' : ''}" onclick="switchClassAnalysisTerm('3')">Term 3</button>
           <button class="record-tab record-tab--summary ${term === 'summary' ? 'record-tab--active' : ''}" onclick="switchClassAnalysisTerm('summary')">Summary</button>
         </div>
       </div>
-    </div>
 
-    ${analysis.learners.length === 0 ? `
-      <div style="text-align:center;padding:var(--space-8);color:var(--text-secondary);">
-        <p style="font-size:var(--font-size-lg);margin:0;">No learner data available for ${termLabel}.</p>
-        <p class="text-sm" style="margin-top:var(--space-2);">Add learners and enter scores to see class analysis.</p>
-      </div>
-    ` : `
-      ${renderClassSummary(analysis.classStats)}
-      ${renderLearnerGradeDistribution(analysis.classStats)}
-      ${analysis.assessments.length > 0 ? `
-        ${renderAssessmentAnalysisChart(analysis.assessments)}
-        ${renderScoreDistributionChart(analysis.assessments, isSummary)}
+      ${analysis.learners.length === 0 ? `
+        <div class="report-empty-state">
+          <strong>No learner data available for ${esc(termLabel)}.</strong>
+          <span>Add learners and enter scores to see class progress reports.</span>
+        </div>
+      ` : `
+        ${renderReportSummary(analysis.classStats, analysis.learners.length)}
+        ${renderMpsChart(analysis.assessments)}
+        ${renderVariabilityChart(analysis.assessments)}
+        ${renderPerformanceChart(analysis.assessments)}
+        ${renderScoreDistributionChart(analysis.assessments)}
         ${renderAssessmentAnalysisTable(analysis.assessments)}
-      ` : ''}
-      ${renderLearnerPerformanceTable(analysis.learners, a)}
-    `}
-  `;
-}
-
-// ── Render: Class Summary Card ───────────────────────────────
-
-function renderClassSummary(stats) {
-  const d = stats.distribution;
-  const total = d.advanced + d.proficient + d.developing + d.beginning;
-
-  function pct(n) { return total > 0 ? Math.round(n / total * 100) : 0; }
-
-  return `
-    <div class="card" style="margin-bottom:var(--space-4);padding:var(--space-4);">
-      <h3 class="card-title" style="margin-top:0;margin-bottom:var(--space-3);">Class Summary</h3>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-4);">
-        <div style="text-align:center;padding:var(--space-3);background:var(--bg-neutral);border-radius:var(--radius-lg);">
-          <div class="text-xs text-muted">Mean</div>
-          <div style="font-size:var(--font-size-xl);font-weight:var(--font-weight-bold);color:var(--color-primary-600);">${stats.mean ? stats.mean.toFixed(1) : '—'}</div>
-        </div>
-        <div style="text-align:center;padding:var(--space-3);background:var(--bg-neutral);border-radius:var(--radius-lg);">
-          <div class="text-xs text-muted">Median</div>
-          <div style="font-size:var(--font-size-xl);font-weight:var(--font-weight-bold);color:var(--color-primary-600);">${stats.median ? stats.median.toFixed(1) : '—'}</div>
-        </div>
-        <div style="text-align:center;padding:var(--space-3);background:var(--bg-neutral);border-radius:var(--radius-lg);">
-          <div class="text-xs text-muted">Mode</div>
-          <div style="font-size:var(--font-size-xl);font-weight:var(--font-weight-bold);color:var(--color-primary-600);">${stats.mode !== null ? stats.mode : '—'}</div>
-        </div>
-        <div style="text-align:center;padding:var(--space-3);background:var(--bg-neutral);border-radius:var(--radius-lg);">
-          <div class="text-xs text-muted">Pass Rate</div>
-          <div style="font-size:var(--font-size-xl);font-weight:var(--font-weight-bold);color:${stats.passRate >= 75 ? 'var(--color-success-600)' : 'var(--color-error-600)'};">${total > 0 ? stats.passRate + '%' : '—'}</div>
-        </div>
-      </div>
-
-      ${total > 0 ? `
-      <div class="text-xs text-muted" style="margin-bottom:6px;">Performance Distribution (${total} learners)</div>
-      <div style="display:flex;height:28px;border-radius:var(--radius-md);overflow:hidden;margin-bottom:var(--space-2);">
-        ${d.advanced > 0 ? `<div style="width:${pct(d.advanced)}%;background:var(--color-success-500);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:600;">${d.advanced > 1 ? d.advanced : ''}</div>` : ''}
-        ${d.proficient > 0 ? `<div style="width:${pct(d.proficient)}%;background:var(--color-primary-500);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:600;">${d.proficient > 1 ? d.proficient : ''}</div>` : ''}
-        ${d.developing > 0 ? `<div style="width:${pct(d.developing)}%;background:var(--color-warning-500);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:600;">${d.developing > 1 ? d.developing : ''}</div>` : ''}
-        ${d.beginning > 0 ? `<div style="width:${pct(d.beginning)}%;background:var(--color-error-500);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:600;">${d.beginning > 1 ? d.beginning : ''}</div>` : ''}
-      </div>
-      <div style="display:flex;gap:var(--space-4);font-size:var(--font-size-xs);">
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--color-success-500);margin-right:4px;"></span>Advanced (${d.advanced})</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--color-primary-500);margin-right:4px;"></span>Proficient (${d.proficient})</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--color-warning-500);margin-right:4px;"></span>Developing (${d.developing})</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--color-error-500);margin-right:4px;"></span>Beginning (${d.beginning})</span>
-      </div>
-      ` : ''}
+        ${renderLearnerPerformanceTable(analysis.learners, a)}
+      `}
     </div>
   `;
 }
 
-// ── Render: Assessment Mean/Median/Mode Chart ────────────────
-
-function renderAssessmentAnalysisChart(assessments) {
-  if (!assessments.length) return '';
-
-  const maxHps = Math.max(...assessments.map(a => parseFloat(a.assessment.maxScore) || 0), 1);
-  const barHeight = 200;
-  const groupWidth = 60;
-  const barWidth = 14;
-  const chartWidth = assessments.length * groupWidth + 40;
-
-  const ySteps = [0, 0.25, 0.5, 0.75, 1];
-
-  let bars = '';
-  assessments.forEach((ast, i) => {
-    const x = i * groupWidth + 20;
-    const hps = parseFloat(ast.assessment.maxScore) || 1;
-
-    const meanH = (ast.mean / hps) * barHeight;
-    const medianH = (ast.median / hps) * barHeight;
-    const modeH = ast.mode !== null ? (ast.mode / hps) * barHeight : 0;
-
-    bars += `
-      <div style="position:absolute;left:${x}px;bottom:0;width:${groupWidth}px;display:flex;justify-content:center;gap:2px;align-items:flex-end;">
-        <div style="width:${barWidth}px;height:${meanH}px;background:var(--color-primary-500);border-radius:3px 3px 0 0;" title="Mean: ${ast.mean.toFixed(1)}"></div>
-        <div style="width:${barWidth}px;height:${medianH}px;background:var(--color-accent-500);border-radius:3px 3px 0 0;" title="Median: ${ast.median.toFixed(1)}"></div>
-        ${ast.mode !== null ? `<div style="width:${barWidth}px;height:${modeH}px;background:var(--color-neutral-400);border-radius:3px 3px 0 0;" title="Mode: ${ast.mode}"></div>` : ''}
-      </div>
-      <div style="position:absolute;left:${x}px;bottom:-22px;width:${groupWidth}px;text-align:center;font-size:10px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(ast.assessment.title)}</div>
-    `;
-  });
-
-  let yLabels = '';
-  ySteps.forEach(pct => {
-    const y = barHeight - (pct * barHeight);
-    const val = (pct * maxHps).toFixed(0);
-    yLabels += `<div style="position:absolute;left:0;bottom:${y - 6}px;font-size:10px;color:var(--text-tertiary);width:30px;text-align:right;">${val}</div>`;
-  });
-
+function renderReportSummary(stats, learnerCount) {
+  const narrative = `The class report covers ${learnerCount} learner${learnerCount === 1 ? '' : 's'}. Current class mean is ${reportNum(stats.mean)}, median is ${reportNum(stats.median)}, standard deviation is ${reportNum(stats.stdDev)}, and average assessment MPS is ${reportPct(stats.mps)}.`;
   return `
-    <div class="card" style="margin-bottom:var(--space-4);padding:var(--space-4);">
-      <h3 class="card-title" style="margin-top:0;margin-bottom:var(--space-3);">Assessment Mean / Median / Mode</h3>
-      <div style="position:relative;height:${barHeight + 30}px;margin-left:35px;">
-        <div style="position:absolute;left:0;top:0;bottom:0;width:1px;background:var(--border-default);"></div>
-        <div style="position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--border-default);"></div>
-        ${yLabels}
-        ${bars}
+    <section class="report-section">
+      <h3>Class Summary</h3>
+      <div class="report-stat-grid">
+        ${reportStat('Mean', reportNum(stats.mean))}
+        ${reportStat('Median', reportNum(stats.median))}
+        ${reportStat('Mode', stats.mode === null ? '--' : stats.mode)}
+        ${reportStat('Standard Deviation', reportNum(stats.stdDev))}
+        ${reportStat('MPS', reportPct(stats.mps))}
+        ${reportStat('Pass Rate', reportPct(stats.passRate))}
       </div>
-      <div style="display:flex;gap:var(--space-4);margin-top:var(--space-3);margin-left:35px;font-size:var(--font-size-xs);">
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--color-primary-500);margin-right:4px;"></span>Mean</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--color-accent-500);margin-right:4px;"></span>Median</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--color-neutral-400);margin-right:4px;"></span>Mode</span>
-      </div>
+      <p class="report-narrative">${esc(narrative)}</p>
+    </section>
+  `;
+}
+
+function reportStat(label, value) {
+  return `<div class="report-stat"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
+}
+
+function renderMpsChart(assessments) {
+  const bars = assessments.map(item => reportBar(item.assessment.title || reportFullName(item.assessment.component), item.mps, masteryLabel(item.mps))).join('');
+  const weak = assessments.filter(item => item.mps < 75).length;
+  return `
+    <section class="report-section">
+      <h3>Assessment MPS</h3>
+      <div class="report-bars">${bars || '<div class="text-muted">No assessment scores available.</div>'}</div>
+      <p class="report-narrative">${weak ? `${weak} assessment${weak === 1 ? '' : 's'} need reinforcement based on MPS below 75%.` : 'All scored assessments are generally mastered or better based on MPS.'}</p>
+    </section>
+  `;
+}
+
+function renderVariabilityChart(assessments) {
+  const maxStd = Math.max(...assessments.map(item => item.stdDev), 1);
+  const bars = assessments.map(item => {
+    const pct = item.stdDev / maxStd * 100;
+    return reportBar(item.assessment.title || reportFullName(item.assessment.component), pct, `SD ${reportNum(item.stdDev)}`, reportNum(item.stdDev));
+  }).join('');
+  return `
+    <section class="report-section">
+      <h3>Assessment Variability</h3>
+      <div class="report-bars">${bars || '<div class="text-muted">No variability data available.</div>'}</div>
+      <p class="report-narrative">Higher standard deviation means learner scores are more spread out and may need targeted remediation groups.</p>
+    </section>
+  `;
+}
+
+function reportBar(label, pct, caption, valueLabel) {
+  const width = Math.max(2, Math.min(100, pct || 0));
+  return `
+    <div class="report-bar-row">
+      <span>${esc(label)}</span>
+      <div class="report-bar-track"><div class="report-bar-fill" style="width:${width}%"></div></div>
+      <strong>${esc(valueLabel || reportPct(pct))}</strong>
+      <em>${esc(caption || '')}</em>
     </div>
   `;
 }
 
-// ── Render: Score Distribution Chart ─────────────────────────
-
-function renderScoreDistributionChart(assessments, isSummary) {
-  if (!assessments.length) return '';
-
-  const labels = ['0-20%', '20-40%', '40-60%', '60-80%', '80-100%'];
-  const colors = ['var(--color-error-500)', 'var(--color-warning-500)', 'var(--color-accent-500)', 'var(--color-primary-500)', 'var(--color-success-500)'];
-
-  let rows = '';
-  assessments.forEach(ast => {
-    const hps = parseFloat(ast.assessment.maxScore) || 0;
-    if (isSummary && ast.termDistributions) {
-      let termCols = '';
-      for (let t = 1; t <= 3; t++) {
-        const dist = ast.termDistributions[t] || [0, 0, 0, 0, 0];
-        const total = dist.reduce((a, b) => a + b, 0);
-        const barSegments = dist.map((count, bin) => {
-          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-          if (pct === 0) return '';
-          return `<div style="width:${pct}%;background:${colors[bin]};height:100%;" title="Term ${t} - ${labels[bin]}: ${count} (${pct}%)"></div>`;
-        }).join('');
-        
-        termCols += `
-          <td style="padding:8px;text-align:center;width:25%;">
-            <div style="font-size:10px;color:var(--text-secondary);margin-bottom:2px;">T${t} (n=${total})</div>
-            <div style="display:flex;height:16px;border-radius:3px;overflow:hidden;background:var(--bg-neutral);border:1px solid var(--border-subtle);">
-              ${barSegments || '<div style="width:100%;text-align:center;font-size:9px;color:var(--text-tertiary);line-height:14px;">No data</div>'}
-            </div>
-          </td>
-        `;
-      }
-      rows += `
-        <tr style="border-bottom:1px solid var(--border-subtle);">
-          <td style="padding:8px;font-weight:500;vertical-align:middle;">${esc(ast.assessment.title)} <span style="font-size:10px;color:var(--text-tertiary);">(${esc(ast.assessment.component)}, HPS: ${hps})</span></td>
-          ${termCols}
-        </tr>
-      `;
-    } else {
-      const dist = ast.distribution || [0, 0, 0, 0, 0];
-      const total = dist.reduce((a, b) => a + b, 0);
-      const barSegments = dist.map((count, bin) => {
-        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-        if (pct === 0) return '';
-        return `<div style="width:${pct}%;background:${colors[bin]};height:100%;" title="${labels[bin]}: ${count} (${pct}%)"></div>`;
-      }).join('');
-
-      const legendSegments = dist.map((count, bin) => {
-        if (count === 0) return '';
-        return `
-          <span style="display:inline-flex;align-items:center;margin-right:8px;font-size:10px;">
-            <span style="width:8px;height:8px;border-radius:1px;background:${colors[bin]};margin-right:3px;"></span>
-            ${labels[bin]}: ${count}
-          </span>
-        `;
-      }).join('');
-
-      rows += `
-        <tr style="border-bottom:1px solid var(--border-subtle);">
-          <td style="padding:8px;font-weight:500;width:30%;">${esc(ast.assessment.title)} <span style="font-size:10px;color:var(--text-tertiary);">(${esc(ast.assessment.component)}, HPS: ${hps})</span></td>
-          <td style="padding:8px;vertical-align:middle;">
-            <div style="display:flex;height:20px;border-radius:4px;overflow:hidden;background:var(--bg-neutral);border:1px solid var(--border-subtle);margin-bottom:4px;">
-              ${barSegments || '<div style="width:100%;text-align:center;font-size:10px;color:var(--text-tertiary);line-height:18px;">No scores recorded</div>'}
-            </div>
-            <div style="display:flex;flex-wrap:wrap;">
-              ${legendSegments}
-            </div>
-          </td>
-        </tr>
-      `;
-    }
-  });
-
-  return `
-    <div class="card" style="margin-bottom:var(--space-4);padding:0;overflow-x:auto;">
-      <div style="padding:var(--space-4) var(--space-4) 0;">
-        <h3 class="card-title" style="margin-top:0;">Score Distribution Analysis</h3>
-      </div>
-      <table style="width:100%;border-collapse:collapse;font-size:var(--font-size-sm);">
-        <thead>
-          <tr style="background:var(--bg-neutral);border-top:1px solid var(--border-default);border-bottom:1px solid var(--border-default);">
-            <th style="padding:8px;text-align:left;">Assessment</th>
-            ${isSummary ? '<th style="padding:8px;text-align:center;" colspan="3">Term distributions</th>' : '<th style="padding:8px;text-align:left;">Distribution Percentage</th>'}
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-// ── Render: Grade Distribution Chart ──────────────────────────
-
-function renderLearnerGradeDistribution(stats) {
-  const gd = stats.gradeDistribution || [0, 0, 0, 0, 0];
-  const total = gd.reduce((x, y) => x + y, 0);
-  
-  const bins = [
-    { label: '90 - 100 (Outstanding)', count: gd[4], color: 'var(--color-success-500)' },
-    { label: '85 - 89 (Very Satisfactory)', count: gd[3], color: 'var(--color-primary-500)' },
-    { label: '80 - 84 (Satisfactory)', count: gd[2], color: 'var(--color-accent-500)' },
-    { label: '75 - 79 (Fairly Satisfactory)', count: gd[1], color: 'var(--color-warning-500)' },
-    { label: 'Below 75 (Did Not Meet Expectations)', count: gd[0], color: 'var(--color-error-500)' }
-  ];
-
-  const rows = bins.map(bin => {
-    const pct = total > 0 ? Math.round((bin.count / total) * 100) : 0;
+function renderPerformanceChart(assessments) {
+  const rows = assessments.map(item => {
+    const total = item.scores.length || 0;
+    const level = item.performanceLevel;
+    const segment = key => total ? Math.round(level[key] / total * 100) : 0;
     return `
-      <div style="margin-bottom:var(--space-2);">
-        <div style="display:flex;justify-content:space-between;font-size:var(--font-size-xs);margin-bottom:2px;">
-          <span>${bin.label}</span>
-          <span style="font-weight:600;">${bin.count} (${pct}%)</span>
-        </div>
-        <div style="height:8px;background:var(--bg-neutral);border-radius:4px;overflow:hidden;">
-          <div style="width:${pct}%;height:100%;background:${bin.color};border-radius:4px;"></div>
+      <div class="report-performance-row">
+        <span>${esc(item.assessment.title || reportFullName(item.assessment.component))}</span>
+        <div class="report-stack">
+          ${stackSegment('advanced', segment('advanced'), level.advanced)}
+          ${stackSegment('proficient', segment('proficient'), level.proficient)}
+          ${stackSegment('developing', segment('developing'), level.developing)}
+          ${stackSegment('beginning', segment('beginning'), level.beginning)}
         </div>
       </div>
     `;
   }).join('');
-
   return `
-    <div class="card" style="margin-bottom:var(--space-4);padding:var(--space-4);">
-      <h3 class="card-title" style="margin-top:0;margin-bottom:var(--space-3);">Grade Distribution</h3>
-      ${rows}
-    </div>
+    <section class="report-section">
+      <h3>Performance Levels by Assessment</h3>
+      <div class="report-performance">${rows || '<div class="text-muted">No performance data available.</div>'}</div>
+      <p class="report-narrative">Performance levels are based on each learner score as a percentage of the assessment HPS.</p>
+    </section>
   `;
 }
 
-// ── Render: Assessment Analysis Table ────────────────────────
+function stackSegment(key, width, count) {
+  if (!width) return '';
+  return `<div class="report-stack-segment report-stack-${key}" style="width:${width}%" title="${key}: ${count}">${count > 0 ? count : ''}</div>`;
+}
+
+function reportTableHeader(label, tooltip) {
+  return `<th title="${esc(tooltip || label)}">${esc(label)}</th>`;
+}
+
+function renderScoreDistributionChart(assessments) {
+  const labels = ['0-20%', '20-40%', '40-60%', '60-80%', '80-100%'];
+  const rows = assessments.map(item => `
+    <div class="report-histogram-row">
+      <span>${esc(item.assessment.title || reportFullName(item.assessment.component))}</span>
+      <div class="report-histogram-bars">
+        ${item.distribution.map((count, idx) => {
+          const max = Math.max(...item.distribution, 1);
+          return `<div class="report-histogram-bin" title="${labels[idx]}: ${count}"><i style="height:${Math.max(4, count / max * 70)}px"></i><small>${esc(labels[idx])}</small><b>${count}</b></div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+  return `
+    <section class="report-section">
+      <h3>Score Distribution</h3>
+      ${rows || '<div class="text-muted">No score distribution data available.</div>'}
+      <p class="report-narrative">Histograms show how learner scores cluster across percentage ranges for each assessment.</p>
+    </section>
+  `;
+}
 
 function renderAssessmentAnalysisTable(assessments) {
-  if (!assessments.length) return '';
-
-  const rows = assessments.map(ast => {
-    return `
-      <tr>
-        <td style="padding:8px;font-weight:500;">${esc(ast.assessment.title)}</td>
-        <td style="padding:8px;text-align:center;">${esc(ast.assessment.component)}</td>
-        <td style="padding:8px;text-align:center;">${esc(ast.assessment.maxScore)}</td>
-        <td style="padding:8px;text-align:center;">${ast.scores.length}</td>
-        <td style="padding:8px;text-align:center;">${ast.mean ? ast.mean.toFixed(1) : '0.0'}</td>
-        <td style="padding:8px;text-align:center;">${ast.median ? ast.median.toFixed(1) : '0.0'}</td>
-        <td style="padding:8px;text-align:center;">${ast.mode !== null ? ast.mode : '—'}</td>
-        <td style="padding:8px;text-align:center;">${ast.min} / ${ast.max}</td>
-        <td style="padding:8px;text-align:center;font-weight:600;color:${ast.passRate >= 75 ? 'var(--color-success-600)' : 'var(--color-error-600)'};">${ast.passRate}%</td>
-      </tr>
-    `;
-  }).join('');
+  const rows = assessments.map(item => `
+    <tr>
+      <td>${esc(item.assessment.title || reportFullName(item.assessment.component))}</td>
+      <td>${esc(reportFullName(item.assessment.component))}</td>
+      <td>${esc(item.hps || '--')}</td>
+      <td>${item.scores.length}</td>
+      <td>${reportNum(item.mean)}</td>
+      <td>${reportNum(item.median)}</td>
+      <td>${item.mode === null ? '--' : esc(item.mode)}</td>
+      <td>${reportNum(item.stdDev)}</td>
+      <td>${reportPct(item.mps)}</td>
+      <td>${esc(item.itemAnalysis.mastery)}</td>
+      <td>${esc(item.itemAnalysis.discrimination.label)}</td>
+    </tr>
+    <tr class="report-table-narrative"><td colspan="11">${esc(item.itemAnalysis.narrative)}</td></tr>
+  `).join('');
 
   return `
-    <div class="card" style="margin-bottom:var(--space-4);padding:0;overflow-x:auto;">
-      <div style="padding:var(--space-4) var(--space-4) 0;">
-        <h3 class="card-title" style="margin-top:0;">Assessment Detailed Statistics</h3>
+    <section class="report-section">
+      <h3 title="Item Analysis and Assessment Details">Item Analysis and Assessment Details</h3>
+      <div class="report-table-wrap">
+        <table class="report-table report-table--analysis">
+          <thead>
+            <tr>
+              ${reportTableHeader('Assessment', 'Assessment title or generated assessment label')}
+              ${reportTableHeader('Component', 'Grading component for the assessment')}
+              ${reportTableHeader('HPS', 'Highest possible score')}
+              ${reportTableHeader('Takers', 'Number of learners with scores')}
+              ${reportTableHeader('Mean', 'Average raw score')}
+              ${reportTableHeader('Median', 'Middle raw score')}
+              ${reportTableHeader('Mode', 'Most common raw score')}
+              ${reportTableHeader('SD', 'Standard deviation of raw scores')}
+              ${reportTableHeader('MPS', 'Mean percentage score')}
+              ${reportTableHeader('Interpretation', 'Mastery interpretation based on MPS')}
+              ${reportTableHeader('Discrimination', 'Upper and lower group separation')}
+            </tr>
+          </thead>
+          <tbody>${rows || '<tr><td colspan="11">No assessment data available.</td></tr>'}</tbody>
+        </table>
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:var(--font-size-sm);">
-        <thead>
-          <tr style="background:var(--bg-neutral);border-top:1px solid var(--border-default);border-bottom:1px solid var(--border-default);">
-            <th style="padding:8px;text-align:left;">Assessment</th>
-            <th style="padding:8px;text-align:center;">Type</th>
-            <th style="padding:8px;text-align:center;">HPS</th>
-            <th style="padding:8px;text-align:center;">Takers</th>
-            <th style="padding:8px;text-align:center;">Mean</th>
-            <th style="padding:8px;text-align:center;">Median</th>
-            <th style="padding:8px;text-align:center;">Mode</th>
-            <th style="padding:8px;text-align:center;">Min / Max</th>
-            <th style="padding:8px;text-align:center;">Pass Rate</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-        </tbody>
-      </table>
-    </div>
+      <p class="report-narrative">Item analysis uses total scores per assessment. For true per-item difficulty, item-level learner responses would need a separate data entry model.</p>
+    </section>
   `;
 }
-
-// ── Render: Learner Performance Table ────────────────────────
 
 function renderLearnerPerformanceTable(learners, assignment) {
-  if (!learners.length) return '';
-
-  const rows = learners.map((lr, idx) => {
-    const rankDisplay = lr.rank === 1 ? '🥇 ' : lr.rank === 2 ? '🥈 ' : lr.rank === 3 ? '🥉 ' : '';
-    const rowBg = lr.rank === 1 ? 'background:rgba(255,215,0,0.08);' : lr.rank === 2 ? 'background:rgba(192,192,192,0.08);' : lr.rank === 3 ? 'background:rgba(205,127,50,0.08);' : idx % 2 === 0 ? 'background:var(--bg-neutral);' : '';
-
-    const gradeDisplay = lr.termGrade !== null && lr.termGrade !== undefined
-      ? (typeof lr.termGrade === 'number' ? formatGradeForDisplay(lr.termGrade, assignment.policy) : lr.termGrade)
-      : '—';
-
-    const remarksClass = lr.remarks === 'Passed' ? 'badge--pass' : lr.remarks === 'Failed' ? 'badge--fail' : lr.remarks === 'For Intervention' ? 'badge--warn' : '';
-
-    return `
-      <tr style="${rowBg}">
-        <td style="padding:6px 8px;text-align:center;font-weight:600;">${rankDisplay}${lr.rank}</td>
-        <td style="padding:6px 8px;font-weight:500;">${esc(lr.learner.lastName + ', ' + lr.learner.firstName + (lr.learner.middleName ? ' ' + lr.learner.middleName : ''))}</td>
-        <td style="padding:6px 8px;text-align:center;">${esc(lr.learner.sex)}</td>
-        <td style="padding:6px 8px;text-align:center;">${lr.ww.hasData ? lr.ww.ps.toFixed(1) + '%' : '—'}</td>
-        <td style="padding:6px 8px;text-align:center;">${lr.pt.hasData ? lr.pt.ps.toFixed(1) + '%' : '—'}</td>
-        <td style="padding:6px 8px;text-align:center;">${lr.exam.ps ? lr.exam.ps.toFixed(1) + '%' : '—'}</td>
-        <td style="padding:6px 8px;text-align:center;">${lr.initialGrade !== null ? lr.initialGrade.toFixed(1) : '—'}</td>
-        <td style="padding:6px 8px;text-align:center;font-weight:600;">${gradeDisplay}</td>
-        <td style="padding:6px 8px;text-align:center;"><span class="badge ${remarksClass}" style="font-size:10px;">${esc(lr.remarks)}</span></td>
-      </tr>
-    `;
-  }).join('');
-
+  const rows = learners.map(item => `
+    <tr>
+      <td>${esc(item.rank)}</td>
+      <td>${esc(learnerDisplayName(item.learner))}</td>
+      <td>${esc(item.learner.sex)}</td>
+      <td>${item.ww.hasData ? reportPct(item.ww.ps) : '--'}</td>
+      <td>${item.pt.hasData ? reportPct(item.pt.ps) : '--'}</td>
+      <td>${item.exam.ps ? reportPct(item.exam.ps) : '--'}</td>
+      <td>${item.initialGrade === null ? '--' : reportNum(item.initialGrade)}</td>
+      <td>${item.termGrade === null ? '--' : esc(formatGradeForDisplay(item.termGrade, assignment.policy))}</td>
+      <td>${esc(item.remarks)}</td>
+    </tr>
+  `).join('');
   return `
-    <div class="card" style="margin-bottom:var(--space-4);padding:0;overflow-x:auto;">
-      <div style="padding:var(--space-4) var(--space-4) 0;">
-        <h3 class="card-title" style="margin-top:0;">Learner Performance</h3>
+    <section class="report-section">
+      <h3 title="Learner Progress">Learner Progress</h3>
+      <div class="report-table-wrap">
+        <table class="report-table report-table--learner">
+          <thead><tr>
+            ${reportTableHeader('Rank', 'Learner rank for the selected report period')}
+            ${reportTableHeader('Learner', 'Learner full name')}
+            ${reportTableHeader('Sex', 'Learner sex')}
+            ${reportTableHeader('Written Works Percentage Score', 'Written Works percentage score')}
+            ${reportTableHeader('Performance Task Percentage Score', 'Performance Task percentage score')}
+            ${reportTableHeader('Term Examination Percentage Score', 'Term Examination percentage score')}
+            ${reportTableHeader('Initial Grade', 'Computed initial grade before transmutation or policy display')}
+            ${reportTableHeader('Term Grade', 'Displayed term grade')}
+            ${reportTableHeader('Remarks', 'Learner status or performance remark')}
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:var(--font-size-sm);">
-        <thead>
-          <tr style="background:var(--bg-neutral);border-top:1px solid var(--border-default);border-bottom:1px solid var(--border-default);">
-            <th style="padding:8px;text-align:center;">Rank</th>
-            <th style="padding:8px;text-align:left;">Learner</th>
-            <th style="padding:8px;text-align:center;">Sex</th>
-            <th style="padding:8px;text-align:center;">WW PS</th>
-            <th style="padding:8px;text-align:center;">PT PS</th>
-            <th style="padding:8px;text-align:center;">Exam PS</th>
-            <th style="padding:8px;text-align:center;">IG</th>
-            <th style="padding:8px;text-align:center;">TG</th>
-            <th style="padding:8px;text-align:center;">Remarks</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-        </tbody>
-      </table>
-    </div>
+    </section>
   `;
 }
 
-// ── Modal Actions ───────────────────────────────────────────
-
-function showClassAnalysisModal(assignmentId, assignment) {
-  const a = assignment || db.assignments.find(x => x.id === assignmentId);
+function showClassAnalysisModal(assignmentId, assignment, term, mapePart) {
+  const a = assignment || db.assignments.find(item => item.id === assignmentId);
   if (!a) {
     toast('Class not found.', 'warning');
     return;
   }
 
   classAnalysisAssignmentId = a.id;
-  classAnalysisTerm = db.currentTerm || '1';
-
+  classAnalysisTerm = term || db.currentTerm || '1';
+  classAnalysisMapePart = mapePart;
   renderClassAnalysisContent(a);
-
-  const modal = document.getElementById('classAnalysisModal');
-  if (modal) modal.style.display = 'flex';
+  showEl('classAnalysisModal', true, 'flex');
 }
 
 function renderClassAnalysisContent(assignment) {
   const body = document.getElementById('classAnalysisBody');
-  if (!body) return;
-  const a = assignment || db.assignments.find(x => x.id === classAnalysisAssignmentId);
-  if (!a) return;
-  body.innerHTML = renderClassAnalysisModal(a, classAnalysisTerm);
+  const a = assignment || db.assignments.find(item => item.id === classAnalysisAssignmentId);
+  if (!body || !a) return;
+  body.innerHTML = renderClassAnalysisModal(a, classAnalysisTerm, classAnalysisMapePart);
 }
 
 function switchClassAnalysisTerm(term) {
   classAnalysisTerm = term;
-  const a = db.assignments.find(x => x.id === classAnalysisAssignmentId);
-  if (a) renderClassAnalysisContent(a);
+  renderClassAnalysisContent();
 }
 
 function closeClassAnalysisModal() {
-  const modal = document.getElementById('classAnalysisModal');
-  if (modal) modal.style.display = 'none';
+  showEl('classAnalysisModal', false);
+}
+
+function reportFilename(a) {
+  const safe = value => String(value || '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const term = classAnalysisTerm === 'summary' ? 'Summary' : `Term-${classAnalysisTerm}`;
+  return `Class-Progress-Report-Grade-${safe(a.gradeLevel)}-${safe(a.section)}-${safe(a.subject)}-${term}.pdf`;
+}
+
+function setReportPrintMode(enabled) {
+  document.body.classList.toggle('report-print-mode', !!enabled);
+}
+
+function printClassReport() {
+  setReportPrintMode(true);
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => setReportPrintMode(false), 500);
+  }, 50);
+}
+
+async function downloadClassReportPdf() {
+  const a = db.assignments.find(item => item.id === classAnalysisAssignmentId);
+  if (!a || !window.electronAPI || !window.electronAPI.exportPdf) return;
+  setReportPrintMode(true);
+  await new Promise(resolve => setTimeout(resolve, 80));
+  const filename = reportFilename(a);
+  try {
+    const result = await window.electronAPI.exportPdf({
+      size: 'A4',
+      landscape: false,
+      filename,
+      metadata: {
+        title: 'Class Progress Report',
+        region: db.region || db.schoolRegion || '',
+        division: db.division || db.schoolDivision || '',
+        schoolName: db.schoolName || '',
+        schoolId: db.schoolId || '',
+        schoolYear: a.schoolYear || db.schoolYear || '',
+        gradeLevel: a.gradeLevel || '',
+        section: a.section || '',
+        subject: a.subject || '',
+        teacherName: db.teacherName || '',
+        timestamp: new Date().toLocaleString()
+      }
+    });
+    if (result && result.success) toast('Class progress report downloaded.', 'success');
+    else if (result && result.error) toast('Report download failed: ' + result.error, 'error');
+  } finally {
+    setReportPrintMode(false);
+  }
 }

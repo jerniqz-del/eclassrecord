@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showPrintChoose: () => ipcRenderer.invoke('dialog:print-choose'),
   exportExcelTemplate: (payload) => ipcRenderer.invoke('dialog:export-excel-template', payload),
   exportPdf: (options) => ipcRenderer.invoke('dialog:export-pdf', options),
+  importAssessmentAttachment: (assignmentId, assessmentId) => ipcRenderer.invoke('dialog:import-assessment-attachment', assignmentId, assessmentId),
+  openAssessmentAttachment: (relativePath) => ipcRenderer.invoke('attachment:open', relativePath),
+  removeAssessmentAttachment: (relativePath) => ipcRenderer.invoke('attachment:remove', relativePath),
 
   // Metadata & System Checks
   getVersion: () => ipcRenderer.invoke('app:version'),

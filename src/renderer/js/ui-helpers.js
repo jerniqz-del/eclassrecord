@@ -175,13 +175,13 @@ function toast(message, kind = '') {
  */
 function confirmModal(title, message, onConfirm) {
   const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
+  overlay.className = 'modal-overlay modal-z-confirm';
   overlay.innerHTML = `
     <div class="modal">
       <div class="modal__title">${esc(title)}</div>
       <div class="modal__body">${esc(message)}</div>
       <div class="modal__actions">
-        <button class="btn btn-ghost btn-sm" id="confirmModalCancel">Cancel</button>
+        <button class="btn btn-warn btn-sm" id="confirmModalCancel">Cancel</button>
         <button class="btn btn-primary btn-sm" id="confirmModalConfirm">Confirm</button>
       </div>
     </div>

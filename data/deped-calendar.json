@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+<<<<<<< HEAD
   "schoolYear": "",
   "lastUpdated": "2026-06-23",
   "source": "",
@@ -46,3 +47,139 @@
     }
   ]
 }
+=======
+  "schoolYear": "2026-2027",
+  "lastUpdated": "2026-06-22",
+  "source": "DepEd Order No. 015 s. 2026",
+  "events": [
+    {
+      "id": "deped-start-2026",
+      "title": "First Day of Classes (SY 2026-2027)",
+      "date": "2026-06-22",
+      "type": "milestone",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "deped-q1-exam-1-2026",
+      "title": "First Quarter Examinations Day 1",
+      "date": "2026-08-20",
+      "type": "milestone",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "deped-q1-exam-2-2026",
+      "title": "First Quarter Examinations Day 2",
+      "date": "2026-08-21",
+      "type": "milestone",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "holiday-ninoy-2026",
+      "title": "Ninoy Aquino Day",
+      "date": "2026-08-21",
+      "type": "holiday",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "holiday-heroes-2026",
+      "title": "National Heroes Day",
+      "date": "2026-08-31",
+      "type": "holiday",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "deped-q2-exam-1-2026",
+      "title": "Second Quarter Examinations Day 1",
+      "date": "2026-10-29",
+      "type": "milestone",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "deped-q2-exam-2-2026",
+      "title": "Second Quarter Examinations Day 2",
+      "date": "2026-10-30",
+      "type": "milestone",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "holiday-saints-2026",
+      "title": "All Saints Day",
+      "date": "2026-11-01",
+      "type": "holiday",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "holiday-souls-2026",
+      "title": "All Souls Day",
+      "date": "2026-11-02",
+      "type": "holiday",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "holiday-bonifacio-2026",
+      "title": "Bonifacio Day",
+      "date": "2026-11-30",
+      "type": "holiday",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "holiday-christmas-2026",
+      "title": "Christmas Day",
+      "date": "2026-12-25",
+      "type": "holiday",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "holiday-rizal-2026",
+      "title": "Rizal Day",
+      "date": "2026-12-30",
+      "type": "holiday",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "holiday-newyear-2027",
+      "title": "New Year's Day",
+      "date": "2027-01-01",
+      "type": "holiday",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "deped-q3-exam-1-2027",
+      "title": "Third Quarter / Final Examinations Day 1",
+      "date": "2027-01-21",
+      "type": "milestone",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "deped-q3-exam-2-2027",
+      "title": "Third Quarter / Final Examinations Day 2",
+      "date": "2027-01-22",
+      "type": "milestone",
+      "schoolYear": "2026-2027",
+      "official": true
+    },
+    {
+      "id": "deped-end-2027",
+      "title": "End of School Year (SY 2026-2027)",
+      "date": "2027-01-29",
+      "type": "milestone",
+      "schoolYear": "2026-2027",
+      "official": true
+    }
+  ]
+}
+>>>>>>> d78fa1f (release: prepare release v1.3.0)

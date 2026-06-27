@@ -371,7 +371,7 @@ function promptPinVerification(onSuccess) {
         <div id="actionVerifyPinErrorMsg" class="unlock-error-msg" style="color:var(--color-error-600)"></div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-ghost btn-sm" id="btnCancelActionVerify">Cancel</button>
+        <button class="btn btn-warn btn-sm" id="btnCancelActionVerify">Cancel</button>
         <button class="btn btn-primary btn-sm" id="btnConfirmActionVerify">Verify & Proceed</button>
       </div>
     </div>
@@ -533,7 +533,7 @@ function editAssignmentModal(id) {
         </div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-ghost btn-sm" id="editModalCancel">Cancel</button>
+        <button class="btn btn-warn btn-sm" id="editModalCancel">Cancel</button>
         <button class="btn btn-primary btn-sm" id="editModalSave">Save Changes</button>
       </div>
     </div>

@@ -19,6 +19,131 @@ let redoStack = [];
 let lastAssignmentId = null;
 let lastTerm = null;
 let lastMapehSubTab = null;
+let assessmentDetailsAssessmentId = null;
+let recordSortState = { key: null, direction: null };
+
+function getMapehConsolidatedTermResult(a, learner, term) {
+  const music = computeTerm(a, learner.id, term, 'music_arts');
+  const pe = computeTerm(a, learner.id, term, 'pe_health');
+  const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
+  let consolidated = null;
+  let initialGrade = 0;
+  let hasData = false;
+
+  if (isDescriptive) {
+    let sum = 0;
+    let count = 0;
+    if (music.hasData) {
+      sum += music.initialGrade;
+      count++;
+    }
+    if (pe.hasData) {
+      sum += pe.initialGrade;
+      count++;
+    }
+    hasData = count > 0;
+    initialGrade = hasData ? sum / count : 0;
+    consolidated = hasData ? transmute(a, initialGrade) : null;
+  } else {
+    consolidated = consolidateMapehGrades(music.termGrade, pe.termGrade);
+    const numeric = [music.termGrade, pe.termGrade].filter(value => typeof value === 'number');
+    hasData = music.hasData || pe.hasData || consolidated === 'T/O';
+    initialGrade = numeric.length ? numeric.reduce((sum, value) => sum + value, 0) / numeric.length : 0;
+  }
+
+  return {
+    music,
+    pe,
+    initialGrade,
+    termGrade: consolidated === '' ? null : consolidated,
+    hasData,
+    isTransferredOut: music.termGrade === 'T/O' || pe.termGrade === 'T/O',
+    isTransferredIn: !!(music.isTransferredIn || pe.isTransferredIn)
+  };
+}
+
+function getRecordLearnerRows(a, term, items, mapePart) {
+  const rows = a.learners.map((learner, originalIndex) => ({
+    learner,
+    originalIndex,
+    result: mapePart === 'consolidated'
+      ? getMapehConsolidatedTermResult(a, learner, term)
+      : computeTerm(a, learner.id, term, mapePart)
+  }));
+  sortRecordLearnerRows(a, rows);
+  return rows;
+}
+
+function toggleRecordSort(event, key) {
+  if (event && event.preventDefault) event.preventDefault();
+  if (event && event.stopPropagation) event.stopPropagation();
+
+  if (recordSortState.key !== key) {
+    recordSortState = { key, direction: 'desc' };
+  } else if (recordSortState.direction === 'desc') {
+    recordSortState.direction = 'asc';
+  } else {
+    recordSortState = { key: null, direction: null };
+  }
+
+  renderRecordTable();
+  return false;
+}
+
+function recordSortButton(key, label) {
+  const isActive = recordSortState.key === key;
+  const arrow = !isActive ? '&#8597;' : recordSortState.direction === 'desc' ? '&#8595;' : '&#8593;';
+  const directionLabel = !isActive
+    ? 'Sort high to low'
+    : recordSortState.direction === 'desc' ? 'Sort low to high' : 'Restore roster order';
+  return `<button type="button" class="record-sort-btn${isActive ? ' record-sort-btn--active' : ''}" title="${esc(directionLabel)}" aria-label="${esc(directionLabel + ' for ' + label)}" onkeydown="event.stopPropagation()" onclick="return toggleRecordSort(event, '${esc(key)}')">${arrow}</button>`;
+}
+
+function recordSortValue(a, row) {
+  const key = recordSortState.key;
+  if (!key) return null;
+
+  if (key.indexOf('assessment:') === 0) {
+    const assessmentId = key.slice('assessment:'.length);
+    const raw = a.scores ? a.scores[`${row.learner.id}|${assessmentId}`] : undefined;
+    return raw === undefined || raw === '' || isNaN(parseFloat(raw)) ? null : number(raw);
+  }
+
+  if (key === 'tg') return row.result.termGrade;
+  if (key === 'mapeh-music') return row.result.music ? row.result.music.termGrade : null;
+  if (key === 'mapeh-pe') return row.result.pe ? row.result.pe.termGrade : null;
+  if (key === 'mapeh-consolidated') return row.result.termGrade;
+  return null;
+}
+
+function numericRecordSortValue(value) {
+  if (typeof value === 'number' && !isNaN(value)) return value;
+  const gradeRank = { A: 5, B: 4, C: 3, D: 2, E: 1 };
+  const normalized = String(value || '').trim().toUpperCase();
+  if (Object.prototype.hasOwnProperty.call(gradeRank, normalized)) return gradeRank[normalized];
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? null : parsed;
+}
+
+function sortRecordLearnerRows(a, rows) {
+  if (!recordSortState.key || !recordSortState.direction) return;
+
+  rows.sort((left, right) => {
+    const leftValue = numericRecordSortValue(recordSortValue(a, left));
+    const rightValue = numericRecordSortValue(recordSortValue(a, right));
+    const leftBlank = leftValue === null;
+    const rightBlank = rightValue === null;
+
+    if (leftBlank && rightBlank) return left.originalIndex - right.originalIndex;
+    if (leftBlank) return 1;
+    if (rightBlank) return -1;
+
+    const diff = recordSortState.direction === 'desc'
+      ? rightValue - leftValue
+      : leftValue - rightValue;
+    return diff || left.originalIndex - right.originalIndex;
+  });
+}
 
 /**
  * Returns a snapshot of current active sheet data (scores and assessments list).
@@ -127,6 +252,7 @@ function checkActiveSheetChange() {
     // Wipe history
     undoStack = [];
     redoStack = [];
+    recordSortState = { key: null, direction: null };
     
     // Update active sheet trackers
     lastAssignmentId = currentId;
@@ -144,9 +270,11 @@ function renderRecordTable() {
   checkActiveSheetChange();
   const a = currentAssignment();
   if (!a) {
+    recordRowCount = 0;
+    recordColCount = 0;
     document.getElementById('recordTable').innerHTML = emptyState(
       'No teaching load selected',
-      'Select a class load in the Classes sidebar or add one to get started.'
+      'Select a class load from the Dashboard or Teaching Load view to get started.'
     );
     return;
   }
@@ -154,6 +282,8 @@ function renderRecordTable() {
   ensureTemplateAssessments(a);
   
   if (a.learners.length === 0) {
+    recordRowCount = 0;
+    recordColCount = 0;
     document.getElementById('recordTable').innerHTML = emptyState(
       'No learners yet',
       'Add student rosters under the Classes tab, upload an SF1, or paste a CSV list.',
@@ -175,7 +305,8 @@ function renderRecordTable() {
   
   const mapePart = isMapeh ? currentMapehSubTab : undefined;
   const items = termAssessments(a, db.currentTerm, mapePart);
-  recordRowCount = a.learners.length;
+  const learnerRows = getRecordLearnerRows(a, db.currentTerm, items, mapePart);
+  recordRowCount = learnerRows.length;
   recordColCount = items.length;
   const w = weightsFor(a.subjectGroup);
   const cols = recordColGroup(a, items, mapePart);
@@ -191,16 +322,16 @@ function renderRecordTable() {
       <th class="c-sex">Sex</th>`;
     for (let gi = 0; gi < items.length; gi++) {
       const compClass = `c-comp-${items[gi].component.toLowerCase()}`;
-      html += `<th class="c-score ${compClass}" title="${esc(items[gi].title)}">
+      html += `<th class="c-score ${compClass} assessment-header-cell" role="button" tabindex="0" title="${esc(componentFullName(items[gi].component) + ' - ' + (items[gi].title || ''))}" onclick="openAssessmentDetailsFromHeader(event, '${esc(items[gi].id)}')" onkeydown="return openAssessmentDetailsFromHeaderKey(event, '${esc(items[gi].id)}')">
         ${esc(compactAssessmentLabel(items[gi]))}
-        <button class="col-delete-btn no-print" title="Clear all student scores in this column" onclick="clearColumnScores('${esc(items[gi].id)}')">&times;</button>
+        ${recordSortButton('assessment:' + items[gi].id, compactAssessmentLabel(items[gi]))}
       </th>`;
-      if (gi === 4) html += `<th class="c-calc c-comp-ww" title="Written Work Total">T</th><th class="c-calc c-comp-ww" title="Written Work Percentage">%</th><th class="c-calc c-comp-ww" title="Written Work Weighted Score">WS</th>`;
+      if (gi === 4) html += `<th class="c-calc c-comp-ww" title="Written Works Total">T</th><th class="c-calc c-comp-ww" title="Written Works Percentage">%</th><th class="c-calc c-comp-ww" title="Written Works Weighted Score">WS</th>`;
       if (gi === 7) html += `<th class="c-calc c-comp-pt" title="Performance Task Total">T</th><th class="c-calc c-comp-pt" title="Performance Task Percentage">%</th><th class="c-calc c-comp-pt" title="Performance Task Weighted Score">WS</th>`;
-      if (gi === 10) html += `<th class="c-calc c-comp-te" title="Trimester Exam Total">T</th><th class="c-calc c-comp-te" title="Trimester Exam Percentage">%</th><th class="c-calc c-comp-te" title="Trimester Exam Weighted Score">WS</th>`;
+      if (gi === 10) html += `<th class="c-calc c-comp-te" title="Term Examination Total">T</th><th class="c-calc c-comp-te" title="Term Examination Percentage">%</th><th class="c-calc c-comp-te" title="Term Examination Weighted Score">WS</th>`;
     }
     html += `<th class="c-grade" title="Initial Grade">IG</th>
-             <th class="c-grade" title="Transmuted Grade">TG</th>
+             <th class="c-grade" title="Transmuted Grade">TG ${recordSortButton('tg', 'Transmuted Grade')}</th>
              <th class="c-desc">Desc.</th></tr>`;
   } else {
     // Standard DepEd Term Headers
@@ -210,19 +341,19 @@ function renderRecordTable() {
       <th class="c-sex">Sex</th>`;
     for (let i = 0; i < items.length; i++) {
       const compClass = `c-comp-${items[i].component.toLowerCase()}`;
-      html += `<th class="c-score ${compClass}" title="${esc(items[i].title)}">
+      html += `<th class="c-score ${compClass} assessment-header-cell" role="button" tabindex="0" title="${esc(componentFullName(items[i].component) + ' - ' + (items[i].title || ''))}" onclick="openAssessmentDetailsFromHeader(event, '${esc(items[i].id)}')" onkeydown="return openAssessmentDetailsFromHeaderKey(event, '${esc(items[i].id)}')">
         ${esc(componentLabel(items[i].component))}<br/>
         <span class="text-xs text-muted">${esc(items[i].title)}</span>
-        <button class="col-delete-btn no-print" title="Clear all student scores in this column" onclick="clearColumnScores('${esc(items[i].id)}')">&times;</button>
+        ${recordSortButton('assessment:' + items[i].id, `${componentLabel(items[i].component)} ${items[i].title || ''}`)}
       </th>`;
     }
     html += `
       <th class="c-spacer"></th>
-      <th class="c-calc" title="Written Work Percentage Score">WW PS</th>
+      <th class="c-calc" title="Written Works Percentage Score">WW PS</th>
       <th class="c-calc" title="Performance Task Percentage Score">PT PS</th>
-      <th class="c-calc" title="Exam Percentage Score">EX PS</th>
+      <th class="c-calc" title="Term Examination Percentage Score">EX PS</th>
       <th class="c-grade" title="Initial Grade">IG</th>
-      <th class="c-grade" title="Transmuted Grade">TG</th>
+      <th class="c-grade" title="Transmuted Grade">TG ${recordSortButton('tg', 'Transmuted Grade')}</th>
       <th class="c-desc">Desc.</th>
     </tr>`;
   }
@@ -241,10 +372,10 @@ function renderRecordTable() {
     </td>`;
     if (isKeyStage2(a) && (h === 4 || h === 7 || h === 10)) {
       const groupMax = groupScoreMax(items, h);
-      const wsVal = h === 4 ? w[0] / 100 : h === 7 ? w[1] / 100 : w[2] / 100;
+      const wsVal = h === 4 ? w[0] : h === 7 ? w[1] : w[2];
       html += `<td class="c-calc">${blankZero(groupMax)}</td>
                <td class="c-calc">100</td>
-               <td class="c-calc">${wsVal}</td>`;
+               <td class="c-calc">${wsVal}%</td>`;
     }
   }
   
@@ -260,9 +391,9 @@ function renderRecordTable() {
   html += `</tr></thead><tbody>`;
   
   // Roster Student Rows
-  for (let r = 0; r < a.learners.length; r++) {
-    const learner = a.learners[r];
-    const result = computeTerm(a, learner.id, db.currentTerm, mapePart);
+  for (let r = 0; r < learnerRows.length; r++) {
+    const learner = learnerRows[r].learner;
+    const result = learnerRows[r].result;
     
     const isRowTO = result.isTransferredOut;
     const isRowTI = result.isTransferredIn;
@@ -281,7 +412,7 @@ function renderRecordTable() {
       const isPerfect = maxNum > 0 && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) === maxNum;
       const isSimilar = maxNum > 0 && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= maxNum * 0.9 && parseFloat(val) < maxNum;
       
-      const scoreTitle = `${learnerDisplayName(learner)} - ${componentLabel(items[j].component)} ${items[j].title || ''} ${maxNum > 0 ? '(max ' + maxNum + ')' : ''}`;
+      const scoreTitle = `${learnerDisplayName(learner)} - ${componentFullName(items[j].component)} ${items[j].title || ''} ${maxNum > 0 ? '(max ' + maxNum + ')' : ''}`;
       
       html += `<td class="c-score">
         <input id="sc-${r}-${j}" class="score-input${overMax ? ' invalid' : ''}${isPerfect ? ' perfect' : ''}${isSimilar ? ' similar' : ''}" title="${esc(scoreTitle)}" value="${isDisabled ? '' : esc(val)}"
@@ -413,6 +544,34 @@ function groupScoreMax(items, endIndex) {
   return total;
 }
 
+function summaryWeightedScore(result, componentKey, weight) {
+  if (!result) return '';
+  if (result.termGrade === 'T/O') return '<span style="color:#ffb703; font-weight:600;">T/O</span>';
+  if (componentKey === 'WW') {
+    return result.ww && result.ww.hasData ? fmt(result.ww.ps * weight / 100) : '';
+  }
+  if (componentKey === 'PT') {
+    return result.pt && result.pt.hasData ? fmt(result.pt.ps * weight / 100) : '';
+  }
+  const examHasData = (result.st1 && result.st1.hasData) || (result.st2 && result.st2.hasData) || (result.te && result.te.hasData);
+  return examHasData ? fmt(result.examPS * weight / 100) : '';
+}
+
+function summaryGradeDisplay(grade, policy) {
+  if (grade === 'T/O') return '<span style="color:#ffb703; font-weight:600;">T/O</span>';
+  if (grade === null || grade === undefined || grade === '') return '';
+  return blankNull(formatGradeForDisplay(grade, policy));
+}
+
+function summaryTermCells(result, weights, policy) {
+  return `
+    <td>${summaryWeightedScore(result, 'WW', weights[0])}</td>
+    <td>${summaryWeightedScore(result, 'PT', weights[1])}</td>
+    <td>${summaryWeightedScore(result, 'STE', weights[2])}</td>
+    <td><strong>${summaryGradeDisplay(result ? result.termGrade : null, policy)}</strong></td>
+  `;
+}
+
 /**
  * Renders the Final Summary Table displaying averages across all terms.
  */
@@ -444,35 +603,48 @@ function renderFinalOnly() {
   }
   
   const mapePart = isMapeh ? currentMapehSubTab : undefined;
+  const weights = weightsFor(a.subjectGroup);
   
   let html = `<table class="summary-table">
     <colgroup>
       <col style="width: 4%" />
-      <col style="width: 12%" />
-      <col style="width: 28%" />
-      <col style="width: 8%" />
-      <col style="width: 8%" />
-      <col style="width: 8%" />
       <col style="width: 10%" />
-      <col style="width: 22%" />
+      <col style="width: 18%" />
+      ${Array(12).fill('<col style="width: 4.5%" />').join('')}
+      <col style="width: 6%" />
+      <col style="width: 8%" />
     </colgroup>
     <thead>
       <tr>
-        <th>No.</th>
-        <th>LRN</th>
-        <th>Learner</th>
-        <th>Term 1</th>
-        <th>Term 2</th>
-        <th>Term 3</th>
-        <th>Final Grade</th>
-        <th>Remarks</th>
+        <th rowspan="2">No.</th>
+        <th rowspan="2">LRN</th>
+        <th rowspan="2">Learner</th>
+        <th colspan="4">Term 1</th>
+        <th colspan="4">Term 2</th>
+        <th colspan="4">Term 3</th>
+        <th rowspan="2">Final Grade</th>
+        <th rowspan="2">Remarks</th>
+      </tr>
+      <tr>
+        <th title="Written Works Weighted Score">WW</th>
+        <th title="Performance Task Weighted Score">PT</th>
+        <th title="Summative Assessment and Term Examination Weighted Score">STE</th>
+        <th title="Total Grade">TG</th>
+        <th title="Written Works Weighted Score">WW</th>
+        <th title="Performance Task Weighted Score">PT</th>
+        <th title="Summative Assessment and Term Examination Weighted Score">STE</th>
+        <th title="Total Grade">TG</th>
+        <th title="Written Works Weighted Score">WW</th>
+        <th title="Performance Task Weighted Score">PT</th>
+        <th title="Summative Assessment and Term Examination Weighted Score">STE</th>
+        <th title="Total Grade">TG</th>
       </tr>
     </thead><tbody>`;
   
   const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
   for (let r = 0; r < a.learners.length; r++) {
     const learner = a.learners[r];
-    const terms = [];
+    const termResults = [];
     let sum = 0;
     let count = 0;
     
@@ -483,10 +655,19 @@ function renderFinalOnly() {
     
     for (let t = 1; t <= 3; t++) {
       if (isTO && t > parseInt(learner.transferredOutTerm)) {
-        terms.push('T/O');
+        termResults.push({
+          ww: { ps: 0, hasData: false },
+          pt: { ps: 0, hasData: false },
+          st1: { hasData: false },
+          st2: { hasData: false },
+          te: { hasData: false },
+          examPS: 0,
+          termGrade: 'T/O',
+          hasData: false
+        });
       } else {
         const res = computeTerm(a, learner.id, String(t), mapePart);
-        terms.push(res.termGrade);
+        termResults.push(res);
         
         if (isDescriptive) {
           if (res.hasData) {
@@ -514,18 +695,15 @@ function renderFinalOnly() {
       remarks = finalRemark(a, fg);
     }
     
-    const t1Display = terms[0] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(terms[0], a.policy));
-    const t2Display = terms[1] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(terms[1], a.policy));
-    const t3Display = terms[2] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(terms[2], a.policy));
     const fgDisplay = fg === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(fg, a.policy));
 
     html += `<tr>
       <td>${r + 1}</td>
       <td>${esc(learner.lrn)}</td>
       <td>${esc(learnerDisplayName(learner))}</td>
-      <td>${t1Display}</td>
-      <td>${t2Display}</td>
-      <td>${t3Display}</td>
+      ${summaryTermCells(termResults[0], weights, a.policy)}
+      ${summaryTermCells(termResults[1], weights, a.policy)}
+      ${summaryTermCells(termResults[2], weights, a.policy)}
       <td><strong>${fgDisplay}</strong></td>
       <td>${remarks}</td>
     </tr>`;
@@ -540,6 +718,8 @@ function renderFinalOnly() {
 
 function renderConsolidatedMapehTable(a) {
   const term = db.currentTerm || '1';
+  const items = termAssessments(a, term, undefined);
+  const learnerRows = getRecordLearnerRows(a, term, items, 'consolidated');
   let html = `<div class="record-scroll"><table class="record-grid is-mapeh">
     <colgroup>
       <col style="width:5%" />
@@ -555,18 +735,19 @@ function renderConsolidatedMapehTable(a) {
         <th class="c-no">No.</th>
         <th class="c-learner">Learner</th>
         <th class="c-sex">Sex</th>
-        <th class="c-grade">Music & Arts Grade</th>
-        <th class="c-grade">PE & Health Grade</th>
-        <th class="c-grade">Consolidated Grade</th>
+        <th class="c-grade">Music & Arts Grade ${recordSortButton('mapeh-music', 'Music & Arts Grade')}</th>
+        <th class="c-grade">PE & Health Grade ${recordSortButton('mapeh-pe', 'PE & Health Grade')}</th>
+        <th class="c-grade">Consolidated Grade ${recordSortButton('mapeh-consolidated', 'Consolidated Grade')}</th>
         <th class="c-desc">Remarks</th>
       </tr>
     </thead><tbody>`;
 
   const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
-  for (let r = 0; r < a.learners.length; r++) {
-    const learner = a.learners[r];
-    const resMusic = computeTerm(a, learner.id, term, 'music_arts');
-    const resPE = computeTerm(a, learner.id, term, 'pe_health');
+  for (let r = 0; r < learnerRows.length; r++) {
+    const learner = learnerRows[r].learner;
+    const consolidatedResult = learnerRows[r].result;
+    const resMusic = consolidatedResult.music;
+    const resPE = consolidatedResult.pe;
 
     const gMusic = resMusic.termGrade;
     const gPE = resPE.termGrade;
@@ -974,6 +1155,14 @@ function componentLabel(component) {
   return component;
 }
 
+function componentFullName(component) {
+  if (component === 'WW') return 'Written Works';
+  if (component === 'PT') return 'Performance Task';
+  if (component === 'SA' || component === 'SA1' || component === 'SA2' || component === 'ST1' || component === 'ST2') return 'Summative Assessment';
+  if (component === 'TE') return 'Term Examination';
+  return component || 'Assessment';
+}
+
 function compactAssessmentLabel(item) {
   let title = trim(item.title || '');
   if (title) {
@@ -994,7 +1183,7 @@ function clearColumnScores(assessmentId) {
   const mapePart = isMapeh ? currentMapehSubTab : undefined;
   const items = termAssessments(a, activeTerm, mapePart);
   const item = items.find(it => it.id === assessmentId);
-  const label = item ? `${componentLabel(item.component)} ${item.title || ''}` : 'Assessment Column';
+  const label = item ? `${componentFullName(item.component)} ${item.title || ''}` : 'Assessment Column';
   
   confirmModal(
     'Clear Column Scores',
@@ -1008,6 +1197,243 @@ function clearColumnScores(assessmentId) {
       saveDatabase();
       render();
       toast('Column scores deleted successfully.', 'success');
+    }
+  );
+}
+
+function openAssessmentDetailsFromHeader(event, assessmentId) {
+  if (event && event.target && event.target.closest && event.target.closest('input, button, select, textarea, a')) {
+    return false;
+  }
+  if (event && event.stopPropagation) event.stopPropagation();
+  showAssessmentDetailsModal(assessmentId);
+  return false;
+}
+
+function openAssessmentDetailsFromHeaderKey(event, assessmentId) {
+  if (!event || (event.key !== 'Enter' && event.key !== ' ')) return true;
+  if (event.preventDefault) event.preventDefault();
+  return openAssessmentDetailsFromHeader(event, assessmentId);
+}
+
+function findAssessmentById(assessmentId) {
+  const a = currentAssignment();
+  if (!a || !a.assessments) return null;
+  const assessment = a.assessments.find(item => item.id === assessmentId);
+  return assessment ? { assignment: a, assessment } : null;
+}
+
+function assessmentStrandLabel(assessment) {
+  if (!assessment || !assessment.mapePart) return '';
+  if (assessment.mapePart === 'music_arts') return 'Music & Arts';
+  if (assessment.mapePart === 'pe_health') return 'PE & Health';
+  return assessment.mapePart;
+}
+
+function sanitizeAssessmentDescription(html) {
+  const allowedTags = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'P', 'DIV', 'UL', 'OL', 'LI', 'SPAN']);
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+
+  function clean(node) {
+    Array.from(node.childNodes).forEach(child => {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        if (!allowedTags.has(child.tagName)) {
+          child.replaceWith(...Array.from(child.childNodes));
+          return;
+        }
+        Array.from(child.attributes).forEach(attr => {
+          if (attr.name !== 'style') child.removeAttribute(attr.name);
+        });
+        if (child.hasAttribute('style')) {
+          const style = child.getAttribute('style') || '';
+          const safeStyle = style
+            .split(';')
+            .map(part => part.trim())
+            .filter(part => /^(font-weight|font-style|text-decoration)\s*:/i.test(part))
+            .join('; ');
+          if (safeStyle) child.setAttribute('style', safeStyle);
+          else child.removeAttribute('style');
+        }
+        clean(child);
+      } else if (child.nodeType !== Node.TEXT_NODE) {
+        child.remove();
+      }
+    });
+  }
+
+  clean(template.content);
+  return template.innerHTML;
+}
+
+function plainAssessmentText(html) {
+  const div = document.createElement('div');
+  div.innerHTML = sanitizeAssessmentDescription(html || '');
+  return (div.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+function showAssessmentDetailsModal(assessmentId) {
+  const found = findAssessmentById(assessmentId);
+  if (!found) {
+    toast('Assessment not found.', 'warning');
+    return;
+  }
+
+  assessmentDetailsAssessmentId = assessmentId;
+  const { assignment, assessment } = found;
+  const idEl = document.getElementById('assessmentDetailsId');
+  const titleEl = document.getElementById('assessmentDetailsTitle');
+  const dateEl = document.getElementById('assessmentDetailsDate');
+  const editor = document.getElementById('assessmentDescriptionEditor');
+  const summaryEl = document.getElementById('assessmentDetailsSummary');
+
+  if (idEl) idEl.value = assessmentId;
+  if (titleEl) titleEl.value = assessment.title || componentLabel(assessment.component);
+  if (dateEl) dateEl.value = assessment.date || '';
+  if (editor) {
+    editor.innerHTML = sanitizeAssessmentDescription(assessment.descriptionHtml || assessment.description || '');
+    editor.onpaste = event => {
+      event.preventDefault();
+      const data = event.clipboardData || window.clipboardData;
+      const html = data.getData('text/html') || esc(data.getData('text/plain') || '');
+      document.execCommand('insertHTML', false, sanitizeAssessmentDescription(html));
+    };
+  }
+
+  if (summaryEl) {
+    const strand = assessmentStrandLabel(assessment);
+    summaryEl.innerHTML = `
+      <div class="assessment-details-summary__primary">
+        <div class="assessment-details-summary__label">${esc(componentFullName(assessment.component))}</div>
+        <div class="assessment-details-summary__title">${esc(assessment.title || componentLabel(assessment.component))}</div>
+      </div>
+      <div class="assessment-details-summary__grid">
+        <div><strong>Term:</strong> Term ${esc(assessment.term || db.currentTerm || '')}</div>
+        ${strand ? `<div><strong>Strand:</strong> ${esc(strand)}</div>` : ''}
+        <div><strong>HPS:</strong> ${esc(assessment.maxScore || 'Not set')}</div>
+        <div><strong>Class:</strong> Grade ${esc(assignment.gradeLevel)} - ${esc(assignment.section)} &middot; ${esc(assignment.subject)}</div>
+      </div>
+    `;
+  }
+
+  renderAssessmentAttachments();
+  showEl('assessmentDetailsModal', true, 'flex');
+}
+
+function closeAssessmentDetailsModal() {
+  assessmentDetailsAssessmentId = null;
+  showEl('assessmentDetailsModal', false);
+}
+
+function formatAssessmentDescription(command) {
+  const editor = document.getElementById('assessmentDescriptionEditor');
+  if (editor) editor.focus();
+  document.execCommand(command, false, null);
+}
+
+function saveAssessmentDetails() {
+  const found = findAssessmentById(assessmentDetailsAssessmentId);
+  if (!found) return;
+  const { assessment } = found;
+  const titleEl = document.getElementById('assessmentDetailsTitle');
+  const dateEl = document.getElementById('assessmentDetailsDate');
+  const editor = document.getElementById('assessmentDescriptionEditor');
+
+  pushHistoryState();
+  assessment.title = trim(titleEl ? titleEl.value : assessment.title) || componentLabel(assessment.component);
+  assessment.date = dateEl ? dateEl.value : '';
+  assessment.descriptionHtml = sanitizeAssessmentDescription(editor ? editor.innerHTML : '');
+  saveDatabase();
+  render();
+  closeAssessmentDetailsModal();
+  toast('Assessment details saved.', 'success');
+}
+
+function renderAssessmentAttachments() {
+  const found = findAssessmentById(assessmentDetailsAssessmentId);
+  const list = document.getElementById('assessmentAttachmentsList');
+  if (!found || !list) return;
+
+  const attachments = found.assessment.attachments || [];
+  if (attachments.length === 0) {
+    list.innerHTML = '<div class="text-muted text-xs">No files uploaded yet.</div>';
+    return;
+  }
+
+  list.innerHTML = attachments.map(file => `
+    <div class="assessment-attachment-item">
+      <div>
+        <div class="assessment-attachment-name">${esc(file.originalName)}</div>
+        <div class="text-muted text-xs">${esc(file.mimeType || 'file')} &middot; ${Math.max(1, Math.round((file.size || 0) / 1024))} KB</div>
+      </div>
+      <div style="display:flex;gap:var(--space-2);">
+        <button class="btn btn-ghost btn-sm" type="button" onclick="openAssessmentAttachment('${esc(file.id)}')">Open</button>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="removeAssessmentAttachment('${esc(file.id)}')">Remove</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function uploadAssessmentAttachment() {
+  const found = findAssessmentById(assessmentDetailsAssessmentId);
+  if (!found || !window.electronAPI || !window.electronAPI.importAssessmentAttachment) return;
+  const result = await window.electronAPI.importAssessmentAttachment(found.assignment.id, found.assessment.id);
+  if (!result || !result.success) {
+    if (result && result.error) toast('Upload failed: ' + result.error, 'error');
+    return;
+  }
+
+  pushHistoryState();
+  if (!found.assessment.attachments) found.assessment.attachments = [];
+  found.assessment.attachments.push(result.attachment);
+  saveDatabase();
+  renderAssessmentAttachments();
+  toast('Assessment file uploaded.', 'success');
+}
+
+async function openAssessmentAttachment(attachmentId) {
+  const found = findAssessmentById(assessmentDetailsAssessmentId);
+  if (!found || !window.electronAPI || !window.electronAPI.openAssessmentAttachment) return;
+  const file = (found.assessment.attachments || []).find(item => item.id === attachmentId);
+  if (!file) return;
+  const result = await window.electronAPI.openAssessmentAttachment(file.relativePath);
+  if (!result || !result.success) toast((result && result.error) || 'Unable to open attachment.', 'error');
+}
+
+async function removeAssessmentAttachment(attachmentId) {
+  const found = findAssessmentById(assessmentDetailsAssessmentId);
+  if (!found || !window.electronAPI || !window.electronAPI.removeAssessmentAttachment) return;
+  const attachments = found.assessment.attachments || [];
+  const file = attachments.find(item => item.id === attachmentId);
+  if (!file) return;
+
+  confirmModal('Remove Attachment', `Remove "${file.originalName}" from this assessment?`, async () => {
+    pushHistoryState();
+    await window.electronAPI.removeAssessmentAttachment(file.relativePath);
+    found.assessment.attachments = attachments.filter(item => item.id !== attachmentId);
+    saveDatabase();
+    renderAssessmentAttachments();
+    toast('Attachment removed.', 'success');
+  });
+}
+
+function clearAssessmentScoresFromDetails() {
+  const found = findAssessmentById(assessmentDetailsAssessmentId);
+  if (!found) return;
+  const label = `${componentFullName(found.assessment.component)} ${found.assessment.title || ''}`;
+
+  confirmModal(
+    'Clear Assessment Scores',
+    `Delete all student scores for "${label}"? This preserves HPS, date, description, and uploaded files.`,
+    () => {
+      pushHistoryState();
+      found.assignment.learners.forEach(learner => {
+        delete found.assignment.scores[`${learner.id}|${found.assessment.id}`];
+      });
+      saveDatabase();
+      render();
+      closeAssessmentDetailsModal();
+      toast('Assessment scores cleared.', 'success');
     }
   );
 }

@@ -30,7 +30,7 @@ function renderDashboardOverview() {
   if (!db.assignments || db.assignments.length === 0) {
     target.innerHTML = emptyState(
       'Welcome to E-Class Record',
-      'Start by adding a teaching load — set your grade level, section, and subject in the sidebar.',
+      'Start by adding a teaching load for the selected school year.',
       'Add Your First Teaching Load',
       "handleAddFirstClassLoad()"
     );
@@ -50,7 +50,19 @@ function renderDashboardOverview() {
     return;
   }
 
-  let html = '<div class="dashboard-cards-grid">';
+  let html = `
+    <div class="dashboard-cards-grid">
+      <button class="dashboard-card dashboard-card--add" onclick="showAddClassLoadModal()" type="button">
+        <span class="dashboard-card--add__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </span>
+        <span class="dashboard-card--add__title">Add Class Load</span>
+        <span class="dashboard-card--add__hint">Create another teaching load for this school year.</span>
+      </button>
+  `;
   for (let i = 0; i < filtered.length; i++) {
     const a = filtered[i];
     const isActive = a.id === db.currentAssignmentId;
@@ -72,7 +84,9 @@ function renderDashboardOverview() {
         <div class="dashboard-card__subject">${esc(a.subject)}</div>
         
         <div class="dashboard-card__students-details">
-          <strong>Learners:</strong> ${total} &nbsp;(M: ${males} &middot; F: ${females})
+          <span><strong>${total}</strong> learners</span>
+          <span>M: ${males}</span>
+          <span>F: ${females}</span>
         </div>
 
         <div class="dashboard-card__selectors" onclick="event.stopPropagation();">
@@ -108,11 +122,29 @@ function renderDashboardOverview() {
             `;
           }).join('')}
         </div>
+
+        <div class="dashboard-card__actions" onclick="event.stopPropagation();">
+          <button class="btn btn-olive btn-sm dashboard-card__report-btn" type="button" onclick="openDashboardReport(this, '${esc(a.id)}')">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 20V10"></path>
+              <path d="M12 20V4"></path>
+              <path d="M6 20v-6"></path>
+            </svg>
+            Reports
+          </button>
+        </div>
       </div>
     `;
   }
   html += '</div>';
   target.innerHTML = html;
+}
+
+function openDashboardReport(button, assignmentId) {
+  const card = button ? button.closest('.dashboard-card') : null;
+  const term = card ? (card.getAttribute('data-active-term') || '1') : '1';
+  const mapePart = card ? card.getAttribute('data-active-part') : undefined;
+  showClassAnalysisModal(assignmentId, null, term, mapePart);
 }
 
 /**

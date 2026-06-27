@@ -182,7 +182,7 @@ function updateLearnerGradesDisplay() {
   
   if (!currentSelectedLearnerId) {
     reportArea.innerHTML = `
-      <div class="text-muted" style="text-align:center; padding:var(--space-8)">
+      <div class="text-muted centered-empty-message">
         Please select a learner to view their grades.
       </div>
     `;
@@ -208,12 +208,12 @@ function updateLearnerGradesDisplay() {
   // Header with meta details (perfect for printing)
   html += `
     <div class="learner-report-header">
-      <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); border-bottom: 2px solid var(--border-default); padding-bottom: var(--space-2); margin-bottom: var(--space-4); text-align: center; color: var(--text-primary)">
+      <div class="learner-report-title">
         INDIVIDUAL LEARNER GRADES REPORT
       </div>
       <div class="print-metadata-grid" style="margin-bottom: var(--space-4); color: var(--text-secondary)">
         <div class="print-metadata-col">
-          <div><strong>Learner Name:</strong> <span style="font-size: var(--font-size-md); font-weight: var(--font-weight-bold); color: var(--text-primary)">${esc(learnerDisplayName(learner))}</span></div>
+          <div><strong>Learner Name:</strong> <span class="learner-report-name">${esc(learnerDisplayName(learner))}</span></div>
           <div><strong>LRN:</strong> ${esc(learner.lrn || '—')}</div>
           <div><strong>Sex:</strong> ${esc(learner.sex || '—')}</div>
           <div><strong>School Name:</strong> ${esc(db.schoolName || '')}</div>
@@ -238,8 +238,8 @@ function updateLearnerGradesDisplay() {
   // Render each term details
   termsToShow.forEach(term => {
     html += `
-      <div class="report-term-section" style="margin-top: var(--space-5); page-break-inside: avoid;">
-        <h3 style="border-bottom: 1px solid var(--border-default); padding-bottom: 3px; font-size: var(--font-size-md); color: var(--color-primary-700); margin-bottom: var(--space-3)">
+      <div class="learner-report-section learner-report-section--term">
+        <h3>
           Term ${term} Grades
         </h3>
     `;
@@ -256,8 +256,8 @@ function updateLearnerGradesDisplay() {
   // Render summary section
   if (showSummary) {
     html += `
-      <div class="report-summary-section" style="margin-top: var(--space-5); page-break-inside: avoid;">
-        <h3 style="border-bottom: 1px solid var(--border-default); padding-bottom: 3px; font-size: var(--font-size-md); color: var(--color-success-700); margin-bottom: var(--space-3)">
+      <div class="learner-report-section learner-report-section--summary">
+        <h3>
           Final Grades Summary
         </h3>
     `;
@@ -273,7 +273,7 @@ function updateLearnerGradesDisplay() {
   
   if (a.policy === 'DO15_DESCRIPTIVE') {
     html += `
-      <div class="report-compliance-note" style="margin-top:var(--space-4); text-align:center; font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic">
+      <div class="report-compliance-note">
         Original basis of grade was descriptive (DO 15, s. 2026).
       </div>
     `;
@@ -291,9 +291,9 @@ function renderTermStandardDetails(a, learnerId, term) {
   const w = weightsFor(a.subjectGroup);
   
   let html = `
-    <table class="report-grades-table" style="width:100%; border-collapse:collapse; margin-bottom:var(--space-3); border:1px solid var(--border-default)">
+    <table class="report-grades-table">
       <thead>
-        <tr style="background:var(--bg-muted); border-bottom:1px solid var(--border-default); text-align:left">
+        <tr class="report-cell-left">
           <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Component</th>
           <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Title</th>
           <th style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:center">Score</th>
@@ -346,8 +346,8 @@ function renderTermStandardDetails(a, learnerId, term) {
     return blockHtml;
   };
 
-  html += renderBlock('WW', 'Written Work', result.ww, w[0]);
-  html += renderBlock('PT', 'Performance Tasks', result.pt, w[1]);
+  html += renderBlock('WW', 'Written Works', result.ww, w[0]);
+  html += renderBlock('PT', 'Performance Task', result.pt, w[1]);
   
   const examResult = {
     hasData: result.st1.hasData || result.st2.hasData || result.te.hasData,
@@ -365,9 +365,9 @@ function renderTermStandardDetails(a, learnerId, term) {
       </tbody>
     </table>
     
-    <div style="display:flex; justify-content:flex-end; gap:var(--space-5); background:var(--bg-surface-raised); padding:var(--space-3); border-radius:var(--radius-lg); border:1px solid var(--border-default); margin-top:var(--space-2)">
+    <div class="term-result-strip">
       <div>Initial Grade (IG): <strong>${result.hasData ? fmt(result.initialGrade) : '—'}</strong></div>
-      <div>Transmuted Grade (TG): <strong style="color:var(--color-primary-600); font-size:var(--font-size-lg)">${result.termGrade === null ? '—' : formatGradeForDisplay(result.termGrade, a.policy)}</strong></div>
+      <div>Transmuted Grade (TG): <strong class="term-grade-highlight">${result.termGrade === null ? '—' : formatGradeForDisplay(result.termGrade, a.policy)}</strong></div>
       <div>Remarks: ${remarksBadge}</div>
     </div>
   `;
@@ -408,29 +408,29 @@ function renderTermMapehDetails(a, learnerId, term) {
     : `<span class="badge ${isPassing(consolidated) ? 'badge--pass' : 'badge--fail'}">${isPassing(consolidated) ? 'Passed' : (a.policy === 'DO15_DESCRIPTIVE' ? 'For Intervention' : 'Failed')}</span>`;
   
   let html = `
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4); margin-bottom:var(--space-3)">
-      <div style="border:1px solid var(--border-default); padding:var(--space-3); border-radius:var(--radius-lg); background:var(--bg-surface)">
-        <h4 style="margin-top:0; border-bottom:1px solid var(--border-subtle); padding-bottom:5px; color:var(--color-primary-600)">Music & Arts</h4>
-        <div>Written Work PS: <strong>${resMusic.ww.hasData ? fmt(resMusic.ww.ps) + '%' : '—'}</strong></div>
-        <div>Performance Tasks PS: <strong>${resMusic.pt.hasData ? fmt(resMusic.pt.ps) + '%' : '—'}</strong></div>
-        <div>Exam PS: <strong>${resMusic.hasData ? fmt(resMusic.examPS) + '%' : '—'}</strong></div>
-        <div style="margin-top:var(--space-2); padding-top:var(--space-2); border-top:1px dashed var(--border-subtle)">
+    <div class="mapeh-term-grid">
+      <div class="mapeh-term-card">
+        <h4>Music & Arts</h4>
+        <div>Written Works Percentage Score: <strong>${resMusic.ww.hasData ? fmt(resMusic.ww.ps) + '%' : '—'}</strong></div>
+        <div>Performance Task Percentage Score: <strong>${resMusic.pt.hasData ? fmt(resMusic.pt.ps) + '%' : '—'}</strong></div>
+        <div>Term Examination Percentage Score: <strong>${resMusic.hasData ? fmt(resMusic.examPS) + '%' : '—'}</strong></div>
+        <div class="mapeh-term-grade">
           Term Grade: <strong style="font-size:var(--font-size-md)">${gMusic === null ? '—' : formatGradeForDisplay(gMusic, a.policy)}</strong>
         </div>
       </div>
-      <div style="border:1px solid var(--border-default); padding:var(--space-3); border-radius:var(--radius-lg); background:var(--bg-surface)">
-        <h4 style="margin-top:0; border-bottom:1px solid var(--border-subtle); padding-bottom:5px; color:var(--color-primary-600)">PE & Health</h4>
-        <div>Written Work PS: <strong>${resPE.ww.hasData ? fmt(resPE.ww.ps) + '%' : '—'}</strong></div>
-        <div>Performance Tasks PS: <strong>${resPE.pt.hasData ? fmt(resPE.pt.ps) + '%' : '—'}</strong></div>
-        <div>Exam PS: <strong>${resPE.hasData ? fmt(resPE.examPS) + '%' : '—'}</strong></div>
-        <div style="margin-top:var(--space-2); padding-top:var(--space-2); border-top:1px dashed var(--border-subtle)">
+      <div class="mapeh-term-card">
+        <h4>PE & Health</h4>
+        <div>Written Works Percentage Score: <strong>${resPE.ww.hasData ? fmt(resPE.ww.ps) + '%' : '—'}</strong></div>
+        <div>Performance Task Percentage Score: <strong>${resPE.pt.hasData ? fmt(resPE.pt.ps) + '%' : '—'}</strong></div>
+        <div>Term Examination Percentage Score: <strong>${resPE.hasData ? fmt(resPE.examPS) + '%' : '—'}</strong></div>
+        <div class="mapeh-term-grade">
           Term Grade: <strong style="font-size:var(--font-size-md)">${gPE === null ? '—' : formatGradeForDisplay(gPE, a.policy)}</strong>
         </div>
       </div>
     </div>
-    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface-raised); padding:var(--space-3); border-radius:var(--radius-lg); border:1px solid var(--border-default)">
+    <div class="mapeh-consolidated-strip">
       <div><strong>MAPEH Consolidated Grade:</strong></div>
-      <div style="font-size:var(--font-size-lg); font-weight:var(--font-weight-bold); color:var(--color-primary-700)">
+      <div class="mapeh-consolidated-grade">
         ${consolidated === null ? '—' : formatGradeForDisplay(consolidated, a.policy)}
       </div>
       <div>${consolidatedBadge}</div>
@@ -474,9 +474,9 @@ function renderSummaryStandardDetails(a, learnerId) {
   const remarks = finalRemark(a, fg);
   
   let html = `
-    <table class="report-grades-table" style="width:100%; border-collapse:collapse; border:1px solid var(--border-default)">
+    <table class="report-grades-table">
       <thead>
-        <tr style="background:var(--bg-muted); border-bottom:1px solid var(--border-default); text-align:center">
+        <tr class="report-cell-center">
           <th style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:left">Term</th>
           <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Grade</th>
           <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Descriptor</th>
@@ -592,9 +592,9 @@ function renderSummaryMapehDetails(a, learnerId) {
   const remarks = finalRemark(a, finalConsolidated);
 
   let html = `
-    <table class="report-grades-table" style="width:100%; border-collapse:collapse; border:1px solid var(--border-default)">
+    <table class="report-grades-table">
       <thead>
-        <tr style="background:var(--bg-muted); border-bottom:1px solid var(--border-default); text-align:center">
+        <tr class="report-cell-center">
           <th style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:left">Component / Term</th>
           <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Term 1</th>
           <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Term 2</th>

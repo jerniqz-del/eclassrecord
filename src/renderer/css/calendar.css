@@ -13,7 +13,8 @@
   padding: var(--space-4);
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
-  border-radius: var(--border-radius-lg);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-xs);
 }
 
 .calendar-header-controls {
@@ -130,39 +131,39 @@
 
 /* Event Types Color Palettes */
 .event-pill--milestone {
-  background-color: rgba(220, 53, 69, 0.1);
-  color: #dc3545;
-  border-left: 3px solid #dc3545;
+  background-color: var(--color-error-50);
+  color: var(--color-error-700);
+  border-left: 3px solid var(--color-error-500);
 }
 
 .event-pill--holiday {
-  background-color: rgba(40, 167, 69, 0.1);
-  color: #28a745;
-  border-left: 3px solid #28a745;
+  background-color: var(--color-success-50);
+  color: var(--color-success-700);
+  border-left: 3px solid var(--color-success-500);
 }
 
 .event-pill--ww {
-  background-color: rgba(0, 123, 255, 0.1);
-  color: #007bff;
-  border-left: 3px solid #007bff;
+  background-color: var(--color-info-50);
+  color: var(--color-info-700);
+  border-left: 3px solid var(--color-info-500);
 }
 
 .event-pill--pt {
-  background-color: rgba(111, 66, 193, 0.1);
-  color: #6f42c1;
-  border-left: 3px solid #6f42c1;
+  background-color: color-mix(in srgb, #7c3aed 12%, var(--bg-surface));
+  color: #7c3aed;
+  border-left: 3px solid #7c3aed;
 }
 
 .event-pill--exam {
-  background-color: rgba(253, 126, 20, 0.1);
-  color: #fd7e14;
-  border-left: 3px solid #fd7e14;
+  background-color: var(--color-accent-50);
+  color: var(--color-accent-700);
+  border-left: 3px solid var(--color-accent-500);
 }
 
 .event-pill--reminder {
-  background-color: rgba(255, 193, 7, 0.1);
-  color: #ffc107;
-  border-left: 3px solid #ffc107;
+  background-color: var(--color-warning-50);
+  color: var(--color-warning-600);
+  border-left: 3px solid var(--color-warning-500);
 }
 
 .calendar-sidebar-card {
@@ -171,7 +172,8 @@
   padding: var(--space-4);
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
-  border-radius: var(--border-radius-lg);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-xs);
   overflow: hidden;
   max-height: 100%;
 }
@@ -198,12 +200,12 @@
   transform: translateY(-2px);
 }
 
-.calendar-agenda-item--milestone { border-color: #dc3545; }
-.calendar-agenda-item--holiday { border-color: #28a745; }
-.calendar-agenda-item--ww { border-color: #007bff; }
+.calendar-agenda-item--milestone { border-color: var(--color-error-500); }
+.calendar-agenda-item--holiday { border-color: var(--color-success-500); }
+.calendar-agenda-item--ww { border-color: var(--color-info-500); }
 .calendar-agenda-item--pt { border-color: #6f42c1; }
-.calendar-agenda-item--exam { border-color: #fd7e14; }
-.calendar-agenda-item--reminder { border-color: #ffc107; }
+.calendar-agenda-item--exam { border-color: var(--color-accent-500); }
+.calendar-agenda-item--reminder { border-color: var(--color-warning-500); }
 
 .calendar-agenda-item__date {
   font-size: 10px;
@@ -255,7 +257,7 @@
 
 .calendar-agenda-item__delete-btn:hover {
   opacity: 1;
-  color: #dc3545;
+  color: var(--color-error-600);
 }
 
 .calendar-agenda-empty {
@@ -275,9 +277,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  background-color: rgba(255, 193, 7, 0.1);
-  color: #856404;
-  border: 1px solid rgba(255, 193, 7, 0.2);
+  background-color: var(--color-warning-50);
+  color: var(--color-warning-600);
+  border: 1px solid var(--color-warning-100);
   border-radius: var(--border-radius-md);
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-3);
@@ -286,7 +288,7 @@
 
 .class-reminder-alert__icon {
   flex-shrink: 0;
-  color: #e0a800;
+  color: var(--color-warning-500);
 }
 
 .class-reminder-alert__text {

@@ -69,7 +69,7 @@ const TOUR_STEPS = [
     selector: '#classRecordPanel',
     view: 'record',
     align: 'top',
-    body: 'Click directly inside cells to input scores for Written Works (WW), Performance Tasks (PT), and Semester Assessments (QA/TE). Calculations update weighted averages in real-time.'
+    body: 'Click directly inside cells to input scores for Written Works, Performance Task, Summative Assessment, and Term Examination. Calculations update weighted averages in real-time.'
   },
   {
     title: 'Grading Sheet Toolbar',

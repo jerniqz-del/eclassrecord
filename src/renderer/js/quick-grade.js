@@ -47,6 +47,8 @@ function showQuickGradeModal() {
     defaultLearnerIdx = window.lastFocusedLearnerIndex;
   }
   quickGradeLearnerIndex = defaultLearnerIdx;
+  const searchEl = document.getElementById('quickGradeRosterSearch');
+  if (searchEl) searchEl.value = '';
   
   // Populate the assessment drop-down selector
   const select = document.getElementById('quickGradeAssessmentSelect');
@@ -60,18 +62,7 @@ function showQuickGradeModal() {
       const comp = item.component;
       const title = (item.title || '').trim();
       
-      let compName = '';
-      if (comp === 'WW') {
-        compName = 'Written Works';
-      } else if (comp === 'PT') {
-        compName = 'Performance Task';
-      } else if (comp === 'SA1' || comp === 'ST1' || comp === 'SA2' || comp === 'ST2' || comp === 'SA') {
-        compName = 'Summative Assessment';
-      } else if (comp === 'TE') {
-        compName = 'Term Examination';
-      } else {
-        compName = componentLabel(comp);
-      }
+      const compName = typeof componentFullName === 'function' ? componentFullName(comp) : componentLabel(comp);
       
       const cleanTitle = title.toUpperCase();
       const cleanComp = comp.toUpperCase();
@@ -156,33 +147,26 @@ function updateQuickGradeAssessmentDetails() {
     return;
   }
   
-  const topicText = assessment.topic || 'No topic specified';
+  const descriptionText = assessment.descriptionHtml
+    ? plainAssessmentText(assessment.descriptionHtml)
+    : (assessment.description || assessment.topic || '');
   const dateText = assessment.date ? new Date(assessment.date).toLocaleDateString() : 'No date specified';
   const maxScoreText = assessment.maxScore ? `${assessment.maxScore} points` : 'Not set';
+  const attachmentCount = assessment.attachments ? assessment.attachments.length : 0;
   
-  let compName = '';
   const comp = assessment.component;
-  if (comp === 'WW') {
-    compName = 'Written Works';
-  } else if (comp === 'PT') {
-    compName = 'Performance Task';
-  } else if (comp === 'SA1' || comp === 'ST1' || comp === 'SA2' || comp === 'ST2' || comp === 'SA') {
-    compName = 'Summative Assessment';
-  } else if (comp === 'TE') {
-    compName = 'Term Examination';
-  } else {
-    compName = componentLabel(comp);
-  }
+  const compName = typeof componentFullName === 'function' ? componentFullName(comp) : componentLabel(comp);
   
   detailsEl.innerHTML = `
-    <div style="background: var(--bg-surface-hover); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: var(--space-3); font-size: var(--font-size-xs); line-height: 1.45; color: var(--text-secondary);">
-      <div style="display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-2);">
-        <div><strong>Component:</strong> ${esc(compName)}</div>
-        <div><strong>HPS:</strong> ${esc(maxScoreText)}</div>
-        <div><strong>Date:</strong> ${esc(dateText)}</div>
+    <div class="quick-grade-assessment-card">
+      <div class="quick-grade-assessment-meta">
+        <span><strong>Component:</strong> ${esc(compName)}</span>
+        <span><strong>HPS:</strong> ${esc(maxScoreText)}</span>
+        <span><strong>Date:</strong> ${esc(dateText)}</span>
+        <span><strong>Files:</strong> ${attachmentCount}</span>
       </div>
-      <div style="border-top: 1px dashed var(--border-subtle); padding-top: var(--space-2);">
-        <strong>Topic:</strong> ${esc(topicText)}
+      <div class="quick-grade-assessment-description">
+        <strong>Description:</strong> ${esc(descriptionText || 'No description provided')}
       </div>
     </div>
   `;
@@ -198,26 +182,38 @@ function renderQuickGradeRoster() {
   const rosterList = document.getElementById('quickGradeRosterList');
   if (!rosterList) return;
   rosterList.innerHTML = '';
+  const searchEl = document.getElementById('quickGradeRosterSearch');
+  const query = searchEl ? trim(searchEl.value).toLowerCase() : '';
   
   let gradedCount = 0;
+  let visibleCount = 0;
   a.learners.forEach((learner, index) => {
     const scoreKey = `${learner.id}|${quickGradeAssessmentId}`;
     const score = a.scores[scoreKey];
     const hasScore = score !== undefined && score !== '';
     if (hasScore) gradedCount++;
+
+    const displayName = learnerDisplayName(learner);
+    const searchable = `${displayName} ${learner.lrn || ''} ${learner.sex || ''}`.toLowerCase();
+    if (query && !searchable.includes(query)) return;
+    visibleCount++;
     
     const item = document.createElement('div');
     item.id = `qg-roster-item-${index}`;
-    item.className = 'quick-grade-roster-item' + (index === quickGradeLearnerIndex ? ' quick-grade-roster-item--active' : '');
+    item.className = 'quick-grade-roster-item'
+      + (index === quickGradeLearnerIndex ? ' quick-grade-roster-item--active' : '')
+      + (hasScore ? ' quick-grade-roster-item--complete' : '');
     item.onclick = () => quickGradeJumpToLearner(index);
     
-    const displayName = learnerDisplayName(learner);
     item.innerHTML = `
       <span class="quick-grade-roster-item__name">${index + 1}. ${esc(displayName)}</span>
       <span class="quick-grade-roster-item__score">${hasScore ? esc(score) : '—'}</span>
     `;
     rosterList.appendChild(item);
   });
+  if (visibleCount === 0) {
+    rosterList.innerHTML = '<div class="quick-grade-roster-empty">No learners match your search.</div>';
+  }
   
   // Update overall progression label
   const progressEl = document.getElementById('quickGradeProgress');

@@ -11,8 +11,56 @@ const HELP_CATEGORIES = [
   { id: 'grading_scoring', name: '📊 Grading & Scoring' },
   { id: 'direct_transfers', name: '🔄 Direct Transfers' },
   { id: 'deped_policies', name: '📋 DepEd Policies & Rules' },
-  { id: 'backups_settings', name: '⚙️ Backups & Settings' }
+  { id: 'backups_settings', name: '⚙️ Backups & Settings' },
+  { id: 'change_history', name: 'Change History & Patches' }
 ];
+
+function renderImplementationHistoryGuide() {
+  const history = (typeof APP_CHANGELOG !== 'undefined' && APP_CHANGELOG && Array.isArray(APP_CHANGELOG.history))
+    ? APP_CHANGELOG.history
+    : [];
+
+  const latestVersion = typeof APP_CHANGELOG !== 'undefined' && APP_CHANGELOG && APP_CHANGELOG.version
+    ? APP_CHANGELOG.version
+    : 'current';
+
+  const cards = history.map(entry => `
+    <div class="change-history-entry">
+      <div class="change-history-entry__header">
+        <strong>${esc(entry.version)}</strong>
+        <span>${esc(entry.date || '')}</span>
+      </div>
+      <div class="change-history-grid">
+        <div>
+          <h5>Implemented changes</h5>
+          <ul>${(entry.changes || []).map(item => `<li>${esc(item)}</li>`).join('')}</ul>
+        </div>
+        <div>
+          <h5>Patches that worked</h5>
+          <ul>${(entry.worked || []).map(item => `<li>${esc(item)}</li>`).join('')}</ul>
+        </div>
+        <div>
+          <h5>Patches adjusted</h5>
+          <ul>${(entry.adjusted || []).map(item => `<li>${esc(item)}</li>`).join('')}</ul>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <p>This guide documents the app changes from the first Electron foundation through the latest v${esc(latestVersion)} update set. It separates the core implemented changes from patches that worked and patches that were later adjusted after testing or release use.</p>
+
+    <div class="help-highlight-box">
+      <strong>Repository document:</strong> A fuller engineering history is also kept in <code>docs/implementation-history.md</code>.
+    </div>
+
+    ${cards || `
+      <div class="help-highlight-box">
+        No detailed changelog history is available in this build.
+      </div>
+    `}
+  `;
+}
 
 const HELP_TOPICS = [
   {
@@ -42,8 +90,8 @@ const HELP_TOPICS = [
       <p>Class Loads represent your teaching schedule for different subjects and sections.</p>
       <h5>Steps to Add a Teaching Load:</h5>
       <ol>
-        <li>Navigate to the <strong>Teaching Load</strong> section in the sidebar.</li>
-        <li>Click the primary <strong>Add Class Load</strong> button in the left load panel.</li>
+        <li>Open the <strong>Teaching Load</strong> view from the sidebar.</li>
+        <li>Click <strong>Add Class Load</strong> from the Dashboard card or empty-state action.</li>
         <li>Select the <strong>Grade Level</strong>, enter the <strong>Section</strong> name, and pick the <strong>School Year</strong>.</li>
         <li>Select the <strong>Subject</strong> from the dropdown (or select <em>Custom Subject</em> to type your own subject name).</li>
         <li>Click <strong>Add Teaching Load</strong> to save it to your roster panel.</li>
@@ -59,7 +107,7 @@ const HELP_TOPICS = [
       <p>You can add students manually to a class roster one at a time using the Add Learner modal.</p>
       <h5>How to Add a Learner:</h5>
       <ol>
-        <li>Go to <strong>Teaching Load</strong> in the sidebar.</li>
+        <li>Open <strong>Teaching Load</strong> from the sidebar.</li>
         <li>Select your active class from the dropdown menu.</li>
         <li>Click the <strong>Add Learner</strong> button at the top-right of the Class Roster card.</li>
         <li>Provide the 12-digit <strong>LRN</strong> (Learner Reference Number), <strong>Last Name</strong>, <strong>First Name</strong>, <strong>Middle Name</strong> (optional), and select their <strong>Sex</strong> (Male or Female).</li>
@@ -76,7 +124,7 @@ const HELP_TOPICS = [
       <p>Official Department of Education (DepEd) forms require student rosters to be grouped by gender (Boys first, then Girls) and sorted alphabetically within each group.</p>
       <h5>Sorting Your Class Roster:</h5>
       <ol>
-        <li>Select your class under the <strong>Teaching Load</strong> section.</li>
+        <li>Select your class in the <strong>Teaching Load</strong> view.</li>
         <li>Click the <strong>Sort Roster</strong> button on the roster card toolbar.</li>
         <li>The system will automatically arrange all boys alphabetically from A to Z, followed by all girls from A to Z, recalculating display names and indexes instantly.</li>
       </ol>
@@ -91,7 +139,7 @@ const HELP_TOPICS = [
       <p>Avoid typing student profiles manually by importing the official <strong>School Form 1 (SF1)</strong> spreadsheet directly into the app.</p>
       <h5>Steps to Upload SF1:</h5>
       <ol>
-        <li>Under <strong>Teaching Load</strong>, select the target class section.</li>
+        <li>Select the target class section in the <strong>Teaching Load</strong> view.</li>
         <li>Click <strong>Upload SF1 Spreadsheet</strong> on the action toolbar.</li>
         <li>Select the Excel sheet (.xls / .xlsx) from your computer.</li>
         <li>The system will extract student LRNs, names, and gender details automatically, filter out duplicates, and append them directly to the roster.</li>
@@ -132,7 +180,7 @@ const HELP_TOPICS = [
       <p>The Grading Sheet is a responsive grid layout aligned with DepEd scoring divisions.</p>
       <h5>Scoring Mechanics:</h5>
       <ul>
-        <li>Select the <strong>Grading Sheet</strong> view from the sidebar or click <strong>Proceed to Grading Sheet</strong>.</li>
+        <li>Select the <strong>Grading Sheet</strong> view from the sidebar or open a class card from the Dashboard.</li>
         <li>Navigate to the desired term (Term 1, 2, or 3) using the tabs at the top.</li>
         <li>Click directly inside any score cell and type a numerical mark.</li>
         <li>Values must be between <strong>0</strong> and the <strong>Highest Possible Score (HPS)</strong> configured for that column.</li>
@@ -338,6 +386,13 @@ const HELP_TOPICS = [
         <li>Click <strong>Clear Local Data</strong> and type in the confirmation prompt. The app will wipe all profiles and restart fresh.</li>
       </ol>
     `
+  },
+  {
+    id: 'implementation_history',
+    category: 'change_history',
+    title: 'Implementation History and Patch Notes',
+    keywords: 'implementation history changelog release notes patches worked adjusted version latest updates beginning feature timeline',
+    content: renderImplementationHistoryGuide
   }
 ];
 
@@ -411,16 +466,19 @@ function renderHelpContent(filteredTopics = null) {
     html += `<h3 class="help-content-title">${cat ? cat.name : 'Guides & Tutorials'}</h3>`;
   }
 
-  html += topicsToShow.map(topic => `
+  html += topicsToShow.map(topic => {
+    const content = typeof topic.content === 'function' ? topic.content() : topic.content;
+    return `
     <div class="help-guide-item" id="guide-${topic.id}">
       <h4 class="help-guide-title">
         <span>📖</span> ${topic.title}
       </h4>
       <div class="help-guide-text">
-        ${topic.content}
+        ${content}
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   contentPane.innerHTML = html;
 }
@@ -442,9 +500,10 @@ function filterHelpTopics() {
 
   // Search across keywords and title/content
   const matches = HELP_TOPICS.filter(t => {
+    const topicContent = typeof t.content === 'function' ? t.content() : t.content;
     return t.title.toLowerCase().includes(query) || 
            t.keywords.toLowerCase().includes(query) || 
-           t.content.toLowerCase().includes(query);
+           String(topicContent).toLowerCase().includes(query);
   });
 
   // De-select category tabs highlights

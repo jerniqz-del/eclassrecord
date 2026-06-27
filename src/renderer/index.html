@@ -17,7 +17,9 @@
   <link rel="stylesheet" href="css/record-table.css" />
   <link rel="stylesheet" href="css/animations.css" />
   <link rel="stylesheet" href="css/mobile-sync.css" />
+  <link rel="stylesheet" href="css/calendar.css" />
   <link rel="stylesheet" href="css/print.css" media="print" />
+  <link rel="stylesheet" href="css/admin.css" />
 </head>
 <body>
   
@@ -88,26 +90,11 @@
           <span class="nav-btn__label">Mobile Sync</span>
         </button>
       </nav>
-      
-      <span class="sidebar__section-title">Teaching Load</span>
-      <!-- Teaching Load List Panel -->
-      <div class="card view-section view-section--flex card--sidebar-load" data-view="dashboard,classes,record">
-        <button class="btn btn-primary btn-sm" style="width: 100%; margin-bottom: var(--space-3);" onclick="showAddClassLoadModal()">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          Add Class Load
-        </button>
-        <ul id="assignmentList" class="load-list"></ul>
-        <div id="assignmentStatus" class="text-muted text-xs" style="margin-top:var(--space-2)">0 class load(s)</div>
-      </div>
-
       </div><!-- /sidebar__body -->
       
       <!-- Sidebar Footer -->
       <div class="sidebar__footer no-print">
-        <button id="sidebarToggle" class="nav-btn" onclick="toggleSidebarCollapse()" title="Collapse Sidebar" style="margin-bottom: 8px;">
+        <button id="sidebarToggle" class="nav-btn u-mb-2" onclick="toggleSidebarCollapse()" title="Collapse Sidebar">
           <svg id="sidebarToggleIcon" class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
@@ -120,7 +107,7 @@
           </svg>
           <span class="nav-btn__label">Settings</span>
         </button>
-        <button id="navHelp" class="nav-btn" onclick="setView('help')" style="margin-top: 4px;" title="Help & Tutorials">
+        <button id="navHelp" class="nav-btn u-mt-1" onclick="setView('help')" title="Help & Tutorials">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
@@ -128,13 +115,13 @@
           </svg>
           <span class="nav-btn__label">Help & Tutorials</span>
         </button>
-        <button id="navFeedback" class="nav-btn" onclick="openFeedback()" style="margin-top: 4px;" title="Feedback">
+        <button id="navFeedback" class="nav-btn u-mt-1" onclick="openFeedback()" title="Feedback">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
           <span class="nav-btn__label">Feedback</span>
         </button>
-        <button id="navLogout" class="nav-btn nav-btn--logout" onclick="logoutProfile()" style="margin-top: 4px;" title="Logout">
+        <button id="navLogout" class="nav-btn nav-btn--logout u-mt-1" onclick="logoutProfile()" title="Logout">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
@@ -218,9 +205,9 @@
           <label id="importHelp" class="field-label">Paste text here.</label>
           <textarea id="importText" class="field-textarea" placeholder="Paste data..."></textarea>
         </div>
-        <div style="display:flex;gap:var(--space-2)">
+        <div class="action-cluster">
           <button class="btn btn-primary btn-sm" onclick="runImport()">Process Import</button>
-          <button class="btn btn-ghost btn-sm" onclick="toggleImport('')">Cancel</button>
+          <button class="btn btn-warn btn-sm" onclick="toggleImport('')">Cancel</button>
         </div>
       </section>
 
@@ -233,7 +220,7 @@
       <section class="view-section" data-view="sync" style="display:none">
         <div class="card sync-panel">
           <div class="sync-panel__header">
-            <h2 class="card-title" style="margin:0; border:0; padding:0;">Mobile Companion Synchronization</h2>
+            <h2 class="card-title card-title--inline">Mobile Companion Synchronization</h2>
             <div class="text-muted text-xs">Link your Android phone to transfer rosters offline and upload entered scores.</div>
           </div>
           
@@ -268,7 +255,7 @@
             <div class="sync-pin-panel" id="syncPinPanel" style="display:none;">
               <div class="field">
                 <label class="field-label">Verification PIN Code</label>
-                <div class="text-xs text-muted" style="margin-bottom: var(--space-2);">Type the 6-digit PIN code currently displayed on your phone's screen.</div>
+                <div class="text-xs text-muted u-mb-2">Type the 6-digit PIN code currently displayed on your phone's screen.</div>
                 <div class="pin-input-group">
                   <input type="text" id="syncPinInput" class="field-input pin-field" maxlength="6" placeholder="000000" />
                   <button class="btn btn-primary btn-sm" onclick="submitHandshakePin()">Verify & Authorize</button>
@@ -282,7 +269,7 @@
               <ul class="device-list" id="discoveredDevicesList">
                 <li class="device-item text-muted">Searching for E-Class companions...</li>
               </ul>
-              <button class="btn btn-ghost btn-sm" style="margin-top:var(--space-2)" onclick="cancelBleDiscovery()">Cancel Search</button>
+              <button class="btn btn-ghost btn-sm u-mt-2" onclick="cancelBleDiscovery()">Cancel Search</button>
             </div>
 
             <!-- Bluetooth Logs -->
@@ -297,11 +284,11 @@
       <!-- Classes & Learners View -->
       <section class="view-section view-section--flex" data-view="classes">
         
-        <div id="classesViewContent" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+        <div id="classesViewContent" class="view-stack">
           <!-- Active Class Dropdown Row (matching layout of record-header-row) -->
           <div class="record-header-row no-print">
             <!-- Class Selector Dropdown -->
-            <div class="record-class-selector" style="margin-bottom: 0;">
+            <div class="record-class-selector u-mb-0">
               <span class="record-class-label">Active Class:</span>
               <select id="classesClassSelect" class="field-select select-class-dropdown" onchange="selectAssignment(this.value); setView('classes');">
                 <!-- Dynamically populated options -->
@@ -310,8 +297,8 @@
           </div>
 
           <!-- Action Buttons Card (placed below Active Class, matching style from record sheet) -->
-          <div id="classesActionsCard" class="card no-print" style="padding:var(--space-3);margin-bottom:var(--space-3)">
-            <div style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
+          <div id="classesActionsCard" class="card no-print u-mb-3 u-p-3">
+            <div class="action-cluster">
               <button class="btn btn-primary btn-sm" onclick="setView('record')">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
                 Proceed to Grading Sheet
@@ -340,10 +327,10 @@
           </div>
 
           <!-- Class Roster Card -->
-          <div class="card no-print" style="margin-top:0; flex: 1; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0;">
-            <div id="classesRosterHeader" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
-              <h2 class="card-title" style="margin:0;border:0;padding:0">Class Roster</h2>
-              <div style="display:flex; gap:var(--space-2)">
+          <div class="card no-print panel-fill panel-stack u-mt-0">
+            <div id="classesRosterHeader" class="spread-row u-mb-3">
+              <h2 class="card-title card-title--inline">Class Roster</h2>
+              <div class="action-cluster">
                 <button class="btn btn-primary btn-sm" onclick="showAddLearnerModal()">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>
                   Add Learner
@@ -352,7 +339,7 @@
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" y1="11" x2="23" y2="11"></line><line x1="20" y1="8" x2="20" y2="14"></line></svg>
                   Bulk Add Learners
                 </button>
-                <button class="btn btn-sm" onclick="sortLearners()" style="border: 1px solid var(--border-color);">
+                <button class="btn btn-sm" onclick="sortLearners()">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="14" y2="9"></line><line x1="4" y1="15" x2="10" y2="15"></line><polyline points="14 12 18 16 22 12"></polyline><line x1="18" y1="8" x2="18" y2="16"></line></svg>
                   Sort Roster
                 </button>
@@ -379,7 +366,7 @@
           </div>
 
           <!-- Record Grid Tabs -->
-          <div id="recordTabs" class="record-tabs" style="margin-bottom: 0;">
+          <div id="recordTabs" class="record-tabs u-mb-0">
             <button id="recTab1" class="record-tab" onclick="setRecordTab('1')">Term 1</button>
             <button id="recTab2" class="record-tab" onclick="setRecordTab('2')">Term 2</button>
             <button id="recTab3" class="record-tab" onclick="setRecordTab('3')">Term 3</button>
@@ -388,7 +375,7 @@
         </div>
 
         <!-- MAPEH Components sub-tabs -->
-        <div id="mapehSubTabs" class="record-tabs record-tabs--sub no-print" style="display:none; margin-top: calc(-1 * var(--space-2));">
+        <div id="mapehSubTabs" class="record-tabs record-tabs--sub no-print record-tabs--pull" style="display:none;">
           <button id="mapehTabMusicArts" class="record-tab record-tab--sub" onclick="setMapehSubTab('music_arts')">Music & Arts</button>
           <button id="mapehTabPEHealth" class="record-tab record-tab--sub" onclick="setMapehSubTab('pe_health')">PE & Health</button>
           <button id="mapehTabConsolidated" class="record-tab record-tab--sub record-tab--consolidated" onclick="setMapehSubTab('consolidated')">Consolidated Grades</button>
@@ -397,9 +384,9 @@
 
         
         <!-- CSV Grades Export, PDF Download & Print Buttons -->
-        <div id="recordActionsCard" class="card no-print" style="padding:var(--space-3);margin-bottom:var(--space-3)">
-          <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:var(--space-2)">
-            <div style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
+        <div id="recordActionsCard" class="card no-print u-mb-3 u-p-3">
+          <div class="action-row action-row--between">
+            <div class="action-cluster">
               <!-- Undo & Redo actions -->
               <button id="undoBtn" class="btn btn-sm" onclick="triggerUndo()" title="Undo (Ctrl+Z)" disabled>
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -475,17 +462,16 @@
                 Print Final Summary
               </button>
             </div>
-            <div class="text-muted text-xs">Download class record sheets as PDF or print the active sheet view.</div>
           </div>
         </div>
 
         <!-- Sheet Grid Tables -->
-        <div id="classRecordPanel" class="card" style="padding:0; overflow:hidden; flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
-          <div class="card-header no-print" style="display:flex;justify-content:space-between;align-items:center;padding:var(--space-4);border-bottom:1px solid var(--border-default)">
-            <div style="display:flex;align-items:center;gap:var(--space-3)">
-              <h2 id="classRecordTitle" class="card-title" style="margin:0;border:0;padding:0">Class Record</h2>
+        <div id="classRecordPanel" class="card panel-fill panel-stack u-p-0">
+          <div class="card-header no-print panel-header">
+            <div class="inline-cluster">
+              <h2 id="classRecordTitle" class="card-title card-title--inline">Class Record</h2>
               <span id="saveStatus"></span>
-              <button id="blurToggleBtn" class="btn btn-sm" onclick="toggleGradesBlur()" title="Toggle Blur Grades (Hide from spectators)" style="min-height: 26px; height: 26px; padding: 2px 8px;">
+              <button id="blurToggleBtn" class="btn btn-sm btn-compact-toggle" onclick="toggleGradesBlur()" title="Toggle Blur Grades (Hide from spectators)">
                 <svg id="blurToggleIcon" class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                   <circle cx="12" cy="12" r="3"></circle>
@@ -498,11 +484,11 @@
           <div id="recordTable" class="table-wrap"></div>
         </div>
 
-        <div id="finalGradesPanel" class="card" style="display:none; padding:0; overflow:hidden; flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
-          <div class="card-header no-print" style="display:flex;justify-content:space-between;align-items:center;padding:var(--space-4);border-bottom:1px solid var(--border-default)">
-            <div style="display:flex;align-items:center;gap:var(--space-3)">
-              <h2 class="card-title" style="margin:0;border:0;padding:0">Final Grades Summary</h2>
-              <button id="blurToggleSummaryBtn" class="btn btn-sm" onclick="toggleGradesBlur()" title="Toggle Blur Grades (Hide from spectators)" style="min-height: 26px; height: 26px; padding: 2px 8px;">
+        <div id="finalGradesPanel" class="card panel-fill panel-stack u-p-0" style="display:none;">
+          <div class="card-header no-print panel-header">
+            <div class="inline-cluster">
+              <h2 class="card-title card-title--inline">Final Grades Summary</h2>
+              <button id="blurToggleSummaryBtn" class="btn btn-sm btn-compact-toggle" onclick="toggleGradesBlur()" title="Toggle Blur Grades (Hide from spectators)">
                 <svg id="blurToggleSummaryIcon" class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                   <circle cx="12" cy="12" r="3"></circle>
@@ -538,7 +524,7 @@
             </div>
           </div>
           
-          <div class="split-row" style="margin-top:var(--space-4)">
+          <div class="split-row u-mt-4">
             <div class="field">
               <label class="field-label">Region</label>
               <select id="schoolRegion" class="field-select" onchange="handleRegionChanged()"></select>
@@ -558,7 +544,7 @@
               <div class="settings-row__title">Backup Directory Path</div>
               <div class="settings-row__desc" id="secondaryBackupPathDesc">None configured. Select a directory (like your OneDrive or Google Drive folder) to save duplicate database copies and daily rolling backups (up to 30 days) in both directories.</div>
             </div>
-            <div style="display:flex;gap:var(--space-2)">
+            <div class="action-cluster">
               <button id="btnClearBackupFolder" class="btn btn-ghost btn-sm" onclick="clearSecondaryBackupFolder()" style="display:none">Clear</button>
               <button class="btn btn-sm" onclick="selectSecondaryBackupFolder()">Select Folder</button>
             </div>
@@ -573,45 +559,57 @@
               <div class="settings-row__title">Auto-blur Grades</div>
               <div class="settings-row__desc">Automatically blur grades and scores when loading grading sheets to hide them from spectators.</div>
             </div>
-            <label class="welcome-checkbox-label" style="display:flex; align-items:center; cursor:pointer;">
-              <input type="checkbox" id="settingAutoBlur" onchange="toggleAutoBlurSetting(this.checked)" style="width:16px; height:16px; cursor:pointer;" />
+            <label class="welcome-checkbox-label checkbox-row">
+              <input type="checkbox" id="settingAutoBlur" onchange="toggleAutoBlurSetting(this.checked)" />
             </label>
           </div>
-          <div class="settings-row" style="margin-top:var(--space-4); border-top:1px solid var(--border-subtle); padding-top:var(--space-4)">
+          <div class="settings-row section-divider">
             <div class="settings-row__left">
               <div class="settings-row__title">Show Numerical Equivalents (DO 15 s. 2026 Annex C)</div>
               <div class="settings-row__desc">Show numerical grade range equivalents (e.g. 90-100 for A) next to descriptive letters in tables, reports, and exports.</div>
             </div>
-            <label class="welcome-checkbox-label" style="display:flex; align-items:center; cursor:pointer;">
-              <input type="checkbox" id="settingShowNumericalEquivalents" onchange="toggleShowNumericalEquivalentsSetting(this.checked)" style="width:16px; height:16px; cursor:pointer;" />
+            <label class="welcome-checkbox-label checkbox-row">
+              <input type="checkbox" id="settingShowNumericalEquivalents" onchange="toggleShowNumericalEquivalentsSetting(this.checked)" />
             </label>
           </div>
-          <div class="settings-row" style="margin-top:var(--space-4); border-top:1px solid var(--border-subtle); padding-top:var(--space-4)">
+          <div class="settings-row section-divider">
             <div class="settings-row__left">
               <div class="settings-row__title">Use Universal Trimester Layout</div>
-              <div class="settings-row__desc" style="color: var(--color-error-600); font-weight: 500;">
+              <div class="settings-row__desc u-text-danger u-text-strong">
                 ⚠ Caution: Enabling this will apply the Key Stage 2 Trimester calculation/layout (5 WW, 3 PT, 3 SA/TE columns) to all grade levels. It will reconstruct columns for existing class records, resetting mismatching scores.
               </div>
             </div>
-            <label class="welcome-checkbox-label" style="display:flex; align-items:center; cursor:pointer;">
-              <input type="checkbox" id="settingUseUniversalTrimesterLayout" onchange="toggleUseUniversalTrimesterLayoutSetting(this.checked)" style="width:16px; height:16px; cursor:pointer;" />
+            <label class="welcome-checkbox-label checkbox-row">
+              <input type="checkbox" id="settingUseUniversalTrimesterLayout" onchange="toggleUseUniversalTrimesterLayoutSetting(this.checked)" />
             </label>
           </div>
-          <div class="settings-row" style="margin-top:var(--space-4); border-top:1px solid var(--border-subtle); padding-top:var(--space-4)">
+          <div class="settings-row section-divider">
             <div class="settings-row__left">
               <div class="settings-row__title">Guided Interactive Tour</div>
               <div class="settings-row__desc">Launch the 12-step guided interactive tour to walkthrough all panels, actions, and features of the application.</div>
             </div>
             <button class="btn btn-sm" onclick="if (typeof startAppTour === 'function') startAppTour();">Start Tour Again</button>
           </div>
-          <div class="settings-row" style="margin-top:var(--space-4); border-top:1px solid var(--border-subtle); padding-top:var(--space-4)">
+          <div class="settings-row section-divider">
             <div class="settings-row__left">
               <div class="settings-row__title">Enable Guided Tour prompts</div>
               <div class="settings-row__desc">Show the interactive guided app tour invitation prompt on startup after unlocking your profile.</div>
             </div>
-            <label class="welcome-checkbox-label" style="display:flex; align-items:center; cursor:pointer;">
-              <input type="checkbox" id="settingEnableTourPrompt" onchange="toggleTourPromptSetting(this.checked)" style="width:16px; height:16px; cursor:pointer;" />
+            <label class="welcome-checkbox-label checkbox-row">
+              <input type="checkbox" id="settingEnableTourPrompt" onchange="toggleTourPromptSetting(this.checked)" />
             </label>
+          </div>
+        </div>
+
+        <!-- Database Integrity Checker -->
+        <div class="card">
+          <h2 class="card-title">Database Integrity Checker</h2>
+          <div class="settings-row">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Scan for Database Anomalies</div>
+              <div class="settings-row__desc">Checks your active database profile for orphaned score keys, entries exceeding HPS, duplicate student LRNs, and calculates potential errors. Offers automatic repairs.</div>
+            </div>
+            <button class="btn btn-olive btn-sm" onclick="runDatabaseIntegrityCheck()">Run Integrity Check</button>
           </div>
         </div>
 
@@ -620,7 +618,7 @@
           <h2 class="card-title">Over-the-Air Updates</h2>
           <div class="settings-row">
             <div class="settings-row__left">
-              <div class="settings-row__title" style="display:flex;align-items:center;gap:var(--space-2)">
+              <div class="settings-row__title inline-cluster">
                 App Update Status
                 <div id="updateIndicator" class="update-indicator"></div>
               </div>
@@ -735,81 +733,87 @@
 
       </div>
       <div class="modal__actions">
-        <button class="btn btn-ghost btn-sm" onclick="hideAddClassLoadModal()">Cancel</button>
+        <button class="btn btn-warn btn-sm" onclick="hideAddClassLoadModal()">Cancel</button>
         <button class="btn btn-primary btn-sm" onclick="addAssignment()">Add Teaching Load</button>
       </div>
     </div>
   </div>
   <!-- Donate Modal -->
-  <div id="donateModal" class="modal-overlay" style="display:none; z-index: 10001;">
-    <div class="modal" style="max-width: 520px;">
+  <div id="donateModal" class="modal-overlay modal-z-donate" style="display:none;">
+    <div class="modal modal--md">
       <div class="modal__title">Support the Developer</div>
       <div class="modal__body">
-        <p style="margin-top:0; font-size:var(--font-size-md);">Thank you for using the E-Class Record App!</p>
-        <p style="font-size:var(--font-size-md);">If this application has helped you save time in your teaching workflow, please consider supporting its development with a small donation. You can also optionally leave feedback to help improve the application.</p>
+        <p class="u-mt-0">Thank you for using the E-Class Record App!</p>
+        <p>If this application has helped you save time in your teaching workflow, please consider supporting its development with a small donation. You can also optionally leave feedback to help improve the application.</p>
         
         <!-- Button container in the center and middle -->
-        <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:160px; margin:var(--space-5) 0; gap:var(--space-3)">
-          <button class="btn btn-primary" onclick="showDonateQrModal()" style="padding:10px 24px; font-size:var(--font-size-md); font-weight:var(--font-weight-semibold); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); display:inline-flex; align-items:center; gap:var(--space-2)">
+        <div class="donation-actions">
+          <button class="btn btn-primary btn-wide" onclick="showDonateQrModal()">
             Click here to donate 👍
           </button>
-          <button class="btn btn-olive" onclick="openFeedback()" style="padding:8px 20px; font-size:var(--font-size-base); font-weight:var(--font-weight-semibold); border-radius:var(--radius-lg); display:inline-flex; align-items:center; gap:var(--space-2)">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px; height:16px;">
+          <button class="btn btn-olive btn-wide" onclick="openFeedback()">
+            <svg class="btn-icon btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
             Leave Feedback 📝
           </button>
+          <button class="btn btn-facebook btn-wide" onclick="openDonateExternal('https://www.facebook.com/eclassrecordapp')">
+            <svg class="btn-icon btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+            </svg>
+            Like Official Page 👍
+          </button>
         </div>
 
-        <p style="font-size:var(--font-size-xs); color:var(--text-secondary); line-height:var(--line-height-normal); margin-bottom:0">
+        <p class="text-muted text-xs u-mb-0">
           * Your donation helps cover distribution costs and keeps this application completely free and open-source for all teachers.
         </p>
       </div>
       <div class="modal__actions">
-        <button id="donateCancelExitBtn" class="btn btn-ghost btn-sm" style="display:none" onclick="hideDonateModal()">Cancel</button>
-        <button id="donateCloseBtn" class="btn btn-primary btn-sm" onclick="hideDonateModal()">Close</button>
+        <button id="donateCancelExitBtn" class="btn btn-warn btn-sm" style="display:none" onclick="hideDonateModal()">Cancel</button>
+        <button id="donateCloseBtn" class="btn btn-warn btn-sm" onclick="hideDonateModal()">Close</button>
         <button id="donateConfirmExitBtn" class="btn btn-primary btn-sm" style="display:none" onclick="confirmAppExit()">Continue to Exit</button>
       </div>
     </div>
   </div>
 
   <!-- Donate QR Modal -->
-  <div id="donateQrModal" class="modal-overlay" style="display:none; z-index: 10005;">
-    <div class="modal" style="max-width: 800px;">
+  <div id="donateQrModal" class="modal-overlay modal-z-higher" style="display:none;">
+    <div class="modal modal--lg">
       <div class="modal__title">Support the Developer - QR Codes</div>
       <div class="modal__body">
-        <p style="margin-top:0; font-size:var(--font-size-md); text-align:center;">
+        <p class="u-mt-0 u-text-center">
           Please scan any of the QR codes below to send your donation.
         </p>
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:var(--space-4); margin:var(--space-5) 0; text-align:center;">
+        <div class="qr-grid">
           <!-- Column 1: GCash 1 -->
-          <div style="display:flex; flex-direction:column; align-items:center; gap:var(--space-2)">
-            <span style="font-weight:var(--font-weight-bold); color:var(--text-primary); font-size:var(--font-size-md); text-transform:uppercase; letter-spacing:var(--letter-spacing-wide)">GCash</span>
-            <div style="width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border-default); box-shadow: var(--shadow-sm); display: flex; justify-content: center; align-items: flex-start; background: #fff; cursor: pointer;" title="Click to enlarge" onclick="showImageZoom('assets/qr_gcash_09106979279.jpg')">
-              <img src="assets/qr_gcash_09106979279.jpg" style="width: 100%; height: auto; transform: translateY(-27.8%); pointer-events: none;" />
+          <div class="qr-card">
+            <span class="qr-title">GCash</span>
+            <div class="qr-image-frame" title="Click to enlarge" onclick="showImageZoom('assets/qr_gcash_09106979279.jpg')">
+              <img class="qr-image qr-image--gcash" src="assets/qr_gcash_09106979279.jpg" />
             </div>
-            <div style="font-family:var(--font-family-mono); font-size:var(--font-size-sm); font-weight:var(--font-weight-bold); color:var(--text-primary); margin-top:var(--space-1)">09106979279</div>
-            <div style="font-size:var(--font-size-xs); color:var(--text-secondary); cursor: pointer; display:flex; align-items:center; gap:4px;" onclick="showImageZoom('assets/qr_gcash_09106979279.jpg')">🔍 Click Image to Enlarge</div>
+            <div class="qr-number">09106979279</div>
+            <div class="qr-zoom-link" onclick="showImageZoom('assets/qr_gcash_09106979279.jpg')">🔍 Click Image to Enlarge</div>
           </div>
 
           <!-- Column 2: GCash 2 -->
-          <div style="display:flex; flex-direction:column; align-items:center; gap:var(--space-2)">
-            <span style="font-weight:var(--font-weight-bold); color:var(--text-primary); font-size:var(--font-size-md); text-transform:uppercase; letter-spacing:var(--letter-spacing-wide)">GCash</span>
-            <div style="width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border-default); box-shadow: var(--shadow-sm); display: flex; justify-content: center; align-items: flex-start; background: #fff; cursor: pointer;" title="Click to enlarge" onclick="showImageZoom('assets/qr_gcash_09568793810.jpg')">
-              <img src="assets/qr_gcash_09568793810.jpg" style="width: 100%; height: auto; transform: translateY(-27.8%); pointer-events: none;" />
+          <div class="qr-card">
+            <span class="qr-title">GCash</span>
+            <div class="qr-image-frame" title="Click to enlarge" onclick="showImageZoom('assets/qr_gcash_09568793810.jpg')">
+              <img class="qr-image qr-image--gcash" src="assets/qr_gcash_09568793810.jpg" />
             </div>
-            <div style="font-family:var(--font-family-mono); font-size:var(--font-size-sm); font-weight:var(--font-weight-bold); color:var(--text-primary); margin-top:var(--space-1)">09568793810</div>
-            <div style="font-size:var(--font-size-xs); color:var(--text-secondary); cursor: pointer; display:flex; align-items:center; gap:4px;" onclick="showImageZoom('assets/qr_gcash_09568793810.jpg')">🔍 Click Image to Enlarge</div>
+            <div class="qr-number">09568793810</div>
+            <div class="qr-zoom-link" onclick="showImageZoom('assets/qr_gcash_09568793810.jpg')">🔍 Click Image to Enlarge</div>
           </div>
 
           <!-- Column 3: Maya -->
-          <div style="display:flex; flex-direction:column; align-items:center; gap:var(--space-2)">
-            <span style="font-weight:var(--font-weight-bold); color:var(--text-primary); font-size:var(--font-size-md); text-transform:uppercase; letter-spacing:var(--letter-spacing-wide)">Maya</span>
-            <div style="width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border-default); box-shadow: var(--shadow-sm); display: flex; justify-content: center; align-items: flex-start; background: #fff; cursor: pointer;" title="Click to enlarge" onclick="showImageZoom('assets/qr_maya_09106979279.jpg')">
-              <img src="assets/qr_maya_09106979279.jpg" style="width: 100%; height: auto; transform: translateY(-13.7%); pointer-events: none;" />
+          <div class="qr-card">
+            <span class="qr-title">Maya</span>
+            <div class="qr-image-frame" title="Click to enlarge" onclick="showImageZoom('assets/qr_maya_09106979279.jpg')">
+              <img class="qr-image qr-image--maya" src="assets/qr_maya_09106979279.jpg" />
             </div>
-            <div style="font-family:var(--font-family-mono); font-size:var(--font-size-sm); font-weight:var(--font-weight-bold); color:var(--text-primary); margin-top:var(--space-1)">09106979279</div>
-            <div style="font-size:var(--font-size-xs); color:var(--text-secondary); cursor: pointer; display:flex; align-items:center; gap:4px;" onclick="showImageZoom('assets/qr_maya_09106979279.jpg')">🔍 Click Image to Enlarge</div>
+            <div class="qr-number">09106979279</div>
+            <div class="qr-zoom-link" onclick="showImageZoom('assets/qr_maya_09106979279.jpg')">🔍 Click Image to Enlarge</div>
           </div>
         </div>
       </div>
@@ -820,24 +824,25 @@
   </div>
 
   <!-- Image Zoom Modal -->
-  <div id="imageZoomModal" class="modal-overlay" style="display:none; z-index: 10010;" onclick="hideImageZoomModal()">
-    <div style="position:relative; max-width: 90%; max-height: 90vh; background: #fff; padding: var(--space-3); border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); display: flex; align-items: center; justify-content: center;" onclick="event.stopPropagation()">
-      <button class="btn btn-ghost btn-sm" style="position:absolute; top:-15px; right:-15px; border-radius: var(--radius-full); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid var(--border-default); box-shadow: var(--shadow-sm); cursor: pointer; color: var(--text-primary); font-weight: bold; font-size: 14px;" onclick="hideImageZoomModal()">✕</button>
-      <img id="zoomedImage" src="" style="max-width: 100%; max-height: 80vh; border-radius: var(--radius-lg); object-fit: contain;" />
+  <div id="imageZoomModal" class="modal-overlay modal-z-top" style="display:none;" onclick="hideImageZoomModal()">
+    <div class="image-zoom-frame" onclick="event.stopPropagation()">
+      <button class="btn btn-ghost btn-sm btn-square-sm image-zoom-close" onclick="hideImageZoomModal()">✕</button>
+      <img id="zoomedImage" class="image-zoom-img" src="" />
     </div>
   </div>
 
   <!-- Quick Grade Entry Modal -->
   <div id="quickGradeModal" class="modal-overlay" style="display:none">
     <div class="modal modal--wide quick-grade-modal">
-      <div class="modal__title">Quick Grade Entry</div>
+      <div class="modal__title quick-grade-modal__title">Quick Grade Entry</div>
       <div class="modal__body split-layout-modal">
         <!-- Main Panel -->
         <div class="quick-grade-main">
-          <div class="field">
+          <div class="field quick-grade-assessment-field">
             <label class="field-label">Select Assessment</label>
             <select id="quickGradeAssessmentSelect" class="field-select" onchange="onQuickGradeAssessmentChanged()"></select>
           </div>
+          <div id="quickGradeAssessmentDetails" class="quick-grade-assessment-details"></div>
           
           <div class="quick-grade-card">
             <div class="quick-grade-progress" id="quickGradeProgress">Learner 1 of 0</div>
@@ -866,11 +871,12 @@
         <!-- Sidebar Panel (Roster & Scores List) -->
         <div class="quick-grade-sidebar">
           <div class="quick-grade-sidebar-title">Learners & Scores</div>
+          <input id="quickGradeRosterSearch" class="field-input quick-grade-roster-search" type="search" placeholder="Search learners..." oninput="renderQuickGradeRoster()" />
           <div class="quick-grade-roster-list" id="quickGradeRosterList"></div>
         </div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-ghost btn-sm" onclick="hideQuickGradeModal()">Close</button>
+        <button class="btn btn-warn btn-sm" onclick="hideQuickGradeModal()">Close</button>
       </div>
     </div>
   </div>
@@ -878,25 +884,25 @@
   <!-- Welcome Modal -->
   <div id="welcomeModal" class="modal-overlay" style="display:none">
     <div class="modal modal--wide welcome-modal">
-      <div class="modal__title" style="display:flex; align-items:center; gap:var(--space-2)">
-        <span style="font-size:24px">👋</span> Welcome to E-Class Record App <span id="welcomeCurrentVersion"></span>
+      <div class="modal__title modal__title-row">
+        <span class="welcome-icon">👋</span> Welcome to E-Class Record App <span id="welcomeCurrentVersion"></span>
       </div>
       <div class="modal__body">
         <!-- Dynamic Update Alert Banner -->
-        <div id="welcomeUpdateBanner" class="welcome-update-banner" style="display:none; flex-direction:column; margin-bottom:var(--space-4); background:var(--color-primary-50); border:1px solid var(--color-primary-200); border-radius:var(--border-radius-md); padding:var(--space-3); gap:var(--space-3)">
-          <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
-            <div style="font-size:var(--font-size-sm); color:var(--text-primary); text-align:left">
-              <strong style="color:var(--color-primary-600)">🚀 New Version Available: v<span id="welcomeLatestVersion"></span></strong><br>
-              <span id="welcomeUpdateNotice" style="font-size:var(--font-size-xs); color:var(--text-secondary)">A new update is ready. Would you like to update now? You can also update later via Settings.</span>
+        <div id="welcomeUpdateBanner" class="welcome-update-banner" style="display:none;">
+          <div class="welcome-update-row">
+            <div class="welcome-update-copy">
+              <strong>🚀 New Version Available: v<span id="welcomeLatestVersion"></span></strong><br>
+              <span id="welcomeUpdateNotice" class="welcome-update-notice">A new update is ready. Would you like to update now? You can also update later via Settings.</span>
             </div>
-            <div id="welcomeUpdateActions" style="display:flex; gap:var(--space-2); flex-shrink:0">
-              <button class="btn btn-ghost btn-sm" onclick="dismissWelcomeUpdate()" style="padding:4px 8px; font-size:var(--font-size-xs)">Later</button>
-              <button class="btn btn-primary btn-sm" onclick="triggerWelcomeUpdate()" style="padding:4px 10px; font-size:var(--font-size-xs)">Update Now</button>
+            <div id="welcomeUpdateActions" class="welcome-update-actions">
+              <button class="btn btn-ghost btn-sm" onclick="dismissWelcomeUpdate()">Later</button>
+              <button class="btn btn-primary btn-sm" onclick="triggerWelcomeUpdate()">Update Now</button>
             </div>
           </div>
           <!-- Download Progress Container -->
-          <div id="welcomeProgressContainer" style="display:none; width:100%; flex-direction:column; gap:4px">
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--font-size-xs); color:var(--text-secondary)">
+          <div id="welcomeProgressContainer" class="welcome-progress" style="display:none;">
+            <div class="welcome-progress-row">
               <span id="welcomeProgressText">Preparing download...</span>
               <span id="welcomeProgressPercent">0%</span>
             </div>
@@ -906,13 +912,13 @@
           </div>
         </div>
 
-        <p style="margin-top:0; font-size:var(--font-size-md); color:var(--text-secondary)">
+        <p class="welcome-intro">
           Your local, secure, and teacher-owned grading assistant. Here are the core features of the application:
         </p>
         
-        <div class="welcome-features-list">
+        <div class="welcome-features-list" id="welcomeFeaturesList">
           <div class="welcome-feature-item">
-            <div class="welcome-feature-icon" style="color: var(--color-primary-500)">
+            <div class="welcome-feature-icon welcome-feature-icon--primary">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                 <circle cx="9" cy="7" r="4"></circle>
@@ -925,7 +931,7 @@
           </div>
           
           <div class="welcome-feature-item">
-            <div class="welcome-feature-icon" style="color: var(--color-success-500)">
+            <div class="welcome-feature-icon welcome-feature-icon--success">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="9" y1="3" x2="9" y2="21"></line>
@@ -939,7 +945,7 @@
           </div>
           
           <div class="welcome-feature-item">
-            <div class="welcome-feature-icon" style="color: var(--color-accent-500)">
+            <div class="welcome-feature-icon welcome-feature-icon--accent">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                 <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -952,7 +958,7 @@
           </div>
 
           <div class="welcome-feature-item">
-            <div class="welcome-feature-icon" style="color: #ca8a04">
+            <div class="welcome-feature-icon welcome-feature-icon--warning">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
@@ -966,36 +972,36 @@
           </div>
         </div>
         <!-- What's New Section (Dynamic) -->
-        <div id="welcomeWhatsNew" style="display:none; margin-top:var(--space-4); border-top:1px solid var(--border-color); padding-top:var(--space-3)">
-          <div style="font-weight:var(--font-weight-semibold); color:var(--text-primary); margin-bottom:var(--space-2); display:flex; align-items:center; gap:var(--space-2); font-size:var(--font-size-sm)">
+        <div id="welcomeWhatsNew" class="welcome-whats-new" style="display:none;">
+          <div class="welcome-whats-new-title">
             <span>🚀 What's New in v<span id="whatsNewVersion"></span>:</span>
           </div>
-          <ul id="whatsNewList" style="margin:0; padding-left:var(--space-4); font-size:var(--font-size-sm); color:var(--text-secondary); line-height:1.6">
+          <ul id="whatsNewList" class="welcome-whats-new-list">
           </ul>
         </div>
       </div>
-      <div class="modal__actions welcome-modal-footer" style="display:flex; justify-content:space-between; align-items:center; width:100%">
+      <div class="modal__actions welcome-modal-footer">
         <!-- Checkbox on the left -->
         <!-- Checkbox on the left -->
-        <label class="welcome-checkbox-label" style="display:flex; align-items:center; gap:var(--space-2); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-secondary)">
-          <input type="checkbox" id="welcomeDoNotShowCheckbox" style="cursor:pointer; width:16px; height:16px" />
+        <label class="welcome-checkbox-label checkbox-row">
+          <input type="checkbox" id="welcomeDoNotShowCheckbox" />
           Do not show again today
         </label>
         <!-- Close button on the right -->
-        <button class="btn btn-primary btn-sm" onclick="closeWelcomeModal()">Close</button>
+        <button class="btn btn-warn btn-sm" onclick="closeWelcomeModal()">Close</button>
       </div>
     </div>
   </div>
 
   <!-- View Learner's Grades Modal -->
   <div id="viewLearnerGradesModal" class="modal-overlay" style="display:none">
-    <div class="modal modal--wide" style="max-width: 700px; display:flex; flex-direction:column; max-height: 90vh;">
+    <div class="modal modal--wide learner-grades-modal">
       <div class="modal__title no-print-modal">View Learner's Grades</div>
-      <div class="modal__body" style="flex:1; overflow-y:auto; padding-right:5px; margin-bottom: var(--space-4);">
+      <div class="modal__body learner-grades-body">
         
         <!-- Selection and controls container -->
-        <div class="no-print-modal" style="margin-bottom:var(--space-4); display:flex; flex-direction:column; gap:var(--space-3)">
-          <div class="field" style="margin-bottom:0">
+        <div class="no-print-modal learner-grades-controls">
+          <div class="field field--compact">
             <label class="field-label">Select Learner</label>
             <select id="viewGradesLearnerSelect" class="field-select" onchange="onLearnerSelectedForGrades()">
               <!-- Dynamic options loaded via JS -->
@@ -1003,22 +1009,22 @@
           </div>
           
           <!-- View checkboxes -->
-          <div style="display:flex; flex-wrap:wrap; gap:var(--space-4); align-items:center; background:var(--bg-muted); padding:var(--space-2) var(--space-3); border-radius:var(--radius-md); border:1px solid var(--border-default)">
-            <span style="font-size:var(--font-size-xs); font-weight:var(--font-weight-bold); color:var(--text-secondary); text-transform:uppercase;">Show Sections:</span>
-            <label style="display:inline-flex; align-items:center; gap:var(--space-1); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-primary);">
-              <input type="checkbox" id="viewGradesShowTerm1" checked onchange="updateLearnerGradesDisplay()" style="cursor:pointer; width:15px; height:15px;" />
+          <div class="learner-grades-filter-row">
+            <span class="learner-grades-filter-title">Show Sections:</span>
+            <label>
+              <input type="checkbox" id="viewGradesShowTerm1" checked onchange="updateLearnerGradesDisplay()" />
               Term 1
             </label>
-            <label style="display:inline-flex; align-items:center; gap:var(--space-1); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-primary);">
-              <input type="checkbox" id="viewGradesShowTerm2" checked onchange="updateLearnerGradesDisplay()" style="cursor:pointer; width:15px; height:15px;" />
+            <label>
+              <input type="checkbox" id="viewGradesShowTerm2" checked onchange="updateLearnerGradesDisplay()" />
               Term 2
             </label>
-            <label style="display:inline-flex; align-items:center; gap:var(--space-1); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-primary);">
-              <input type="checkbox" id="viewGradesShowTerm3" checked onchange="updateLearnerGradesDisplay()" style="cursor:pointer; width:15px; height:15px;" />
+            <label>
+              <input type="checkbox" id="viewGradesShowTerm3" checked onchange="updateLearnerGradesDisplay()" />
               Term 3
             </label>
-            <label style="display:inline-flex; align-items:center; gap:var(--space-1); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-primary);">
-              <input type="checkbox" id="viewGradesShowSummary" checked onchange="updateLearnerGradesDisplay()" style="cursor:pointer; width:15px; height:15px;" />
+            <label>
+              <input type="checkbox" id="viewGradesShowSummary" checked onchange="updateLearnerGradesDisplay()" />
               Summary
             </label>
           </div>
@@ -1026,18 +1032,90 @@
 
         <!-- The area showing the actual report/grades of the learner -->
         <div id="learnerGradesReportArea" class="printable-grades-area">
-          <div class="text-muted" style="text-align:center; padding:var(--space-8)">
+          <div class="text-muted centered-empty-message">
             Please select a learner to view their grades.
           </div>
         </div>
 
       </div>
       <div class="modal__actions no-print-modal">
-        <button class="btn btn-ghost btn-sm" onclick="hideViewLearnerGradesModal()">Close</button>
+        <button class="btn btn-warn btn-sm" onclick="hideViewLearnerGradesModal()">Close</button>
         <button id="downloadLearnerGradesBtn" class="btn btn-primary btn-sm" onclick="downloadLearnerGradesPdf()" style="display:none">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           Download Grades Report
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Class Analysis Modal -->
+  <div id="classAnalysisModal" class="modal-overlay modal-z-analysis" style="display:none;">
+    <div class="modal modal--wide modal--analysis">
+      <div class="modal__title">Class Progress Report</div>
+      <div class="modal__body modal-body--scroll" id="classAnalysisBody">
+        <!-- Populated by renderClassAnalysisModal() -->
+      </div>
+      <div class="modal__actions class-report-actions">
+        <button class="btn btn-ghost btn-sm" onclick="printClassReport()">Print</button>
+        <button class="btn btn-primary btn-sm" onclick="downloadClassReportPdf()">Download PDF</button>
+        <button class="btn btn-warn btn-sm" onclick="closeClassAnalysisModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assessment Details Modal -->
+  <div id="assessmentDetailsModal" class="modal-overlay modal-z-assessment" style="display:none;">
+    <div class="modal modal--wide assessment-details-modal">
+      <div class="modal__title assessment-details-title">Assessment Details</div>
+      <div class="modal__body assessment-details-body">
+        <input type="hidden" id="assessmentDetailsId" />
+        <div id="assessmentDetailsSummary" class="assessment-details-summary"></div>
+
+        <div class="split-row assessment-details-fields">
+          <div class="field">
+            <label class="field-label">Assessment Title</label>
+            <input id="assessmentDetailsTitle" class="field-input" />
+          </div>
+          <div class="field">
+            <label class="field-label">Date</label>
+            <input id="assessmentDetailsDate" class="field-input" type="date" />
+          </div>
+        </div>
+
+        <div class="field assessment-description-field">
+          <label class="field-label">Description</label>
+          <div class="assessment-editor-toolbar">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="formatAssessmentDescription('bold')" title="Bold"><strong>B</strong></button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="formatAssessmentDescription('italic')" title="Italic"><em>I</em></button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="formatAssessmentDescription('underline')" title="Underline"><u>U</u></button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="formatAssessmentDescription('insertUnorderedList')" title="Bullet List">List</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="formatAssessmentDescription('insertOrderedList')" title="Numbered List">1. List</button>
+          </div>
+          <div id="assessmentDescriptionEditor" class="assessment-description-editor" contenteditable="true"></div>
+        </div>
+
+        <div class="assessment-attachments-panel">
+          <div class="assessment-attachments-header">
+            <div>
+              <div class="settings-row__title">Uploaded Files</div>
+              <div class="settings-row__desc">Attach documents, PDFs, or images related to this assessment.</div>
+            </div>
+            <button class="btn btn-sm" type="button" onclick="uploadAssessmentAttachment()">Upload File</button>
+          </div>
+          <div id="assessmentAttachmentsList" class="assessment-attachments-list"></div>
+        </div>
+
+        <div class="assessment-danger-panel">
+          <div>
+            <div class="settings-row__title">Clear Scores</div>
+            <div class="settings-row__desc">Delete all learner scores for this assessment only. HPS, date, description, and files are preserved.</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="clearAssessmentScoresFromDetails()">Clear all students scores for this assessment</button>
+        </div>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-warn btn-sm" onclick="closeAssessmentDetailsModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveAssessmentDetails()">Save Details</button>
       </div>
     </div>
   </div>
@@ -1051,7 +1129,7 @@
       <div id="profileList" class="profile-grid">
         <!-- Dynamic list of profile cards -->
       </div>
-      <div style="margin-top:var(--space-5); text-align:center">
+      <div class="profile-actions">
         <button class="btn btn-sm" onclick="showCreateProfileForm()">Create New Profile</button>
       </div>
     </div>
@@ -1067,7 +1145,7 @@
         <input type="password" id="passcodeField" class="passcode-field" placeholder="••••••" maxlength="6" autocomplete="off" />
       </div>
       <div id="unlockErrorMsg" class="unlock-error-msg"></div>
-      <button class="btn btn-primary btn-sm" style="width:100%; margin-top:var(--space-3)" onclick="submitPasscode()">Unlock Profile</button>
+      <button class="btn btn-primary btn-sm btn-block u-mt-3" onclick="submitPasscode()">Unlock Profile</button>
     </div>
 
     <!-- Create Profile Panel -->
@@ -1084,8 +1162,8 @@
       </div>
       
       <div class="field">
-        <label class="welcome-checkbox-label" style="display:flex; align-items:center; gap:var(--space-2); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-secondary); margin-bottom:var(--space-3)">
-           <input type="checkbox" id="createProfilePinEnabled" onchange="togglePinFields(this.checked)" checked style="cursor:pointer; width:16px; height:16px" />
+        <label class="welcome-checkbox-label checkbox-row u-mb-3">
+           <input type="checkbox" id="createProfilePinEnabled" onchange="togglePinFields(this.checked)" checked />
            Enable PIN Lock Security
         </label>
       </div>
@@ -1102,7 +1180,7 @@
       </div>
       
       <div id="createProfileErrorMsg" class="unlock-error-msg"></div>
-      <button class="btn btn-primary btn-sm" style="width:100%; margin-top:var(--space-3)" onclick="submitCreateProfile()">Create Profile</button>
+      <button class="btn btn-primary btn-sm btn-block u-mt-3" onclick="submitCreateProfile()">Create Profile</button>
     </div>
   </div>
 
@@ -1124,40 +1202,40 @@
       <div class="tour-popover__dots" id="tourPopoverDots">
         <!-- Dots injected dynamically -->
       </div>
-      <div style="display: flex; gap: var(--space-2)">
-        <button class="btn btn-ghost btn-sm" id="tourBtnSkip" onclick="skipTour()" style="padding: 2px 8px; font-size: var(--font-size-xs);">Skip</button>
-        <button class="btn btn-ghost btn-sm" id="tourBtnPrev" onclick="prevTourStep()" style="padding: 2px 8px; font-size: var(--font-size-xs);">&larr; Prev</button>
-        <button class="btn btn-primary btn-sm" id="tourBtnNext" onclick="nextTourStep()" style="padding: 2px 10px; font-size: var(--font-size-xs);">Next &rarr;</button>
+      <div class="tour-controls">
+        <button class="btn btn-ghost btn-sm tour-control-btn" id="tourBtnSkip" onclick="skipTour()">Skip</button>
+        <button class="btn btn-ghost btn-sm tour-control-btn" id="tourBtnPrev" onclick="prevTourStep()">&larr; Prev</button>
+        <button class="btn btn-primary btn-sm tour-control-btn tour-control-btn--next" id="tourBtnNext" onclick="nextTourStep()">Next &rarr;</button>
       </div>
     </div>
   </div>
 
   <!-- App Tour Prompt Modal -->
-  <div id="tourPromptModal" class="modal-overlay" style="display:none; z-index: 10020;">
-    <div class="modal" style="max-width: 480px;">
-      <div class="modal__title" style="display:flex; align-items:center; gap:var(--space-2)">
+  <div id="tourPromptModal" class="modal-overlay modal-z-tour" style="display:none;">
+    <div class="modal modal--tour">
+      <div class="modal__title modal__title-row">
         <span>🗺️</span> Interactive Application Tour
       </div>
       <div class="modal__body">
-        <p style="margin-top:0; font-size:var(--font-size-md); color:var(--text-primary)">
+        <p class="tour-prompt-copy">
           Would you like to take a quick interactive tour to familiarize yourself with E-Class Record App's features and functionalities?
         </p>
-        <p style="font-size:var(--font-size-sm); color:var(--text-secondary); line-height:var(--line-height-normal)">
+        <p class="tour-prompt-subcopy">
           The tour will guide you through the Dashboard, Teaching Loads, Student Rosters, Grading Sheets, and Settings in 12 simple steps.
         </p>
       </div>
-      <div class="modal__actions welcome-modal-footer" style="display:flex; flex-direction:column; align-items:flex-start; gap:var(--space-2); width:100%">
-        <div style="display:flex; flex-direction:column; gap:6px;">
-          <label class="welcome-checkbox-label" style="display:flex; align-items:center; gap:var(--space-2); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-secondary)">
-            <input type="checkbox" id="tourDoNotShowCheckbox" style="cursor:pointer; width:16px; height:16px" />
+      <div class="modal__actions welcome-modal-footer tour-prompt-footer">
+        <div class="tour-prompt-options">
+          <label class="welcome-checkbox-label checkbox-row">
+            <input type="checkbox" id="tourDoNotShowCheckbox" />
             Do not show again today
           </label>
-          <label class="welcome-checkbox-label" style="display:flex; align-items:center; gap:var(--space-2); cursor:pointer; font-size:var(--font-size-sm); color:var(--text-secondary)">
-            <input type="checkbox" id="tourDisablePermanentCheckbox" style="cursor:pointer; width:16px; height:16px" />
+          <label class="welcome-checkbox-label checkbox-row">
+            <input type="checkbox" id="tourDisablePermanentCheckbox" />
             Never show tour prompts on startup
           </label>
         </div>
-        <div style="display:flex; justify-content:flex-end; width:100%; gap:var(--space-2); margin-top:var(--space-2)">
+        <div class="tour-prompt-actions">
           <button class="btn btn-ghost btn-sm" onclick="dismissTourPrompt()">Skip Tour</button>
           <button class="btn btn-primary btn-sm" onclick="acceptTourPrompt()">Start Tour</button>
         </div>
@@ -1231,8 +1309,12 @@
   <script src="js/quick-grade.js"></script>
   <script src="js/learner-grades.js"></script>
   <script src="js/mobile-sync.js"></script>
+  <script src="js/integrity.js"></script>
+  <script src="js/calendar.js"></script>
   <script src="js/help.js"></script>
   <script src="js/tour.js"></script>
+  <script src="js/class-analysis.js"></script>
+  <script src="js/admin.js"></script>
   <script src="js/app.js"></script>
   <script>initFontSize(); initSidebarResizer();</script>
 </body>

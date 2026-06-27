@@ -5,7 +5,9 @@
    ============================================================ */
 
 @media print {
-  html, body {
+
+  html,
+  body {
     height: auto;
     overflow: visible;
     background: #fff;
@@ -108,13 +110,14 @@
   }
 
   /* Tables */
-  th, td {
+  th,
+  td {
     border: 1px solid #000;
     padding: 3px;
     background: #fff !important;
     color: #000 !important;
     white-space: normal;
-    font-size: 9px;
+    font-size: 10px;
   }
 
   th {
@@ -228,6 +231,7 @@
 
 /* Custom printing styles for the individual learner grades report */
 @media print {
+
   body.print-modal-only .layout,
   body.print-modal-only .sidebar,
   body.print-modal-only .app-header,
@@ -237,7 +241,7 @@
   body.print-modal-only .modal-overlay:not(#viewLearnerGradesModal) {
     display: none !important;
   }
-  
+
   body.print-modal-only #viewLearnerGradesModal {
     display: block !important;
     position: static !important;
@@ -249,7 +253,7 @@
     height: auto !important;
     overflow: visible !important;
   }
-  
+
   body.print-modal-only #viewLearnerGradesModal .modal {
     box-shadow: none !important;
     border: none !important;
@@ -264,11 +268,11 @@
     background: #fff !important;
     color: #000 !important;
   }
-  
+
   body.print-modal-only #viewLearnerGradesModal .no-print-modal {
     display: none !important;
   }
-  
+
   body.print-modal-only #viewLearnerGradesModal .modal__body {
     overflow: visible !important;
     max-height: none !important;
@@ -276,13 +280,13 @@
     margin: 0 !important;
     padding: 0 !important;
   }
-  
+
   body.print-modal-only .printable-grades-area table {
     width: 100% !important;
     border-collapse: collapse !important;
     margin-bottom: 12px !important;
   }
-  
+
   body.print-modal-only .printable-grades-area th,
   body.print-modal-only .printable-grades-area td {
     border: 1px solid #000 !important;
@@ -292,4 +296,3 @@
     color: #000 !important;
   }
 }
-

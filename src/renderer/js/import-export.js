@@ -56,7 +56,7 @@ function promptBackupPinModal(onConfirm, onCancel) {
         <div id="backupDecryptErrorMsg" class="unlock-error-msg" style="color:var(--color-error-600)"></div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-ghost btn-sm" id="btnCancelBackupDecrypt">Cancel</button>
+        <button class="btn btn-warn btn-sm" id="btnCancelBackupDecrypt">Cancel</button>
         <button class="btn btn-primary btn-sm" id="btnConfirmBackupDecrypt">Decrypt & Import</button>
       </div>
     </div>
@@ -1164,7 +1164,7 @@ function initiateLearnerImport() {
         </div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-ghost btn-sm" id="btnCancelImport">Cancel</button>
+        <button class="btn btn-warn btn-sm" id="btnCancelImport">Cancel</button>
       </div>
     </div>
   `;
@@ -1282,7 +1282,7 @@ function showDirectClassCopyModal() {
         </div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-ghost btn-sm" id="btnCancelCopy">Cancel</button>
+        <button class="btn btn-warn btn-sm" id="btnCancelCopy">Cancel</button>
         <button class="btn btn-primary btn-sm" id="btnConfirmCopy" disabled>Copy & Import</button>
       </div>
     </div>
@@ -1437,7 +1437,7 @@ function showImportRosterModal() {
         </div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-ghost btn-sm" id="btnCancelImportRoster">Cancel</button>
+        <button class="btn btn-warn btn-sm" id="btnCancelImportRoster">Cancel</button>
         <button class="btn btn-primary btn-sm" id="btnConfirmImportRoster" disabled>Import Roster</button>
       </div>
     </div>
