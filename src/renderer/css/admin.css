@@ -1,0 +1,458 @@
+/* E-Class Record — Admin Panel Styles */
+/* Hidden admin overlay, auth box, and panel components. */
+
+/* ── Auth overlay ──────────────────────────────────────────── */
+.adm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.adm-auth-box {
+  background: #13151c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 36px 32px;
+  width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+  animation: adm-fadein 0.18s ease;
+}
+
+.adm-auth-logo {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.adm-auth-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: -0.3px;
+}
+
+.adm-auth-sub {
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.adm-auth-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #f1f5f9;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.adm-auth-input:focus {
+  border-color: rgba(99, 102, 241, 0.7);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* ── Cooldown progress bar ─────────────────────────────────── */
+.adm-cooldown-bar {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+.adm-cooldown-bar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  background: #ef4444;
+  border-radius: 2px;
+  transform-origin: left;
+}
+
+.adm-cooldown-bar--active::after {
+  animation: adm-cooldown var(--adm-cooldown-dur, 60000ms) linear forwards;
+}
+
+@keyframes adm-cooldown {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+.adm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 9px 18px;
+  flex: 1;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.adm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.adm-btn:active:not(:disabled) { transform: scale(0.97); }
+
+.adm-btn--primary {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #fff;
+}
+
+.adm-btn--primary:hover:not(:disabled) { opacity: 0.9; }
+
+.adm-btn--ghost {
+  background: rgba(255, 255, 255, 0.07);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.adm-btn--ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+
+.adm-btn--olive {
+  background: linear-gradient(135deg, #4ade80, #16a34a);
+  color: #fff;
+}
+
+.adm-btn--sm { padding: 6px 12px; font-size: 12px; flex: none; border-radius: 6px; }
+.adm-btn--close { background: transparent; border: none; color: #64748b; font-size: 16px; padding: 4px 8px; }
+
+/* ── Reset link ────────────────────────────────────────────── */
+.adm-reset-link {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  color: #6366f1;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  padding: 0;
+  transition: text-decoration-color 0.15s;
+}
+.adm-reset-link:hover { text-decoration-color: #6366f1; }
+
+/* ── Admin panel overlay ───────────────────────────────────── */
+.adm-panel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.adm-panel {
+  background: #0f1117;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.7);
+  animation: adm-fadein 0.2s ease;
+}
+
+@keyframes adm-fadein {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Panel header ──────────────────────────────────────────── */
+.adm-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+}
+
+.adm-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.adm-panel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  letter-spacing: 0.5px;
+}
+
+.adm-session-timer {
+  font-size: 11px;
+  color: #64748b;
+  font-family: monospace;
+}
+
+/* ── Tabs ──────────────────────────────────────────────────── */
+.adm-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 10px 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.adm-tab {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  padding: 8px 14px;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.adm-tab--active {
+  color: #a5b4fc;
+  border-bottom-color: #6366f1;
+}
+
+.adm-tab--disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Panel body ────────────────────────────────────────────── */
+.adm-panel-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Token setup screen ────────────────────────────────────── */
+.adm-token-setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 14px;
+  padding: 40px;
+  max-width: 500px;
+  margin: 0 auto;
+  width: 100%;
+  text-align: center;
+}
+
+.adm-token-setup-icon { font-size: 48px; }
+.adm-token-setup-title { font-size: 18px; font-weight: 700; color: #f1f5f9; }
+.adm-token-setup-desc { font-size: 13px; color: #64748b; line-height: 1.6; }
+.adm-token-setup-desc code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px; color: #a5b4fc; }
+
+/* ── Calendar tab layout ───────────────────────────────────── */
+.adm-cal-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.adm-cal-meta {
+  display: flex;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+
+.adm-meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.adm-meta-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.adm-meta-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.adm-meta-input:focus { border-color: rgba(99,102,241,0.6); }
+
+/* ── Events list ───────────────────────────────────────────── */
+.adm-cal-events-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+  color: #f1f5f9;
+}
+
+.adm-search-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  width: 200px;
+}
+
+.adm-cal-events-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.adm-event-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.1s;
+}
+
+.adm-event-row:hover { background: rgba(255,255,255,0.06); }
+
+.adm-event-row-pill {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.adm-event-pill--milestone { background: rgba(239,68,68,0.15); color: #f87171; }
+.adm-event-pill--holiday   { background: rgba(34,197,94,0.15);  color: #4ade80; }
+.adm-event-pill--reminder  { background: rgba(234,179,8,0.15);  color: #facc15; }
+
+.adm-event-row-body { flex: 1; min-width: 0; }
+.adm-event-row-title { font-size: 13px; font-weight: 600; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adm-event-row-date  { font-size: 11px; color: #64748b; margin-top: 1px; }
+.adm-event-row-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+.adm-row-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 5px;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 3px 8px;
+  transition: background 0.15s, color 0.15s;
+}
+.adm-row-btn:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+.adm-row-btn--del:hover { background: rgba(239,68,68,0.2); color: #f87171; }
+
+/* ── Add/Edit form ─────────────────────────────────────────── */
+.adm-event-form {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.adm-form-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #a5b4fc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.adm-form-row { display: flex; gap: 10px; }
+.adm-form-field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+
+/* ── Footer ────────────────────────────────────────────────── */
+.adm-cal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.015);
+  flex-shrink: 0;
+}
+
+.adm-push-status {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Misc ──────────────────────────────────────────────────── */
+.adm-loading, .adm-empty {
+  font-size: 13px;
+  color: #475569;
+  text-align: center;
+  padding: 40px;
+}

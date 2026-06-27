@@ -30,7 +30,7 @@ body[data-active-view="record"] .main {
 
 #recordTable .record-grid th,
 #recordTable .record-grid td {
-  padding: 3px 2px;
+  padding: 6px 3px;
   text-align: center;
   white-space: normal;
   word-break: break-word;
@@ -41,7 +41,7 @@ body[data-active-view="record"] .main {
 #recordTable .record-grid th {
   position: sticky;
   top: 0;
-  z-index: 12;
+  z-index: 10;
   font-weight: var(--font-weight-bold);
   background: var(--color-neutral-50);
   font-size: 9px;
@@ -63,7 +63,7 @@ body[data-active-view="record"] .main {
 #recordTable .record-grid .score-input {
   width: 100%;
   min-width: 0;
-  height: 24px;
+  height: 36px;
   padding: 2px 2px;
   font-size: 9.5px;
   font-family: var(--font-family-mono);

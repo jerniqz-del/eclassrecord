@@ -208,84 +208,83 @@ async function exportCsv() {
         let sumMusicIg = 0, countMusicIg = 0;
         let sumPEIg = 0, countPEIg = 0;
 
+        const isTO = !!learner.transferredOutTerm;
         for (let t = 1; t <= 3; t++) {
-          const resMusic = computeTerm(a, learner.id, String(t), 'music_arts');
-          const resPE = computeTerm(a, learner.id, String(t), 'pe_health');
-
-          const gm = resMusic.termGrade;
-          const gp = resPE.termGrade;
-
-          if (isDescriptive) {
-            if (resMusic.hasData) {
-              sumMusicIg += resMusic.initialGrade;
-              countMusicIg++;
-            }
-            if (resPE.hasData) {
-              sumPEIg += resPE.initialGrade;
-              countPEIg++;
-            }
-
-            let sumTermIg = 0;
-            let countTermIg = 0;
-            if (resMusic.hasData) {
-              sumTermIg += resMusic.initialGrade;
-              countTermIg++;
-            }
-            if (resPE.hasData) {
-              sumTermIg += resPE.initialGrade;
-              countTermIg++;
-            }
-            consGrades.push(countTermIg > 0 ? transmute(a, sumTermIg / countTermIg) : '');
+          if (isTO && t > parseInt(learner.transferredOutTerm)) {
+            consGrades.push('T/O');
           } else {
-            if (gm !== null) {
-              sumMusic += gm;
-              countMusic++;
-            }
-            if (gp !== null) {
-              sumPE += gp;
-              countPE++;
-            }
+            const resMusic = computeTerm(a, learner.id, String(t), 'music_arts');
+            const resPE = computeTerm(a, learner.id, String(t), 'pe_health');
 
-            let gc = '';
-            if (gm !== null && gp !== null) {
-              gc = Math.round((gm + gp) / 2);
-            } else if (gm !== null) {
-              gc = gm;
-            } else if (gp !== null) {
-              gc = gp;
+            const gm = resMusic.termGrade;
+            const gp = resPE.termGrade;
+
+            if (isDescriptive) {
+              if (resMusic.hasData) {
+                sumMusicIg += resMusic.initialGrade;
+                countMusicIg++;
+              }
+              if (resPE.hasData) {
+                sumPEIg += resPE.initialGrade;
+                countPEIg++;
+              }
+
+              let sumTermIg = 0;
+              let countTermIg = 0;
+              if (resMusic.hasData) {
+                sumTermIg += resMusic.initialGrade;
+                countTermIg++;
+              }
+              if (resPE.hasData) {
+                sumTermIg += resPE.initialGrade;
+                countTermIg++;
+              }
+              consGrades.push(countTermIg > 0 ? transmute(a, sumTermIg / countTermIg) : '');
+            } else {
+              if (gm !== null && typeof gm === 'number') {
+                sumMusic += gm;
+                countMusic++;
+              }
+              if (gp !== null && typeof gp === 'number') {
+                sumPE += gp;
+                countPE++;
+              }
+
+              const gc = consolidateMapehGrades(gm, gp);
+              consGrades.push(gc === null ? '' : gc);
             }
-            consGrades.push(gc);
           }
         }
 
-        const musicFinal = isDescriptive
-          ? (countMusicIg > 0 ? transmute(a, sumMusicIg / countMusicIg) : '')
-          : (countMusic > 0 ? Math.round(sumMusic / countMusic) : '');
-          
-        const peFinal = isDescriptive
-          ? (countPEIg > 0 ? transmute(a, sumPEIg / countPEIg) : '')
-          : (countPE > 0 ? Math.round(sumPE / countPE) : '');
-
         let finalConsolidated = '';
-        if (isDescriptive) {
-          let sumFinalIg = 0;
-          let countFinalIg = 0;
-          if (countMusicIg > 0) {
-            sumFinalIg += (sumMusicIg / countMusicIg);
-            countFinalIg++;
-          }
-          if (countPEIg > 0) {
-            sumFinalIg += (sumPEIg / countPEIg);
-            countFinalIg++;
-          }
-          finalConsolidated = countFinalIg > 0 ? transmute(a, sumFinalIg / countFinalIg) : '';
+        if (isTO) {
+          musicFinal = 'T/O';
+          peFinal = 'T/O';
+          finalConsolidated = 'T/O';
         } else {
-          if (musicFinal !== '' && peFinal !== '') {
-            finalConsolidated = Math.round((musicFinal + peFinal) / 2);
-          } else if (musicFinal !== '') {
-            finalConsolidated = musicFinal;
-          } else if (peFinal !== '') {
-            finalConsolidated = peFinal;
+          musicFinal = isDescriptive
+            ? (countMusicIg > 0 ? transmute(a, sumMusicIg / countMusicIg) : '')
+            : (countMusic > 0 ? Math.round(sumMusic / countMusic) : '');
+            
+          peFinal = isDescriptive
+            ? (countPEIg > 0 ? transmute(a, sumPEIg / countPEIg) : '')
+            : (countPE > 0 ? Math.round(sumPE / countPE) : '');
+
+          if (isDescriptive) {
+            let sumFinalIg = 0;
+            let countFinalIg = 0;
+            if (countMusicIg > 0) {
+              sumFinalIg += (sumMusicIg / countMusicIg);
+              countFinalIg++;
+            }
+            if (countPEIg > 0) {
+              sumFinalIg += (sumPEIg / countPEIg);
+              countFinalIg++;
+            }
+            finalConsolidated = countFinalIg > 0 ? transmute(a, sumFinalIg / countFinalIg) : '';
+          } else {
+            finalConsolidated = consolidateMapehGrades(musicFinal, peFinal);
+            if (finalConsolidated === null) finalConsolidated = '';
           }
         }
 
@@ -325,13 +324,8 @@ async function exportCsv() {
           }
           consolidated = countIg > 0 ? transmute(a, sumIg / countIg) : '';
         } else {
-          if (gMusic !== null && gPE !== null) {
-            consolidated = Math.round((gMusic + gPE) / 2);
-          } else if (gMusic !== null) {
-            consolidated = gMusic;
-          } else if (gPE !== null) {
-            consolidated = gPE;
-          }
+          consolidated = consolidateMapehGrades(gMusic, gPE);
+          if (consolidated === null) consolidated = '';
         }
 
         const remarkText = consolidated !== '' ? (isPassing(consolidated) ? 'Passed' : 'For Intervention') : '';
@@ -944,9 +938,8 @@ function compileStudentConsolidatedExcelData(a, student) {
       if (res1PE.hasData) { sumIg += res1PE.initialGrade; countIg++; }
       if (countIg > 0) g1Cons = transmute(a, sumIg / countIg);
     } else {
-      if (g1Music !== null && g1PE !== null) g1Cons = Math.round((g1Music + g1PE) / 2);
-      else if (g1Music !== null) g1Cons = g1Music;
-      else if (g1PE !== null) g1Cons = g1PE;
+      g1Cons = consolidateMapehGrades(g1Music, g1PE);
+      if (g1Cons === null) g1Cons = '';
     }
   }
 
@@ -968,9 +961,8 @@ function compileStudentConsolidatedExcelData(a, student) {
       if (res2PE.hasData) { sumIg += res2PE.initialGrade; countIg++; }
       if (countIg > 0) g2Cons = transmute(a, sumIg / countIg);
     } else {
-      if (g2Music !== null && g2PE !== null) g2Cons = Math.round((g2Music + g2PE) / 2);
-      else if (g2Music !== null) g2Cons = g2Music;
-      else if (g2PE !== null) g2Cons = g2PE;
+      g2Cons = consolidateMapehGrades(g2Music, g2PE);
+      if (g2Cons === null) g2Cons = '';
     }
   }
 
@@ -992,9 +984,8 @@ function compileStudentConsolidatedExcelData(a, student) {
       if (res3PE.hasData) { sumIg += res3PE.initialGrade; countIg++; }
       if (countIg > 0) g3Cons = transmute(a, sumIg / countIg);
     } else {
-      if (g3Music !== null && g3PE !== null) g3Cons = Math.round((g3Music + g3PE) / 2);
-      else if (g3Music !== null) g3Cons = g3Music;
-      else if (g3PE !== null) g3Cons = g3PE;
+      g3Cons = consolidateMapehGrades(g3Music, g3PE);
+      if (g3Cons === null) g3Cons = '';
     }
   }
 
@@ -1037,13 +1028,8 @@ function compileStudentConsolidatedExcelData(a, student) {
       if (countMusic > 0) musicFinal = Math.round(sumMusic / countMusic);
       if (countPE > 0) peFinal = Math.round(sumPE / countPE);
       
-      if (musicFinal !== '' && peFinal !== '') {
-        finalConsolidated = Math.round((musicFinal + peFinal) / 2);
-      } else if (musicFinal !== '') {
-        finalConsolidated = musicFinal;
-      } else if (peFinal !== '') {
-        finalConsolidated = peFinal;
-      }
+      finalConsolidated = consolidateMapehGrades(musicFinal, peFinal);
+      if (finalConsolidated === null) finalConsolidated = '';
     }
     
     if (finalConsolidated !== '') {

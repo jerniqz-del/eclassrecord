@@ -1,0 +1,311 @@
+/* E-Class Record — School Calendar CSS Stylesheet */
+
+.calendar-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-4);
+  height: 100%;
+}
+
+.calendar-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--border-radius-lg);
+}
+
+.calendar-header-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.calendar-month-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.calendar-grid-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.calendar-day-headers {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.calendar-day-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: minmax(65px, 1fr);
+  gap: 2px;
+  background-color: var(--border-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.calendar-day-cell {
+  background: var(--bg-surface);
+  padding: var(--space-2);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  min-height: 60px;
+  overflow: hidden;
+}
+
+.calendar-day-cell:hover {
+  background-color: var(--bg-hover);
+}
+
+.calendar-day-cell--empty {
+  background-color: var(--bg-neutral);
+  cursor: default;
+}
+
+.calendar-day-cell--empty:hover {
+  background-color: var(--bg-neutral);
+}
+
+.calendar-day-number {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  align-self: flex-end;
+}
+
+.calendar-day-cell--today .calendar-day-number {
+  background: var(--color-primary-500);
+  color: #fff;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  box-shadow: var(--shadow-sm);
+}
+
+.calendar-day-cell--has-events {
+  border-top: 3px solid var(--color-primary-400);
+}
+
+.calendar-event-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: var(--space-2);
+  overflow: hidden;
+}
+
+.calendar-event-pill {
+  font-size: 9px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 500;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+/* Event Types Color Palettes */
+.event-pill--milestone {
+  background-color: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border-left: 3px solid #dc3545;
+}
+
+.event-pill--holiday {
+  background-color: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+  border-left: 3px solid #28a745;
+}
+
+.event-pill--ww {
+  background-color: rgba(0, 123, 255, 0.1);
+  color: #007bff;
+  border-left: 3px solid #007bff;
+}
+
+.event-pill--pt {
+  background-color: rgba(111, 66, 193, 0.1);
+  color: #6f42c1;
+  border-left: 3px solid #6f42c1;
+}
+
+.event-pill--exam {
+  background-color: rgba(253, 126, 20, 0.1);
+  color: #fd7e14;
+  border-left: 3px solid #fd7e14;
+}
+
+.event-pill--reminder {
+  background-color: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+  border-left: 3px solid #ffc107;
+}
+
+.calendar-sidebar-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  max-height: 100%;
+}
+
+.calendar-sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-right: 4px;
+}
+
+.calendar-agenda-item {
+  padding: var(--space-3);
+  border-radius: var(--border-radius-md);
+  border-left: 4px solid var(--color-neutral-300);
+  background-color: var(--bg-neutral);
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.calendar-agenda-item:hover {
+  transform: translateY(-2px);
+}
+
+.calendar-agenda-item--milestone { border-color: #dc3545; }
+.calendar-agenda-item--holiday { border-color: #28a745; }
+.calendar-agenda-item--ww { border-color: #007bff; }
+.calendar-agenda-item--pt { border-color: #6f42c1; }
+.calendar-agenda-item--exam { border-color: #fd7e14; }
+.calendar-agenda-item--reminder { border-color: #ffc107; }
+
+.calendar-agenda-item__date {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.calendar-agenda-item__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  padding-right: 20px;
+}
+
+.calendar-agenda-item__desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.calendar-agenda-item__class {
+  margin-top: var(--space-2);
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--border-radius-full);
+  background: var(--border-default);
+  color: var(--text-primary);
+}
+
+.calendar-agenda-item__delete-btn {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  background: none;
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  padding: 0;
+}
+
+.calendar-agenda-item__delete-btn:hover {
+  opacity: 1;
+  color: #dc3545;
+}
+
+.calendar-agenda-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  padding: var(--space-6) 0;
+}
+
+/* Alert pill for class reminders inside grading sheet view */
+.class-reminder-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background-color: rgba(255, 193, 7, 0.1);
+  color: #856404;
+  border: 1px solid rgba(255, 193, 7, 0.2);
+  border-radius: var(--border-radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.class-reminder-alert__icon {
+  flex-shrink: 0;
+  color: #e0a800;
+}
+
+.class-reminder-alert__text {
+  flex: 1;
+}
+
+@media (max-width: 900px) {
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Sync button spinner animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.btn-icon.spin {
+  animation: spin 0.8s linear infinite;
+  transform-origin: center;
+}

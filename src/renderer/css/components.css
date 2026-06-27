@@ -986,6 +986,67 @@
   justify-content: flex-end;
 }
 
+/* Add Class Load Dashboard Card */
+.dashboard-card--add {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  min-height: 180px !important;
+  background: var(--bg-surface) !important;
+  border: 1px dashed var(--border-default) !important;
+  border-radius: var(--radius-xl) !important;
+  padding: var(--space-6) !important;
+  transition: all var(--transition-base) !important;
+  width: 100%;
+}
+
+.dashboard-card--add:hover {
+  border-color: var(--color-primary-400) !important;
+  background: color-mix(in srgb, var(--color-primary-50) 8%, var(--bg-surface)) !important;
+  transform: translateY(-3px) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.dashboard-card--add__icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: var(--radius-full) !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-600) !important;
+  margin-bottom: var(--space-3) !important;
+  transition: all var(--transition-base) !important;
+}
+
+.dashboard-card--add:hover .dashboard-card--add__icon {
+  background: var(--color-primary-100) !important;
+  transform: scale(1.08) !important;
+}
+
+.dashboard-card--add__icon svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.dashboard-card--add__title {
+  font-size: var(--font-size-md) !important;
+  font-weight: var(--font-weight-bold) !important;
+  color: var(--text-primary) !important;
+  margin: 0 0 var(--space-1) 0 !important;
+  line-height: var(--line-height-tight) !important;
+}
+
+.dashboard-card--add__hint {
+  font-size: var(--font-size-xs) !important;
+  color: var(--text-secondary) !important;
+  max-width: 220px !important;
+  line-height: var(--line-height-normal) !important;
+}
+
 /* ═══════════════════════════════════════════════════════
    UPDATE INDICATOR DOT
    ═══════════════════════════════════════════════════════ */
@@ -2479,4 +2540,61 @@
   background: var(--color-primary-500);
   transition: width 0.2s ease;
   border-radius: 3px;
+}
+
+/* Startup Loading Screen Overlay */
+.startup-loading-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  background: var(--bg-app) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 250ms ease, visibility 250ms ease;
+}
+
+.startup-loading-overlay.hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.startup-loading-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  background: var(--bg-surface) !important;
+  border-radius: var(--radius-2xl) !important;
+  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(0, 0, 0, 0.06) !important;
+  padding: var(--space-8) !important;
+  width: 300px !important;
+}
+
+.startup-loading-spinner {
+  width: 36px !important;
+  height: 36px !important;
+  border: 3px solid var(--color-primary-100) !important;
+  border-top-color: var(--color-primary-600) !important;
+  border-radius: 50% !important;
+  animation: spin 0.8s linear infinite !important;
+  margin-bottom: var(--space-4) !important;
+}
+
+.startup-loading-text {
+  font-size: var(--font-size-md) !important;
+  font-weight: var(--font-weight-semibold) !important;
+  color: var(--text-primary) !important;
+  margin-bottom: var(--space-1) !important;
+}
+
+.startup-loading-sub {
+  font-size: var(--font-size-xs) !important;
+  color: var(--text-secondary) !important;
 }

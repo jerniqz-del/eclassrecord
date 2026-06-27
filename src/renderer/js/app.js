@@ -749,7 +749,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
       }
     }
-    
     if (status === 'downloaded') {
       toast('Update downloaded. Restarting app to install updates...', 'success');
       setTimeout(() => {
@@ -760,6 +759,15 @@ window.addEventListener('DOMContentLoaded', async () => {
       }, 1500);
     }
   });
+
+  // Hide startup loading screen
+  const startupLoader = document.getElementById('startupLoadingScreen');
+  if (startupLoader) {
+    startupLoader.classList.add('hidden');
+    setTimeout(() => {
+      startupLoader.remove();
+    }, 250);
+  }
 
 });
 

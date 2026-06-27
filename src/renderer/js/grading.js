@@ -406,7 +406,7 @@ function ensureTemplateAssessments(a) {
 function findAssessment(a, term, component, title, mapePart) {
   for (let i = 0; i < a.assessments.length; i++) {
     const item = a.assessments[i];
-    if (item.term === term && item.component === component && item.title === title && item.mapePart === mapePart) {
+    if (String(item.term) === String(term) && item.component === component && item.title === title && item.mapePart === mapePart) {
       return item;
     }
   }
@@ -423,7 +423,7 @@ function componentScore(a, learnerId, term, components, mapePart) {
 
   for (let i = 0; i < a.assessments.length; i++) {
     const item = a.assessments[i];
-    if (item.term !== term) continue;
+    if (String(item.term) !== String(term)) continue;
     if (!components.includes(item.component)) continue;
     if (mapePart && item.mapePart !== mapePart) continue;
 
@@ -568,6 +568,23 @@ function descriptor(grade) {
   if (num >= 65) return 'Developing (Napauunlad)';
   return 'Emerging (Nagsisimula)';
 }
+
+function consolidateMapehGrades(gm, gp) {
+  if (gm === 'T/O' || gp === 'T/O') return 'T/O';
+  if (gm === null || gm === undefined || gm === '' || gp === null || gp === undefined || gp === '') {
+    const valid = [gm, gp].filter(x => x !== null && x !== undefined && x !== '' && x !== 'T/O');
+    if (valid.length === 0) return '';
+    const num = parseFloat(valid[0]);
+    return isNaN(num) ? '' : Math.round(num);
+  }
+  const valM = parseFloat(gm);
+  const valP = parseFloat(gp);
+  if (isNaN(valM) && isNaN(valP)) return '';
+  if (isNaN(valM)) return Math.round(valP);
+  if (isNaN(valP)) return Math.round(valM);
+  return Math.round((valM + valP) / 2);
+}
+
 
 function isZeroBasedSy(sy) {
   if (!sy) return false;

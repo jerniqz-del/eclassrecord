@@ -400,13 +400,7 @@ function renderTermMapehDetails(a, learnerId, term) {
     }
     consolidated = countIg > 0 ? transmute(a, sumIg / countIg) : null;
   } else {
-    if (gMusic !== null && gPE !== null) {
-      consolidated = Math.round((gMusic + gPE) / 2);
-    } else if (gMusic !== null) {
-      consolidated = gMusic;
-    } else if (gPE !== null) {
-      consolidated = gPE;
-    }
+    consolidated = consolidateMapehGrades(gMusic, gPE);
   }
 
   const consolidatedBadge = consolidated === null
@@ -565,14 +559,7 @@ function renderSummaryMapehDetails(a, learnerId) {
         countPE++;
       }
 
-      let gc = null;
-      if (gm !== null && gp !== null) {
-        gc = Math.round((gm + gp) / 2);
-      } else if (gm !== null) {
-        gc = gm;
-      } else if (gp !== null) {
-        gc = gp;
-      }
+      const gc = consolidateMapehGrades(gm, gp);
       consGrades.push(gc);
     }
   }
@@ -599,13 +586,7 @@ function renderSummaryMapehDetails(a, learnerId) {
     }
     finalConsolidated = countFinalIg > 0 ? transmute(a, sumFinalIg / countFinalIg) : null;
   } else {
-    if (musicFinal !== null && peFinal !== null) {
-      finalConsolidated = Math.round((musicFinal + peFinal) / 2);
-    } else if (musicFinal !== null) {
-      finalConsolidated = musicFinal;
-    } else if (peFinal !== null) {
-      finalConsolidated = peFinal;
-    }
+    finalConsolidated = consolidateMapehGrades(musicFinal, peFinal);
   }
 
   const remarks = finalRemark(a, finalConsolidated);

@@ -406,7 +406,9 @@ function groupScoreMax(items, endIndex) {
   const start = endIndex === 4 ? 0 : endIndex === 7 ? 5 : 8;
   let total = 0;
   for (let i = start; i <= endIndex; i++) {
-    total += number(items[i].maxScore);
+    if (items[i]) {
+      total += number(items[i].maxScore);
+    }
   }
   return total;
 }
@@ -583,13 +585,7 @@ function renderConsolidatedMapehTable(a) {
       }
       consolidated = countIg > 0 ? transmute(a, sumIg / countIg) : null;
     } else {
-      if (gMusic !== null && gPE !== null) {
-        consolidated = Math.round((gMusic + gPE) / 2);
-      } else if (gMusic !== null) {
-        consolidated = gMusic;
-      } else if (gPE !== null) {
-        consolidated = gPE;
-      }
+      consolidated = consolidateMapehGrades(gMusic, gPE);
     }
 
     html += `<tr>
@@ -693,14 +689,7 @@ function renderConsolidatedMapehSummary(a) {
             countPE++;
           }
 
-          let gc = null;
-          if (gm !== null && gp !== null) {
-            gc = Math.round((gm + gp) / 2);
-          } else if (gm !== null) {
-            gc = gm;
-          } else if (gp !== null) {
-            gc = gp;
-          }
+          const gc = consolidateMapehGrades(gm, gp);
           consGrades.push(gc);
         }
       }
@@ -736,13 +725,7 @@ function renderConsolidatedMapehSummary(a) {
         }
         finalConsolidated = countFinalIg > 0 ? transmute(a, sumFinalIg / countFinalIg) : null;
       } else {
-        if (musicFinal !== null && peFinal !== null) {
-          finalConsolidated = Math.round((musicFinal + peFinal) / 2);
-        } else if (musicFinal !== null) {
-          finalConsolidated = musicFinal;
-        } else if (peFinal !== null) {
-          finalConsolidated = peFinal;
-        }
+        finalConsolidated = consolidateMapehGrades(musicFinal, peFinal);
       }
       remarks = finalRemark(a, finalConsolidated);
     }
@@ -943,7 +926,7 @@ function termAssessments(a, term, mapePart) {
   if (!a) return out;
   for (let i = 0; i < a.assessments.length; i++) {
     const ast = a.assessments[i];
-    if (ast.term === term) {
+    if (String(ast.term) === String(term)) {
       if (mapePart === undefined || ast.mapePart === mapePart) {
         out.push(ast);
       }

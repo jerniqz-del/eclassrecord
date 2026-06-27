@@ -55,9 +55,34 @@ function showQuickGradeModal() {
     assessments.forEach(item => {
       const opt = document.createElement('option');
       opt.value = item.id;
-      const compLabel = isKeyStage2(a) 
-        ? compactAssessmentLabel(item) 
-        : `${componentLabel(item.component)} ${item.title || ''}`;
+      
+      let compLabel = '';
+      const comp = item.component;
+      const title = (item.title || '').trim();
+      
+      let compName = '';
+      if (comp === 'WW') {
+        compName = 'Written Works';
+      } else if (comp === 'PT') {
+        compName = 'Performance Task';
+      } else if (comp === 'SA1' || comp === 'ST1' || comp === 'SA2' || comp === 'ST2' || comp === 'SA') {
+        compName = 'Summative Assessment';
+      } else if (comp === 'TE') {
+        compName = 'Term Examination';
+      } else {
+        compName = componentLabel(comp);
+      }
+      
+      const cleanTitle = title.toUpperCase();
+      const cleanComp = comp.toUpperCase();
+      if (cleanTitle === cleanComp || cleanTitle === 'WW' || cleanTitle === 'PT' || cleanTitle === 'SA' || cleanTitle === 'TE' || cleanTitle === 'SA1' || cleanTitle === 'SA2' || cleanTitle === 'ST1' || cleanTitle === 'ST2') {
+        compLabel = compName;
+      } else if (title) {
+        compLabel = `${compName} ${title}`;
+      } else {
+        compLabel = compName;
+      }
+      
       const hps = item.maxScore ? `HPS: ${item.maxScore}` : 'HPS: Not Set';
       opt.textContent = `${compLabel} (${hps})`;
       if (item.id === quickGradeAssessmentId) {
@@ -112,6 +137,55 @@ function onQuickGradeAssessmentChanged() {
   
   renderQuickGradeRoster();
   updateQuickGradeActiveLearner();
+  updateQuickGradeAssessmentDetails();
+}
+
+/**
+ * Updates the details box for the currently active assessment.
+ */
+function updateQuickGradeAssessmentDetails() {
+  const a = currentAssignment();
+  if (!a) return;
+  
+  const detailsEl = document.getElementById('quickGradeAssessmentDetails');
+  if (!detailsEl) return;
+  
+  const assessment = a.assessments.find(x => x.id === quickGradeAssessmentId);
+  if (!assessment) {
+    detailsEl.innerHTML = '';
+    return;
+  }
+  
+  const topicText = assessment.topic || 'No topic specified';
+  const dateText = assessment.date ? new Date(assessment.date).toLocaleDateString() : 'No date specified';
+  const maxScoreText = assessment.maxScore ? `${assessment.maxScore} points` : 'Not set';
+  
+  let compName = '';
+  const comp = assessment.component;
+  if (comp === 'WW') {
+    compName = 'Written Works';
+  } else if (comp === 'PT') {
+    compName = 'Performance Task';
+  } else if (comp === 'SA1' || comp === 'ST1' || comp === 'SA2' || comp === 'ST2' || comp === 'SA') {
+    compName = 'Summative Assessment';
+  } else if (comp === 'TE') {
+    compName = 'Term Examination';
+  } else {
+    compName = componentLabel(comp);
+  }
+  
+  detailsEl.innerHTML = `
+    <div style="background: var(--bg-surface-hover); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: var(--space-3); font-size: var(--font-size-xs); line-height: 1.45; color: var(--text-secondary);">
+      <div style="display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-2);">
+        <div><strong>Component:</strong> ${esc(compName)}</div>
+        <div><strong>HPS:</strong> ${esc(maxScoreText)}</div>
+        <div><strong>Date:</strong> ${esc(dateText)}</div>
+      </div>
+      <div style="border-top: 1px dashed var(--border-subtle); padding-top: var(--space-2);">
+        <strong>Topic:</strong> ${esc(topicText)}
+      </div>
+    </div>
+  `;
 }
 
 /**
