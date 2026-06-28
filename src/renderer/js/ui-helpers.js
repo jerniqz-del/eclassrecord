@@ -225,35 +225,67 @@ function debounce(fn, waitMs) {
 
 // MS Word-like Zoom Control Sizing
 let zoomPercentage = 100;
+let zoomDefaultPercentage = 100;
+const ZOOM_DEFAULT_KEY = 'ecr_zoom_default_pct';
+const ZOOM_LEGACY_KEY = 'ecr_zoom_pct';
+
+function clampZoomPct(value) {
+  let val = parseInt(value, 10);
+  if (isNaN(val)) val = 100;
+  if (val < 50) val = 50;
+  if (val > 200) val = 200;
+  return val;
+}
+
+function readSavedZoomDefault() {
+  const savedDefault = parseInt(localStorage.getItem(ZOOM_DEFAULT_KEY), 10);
+  if (!isNaN(savedDefault) && savedDefault >= 50 && savedDefault <= 200) {
+    return savedDefault;
+  }
+
+  const legacySaved = parseInt(localStorage.getItem(ZOOM_LEGACY_KEY), 10);
+  if (!isNaN(legacySaved) && legacySaved >= 50 && legacySaved <= 200) {
+    return legacySaved;
+  }
+
+  const savedStep = parseInt(localStorage.getItem('ecr_font_step'), 10);
+  const FONT_STEPS = [80, 85, 90, 95, 100, 105, 110, 115, 120];
+  if (!isNaN(savedStep) && savedStep >= 0 && savedStep < FONT_STEPS.length) {
+    return FONT_STEPS[savedStep];
+  }
+
+  return 100;
+}
 
 /**
  * Initialises font size from localStorage and applies it.
  * Call once on app startup.
  */
 function initFontSize() {
-  const saved = parseInt(localStorage.getItem('ecr_zoom_pct'), 10);
-  if (!isNaN(saved) && saved >= 50 && saved <= 200) {
-    zoomPercentage = saved;
-  } else {
-    // Check legacy setting
-    const savedStep = parseInt(localStorage.getItem('ecr_font_step'), 10);
-    const FONT_STEPS = [80, 85, 90, 95, 100, 105, 110, 115, 120];
-    if (!isNaN(savedStep) && savedStep >= 0 && savedStep < FONT_STEPS.length) {
-      zoomPercentage = FONT_STEPS[savedStep];
-    } else {
-      zoomPercentage = 100;
-    }
-  }
+  zoomDefaultPercentage = readSavedZoomDefault();
+  zoomPercentage = zoomDefaultPercentage;
   applyZoom();
   
-  // Close zoom dropdown on click outside
+  // Close zoom dropdowns on click outside
   document.addEventListener('click', (e) => {
     const dropdown = document.getElementById('zoomDropdownMenu');
+    const defaultMenu = document.getElementById('zoomDefaultMenu');
     const labelBtn = document.getElementById('zoomLabel');
     if (dropdown && dropdown.style.display === 'block') {
       if (!dropdown.contains(e.target) && e.target !== labelBtn) {
         dropdown.style.display = 'none';
       }
+    }
+    if (defaultMenu && defaultMenu.style.display === 'block') {
+      if (!defaultMenu.contains(e.target)) {
+        defaultMenu.style.display = 'none';
+      }
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      hideZoomMenus();
     }
   });
 }
@@ -264,10 +296,7 @@ function initFontSize() {
  */
 function changeZoom(delta) {
   let next = zoomPercentage + delta;
-  if (next < 50) next = 50;
-  if (next > 200) next = 200;
-  zoomPercentage = next;
-  localStorage.setItem('ecr_zoom_pct', zoomPercentage);
+  zoomPercentage = clampZoomPct(next);
   applyZoom();
 }
 
@@ -276,12 +305,7 @@ function changeZoom(delta) {
  * @param {number} pct Percentage (50-200)
  */
 function setZoomPct(pct) {
-  let val = parseInt(pct, 10);
-  if (isNaN(val)) val = 100;
-  if (val < 50) val = 50;
-  if (val > 200) val = 200;
-  zoomPercentage = val;
-  localStorage.setItem('ecr_zoom_pct', zoomPercentage);
+  zoomPercentage = clampZoomPct(pct);
   applyZoom();
   
   const dropdown = document.getElementById('zoomDropdownMenu');
@@ -301,9 +325,54 @@ function onZoomSliderInput(val) {
 function toggleZoomMenu(e) {
   e.stopPropagation();
   const dropdown = document.getElementById('zoomDropdownMenu');
+  const defaultMenu = document.getElementById('zoomDefaultMenu');
+  if (defaultMenu) defaultMenu.style.display = 'none';
   if (dropdown) {
     const isOpen = dropdown.style.display === 'block';
     dropdown.style.display = isOpen ? 'none' : 'block';
+  }
+}
+
+function hideZoomMenus() {
+  const dropdown = document.getElementById('zoomDropdownMenu');
+  const defaultMenu = document.getElementById('zoomDefaultMenu');
+  if (dropdown) dropdown.style.display = 'none';
+  if (defaultMenu) defaultMenu.style.display = 'none';
+}
+
+function updateZoomDefaultMenuState() {
+  const saveBtn = document.getElementById('saveZoomDefaultBtn');
+  if (!saveBtn) return;
+
+  const isCurrentDefault = zoomPercentage === zoomDefaultPercentage;
+  saveBtn.textContent = isCurrentDefault
+    ? `${zoomPercentage}% is already default`
+    : `Set ${zoomPercentage}% as default`;
+  saveBtn.disabled = isCurrentDefault;
+}
+
+function showZoomDefaultMenu(e) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const dropdown = document.getElementById('zoomDropdownMenu');
+  const defaultMenu = document.getElementById('zoomDefaultMenu');
+  if (dropdown) dropdown.style.display = 'none';
+  if (!defaultMenu) return;
+
+  updateZoomDefaultMenuState();
+  defaultMenu.style.display = 'block';
+}
+
+function saveCurrentZoomAsDefault() {
+  zoomDefaultPercentage = zoomPercentage;
+  localStorage.setItem(ZOOM_DEFAULT_KEY, String(zoomDefaultPercentage));
+  localStorage.setItem(ZOOM_LEGACY_KEY, String(zoomDefaultPercentage));
+  updateZoomDefaultMenuState();
+  hideZoomMenus();
+
+  if (typeof toast === 'function') {
+    toast(`Default zoom set to ${zoomDefaultPercentage}%.`, 'success');
   }
 }
 
@@ -323,6 +392,7 @@ function applyZoom() {
   if (slider) slider.value = zoomPercentage;
   if (btnDec) btnDec.disabled = zoomPercentage <= 50;
   if (btnInc) btnInc.disabled = zoomPercentage >= 200;
+  updateZoomDefaultMenuState();
   
   if (typeof adjustHpsStickyTop === 'function') {
     setTimeout(adjustHpsStickyTop, 0);

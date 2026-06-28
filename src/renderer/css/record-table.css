@@ -45,7 +45,7 @@ body[data-active-view="record"] .main {
   z-index: 10;
   font-weight: var(--font-weight-bold);
   background: var(--color-neutral-50);
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text-primary);
   letter-spacing: 0;
   border-bottom: 2px solid var(--color-neutral-300);
@@ -92,10 +92,11 @@ body[data-active-view="record"] .main {
   text-align: left;
   word-break: normal;
   overflow-wrap: anywhere;
+  white-space: normal;
   font-weight: var(--font-weight-medium);
   padding-left: 5px;
-  font-size: 11px;
-  line-height: 1.2;
+  font-size: 13px;
+  line-height: 1.15;
 }
 
 /* ── Score Inputs ───────────────────────────────────────── */
@@ -276,9 +277,10 @@ body[data-active-view="record"] .main {
 #recordTable .record-grid th.c-calc,
 #recordTable .record-grid th.c-grade,
 #recordTable .record-grid th.c-desc {
-  font-size: 8.5px;
+  font-size: 9.5px;
   line-height: 1.1;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   word-break: normal;
   font-weight: var(--font-weight-bold);
 }
@@ -400,48 +402,174 @@ body[data-active-view="record"] .main {
 /* ── Final Summary Table styling & wrapping ─────────────────── */
 
 #finalTable .summary-table {
-  table-layout: fixed;
+  table-layout: auto;
   width: 100%;
+  min-width: 100%;
   background: var(--bg-surface);
   border-collapse: collapse;
+  font-size: 9.5px;
+  line-height: 1.2;
+}
+
+#finalTable .summary-table col.summary-col-no {
+  width: 36px;
+}
+
+#finalTable .summary-table col.summary-col-learner {
+  width: auto;
+}
+
+#finalTable .summary-table--terms col.summary-col-term {
+  width: 4%;
+}
+
+#finalTable .summary-table--terms col.summary-col-final {
+  width: 7%;
+}
+
+#finalTable .summary-table--terms col.summary-col-remarks {
+  width: 9%;
+}
+
+#finalTable .summary-table--mapeh col.summary-col-term {
+  width: 10%;
+}
+
+#finalTable .summary-table--mapeh col.summary-col-final {
+  width: 10%;
+}
+
+#finalTable .summary-table--mapeh col.summary-col-remarks {
+  width: 9%;
 }
 
 #finalTable .summary-table th,
 #finalTable .summary-table td {
-  white-space: normal !important;
-  word-break: normal !important;
+  white-space: normal;
+  word-break: normal;
   overflow-wrap: anywhere;
   text-align: center;
-  padding: var(--table-cell-pad-y) 4px;
-  font-size: var(--font-size-xs);
-  line-height: 1.25;
+  padding: var(--record-cell-pad-y) var(--record-cell-pad-x);
+  font-size: 9.5px;
+  line-height: 1.2;
   vertical-align: middle;
+  border: 1px solid var(--color-neutral-200);
 }
 
-#finalTable .summary-table th:nth-child(3),
-#finalTable .summary-table td:nth-child(3) {
+#finalTable .summary-table tbody tr {
+  height: calc(var(--record-input-height) + var(--record-cell-pad-y) + var(--record-cell-pad-y));
+}
+
+#finalTable .summary-table tbody td {
+  height: calc(var(--record-input-height) + var(--record-cell-pad-y) + var(--record-cell-pad-y));
+  max-height: calc(var(--record-input-height) + var(--record-cell-pad-y) + var(--record-cell-pad-y));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+#finalTable .summary-table th:first-child,
+#finalTable .summary-table td:first-child {
+  min-width: 36px;
+  width: 36px;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+#finalTable .summary-table th {
+  font-size: 9.5px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0;
+}
+
+#finalTable .summary-table .summary-learner-head,
+#finalTable .summary-table .summary-learner-cell {
   text-align: left;
-  /* Keep learner names left-aligned */
-  padding-left: 8px;
+  padding-left: 5px;
   font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+#finalTable .summary-table .summary-learner-cell {
+  font-size: 13px;
+  line-height: 1.15;
+  white-space: normal;
 }
 
 #finalTable .summary-table thead tr:first-child th {
   background: var(--bg-muted);
-  font-weight: var(--font-weight-bold);
 }
 
 #finalTable .summary-table thead tr:nth-child(2) th {
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--text-secondary);
 }
 
-#finalTable .summary-table td:nth-child(7),
-#finalTable .summary-table td:nth-child(11),
-#finalTable .summary-table td:nth-child(15),
-#finalTable .summary-table td:nth-child(16) {
+#finalTable .summary-table .summary-term-grade,
+#finalTable .summary-table .summary-term-initial,
+#finalTable .summary-table .summary-final-grade {
   font-weight: var(--font-weight-semibold);
-  background: color-mix(in srgb, var(--color-primary-50) 18%, var(--bg-surface));
+}
+
+#finalTable .summary-table .summary-term-head,
+#finalTable .summary-table .summary-term-cell {
+  min-width: 36px;
+}
+
+#finalTable .summary-table .summary-term-1 {
+  background: color-mix(in srgb, #e0f2fe 66%, var(--bg-surface));
+  border-color: color-mix(in srgb, #7dd3fc 48%, var(--color-neutral-200));
+  color: #075985;
+}
+
+#finalTable .summary-table .summary-term-2 {
+  background: color-mix(in srgb, #f3e8ff 62%, var(--bg-surface));
+  border-color: color-mix(in srgb, #c084fc 45%, var(--color-neutral-200));
+  color: #6b21a8;
+}
+
+#finalTable .summary-table .summary-term-3 {
+  background: color-mix(in srgb, #fef3c7 62%, var(--bg-surface));
+  border-color: color-mix(in srgb, #fbbf24 45%, var(--color-neutral-200));
+  color: #92400e;
+}
+
+#finalTable .summary-table .summary-final-head,
+#finalTable .summary-table .summary-final-cell {
+  background: color-mix(in srgb, #dcfce7 60%, var(--bg-surface));
+  border-color: color-mix(in srgb, #86efac 45%, var(--color-neutral-200));
+  color: #166534;
+}
+
+#finalTable .summary-table thead .summary-term-head,
+#finalTable .summary-table thead .summary-final-head {
+  font-weight: var(--font-weight-bold);
+}
+
+[data-theme="dark"] #finalTable .summary-table .summary-term-1 {
+  background: rgba(14, 165, 233, 0.14);
+  border-color: rgba(125, 211, 252, 0.28);
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] #finalTable .summary-table .summary-term-2 {
+  background: rgba(168, 85, 247, 0.14);
+  border-color: rgba(192, 132, 252, 0.28);
+  color: #d8b4fe;
+}
+
+[data-theme="dark"] #finalTable .summary-table .summary-term-3 {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(251, 191, 36, 0.28);
+  color: #fcd34d;
+}
+
+[data-theme="dark"] #finalTable .summary-table .summary-final-head,
+[data-theme="dark"] #finalTable .summary-table .summary-final-cell {
+  background: rgba(34, 197, 94, 0.13);
+  border-color: rgba(134, 239, 172, 0.28);
+  color: #86efac;
 }
 
 #recordTable .record-grid th.assessment-header-cell {

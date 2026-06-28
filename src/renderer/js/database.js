@@ -8,12 +8,52 @@
 const DB_VERSION = 2;
 const ROOT_DB_VERSION = 3;
 
+function timestampNow() {
+  return new Date().toISOString();
+}
+
+function normalizeVersion(value, currentVersion) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > currentVersion ? parsed : currentVersion;
+}
+
+function createEmptyRootDatabase() {
+  return {
+    version: ROOT_DB_VERSION,
+    lastUpdatedAt: '',
+    profiles: [],
+    activeProfileId: ''
+  };
+}
+
+function normalizeProfileRecord(profile) {
+  if (!profile || typeof profile !== 'object') return null;
+  if (profile.pinEnabled === undefined) profile.pinEnabled = false;
+  if (profile.secondaryBackupPath === undefined) profile.secondaryBackupPath = '';
+  if (profile.createdAt === undefined) profile.createdAt = profile.lastUpdatedAt || '';
+  if (profile.lastUpdatedAt === undefined) profile.lastUpdatedAt = profile.createdAt || '';
+  return profile;
+}
+
+function normalizeRootDatabase(root) {
+  const nextRoot = root && typeof root === 'object' ? root : createEmptyRootDatabase();
+  nextRoot.version = normalizeVersion(nextRoot.version, ROOT_DB_VERSION);
+  if (!Array.isArray(nextRoot.profiles)) nextRoot.profiles = [];
+  nextRoot.profiles = nextRoot.profiles.map(normalizeProfileRecord).filter(Boolean);
+  if (typeof nextRoot.activeProfileId !== 'string') nextRoot.activeProfileId = '';
+  if (nextRoot.activeProfileId && !nextRoot.profiles.some(p => p.id === nextRoot.activeProfileId)) {
+    nextRoot.activeProfileId = '';
+  }
+  if (nextRoot.lastUpdatedAt === undefined) {
+    nextRoot.lastUpdatedAt = nextRoot.profiles.reduce((latest, profile) => {
+      return profile.lastUpdatedAt && profile.lastUpdatedAt > latest ? profile.lastUpdatedAt : latest;
+    }, '');
+  }
+  return nextRoot;
+}
+
 // Entire database loaded from file
-let dbRoot = {
-  version: ROOT_DB_VERSION,
-  profiles: [],
-  activeProfileId: ''
-};
+let dbRoot = createEmptyRootDatabase();
 
 // Global reference for legacy data to migrate
 let legacyDataToMigrate = null;
@@ -23,6 +63,7 @@ let sessionActive = false;
 // In-memory application state copy (active profile)
 let db = {
   version: DB_VERSION,
+  lastUpdatedAt: '',
   teacherName: '',
   schoolName: '',
   schoolYear: '2026-2027',
@@ -41,6 +82,8 @@ let importMode = '';
  * Ensures structure compatibility across version updates.
  */
 function normalizeDatabase() {
+  db.version = normalizeVersion(db.version, DB_VERSION);
+  if (db.lastUpdatedAt === undefined) db.lastUpdatedAt = '';
   if (!db.assignments) db.assignments = [];
   if (!db.activeView) db.activeView = 'dashboard';
   if (!db.currentTerm) db.currentTerm = '1';
@@ -48,7 +91,6 @@ function normalizeDatabase() {
   if (db.region === undefined) db.region = '';
   if (db.division === undefined) db.division = '';
   if (db.autoBlur === undefined) db.autoBlur = false;
-  if (!db.version || db.version < DB_VERSION) db.version = DB_VERSION;
   
   for (let i = 0; i < db.assignments.length; i++) {
     const a = db.assignments[i];
@@ -103,34 +145,19 @@ async function loadDatabase() {
     if (localData) {
       if (localData.profiles && Array.isArray(localData.profiles)) {
         // This is a profile-based database
-        dbRoot = localData;
-        if (dbRoot.version < ROOT_DB_VERSION) {
-          dbRoot.version = ROOT_DB_VERSION;
-        }
+        dbRoot = normalizeRootDatabase(localData);
       } else if (localData.assignments || localData.teacherName) {
         // This is a legacy database (version 2)
         // Store legacy data for migration
         legacyDataToMigrate = localData;
-        dbRoot = {
-          version: ROOT_DB_VERSION,
-          profiles: [],
-          activeProfileId: ''
-        };
+        dbRoot = createEmptyRootDatabase();
       } else {
         // Brand new database file or empty object
-        dbRoot = {
-          version: ROOT_DB_VERSION,
-          profiles: [],
-          activeProfileId: ''
-        };
+        dbRoot = createEmptyRootDatabase();
       }
     } else {
       // No database exists yet
-      dbRoot = {
-        version: ROOT_DB_VERSION,
-        profiles: [],
-        activeProfileId: ''
-      };
+      dbRoot = createEmptyRootDatabase();
     }
   } catch (error) {
     console.error('Failed to load database:', error);
@@ -145,10 +172,13 @@ async function saveDatabase() {
   updateProfile();
   db.activeView = currentView;
   db.recordTab = recordTab;
+  db.version = normalizeVersion(db.version, DB_VERSION);
+  db.lastUpdatedAt = timestampNow();
   
   if (dbRoot && dbRoot.activeProfileId) {
     const p = dbRoot.profiles.find(x => x.id === dbRoot.activeProfileId);
     if (p) {
+      normalizeProfileRecord(p);
       p.secondaryBackupPath = db.secondaryBackupPath || '';
       if (p.pinEnabled) {
         if (!currentProfilePin) {
@@ -161,6 +191,7 @@ async function saveDatabase() {
         p.data = db;
       }
       p.name = db.teacherName || p.name;
+      p.lastUpdatedAt = db.lastUpdatedAt;
     }
   }
   
@@ -172,6 +203,8 @@ async function saveDatabase() {
  */
 async function saveRootDatabase() {
   try {
+    dbRoot = normalizeRootDatabase(dbRoot);
+    dbRoot.lastUpdatedAt = timestampNow();
     const success = await window.electronAPI.saveDatabase(dbRoot);
     if (success) {
       setStatus('Saved locally at ' + new Date().toLocaleTimeString());
@@ -450,11 +483,13 @@ function clearLocalData() {
       async () => {
         dbRoot = {
           version: ROOT_DB_VERSION,
+          lastUpdatedAt: timestampNow(),
           profiles: [],
           activeProfileId: ''
         };
         db = {
           version: DB_VERSION,
+          lastUpdatedAt: timestampNow(),
           teacherName: '',
           schoolName: '',
           schoolId: '',

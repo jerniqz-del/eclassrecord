@@ -338,40 +338,40 @@ ipcMain.handle('dialog:export-pdf', async (_event, options) => {
   const { size, landscape, filename, metadata } = options || {};
   
   const headerHtml = `
-    <div style="font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000; width: 100%; margin: 0 0.4in; box-sizing: border-box; border-bottom: 2px solid #000; padding-bottom: 6px;">
-      <div style="font-size: 11px; font-weight: bold; font-family: 'Segoe UI', Arial, sans-serif; color: #000; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 5px; text-transform: uppercase;">
+    <div style="font-size: 11px; font-family: 'Segoe UI', Arial, sans-serif; color: #000; width: 100%; margin: 0 0.4in; box-sizing: border-box; border-bottom: 2px solid #000; padding-bottom: 8px;">
+      <div style="font-size: 16px; font-weight: bold; font-family: 'Segoe UI', Arial, sans-serif; color: #000; border-bottom: 1px solid #000; padding-bottom: 6px; margin-bottom: 6px; text-transform: uppercase;">
         ${metadata ? (metadata.title || '') : ''}
       </div>
-      <table style="width: 100%; border-collapse: collapse; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000; margin: 0; padding: 0;">
+      <table style="width: 100%; border-collapse: collapse; border: none; font-size: 11px; line-height: 1.25; font-family: 'Segoe UI', Arial, sans-serif; color: #000; margin: 0; padding: 0;">
         <tr>
-          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+          <td style="width: 50%; padding: 2px 0; border: none; font-size: 11px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
             <strong>Region:</strong> ${metadata ? (metadata.region || '') : ''}
           </td>
-          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+          <td style="width: 50%; padding: 2px 0; border: none; font-size: 11px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
             <strong>School Year:</strong> ${metadata ? (metadata.schoolYear || '') : ''}
           </td>
         </tr>
         <tr>
-          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+          <td style="width: 50%; padding: 2px 0; border: none; font-size: 11px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
             <strong>Division:</strong> ${metadata ? (metadata.division || '') : ''}
           </td>
-          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+          <td style="width: 50%; padding: 2px 0; border: none; font-size: 11px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
             <strong>Grade & Section:</strong> Grade ${metadata ? (metadata.gradeLevel || '') : ''} - ${metadata ? (metadata.section || '') : ''}
           </td>
         </tr>
         <tr>
-          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+          <td style="width: 50%; padding: 2px 0; border: none; font-size: 11px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
             <strong>School Name:</strong> ${metadata ? (metadata.schoolName || '') : ''}
           </td>
-          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+          <td style="width: 50%; padding: 2px 0; border: none; font-size: 11px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
             <strong>Subject:</strong> ${metadata ? (metadata.subject || '') : ''}
           </td>
         </tr>
         <tr>
-          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+          <td style="width: 50%; padding: 2px 0; border: none; font-size: 11px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
             <strong>School ID:</strong> ${metadata ? (metadata.schoolId || '') : ''}
           </td>
-          <td style="width: 50%; padding: 1px 0; border: none; font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
+          <td style="width: 50%; padding: 2px 0; border: none; font-size: 11px; font-family: 'Segoe UI', Arial, sans-serif; color: #000;">
             <strong>Teacher:</strong> ${metadata ? (metadata.teacherName || '') : ''}
           </td>
         </tr>
@@ -394,7 +394,7 @@ ipcMain.handle('dialog:export-pdf', async (_event, options) => {
   const printOptions = {
     margins: {
       marginType: 'custom',
-      top: 1.3, // in inches
+      top: 1.45, // in inches
       bottom: 0.6,
       left: 0.4, // in inches
       right: 0.4

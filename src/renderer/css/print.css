@@ -8,8 +8,9 @@
 
   html,
   body {
-    height: auto;
-    overflow: visible;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
     background: #fff;
     color: #000;
     font-size: 10px;
@@ -34,12 +35,36 @@
   .layout,
   .main {
     display: block;
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    padding: 0;
-    left: 0;
+    position: static !important;
+    inset: auto !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    left: 0 !important;
+  }
+
+  .view-section {
+    display: none !important;
+  }
+
+  .view-section[data-view="record"] {
+    display: block !important;
+  }
+
+  body[data-active-view="record"] .main,
+  .view-section[data-view="record"],
+  .view-section[data-view="record"].view-section--flex,
+  .view-section[data-view="record"] .panel-fill,
+  .view-section[data-view="record"] .panel-stack {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   /* Header: static, minimal */
@@ -82,7 +107,9 @@
   .card-title {
     border-bottom: 1px solid #000;
     color: #000;
-    font-size: 11px;
+    font-size: 22px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
   }
 
   /* Stat cards */
@@ -127,6 +154,11 @@
   }
 
   /* Record table overrides to prevent scrolling/clipping in print */
+  #recordTable {
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
   #recordTable .record-scroll {
     max-height: none !important;
     overflow: visible !important;
@@ -139,10 +171,55 @@
     padding-right: 0 !important;
   }
 
+  #recordTable .record-grid {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  #recordTable .record-grid thead {
+    display: table-header-group;
+  }
+
+  #recordTable .record-grid tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  #recordTable .record-grid th,
+  #recordTable .record-grid td {
+    padding: 2px 3px !important;
+    overflow: visible !important;
+  }
+
+  #recordTable .record-grid th {
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  #recordTable .record-grid tbody tr {
+    height: calc(var(--record-input-height) + var(--record-cell-pad-y) + var(--record-cell-pad-y)) !important;
+  }
+
+  #recordTable .record-grid tbody td {
+    height: calc(var(--record-input-height) + var(--record-cell-pad-y) + var(--record-cell-pad-y)) !important;
+    padding: var(--record-cell-pad-y) var(--record-cell-pad-x) !important;
+  }
+
+  #recordTable .record-grid .learner-cell {
+    font-size: 12px !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
   .table-wrap {
     border: 1px solid #000;
     box-shadow: none;
-    overflow: visible;
+    overflow: visible !important;
   }
 
   /* Score inputs: show value, hide border */
@@ -151,13 +228,24 @@
     border: 0 !important;
     box-shadow: none !important;
     background: transparent !important;
+    height: auto !important;
+    min-height: 0 !important;
     font-size: 9px;
+    line-height: 1.1 !important;
     padding: 0;
     text-align: center;
   }
 
   .max-input {
     background: transparent !important;
+  }
+
+  #recordTable .record-grid .score-input,
+  #recordTable .record-grid .max-input {
+    height: var(--record-input-height) !important;
+    min-height: var(--record-input-height) !important;
+    padding: 2px !important;
+    line-height: 1.1 !important;
   }
 
   /* Badges */
@@ -199,6 +287,127 @@
     background: #f8f8f8 !important;
   }
 
+  #finalTable {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  #finalTable .summary-table {
+    table-layout: auto !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 8.5px !important;
+    line-height: 1.15 !important;
+  }
+
+  #finalTable .summary-table col.summary-col-no {
+    width: 30px !important;
+  }
+
+  #finalTable .summary-table col.summary-col-learner {
+    width: auto !important;
+  }
+
+  #finalTable .summary-table--terms col.summary-col-term {
+    width: 4% !important;
+  }
+
+  #finalTable .summary-table--terms col.summary-col-final {
+    width: 7% !important;
+  }
+
+  #finalTable .summary-table--terms col.summary-col-remarks {
+    width: 9% !important;
+  }
+
+  #finalTable .summary-table--mapeh col.summary-col-term {
+    width: 10% !important;
+  }
+
+  #finalTable .summary-table--mapeh col.summary-col-final {
+    width: 10% !important;
+  }
+
+  #finalTable .summary-table--mapeh col.summary-col-remarks {
+    width: 9% !important;
+  }
+
+  #finalTable .summary-table th,
+  #finalTable .summary-table td {
+    padding: 2px 3px !important;
+    font-size: 9.5px !important;
+    line-height: 1.15 !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  #finalTable .summary-table tbody tr {
+    height: 24px !important;
+  }
+
+  #finalTable .summary-table tbody td {
+    height: 24px !important;
+    max-height: 24px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  #finalTable .summary-table tbody td:last-child {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+   }
+
+  #finalTable .summary-table th:first-child,
+  #finalTable .summary-table td:first-child {
+    min-width: 30px !important;
+    width: 30px !important;
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+
+  #finalTable .summary-table .summary-learner-head,
+  #finalTable .summary-table .summary-learner-cell {
+    font-size: 12px !important;
+    text-align: left !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  #finalTable .summary-table .summary-term-head,
+  #finalTable .summary-table .summary-term-cell {
+    min-width: 28px !important;
+  }
+
+  #finalTable .summary-table .summary-term-1 {
+    background: #e0f2fe !important;
+    color: #000 !important;
+  }
+
+  #finalTable .summary-table .summary-term-2 {
+    background: #f3e8ff !important;
+    color: #000 !important;
+  }
+
+  #finalTable .summary-table .summary-term-3 {
+    background: #fef3c7 !important;
+    color: #000 !important;
+  }
+
+  #finalTable .summary-table .summary-final-head,
+  #finalTable .summary-table .summary-final-cell {
+    background: #dcfce7 !important;
+    color: #000 !important;
+  }
+
   /* Hide inline headers during PDF exports to prevent duplicates with page-repeating headers */
   body.pdf-export-mode .card-title,
   body.pdf-export-mode .print-metadata-header {
@@ -223,8 +432,8 @@
   .print-metadata-col {
     display: table-cell !important;
     width: 50% !important;
-    font-size: 10px !important;
-    line-height: 1.5 !important;
+    font-size: 20px !important;
+    line-height: 1.35 !important;
     color: #000 !important;
   }
 }

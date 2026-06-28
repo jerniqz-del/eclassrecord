@@ -140,6 +140,46 @@ function sortLearners() {
 }
 
 /**
+ * Removes all learners and class scores from the active roster after confirmation.
+ */
+function clearAllLearnersFromCurrentClass() {
+  const a = currentAssignment();
+  if (!a) {
+    toast('Select a class first.', 'warning');
+    return;
+  }
+
+  const learnerCount = Array.isArray(a.learners) ? a.learners.length : 0;
+  if (learnerCount === 0) {
+    toast('No learners to clear in this class roster.', 'info');
+    return;
+  }
+
+  confirmModal(
+    'Clear All Learners?',
+    `This will permanently remove all ${learnerCount} learner${learnerCount === 1 ? '' : 's'} from this class roster and delete their saved scores for this class. This cannot be undone.`,
+    () => {
+      const learnerIds = new Set(a.learners.map(learner => learner.id));
+
+      if (a.scores) {
+        Object.keys(a.scores).forEach(key => {
+          const separatorIndex = key.indexOf('|');
+          const learnerId = separatorIndex === -1 ? key : key.slice(0, separatorIndex);
+          if (learnerIds.has(learnerId)) {
+            delete a.scores[key];
+          }
+        });
+      }
+
+      a.learners = [];
+      saveDatabase();
+      render();
+      toast(`Cleared ${learnerCount} learner${learnerCount === 1 ? '' : 's'} from this class roster.`, 'success');
+    }
+  );
+}
+
+/**
  * Formats a learner's name: Last Name, First Name M.I.
  */
 function formatLearnerName(lastName, firstName, middleName) {

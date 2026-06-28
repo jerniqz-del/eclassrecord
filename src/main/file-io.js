@@ -108,6 +108,18 @@ function saveDatabase(data) {
   try {
     ensureDataFolder();
     const payload = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    JSON.parse(payload);
+
+    if (fs.existsSync(dbPath)) {
+      try {
+        const previousPayload = fs.readFileSync(dbPath, 'utf8');
+        JSON.parse(previousPayload);
+        createRollingBackup(previousPayload, dbDir, 30, 'pre-save');
+      } catch (backupError) {
+        console.error('Pre-save backup skipped:', backupError);
+      }
+    }
+
     fs.writeFileSync(dbPath, payload, 'utf8');
 
     // Local daily rolling backup in AppData backups folder

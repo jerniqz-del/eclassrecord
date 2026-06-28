@@ -10,6 +10,8 @@
  */
 async function exportJson() {
   updateProfile();
+  db.version = normalizeVersion(db.version, DB_VERSION);
+  db.lastUpdatedAt = timestampNow();
   
   const activeProfile = dbRoot.profiles.find(p => p.id === dbRoot.activeProfileId);
   let textToExport = '';

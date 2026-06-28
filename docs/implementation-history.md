@@ -2,8 +2,8 @@
 
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
-Current app version: 1.2.2
-Last reviewed: 2026-06-27
+Current app version: 1.3.3
+Last reviewed: 2026-06-28
 
 ## 1. Project Foundation
 
@@ -96,6 +96,8 @@ Implemented changes:
 - Added secondary auto-backup folder support with rolling daily backups.
 - Added database normalization and migration for older data structures.
 - Added Database Integrity Checker for anomalies such as orphaned scores, duplicate LRNs, and scores exceeding HPS.
+- Added lightweight `lastUpdatedAt` metadata on saved profile data and root database records.
+- Added pre-save database snapshots before overwriting the main local data file.
 
 Worked patches:
 
@@ -107,6 +109,17 @@ Adjusted patches:
 
 - Backup security was patched after the first public releases.
 - Database migration was adjusted to support legacy single-profile data and newer multi-profile roots.
+- Version normalization and save metadata were hardened in v1.3.2 before adding new learner-support features.
+- Summary page table styling was tightened in v1.3.3 without changing saved grade or learner data.
+- Summary view and PDF output removed the LRN column and use content-aware widths with evenly distributed term columns.
+- Summary view and PDF output added per-term Initial Grade columns, restored readable `No.` column spacing, and locked body rows to a consistent height.
+- Welcome modal sizing was made viewport-aware so update changelogs stay inside the available window.
+- Term 1 to Term 3 PDF row heights were adjusted to better match the class record table page view.
+- Learner names, table headers, class record titles, Summary titles, and printed class/term details were enlarged in v1.3.3 while preserving table column widths.
+- Downloaded PDF class/term header text was enlarged through the Electron PDF header template, and Summary PDF remarks were allowed to wrap.
+- Zoom controls gained a right-click menu in v1.3.3 for explicitly saving the current zoom value as the next startup default.
+- The zoom menus were adjusted to open downward so they remain visible near the app header.
+- Teaching Load class rosters gained a confirmed Clear All action in v1.3.3 to remove all learners and their saved scores from the active class.
 
 ## 6. Updates, Releases, And Distribution
 
@@ -176,6 +189,9 @@ Implemented changes:
 - Added the Class Analysis module for per-assessment statistics, learner ranking, grade distribution, and CSS-rendered charts.
 - Added database integrity UI in Settings.
 - Restored and merged usability patches through version 1.2.2.
+- Restored and merged usability patches through version 1.3.0.
+- Added v1.3.2 data-safety hardening and class record PDF pagination fixes before the Attendance + Intervention Tracker roadmap work.
+- Added v1.3.3 Summary page density, term-color grouping, LRN removal, Initial Grade columns, fixed body row heights, welcome modal resizing, larger record typography, explicit zoom-default saving, Teaching Load roster Clear All, and print/PDF polish.
 
 Worked patches:
 
@@ -206,7 +222,9 @@ Adjusted patches:
 | v1.1.0 to v1.1.1 | Prepared release line after accumulated app changes. | Stabilized the next release branch. |
 | v1.2.0 to v1.2.1 | Prepared release line before v1.2.2. | Continued release packaging. |
 | v1.2.2 | Added auto-close and relaunch after update download. | Update workflow was adjusted for cleaner install completion. |
-| Latest main commit | Restored and merged usability patches up to v1.2.2, including class analysis, calendar/admin modules, integrity checking, and import/export refinements. | Latest patch set still needs final smoke testing, especially feature entry points. |
+| v1.3.0 | Restored and merged usability patches up to v1.2.2, including CSS optimization, sticky record headers, simple column sorting, modal layering fixes, Class Progress Report wrapping, and release-note polish. | Established the checkpoint for the next roadmap phase. |
+| v1.3.2 | Hardened database version normalization, save metadata, manual backup metadata, pre-save database snapshots, and class record PDF pagination. | Data-safety and print/PDF patch so only the active sheet exports and full learner rosters are not clipped before adding Attendance + Intervention Tracker records. |
+| v1.3.3 | Matched Summary page row density to the compact term record table, added color-themed term/final groups, removed LRN from Summary output, added per-term Initial Grade columns, fixed body row heights, enlarged learner/header/title/PDF detail typography, made the Welcome modal viewport-aware, added explicit zoom-default saving, added Teaching Load roster Clear All, wrapped Summary PDF remarks, and balanced Summary/PDF column widths. | Visual polish and roster-management patch for Summary, Welcome, term records, zoom controls, Teaching Load, and PDF output; no grading formulas or data structures changed. |
 
 ## Current Follow-Up Checks
 

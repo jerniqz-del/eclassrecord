@@ -277,6 +277,13 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+#classRecordTitle,
+#finalGradesPanel .card-title {
+  font-size: calc(var(--font-size-xs) * 2);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
 /* ═══════════════════════════════════════════════════════
    RECORD TABS — Pill style
    ═══════════════════════════════════════════════════════ */
@@ -1274,7 +1281,8 @@
 .zoom-dropdown-menu {
   display: none;
   position: absolute;
-  bottom: calc(100% + 8px);
+  top: calc(100% + 8px);
+  bottom: auto;
   right: 0;
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
@@ -1310,6 +1318,18 @@
    Used on .dashboard-card and .load-list__item via
    subject--<name> modifier classes.
    ═══════════════════════════════════════════════════════ */
+
+.zoom-default-menu {
+  min-width: 180px;
+}
+
+.zoom-dropdown-menu button:disabled,
+.zoom-dropdown-menu button:disabled:hover {
+  cursor: default;
+  color: var(--text-tertiary);
+  background: transparent;
+  opacity: 0.72;
+}
 
 .subject--english  { --subject-color: #0ea5e9; } /* Sky Blue    */
 .subject--filipino { --subject-color: #1e40af; } /* Navy Blue   */
@@ -2549,7 +2569,38 @@
    ═══════════════════════════════════════════════════════ */
 
 .welcome-modal {
-  max-width: 620px;
+  width: min(92vw, 860px);
+  max-width: min(92vw, 860px);
+  max-height: min(86vh, 760px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#welcomeModal {
+  padding: clamp(var(--space-3), 3vw, var(--space-6));
+}
+
+#welcomeModal .modal__title {
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#welcomeModal .modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+}
+
+#welcomeModal .welcome-whats-new-list {
+  overflow-wrap: anywhere;
+}
+
+#welcomeModal .welcome-modal-footer {
+  flex: 0 0 auto;
 }
 
 .welcome-features-list {
@@ -3718,6 +3769,27 @@ body.report-print-mode #classAnalysisBody {
 }
 
 @media (max-width: 768px) {
+  .welcome-modal {
+    width: min(96vw, 640px);
+    max-width: 96vw;
+    max-height: 90vh;
+  }
+
+  .welcome-update-row,
+  .welcome-modal-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .welcome-update-actions {
+    width: 100%;
+  }
+
+  .welcome-update-actions .btn,
+  .welcome-modal-footer .btn {
+    width: 100%;
+  }
+
   .bulk-modal-grid {
     grid-template-columns: 1fr;
   }

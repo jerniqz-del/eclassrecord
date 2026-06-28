@@ -1324,15 +1324,23 @@ async function submitCreateProfile() {
   
   const profileId = uid('profile');
   let profileData = {};
+  const createdAt = timestampNow();
   
   if (legacyDataToMigrate) {
     profileData = legacyDataToMigrate;
+    const previousDb = db;
+    db = profileData;
+    normalizeDatabase();
+    profileData = db;
+    db = previousDb;
     profileData.teacherName = name;
+    profileData.lastUpdatedAt = profileData.lastUpdatedAt || createdAt;
     legacyDataToMigrate = null;
     toast('Legacy class records successfully migrated to your new profile!', 'success');
   } else {
     profileData = {
       version: DB_VERSION,
+      lastUpdatedAt: createdAt,
       teacherName: name,
       schoolName: '',
       schoolYear: '2026-2027',
@@ -1350,6 +1358,8 @@ async function submitCreateProfile() {
     salt: salt,
     pinHash: pinHash,
     secondaryBackupPath: '',
+    createdAt,
+    lastUpdatedAt: createdAt,
     data: profileData
   };
   
@@ -1396,6 +1406,7 @@ async function unlockProfileAndEnter(profile, pin) {
   console.log("unlockProfileAndEnter: Loading decrypted data into state...");
   db = decryptedData;
   db.secondaryBackupPath = profile.secondaryBackupPath || '';
+  normalizeProfileRecord(profile);
   dbRoot.activeProfileId = profile.id;
   currentProfilePin = pin || '';
   sessionActive = true;
@@ -1453,6 +1464,7 @@ async function logoutProfile() {
   
   db = {
     version: DB_VERSION,
+    lastUpdatedAt: '',
     teacherName: '',
     schoolName: '',
     schoolYear: '2026-2027',

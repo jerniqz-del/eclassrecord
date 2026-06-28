@@ -179,7 +179,7 @@
             Upload Backup
           </button>
           <!-- Word-like Zoom Control -->
-          <div class="zoom-word-control" title="Zoom">
+          <div class="zoom-word-control" title="Zoom" oncontextmenu="showZoomDefaultMenu(event)">
             <button class="zoom-word-btn" id="zoomOutBtn" onclick="changeZoom(-5)" title="Zoom Out">−</button>
             <input type="range" id="zoomSlider" min="50" max="200" step="5" value="100" oninput="onZoomSliderInput(this.value)" class="zoom-word-slider" title="Zoom Slider" />
             <button class="zoom-word-btn" id="zoomInBtn" onclick="changeZoom(5)" title="Zoom In">+</button>
@@ -192,6 +192,9 @@
                 <button onclick="setZoomPct(120)">120%</button>
                 <button onclick="setZoomPct(150)">150%</button>
                 <button onclick="setZoomPct(200)">200%</button>
+              </div>
+              <div class="zoom-dropdown-menu zoom-default-menu" id="zoomDefaultMenu">
+                <button id="saveZoomDefaultBtn" onclick="saveCurrentZoomAsDefault()">Set current zoom as default</button>
               </div>
             </div>
           </div>
@@ -342,6 +345,10 @@
                 <button class="btn btn-sm" onclick="sortLearners()">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="14" y2="9"></line><line x1="4" y1="15" x2="10" y2="15"></line><polyline points="14 12 18 16 22 12"></polyline><line x1="18" y1="8" x2="18" y2="16"></line></svg>
                   Sort Roster
+                </button>
+                <button class="btn btn-warn btn-sm" onclick="clearAllLearnersFromCurrentClass()">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+                  Clear All
                 </button>
               </div>
             </div>

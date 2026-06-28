@@ -563,12 +563,20 @@ function summaryGradeDisplay(grade, policy) {
   return blankNull(formatGradeForDisplay(grade, policy));
 }
 
-function summaryTermCells(result, weights, policy) {
+function summaryInitialGradeDisplay(result) {
+  if (!result) return '';
+  if (result.termGrade === 'T/O') return '<span style="color:#ffb703; font-weight:600;">T/O</span>';
+  return result.hasData ? fmt(result.initialGrade) : '';
+}
+
+function summaryTermCells(result, weights, policy, termNumber) {
+  const termClass = `summary-term-cell summary-term-${termNumber}`;
   return `
-    <td>${summaryWeightedScore(result, 'WW', weights[0])}</td>
-    <td>${summaryWeightedScore(result, 'PT', weights[1])}</td>
-    <td>${summaryWeightedScore(result, 'STE', weights[2])}</td>
-    <td><strong>${summaryGradeDisplay(result ? result.termGrade : null, policy)}</strong></td>
+    <td class="${termClass}">${summaryWeightedScore(result, 'WW', weights[0])}</td>
+    <td class="${termClass}">${summaryWeightedScore(result, 'PT', weights[1])}</td>
+    <td class="${termClass}">${summaryWeightedScore(result, 'STE', weights[2])}</td>
+    <td class="${termClass} summary-term-initial">${summaryInitialGradeDisplay(result)}</td>
+    <td class="${termClass} summary-term-grade"><strong>${summaryGradeDisplay(result ? result.termGrade : null, policy)}</strong></td>
   `;
 }
 
@@ -605,39 +613,40 @@ function renderFinalOnly() {
   const mapePart = isMapeh ? currentMapehSubTab : undefined;
   const weights = weightsFor(a.subjectGroup);
   
-  let html = `<table class="summary-table">
+  let html = `<table class="summary-table summary-table--terms">
     <colgroup>
-      <col style="width: 4%" />
-      <col style="width: 10%" />
-      <col style="width: 18%" />
-      ${Array(12).fill('<col style="width: 4.5%" />').join('')}
-      <col style="width: 6%" />
-      <col style="width: 8%" />
+      <col class="summary-col-no" />
+      <col class="summary-col-learner" />
+      ${Array(15).fill('<col class="summary-col-term" />').join('')}
+      <col class="summary-col-final" />
+      <col class="summary-col-remarks" />
     </colgroup>
     <thead>
       <tr>
         <th rowspan="2">No.</th>
-        <th rowspan="2">LRN</th>
-        <th rowspan="2">Learner</th>
-        <th colspan="4">Term 1</th>
-        <th colspan="4">Term 2</th>
-        <th colspan="4">Term 3</th>
-        <th rowspan="2">Final Grade</th>
-        <th rowspan="2">Remarks</th>
+        <th rowspan="2" class="summary-learner-head">Learner</th>
+        <th colspan="5" class="summary-term-head summary-term-1">Term 1</th>
+        <th colspan="5" class="summary-term-head summary-term-2">Term 2</th>
+        <th colspan="5" class="summary-term-head summary-term-3">Term 3</th>
+        <th rowspan="2" class="summary-final-head">Final Grade</th>
+        <th rowspan="2" class="summary-final-head">Remarks</th>
       </tr>
       <tr>
-        <th title="Written Works Weighted Score">WW</th>
-        <th title="Performance Task Weighted Score">PT</th>
-        <th title="Summative Assessment and Term Examination Weighted Score">STE</th>
-        <th title="Total Grade">TG</th>
-        <th title="Written Works Weighted Score">WW</th>
-        <th title="Performance Task Weighted Score">PT</th>
-        <th title="Summative Assessment and Term Examination Weighted Score">STE</th>
-        <th title="Total Grade">TG</th>
-        <th title="Written Works Weighted Score">WW</th>
-        <th title="Performance Task Weighted Score">PT</th>
-        <th title="Summative Assessment and Term Examination Weighted Score">STE</th>
-        <th title="Total Grade">TG</th>
+        <th class="summary-term-head summary-term-1" title="Written Works Weighted Score">WW</th>
+        <th class="summary-term-head summary-term-1" title="Performance Task Weighted Score">PT</th>
+        <th class="summary-term-head summary-term-1" title="Summative Assessment and Term Examination Weighted Score">STE</th>
+        <th class="summary-term-head summary-term-1" title="Initial Grade">IG</th>
+        <th class="summary-term-head summary-term-1" title="Total Grade">TG</th>
+        <th class="summary-term-head summary-term-2" title="Written Works Weighted Score">WW</th>
+        <th class="summary-term-head summary-term-2" title="Performance Task Weighted Score">PT</th>
+        <th class="summary-term-head summary-term-2" title="Summative Assessment and Term Examination Weighted Score">STE</th>
+        <th class="summary-term-head summary-term-2" title="Initial Grade">IG</th>
+        <th class="summary-term-head summary-term-2" title="Total Grade">TG</th>
+        <th class="summary-term-head summary-term-3" title="Written Works Weighted Score">WW</th>
+        <th class="summary-term-head summary-term-3" title="Performance Task Weighted Score">PT</th>
+        <th class="summary-term-head summary-term-3" title="Summative Assessment and Term Examination Weighted Score">STE</th>
+        <th class="summary-term-head summary-term-3" title="Initial Grade">IG</th>
+        <th class="summary-term-head summary-term-3" title="Total Grade">TG</th>
       </tr>
     </thead><tbody>`;
   
@@ -699,13 +708,12 @@ function renderFinalOnly() {
 
     html += `<tr>
       <td>${r + 1}</td>
-      <td>${esc(learner.lrn)}</td>
-      <td>${esc(learnerDisplayName(learner))}</td>
-      ${summaryTermCells(termResults[0], weights, a.policy)}
-      ${summaryTermCells(termResults[1], weights, a.policy)}
-      ${summaryTermCells(termResults[2], weights, a.policy)}
-      <td><strong>${fgDisplay}</strong></td>
-      <td>${remarks}</td>
+      <td class="summary-learner-cell">${esc(learnerDisplayName(learner))}</td>
+      ${summaryTermCells(termResults[0], weights, a.policy, 1)}
+      ${summaryTermCells(termResults[1], weights, a.policy, 2)}
+      ${summaryTermCells(termResults[2], weights, a.policy, 3)}
+      <td class="summary-final-cell summary-final-grade"><strong>${fgDisplay}</strong></td>
+      <td class="summary-final-cell">${remarks}</td>
     </tr>`;
   }
   
@@ -788,31 +796,29 @@ function renderConsolidatedMapehTable(a) {
 }
 
 function renderConsolidatedMapehSummary(a) {
-  let html = `<table class="summary-table">
+  let html = `<table class="summary-table summary-table--mapeh">
     <colgroup>
-      <col style="width: 4%" />
-      <col style="width: 10%" />
-      <col style="width: 20%" />
-      <col style="width: 10%" />
-      <col style="width: 10%" />
-      <col style="width: 10%" />
-      <col style="width: 10%" />
-      <col style="width: 10%" />
-      <col style="width: 8%" />
-      <col style="width: 8%" />
+      <col class="summary-col-no" />
+      <col class="summary-col-learner" />
+      <col class="summary-col-final" />
+      <col class="summary-col-final" />
+      <col class="summary-col-term" />
+      <col class="summary-col-term" />
+      <col class="summary-col-term" />
+      <col class="summary-col-final" />
+      <col class="summary-col-remarks" />
     </colgroup>
     <thead>
       <tr>
         <th>No.</th>
-        <th>LRN</th>
-        <th>Learner</th>
-        <th>Music & Arts Final</th>
-        <th>PE & Health Final</th>
-        <th>Term 1 Consolidated</th>
-        <th>Term 2 Consolidated</th>
-        <th>Term 3 Consolidated</th>
-        <th>MAPEH Final</th>
-        <th>Remarks</th>
+        <th class="summary-learner-head">Learner</th>
+        <th class="summary-final-head">Music & Arts Final</th>
+        <th class="summary-final-head">PE & Health Final</th>
+        <th class="summary-term-head summary-term-1">Term 1 Consolidated</th>
+        <th class="summary-term-head summary-term-2">Term 2 Consolidated</th>
+        <th class="summary-term-head summary-term-3">Term 3 Consolidated</th>
+        <th class="summary-final-head">MAPEH Final</th>
+        <th class="summary-final-head">Remarks</th>
       </tr>
     </thead><tbody>`;
   const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
@@ -920,15 +926,14 @@ function renderConsolidatedMapehSummary(a) {
 
     html += `<tr>
       <td>${r + 1}</td>
-      <td>${esc(learner.lrn)}</td>
-      <td>${esc(learnerDisplayName(learner))}</td>
-      <td>${mfDisplay}</td>
-      <td>${pfDisplay}</td>
-      <td>${t1Display}</td>
-      <td>${t2Display}</td>
-      <td>${t3Display}</td>
-      <td><strong>${fcDisplay}</strong></td>
-      <td>${remarks}</td>
+      <td class="summary-learner-cell">${esc(learnerDisplayName(learner))}</td>
+      <td class="summary-final-cell">${mfDisplay}</td>
+      <td class="summary-final-cell">${pfDisplay}</td>
+      <td class="summary-term-cell summary-term-1 summary-term-grade">${t1Display}</td>
+      <td class="summary-term-cell summary-term-2 summary-term-grade">${t2Display}</td>
+      <td class="summary-term-cell summary-term-3 summary-term-grade">${t3Display}</td>
+      <td class="summary-final-cell summary-final-grade"><strong>${fcDisplay}</strong></td>
+      <td class="summary-final-cell">${remarks}</td>
     </tr>`;
   }
   
