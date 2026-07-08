@@ -81,6 +81,16 @@
           </svg>
           <span class="nav-btn__label">Grading Sheet</span>
         </button>
+        <button id="navAttendance" class="nav-btn" onclick="setView('attendance')" title="Attendance Tracker">
+          <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+            <path d="m9 16 2 2 4-5"></path>
+          </svg>
+          <span class="nav-btn__label">Attendance</span>
+        </button>
         <button id="navSync" class="nav-btn" onclick="setView('sync')" title="Mobile Sync" style="display: none;">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
@@ -90,6 +100,12 @@
           <span class="nav-btn__label">Mobile Sync</span>
         </button>
       </nav>
+
+      <section
+        id="sidebarAdSlot"
+        class="sidebar-ad"
+        aria-label="Sponsored message"
+      ></section>
       </div><!-- /sidebar__body -->
       
       <!-- Sidebar Footer -->
@@ -170,6 +186,20 @@
             </svg>
             Auto-saved
           </span>
+          <button id="undoBtn" class="btn btn-sm record-header-action" onclick="triggerUndo()" title="Undo (Ctrl+Z)" disabled style="display:none">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7v6h6"></path>
+              <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+            </svg>
+            Undo
+          </button>
+          <button id="redoBtn" class="btn btn-sm record-header-action" onclick="triggerRedo()" title="Redo (Ctrl+Y)" disabled style="display:none">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 7v6h-6"></path>
+              <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path>
+            </svg>
+            Redo
+          </button>
           <button class="btn btn-sm" onclick="exportJson()">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Download Backup
@@ -291,38 +321,20 @@
           <!-- Active Class Dropdown Row (matching layout of record-header-row) -->
           <div class="record-header-row no-print">
             <!-- Class Selector Dropdown -->
-            <div class="record-class-selector u-mb-0">
-              <span class="record-class-label">Active Class:</span>
-              <select id="classesClassSelect" class="field-select select-class-dropdown" onchange="selectAssignment(this.value); setView('classes');">
-                <!-- Dynamically populated options -->
-              </select>
+            <div class="record-header-main">
+              <div class="record-class-selector u-mb-0">
+                <span class="record-class-label">Active Class:</span>
+                <select id="classesClassSelect" class="field-select select-class-dropdown" onchange="selectAssignment(this.value); setView('classes');">
+                  <!-- Dynamically populated options -->
+                </select>
+              </div>
             </div>
-          </div>
-
-          <!-- Action Buttons Card (placed below Active Class, matching style from record sheet) -->
-          <div id="classesActionsCard" class="card no-print u-mb-3 u-p-3">
-            <div class="action-cluster">
-              <button class="btn btn-primary btn-sm" onclick="setView('record')">
+            <div class="page-action-cluster action-cluster action-cluster--end">
+              <button class="btn btn-primary btn-lg teaching-load-primary-action" onclick="setView('record')" title="Open the selected class in the grading sheet">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
                 Proceed to Grading Sheet
               </button>
-              <button class="btn btn-olive btn-sm" onclick="importSf1()">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                Upload SF1 Spreadsheet
-              </button>
-              <button class="btn btn-olive btn-sm" onclick="showBulkAddLearnersModal()">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" y1="11" x2="23" y2="11"></line><line x1="20" y1="8" x2="20" y2="14"></line></svg>
-                Bulk Add Learners
-              </button>
-              <button class="btn btn-olive btn-sm" onclick="initiateLearnerImport()">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="16" y1="11" x2="22" y2="11"></line></svg>
-                Import Transferred Learner
-              </button>
-              <button class="btn btn-olive btn-sm" onclick="showImportRosterModal()">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                Import Roster from Other Class
-              </button>
-              <button class="btn btn-warn btn-sm" onclick="removeCurrentAssignment()">
+              <button class="btn btn-warn btn-lg" onclick="removeCurrentAssignment()" title="Delete this class load">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 Delete This Class
               </button>
@@ -334,19 +346,15 @@
             <div id="classesRosterHeader" class="spread-row u-mb-3">
               <h2 class="card-title card-title--inline">Class Roster</h2>
               <div class="action-cluster">
-                <button class="btn btn-primary btn-sm" onclick="showAddLearnerModal()">
+                <button class="btn btn-primary btn-sm" onclick="showAddLearnerModal()" title="Add one learner to this class">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>
                   Add Learner
                 </button>
-                <button class="btn btn-olive btn-sm" onclick="showBulkAddLearnersModal()">
-                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" y1="11" x2="23" y2="11"></line><line x1="20" y1="8" x2="20" y2="14"></line></svg>
-                  Bulk Add Learners
-                </button>
-                <button class="btn btn-sm" onclick="sortLearners()">
+                <button class="btn btn-olive btn-sm" onclick="sortLearners()" title="Sort learners by sex and name">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="14" y2="9"></line><line x1="4" y1="15" x2="10" y2="15"></line><polyline points="14 12 18 16 22 12"></polyline><line x1="18" y1="8" x2="18" y2="16"></line></svg>
                   Sort Roster
                 </button>
-                <button class="btn btn-warn btn-sm" onclick="clearAllLearnersFromCurrentClass()">
+                <button class="btn btn-warn btn-sm" onclick="clearAllLearnersFromCurrentClass()" title="Delete all learners from the selected class after confirmation">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
                   Clear All
                 </button>
@@ -364,20 +372,57 @@
         
         <!-- Record Grid Header Row -->
         <div class="record-header-row no-print">
-          <!-- Class Selector Dropdown -->
-          <div class="record-class-selector">
-            <span class="record-class-label">Active Class:</span>
-            <select id="recordClassSelect" class="field-select select-class-dropdown" onchange="selectAssignment(this.value); setView('record');">
-              <!-- Dynamically populated options -->
-            </select>
+          <div class="record-header-main">
+            <!-- Class Selector Dropdown -->
+            <div class="record-class-selector">
+              <span class="record-class-label">Active Class:</span>
+              <select id="recordClassSelect" class="field-select select-class-dropdown" onchange="selectAssignment(this.value); setView('record');" title="Choose the active class for this grading sheet">
+                <!-- Dynamically populated options -->
+              </select>
+            </div>
+
+            <!-- Record Grid Tabs -->
+            <div id="recordTabs" class="record-tabs u-mb-0" title="Switch between term records and final summary">
+              <button id="recTab1" class="record-tab" onclick="setRecordTab('1')" title="Show Term 1 grading sheet">Term 1</button>
+              <button id="recTab2" class="record-tab" onclick="setRecordTab('2')" title="Show Term 2 grading sheet">Term 2</button>
+              <button id="recTab3" class="record-tab" onclick="setRecordTab('3')" title="Show Term 3 grading sheet">Term 3</button>
+              <button id="recTabSummary" class="record-tab record-tab--summary" onclick="setRecordTab('summary')" title="Show final grades summary">Summary</button>
+            </div>
           </div>
 
-          <!-- Record Grid Tabs -->
-          <div id="recordTabs" class="record-tabs u-mb-0">
-            <button id="recTab1" class="record-tab" onclick="setRecordTab('1')">Term 1</button>
-            <button id="recTab2" class="record-tab" onclick="setRecordTab('2')">Term 2</button>
-            <button id="recTab3" class="record-tab" onclick="setRecordTab('3')">Term 3</button>
-            <button id="recTabSummary" class="record-tab record-tab--summary" onclick="setRecordTab('summary')">Summary</button>
+          <div class="page-action-cluster action-cluster action-cluster--end">
+            <button id="printTerm1Btn" class="btn btn-primary btn-sm" onclick="printClassRecord()" title="Print the active grading sheet" style="display:none">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              Print
+            </button>
+            <button id="printTerm2Btn" class="btn btn-primary btn-sm" onclick="printClassRecord()" title="Print the active grading sheet" style="display:none">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              Print
+            </button>
+            <button id="printTerm3Btn" class="btn btn-primary btn-sm" onclick="printClassRecord()" title="Print the active grading sheet" style="display:none">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              Print
+            </button>
+            <button id="printSummaryBtn" class="btn btn-primary btn-sm" onclick="printClassRecord()" title="Print the active summary" style="display:none">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              Print
+            </button>
+            <button id="pdfTerm1Btn" class="btn btn-olive btn-sm" onclick="downloadPdf()" title="Download the active grading sheet as PDF" style="display:none">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Download PDF
+            </button>
+            <button id="pdfTerm2Btn" class="btn btn-olive btn-sm" onclick="downloadPdf()" title="Download the active grading sheet as PDF" style="display:none">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Download PDF
+            </button>
+            <button id="pdfTerm3Btn" class="btn btn-olive btn-sm" onclick="downloadPdf()" title="Download the active grading sheet as PDF" style="display:none">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Download PDF
+            </button>
+            <button id="pdfSummaryBtn" class="btn btn-olive btn-sm" onclick="downloadPdf()" title="Download the active summary as PDF" style="display:none">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Download PDF
+            </button>
           </div>
         </div>
 
@@ -388,89 +433,6 @@
           <button id="mapehTabConsolidated" class="record-tab record-tab--sub record-tab--consolidated" onclick="setMapehSubTab('consolidated')">Consolidated Grades</button>
         </div>
 
-
-        
-        <!-- CSV Grades Export, PDF Download & Print Buttons -->
-        <div id="recordActionsCard" class="card no-print u-mb-3 u-p-3">
-          <div class="action-row action-row--between">
-            <div class="action-cluster">
-              <!-- Undo & Redo actions -->
-              <button id="undoBtn" class="btn btn-sm" onclick="triggerUndo()" title="Undo (Ctrl+Z)" disabled>
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 7v6h6"></path>
-                  <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
-                </svg>
-                Undo
-              </button>
-              <button id="redoBtn" class="btn btn-sm" onclick="triggerRedo()" title="Redo (Ctrl+Y)" disabled>
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 7v6h-6"></path>
-                  <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path>
-                </svg>
-                Redo
-              </button>
-              
-              <button id="importRosterGradingBtn" class="btn btn-olive btn-sm" onclick="showImportRosterModal()" title="Import roster from another class load">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                Import Roster from Other Class
-              </button>
-              
-              <button id="quickGradeBtn" class="btn btn-primary btn-sm" onclick="showQuickGradeModal()" title="Enter scores sequentially" style="display:none">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                  <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                </svg>
-                Quick Grade Entry
-              </button>
-              
-              <button id="viewLearnerGradesBtn" class="btn btn-olive btn-sm" onclick="showViewLearnerGradesModal()" title="View individual learner's grades summary" style="display:none">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-                View Learner's Grades
-              </button>
-              
-              <!-- Separate Download PDF buttons per record sheet per term and summary -->
-              <button id="pdfTerm1Btn" class="btn btn-olive btn-sm" onclick="downloadPdf()" style="display:none">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                Download PDF
-              </button>
-              <button id="pdfTerm2Btn" class="btn btn-olive btn-sm" onclick="downloadPdf()" style="display:none">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                Download PDF
-              </button>
-              <button id="pdfTerm3Btn" class="btn btn-olive btn-sm" onclick="downloadPdf()" style="display:none">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                Download PDF
-              </button>
-              <button id="pdfSummaryBtn" class="btn btn-olive btn-sm" onclick="downloadPdf()" style="display:none">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                Download PDF
-              </button>
-              
-              <!-- Separate print buttons per record sheet per term and summary -->
-              <button id="printTerm1Btn" class="btn btn-primary btn-sm" onclick="printClassRecord()" style="display:none">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                Print Term 1 Sheet
-              </button>
-              <button id="printTerm2Btn" class="btn btn-primary btn-sm" onclick="printClassRecord()" style="display:none">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                Print Term 2 Sheet
-              </button>
-              <button id="printTerm3Btn" class="btn btn-primary btn-sm" onclick="printClassRecord()" style="display:none">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                Print Term 3 Sheet
-              </button>
-              <button id="printSummaryBtn" class="btn btn-primary btn-sm" onclick="printClassRecord()" style="display:none">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                Print Final Summary
-              </button>
-            </div>
-          </div>
-        </div>
 
         <!-- Sheet Grid Tables -->
         <div id="classRecordPanel" class="card panel-fill panel-stack u-p-0">
@@ -484,6 +446,24 @@
                   <circle cx="12" cy="12" r="3"></circle>
                 </svg>
                 <span id="blurToggleText">Blur Grades</span>
+              </button>
+            </div>
+            <div class="action-cluster action-cluster--end">
+              <button id="quickGradeBtn" class="btn btn-primary btn-lg" onclick="showQuickGradeModal()" title="Enter scores sequentially" style="display:none">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Quick Grade Entry
+              </button>
+              <button id="viewLearnerGradesBtn" class="btn btn-olive btn-lg" onclick="showViewLearnerGradesModal()" title="View individual learner's grades summary" style="display:none">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                View Learner's Grades
               </button>
             </div>
           </div>
@@ -506,6 +486,39 @@
           </div>
           <div id="finalGradesPrintHeader" class="print-metadata-header"></div>
           <div id="finalTable" class="table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- Attendance Tracker View -->
+      <section class="view-section view-section--flex" data-view="attendance">
+        <div id="attendanceTrackerView" class="support-view panel-fill">
+          <div class="record-header-row no-print">
+            <div class="record-header-main">
+              <div class="record-class-selector u-mb-0">
+                <span class="record-class-label">Active Class:</span>
+                <select id="attendanceClassSelect" class="field-select select-class-dropdown" onchange="selectAssignment(this.value); setView('attendance'); render();" title="Choose the active class for attendance"></select>
+              </div>
+              <span id="attendanceSaveStatus"></span>
+            </div>
+            <div class="page-action-cluster action-cluster action-cluster--end">
+              <button class="btn btn-primary btn-sm" onclick="printAttendanceLog()" title="Print the current Attendance Log">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Print
+              </button>
+              <button class="btn btn-olive btn-sm" onclick="downloadAttendanceLogPdf()" title="Preview and export the SF2 Daily Attendance sheet">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download PDF
+              </button>
+            </div>
+          </div>
+
+          <div id="attendanceTrackerEmpty"></div>
+          <div id="attendanceTrackerContent" class="support-stack">
+            <div id="attendanceSummaryCards" class="support-stat-grid no-print"></div>
+            <div id="attendanceMonthlyCard" class="card attendance-monthly-card no-print"></div>
+            <div id="attendanceFiltersCard" class="card support-filters-card no-print"></div>
+            <div id="attendanceReportPrintable" class="card support-report-card panel-fill u-p-0"></div>
+          </div>
         </div>
       </section>
 
@@ -644,6 +657,12 @@
               <div class="settings-row__desc">Help improve the E-Class Record App by reporting bugs, suggesting features, or sharing your experience.</div>
             </div>
             <button class="btn btn-primary btn-sm" onclick="openFeedback()">Give Feedback</button>
+          </div>
+          <div class="settings-row section-divider">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Community Help</div>
+              <div class="settings-row__desc">Ask the Community is managed automatically by the app. Status: <span id="communityRelayStatus" class="community-relay-status">Online when connected to the internet</span></div>
+            </div>
           </div>
         </div>
 
@@ -920,25 +939,12 @@
         </div>
 
         <p class="welcome-intro">
-          Your local, secure, and teacher-owned grading assistant. Here are the core features of the application:
+          Your local, secure, and teacher-owned grading assistant. Here are the latest tools available in this version:
         </p>
         
         <div class="welcome-features-list" id="welcomeFeaturesList">
           <div class="welcome-feature-item">
             <div class="welcome-feature-icon welcome-feature-icon--primary">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-              </svg>
-            </div>
-            <div class="welcome-feature-details">
-              <div class="welcome-feature-title">Roster Management</div>
-              <div class="welcome-feature-desc">Manage class workloads, add students, and import rosters directly from official DepEd SF1 spreadsheets.</div>
-            </div>
-          </div>
-          
-          <div class="welcome-feature-item">
-            <div class="welcome-feature-icon welcome-feature-icon--success">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="9" y1="3" x2="9" y2="21"></line>
@@ -946,11 +952,72 @@
               </svg>
             </div>
             <div class="welcome-feature-details">
-              <div class="welcome-feature-title">DepEd Grading Calculations</div>
-              <div class="welcome-feature-desc">Calculates terms using standard DO 15 s.2026 transition, zero-based, or Key Stage 2 Trimester models.</div>
+              <div class="welcome-feature-title">Class Records &amp; Grading</div>
+              <div class="welcome-feature-desc">Create grading sheets, manage assessments, HPS, summaries, and final grades.</div>
             </div>
           </div>
           
+          <div class="welcome-feature-item">
+            <div class="welcome-feature-icon welcome-feature-icon--success">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 2v4"></path>
+                <path d="M16 2v4"></path>
+                <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                <path d="M3 10h18"></path>
+                <path d="m9 16 2 2 4-5"></path>
+              </svg>
+            </div>
+            <div class="welcome-feature-details">
+              <div class="welcome-feature-title">Attendance Tracker</div>
+              <div class="welcome-feature-desc">Record daily attendance, tardiness, absences, follow-ups, and monthly summaries.</div>
+            </div>
+          </div>
+          
+          <div class="welcome-feature-item">
+            <div class="welcome-feature-icon welcome-feature-icon--accent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <path d="M9 15h6"></path>
+                <path d="M9 11h2"></path>
+                <path d="M9 19h4"></path>
+              </svg>
+            </div>
+            <div class="welcome-feature-details">
+              <div class="welcome-feature-title">SF2 Attendance PDF</div>
+              <div class="welcome-feature-desc">Preview and download SF2 Daily Attendance reports with printable formatting.</div>
+            </div>
+          </div>
+
+          <div class="welcome-feature-item">
+            <div class="welcome-feature-icon welcome-feature-icon--warning">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+                <path d="M8 9h8"></path>
+                <path d="M8 13h5"></path>
+              </svg>
+            </div>
+            <div class="welcome-feature-details">
+              <div class="welcome-feature-title">Help Assistant</div>
+              <div class="welcome-feature-desc">Ask app questions from a floating chatbox with offline FAQ answers and quick suggestions.</div>
+            </div>
+          </div>
+
+          <div class="welcome-feature-item">
+            <div class="welcome-feature-icon welcome-feature-icon--success">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 8a5 5 0 0 0-10 0"></path>
+                <rect x="3" y="8" width="18" height="13" rx="2"></rect>
+                <path d="M8 13h8"></path>
+                <path d="M8 17h5"></path>
+              </svg>
+            </div>
+            <div class="welcome-feature-details">
+              <div class="welcome-feature-title">Ask the Community</div>
+              <div class="welcome-feature-desc">Send unanswered questions online and receive teacher question notifications when connected.</div>
+            </div>
+          </div>
+
           <div class="welcome-feature-item">
             <div class="welcome-feature-icon welcome-feature-icon--accent">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -960,12 +1027,12 @@
             </div>
             <div class="welcome-feature-details">
               <div class="welcome-feature-title">Quick Grade Entry</div>
-              <div class="welcome-feature-desc">Sequential grade entry wizard. Type a score and press Enter to save and advance automatically.</div>
+              <div class="welcome-feature-desc">Enter scores faster with keyboard-friendly navigation and automatic saving.</div>
             </div>
           </div>
 
           <div class="welcome-feature-item">
-            <div class="welcome-feature-icon welcome-feature-icon--warning">
+            <div class="welcome-feature-icon welcome-feature-icon--primary">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
@@ -973,29 +1040,108 @@
               </svg>
             </div>
             <div class="welcome-feature-details">
-              <div class="welcome-feature-title">Backups & Export</div>
-              <div class="welcome-feature-desc">Download secure offline backups of your database, print class records directly, or export premium PDF reports.</div>
+              <div class="welcome-feature-title">Backups &amp; Profiles</div>
+              <div class="welcome-feature-desc">Use local profiles, PIN protection, backup, restore, and offline-first data storage.</div>
             </div>
           </div>
         </div>
         <!-- What's New Section (Dynamic) -->
-        <div id="welcomeWhatsNew" class="welcome-whats-new" style="display:none;">
-          <div class="welcome-whats-new-title">
-            <span>🚀 What's New in v<span id="whatsNewVersion"></span>:</span>
-          </div>
-          <ul id="whatsNewList" class="welcome-whats-new-list">
-          </ul>
+        <div class="welcome-link-row">
+          <button type="button" id="welcomeWhatsNewBtn" class="welcome-inline-link" onclick="showWhatsNewModal()">What's New...</button>
         </div>
       </div>
       <div class="modal__actions welcome-modal-footer">
-        <!-- Checkbox on the left -->
-        <!-- Checkbox on the left -->
-        <label class="welcome-checkbox-label checkbox-row">
-          <input type="checkbox" id="welcomeDoNotShowCheckbox" />
-          Do not show again today
-        </label>
-        <!-- Close button on the right -->
-        <button class="btn btn-warn btn-sm" onclick="closeWelcomeModal()">Close</button>
+        <div class="welcome-modal-footer__checks">
+          <label class="welcome-checkbox-label checkbox-row">
+            <input type="checkbox" id="welcomeTermsCheckbox" onchange="updateWelcomeTermsGate()" />
+            <span>I have read and agree to the <button type="button" class="welcome-terms-link" onclick="showTermsModal(event)">Terms &amp; Conditions</button></span>
+          </label>
+          <label class="welcome-checkbox-label checkbox-row">
+            <input type="checkbox" id="welcomeDoNotShowCheckbox" />
+            Do not show again today
+          </label>
+        </div>
+        <button id="welcomeCloseBtn" class="btn btn-warn btn-sm" onclick="closeWelcomeModal()" disabled>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- What's New Modal -->
+  <div id="whatsNewModal" class="modal-overlay modal-z-higher" style="display:none">
+    <div class="modal modal--wide whats-new-modal">
+      <div class="modal__title" id="whatsNewModalTitle">What's New</div>
+      <div class="modal__body whats-new-modal__body">
+        <div id="whatsNewModalMeta" class="whats-new-modal__meta"></div>
+        <ul id="whatsNewModalList" class="whats-new-modal__list"></ul>
+        <p id="whatsNewModalFallback" class="whats-new-modal__fallback" style="display:none">No release notes are available for this version.</p>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-primary btn-sm" onclick="closeWhatsNewModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Terms & Conditions Modal -->
+  <div id="termsModal" class="modal-overlay modal-z-higher" style="display:none">
+    <div class="modal modal--wide terms-modal">
+      <div class="modal__title">Terms &amp; Conditions of Service</div>
+      <div class="modal__body terms-modal__body">
+        <p id="termsModalVersion" class="terms-modal__version"></p>
+        <section>
+          <h3>1. Purpose of the App</h3>
+          <p>E-Class Record App is a teacher-managed tool for preparing, calculating, reviewing, printing, and exporting class records, learner information, attendance records, grading sheets, reports, backups, and related school documents. The app is intended to support your work, not replace your professional judgment or the official requirements of your school, division, region, or the Department of Education.</p>
+        </section>
+        <section>
+          <h3>2. Your Responsibility for Records</h3>
+          <p>You are responsible for checking all learner names, LRNs, grades, attendance entries, assessment scores, formulas, generated reports, PDF exports, printed documents, backups, restored data, and submitted records before relying on or distributing them. You agree to verify the app's outputs against official policies, school instructions, source documents, and your own class records.</p>
+        </section>
+        <section>
+          <h3>3. Local Data and Device Security</h3>
+          <p>The app stores class data locally on your device and in backup files that you create or restore. You are responsible for protecting your device, user account, PIN, passwords, backup files, exported documents, printed records, and any copies shared outside the app. Do not store or share learner information in a way that violates school rules, privacy laws, or professional obligations.</p>
+        </section>
+        <section>
+          <h3>4. Backups and Data Loss</h3>
+          <p>You are responsible for making regular backups and checking that your backups can be restored. The app may provide backup, restore, import, export, and print features, but no feature can guarantee that data will never be lost, corrupted, overwritten, deleted, misread, or restored incorrectly. Keep separate backup copies in secure locations when records are important.</p>
+        </section>
+        <section>
+          <h3>5. Optional Online Features</h3>
+          <p>Most core record work is designed for local use. Some optional features may use internet access, including update checks, release notes, external support links, feedback links, sponsor or ad placements, donation links, documentation links, and other online resources. These online features may be unavailable, delayed, changed, blocked, or removed without affecting your responsibility to maintain accurate local records.</p>
+        </section>
+        <section>
+          <h3>6. Sponsors, Ads, Donations, and External Links</h3>
+          <p>The app may display support messages, donation prompts, sponsor placements, or ads to help sustain development. Sponsored or external content does not change your class records and should not be treated as official school guidance. When you open an external link, you may leave the app and interact with a third-party website or service under that party's own terms and privacy practices.</p>
+        </section>
+        <section>
+          <h3>7. No Warranty</h3>
+          <p>The app is provided as-is and as-available. No guarantee is made that the app, calculations, templates, imports, exports, reports, attendance tools, update checks, or policy-related wording will be accurate, complete, uninterrupted, secure, compatible with every device, or free from mistakes. You should independently review any output before using it for official purposes.</p>
+        </section>
+        <section>
+          <h3>8. Limitation of Liability</h3>
+          <p>To the fullest extent allowed by law, the developer, contributors, maintainers, and distributors are not liable for losses, damages, penalties, missed deadlines, incorrect submissions, data loss, privacy incidents, device issues, school compliance issues, or other consequences arising from use of the app, inability to use the app, reliance on generated outputs, or use of external services.</p>
+        </section>
+        <section>
+          <h3>9. Acceptable Use</h3>
+          <p>You agree to use the app only for lawful, professional, and authorized purposes. You must not use the app to falsify records, misrepresent learner performance, bypass school processes, upload or share data without authority, interfere with app security, reverse engineer protected portions where prohibited, or use the app in a way that harms learners, colleagues, schools, or systems.</p>
+        </section>
+        <section>
+          <h3>10. Intellectual Property</h3>
+          <p>The app's code, interface, design, text, bundled assets, and documentation belong to their respective owners and are protected by applicable intellectual property rules. You may use the app for its intended purpose, but you may not claim ownership of the app, redistribute modified versions without permission where permission is required, or remove ownership notices.</p>
+        </section>
+        <section>
+          <h3>11. Updates and Changes</h3>
+          <p>The app may be updated to add features, adjust behavior, fix issues, change sponsor or support messages, improve security, or revise these Terms. When the Terms version changes, you may be asked to review and accept the updated Terms before continuing to use the app.</p>
+        </section>
+        <section>
+          <h3>12. Support</h3>
+          <p>Support may be provided through the app, external links, community channels, or direct contact options when available. Support is not guaranteed, and response times may vary. You remain responsible for maintaining backups and verifying important outputs even when support is requested.</p>
+        </section>
+        <section>
+          <h3>13. Agreement</h3>
+          <p>By checking the acceptance box and continuing into the app, you confirm that you have read, understood, and agreed to these Terms &amp; Conditions of Service for the version shown above.</p>
+        </section>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-primary btn-sm" onclick="closeTermsModal()">Close</button>
       </div>
     </div>
   </div>
@@ -1035,6 +1181,21 @@
               Summary
             </label>
           </div>
+
+          <div id="completionReportControls" class="completion-report-controls" style="display:none">
+            <div class="field field--compact">
+              <label class="field-label">Completion Report Term</label>
+              <select id="completionReportTermSelect" class="field-select">
+                <option value="1">Term 1</option>
+                <option value="2">Term 2</option>
+                <option value="3">Term 3</option>
+              </select>
+            </div>
+            <div class="field field--compact completion-report-note-field">
+              <label class="field-label">Parent Note / Reminder</label>
+              <textarea id="completionReportNote" class="field-textarea completion-report-note" placeholder="Optional message to parents or guardians"></textarea>
+            </div>
+          </div>
         </div>
 
         <!-- The area showing the actual report/grades of the learner -->
@@ -1047,9 +1208,16 @@
       </div>
       <div class="modal__actions no-print-modal">
         <button class="btn btn-warn btn-sm" onclick="hideViewLearnerGradesModal()">Close</button>
+        <button id="openLearnerAttendanceBtn" class="btn btn-sm" onclick="openLearnerAttendanceLog(currentSelectedLearnerId)" style="display:none">
+          Open Attendance Log
+        </button>
         <button id="downloadLearnerGradesBtn" class="btn btn-primary btn-sm" onclick="downloadLearnerGradesPdf()" style="display:none">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           Download Grades Report
+        </button>
+        <button id="downloadCompletionReportBtn" class="btn btn-olive btn-sm" onclick="downloadLearnerCompletionReportPdf()" style="display:none">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15h6"></path><path d="M9 11h2"></path><path d="M9 19h4"></path></svg>
+          Download Completion Report
         </button>
       </div>
     </div>
@@ -1076,53 +1244,82 @@
       <div class="modal__title assessment-details-title">Assessment Details</div>
       <div class="modal__body assessment-details-body">
         <input type="hidden" id="assessmentDetailsId" />
-        <div id="assessmentDetailsSummary" class="assessment-details-summary"></div>
 
-        <div class="split-row assessment-details-fields">
-          <div class="field">
-            <label class="field-label">Assessment Title</label>
-            <input id="assessmentDetailsTitle" class="field-input" />
-          </div>
-          <div class="field">
-            <label class="field-label">Date</label>
-            <input id="assessmentDetailsDate" class="field-input" type="date" />
-          </div>
-        </div>
+        <div class="assessment-details-shell">
+          <div class="assessment-details-main">
+            <div id="assessmentDetailsSummary" class="assessment-details-summary"></div>
 
-        <div class="field assessment-description-field">
-          <label class="field-label">Description</label>
-          <div class="assessment-editor-toolbar">
-            <button type="button" class="btn btn-ghost btn-sm" onclick="formatAssessmentDescription('bold')" title="Bold"><strong>B</strong></button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="formatAssessmentDescription('italic')" title="Italic"><em>I</em></button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="formatAssessmentDescription('underline')" title="Underline"><u>U</u></button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="formatAssessmentDescription('insertUnorderedList')" title="Bullet List">List</button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="formatAssessmentDescription('insertOrderedList')" title="Numbered List">1. List</button>
-          </div>
-          <div id="assessmentDescriptionEditor" class="assessment-description-editor" contenteditable="true"></div>
-        </div>
-
-        <div class="assessment-attachments-panel">
-          <div class="assessment-attachments-header">
-            <div>
-              <div class="settings-row__title">Uploaded Files</div>
-              <div class="settings-row__desc">Attach documents, PDFs, or images related to this assessment.</div>
+            <div class="split-row assessment-details-fields">
+              <div class="field">
+                <label class="field-label">Assessment Title</label>
+                <input id="assessmentDetailsTitle" class="field-input" />
+              </div>
+              <div class="field">
+                <label class="field-label">Date</label>
+                <input id="assessmentDetailsDate" class="field-input" type="date" />
+              </div>
             </div>
-            <button class="btn btn-sm" type="button" onclick="uploadAssessmentAttachment()">Upload File</button>
-          </div>
-          <div id="assessmentAttachmentsList" class="assessment-attachments-list"></div>
-        </div>
 
-        <div class="assessment-danger-panel">
-          <div>
-            <div class="settings-row__title">Clear Scores</div>
-            <div class="settings-row__desc">Delete all learner scores for this assessment only. HPS, date, description, and files are preserved.</div>
+            <div class="field assessment-description-field">
+              <label class="field-label">Description</label>
+              <div class="assessment-editor-toolbar" role="toolbar" aria-label="Description formatting">
+                <button type="button" class="assessment-format-btn" onclick="formatAssessmentDescription('bold')" title="Bold" aria-label="Bold"><strong>B</strong></button>
+                <button type="button" class="assessment-format-btn" onclick="formatAssessmentDescription('italic')" title="Italic" aria-label="Italic"><em>I</em></button>
+                <button type="button" class="assessment-format-btn" onclick="formatAssessmentDescription('underline')" title="Underline" aria-label="Underline"><u>U</u></button>
+                <button type="button" class="assessment-format-btn" onclick="formatAssessmentDescription('insertUnorderedList')" title="Bullet List" aria-label="Bullet list">• List</button>
+                <button type="button" class="assessment-format-btn" onclick="formatAssessmentDescription('insertOrderedList')" title="Numbered List" aria-label="Numbered list">1. List</button>
+              </div>
+              <div id="assessmentDescriptionEditor" class="assessment-description-editor" contenteditable="true"></div>
+            </div>
           </div>
-          <button class="btn btn-ghost btn-sm" type="button" onclick="clearAssessmentScoresFromDetails()">Clear all students scores for this assessment</button>
+
+          <aside class="assessment-details-side">
+            <div class="assessment-attachments-panel">
+              <div class="assessment-attachments-header">
+                <div>
+                  <div class="settings-row__title">Uploaded Files</div>
+                  <div class="settings-row__desc">Attach documents, PDFs, or images related to this assessment.</div>
+                </div>
+                <button class="btn btn-sm" type="button" onclick="uploadAssessmentAttachment()">Upload File</button>
+              </div>
+              <div id="assessmentAttachmentsList" class="assessment-attachments-list"></div>
+            </div>
+
+            <div class="assessment-danger-panel">
+              <div>
+                <div class="settings-row__title">Clear Scores</div>
+                <div class="settings-row__desc">Delete all learner scores for this assessment only. HPS, date, description, and files are preserved.</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" type="button" onclick="clearAssessmentScoresFromDetails()">Clear all students scores for this assessment</button>
+            </div>
+          </aside>
         </div>
       </div>
-      <div class="modal__actions">
+      <div class="modal__actions assessment-details-actions">
         <button class="btn btn-warn btn-sm" onclick="closeAssessmentDetailsModal()">Cancel</button>
         <button class="btn btn-primary btn-sm" onclick="saveAssessmentDetails()">Save Details</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Owner Sidebar Ads Modal -->
+  <div id="ownerSidebarAdsModal" class="modal-overlay" style="display:none;">
+    <div class="modal modal--wide owner-sidebar-ads-modal">
+      <div class="modal__title">Sidebar Ads</div>
+      <div class="modal__body owner-sidebar-ads-body">
+        <div class="settings-row__desc owner-sidebar-ads-note">Edit one ad per block. Saved links update the global sidebar carousel for online app users.</div>
+        <div class="field owner-sidebar-ads-token">
+          <label class="field-label">Admin Token</label>
+          <input id="ownerSidebarAdsToken" class="field-input" type="password" autocomplete="off" placeholder="Cloudflare ADS_ADMIN_TOKEN" />
+        </div>
+        <div id="ownerSidebarAdsList" class="owner-sidebar-ads-list"></div>
+        <div id="ownerSidebarAdsStatus" class="settings-row__desc owner-sidebar-ads-status"></div>
+      </div>
+      <div class="modal__actions owner-sidebar-ads-actions">
+        <button class="btn btn-ghost btn-sm" type="button" onclick="addOwnerSidebarAdRow()">Add Link</button>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="resetOwnerSidebarAds()">Reset Defaults</button>
+        <button class="btn btn-warn btn-sm" type="button" onclick="closeSidebarAdOwnerModal()">Cancel</button>
+        <button id="ownerSidebarAdsSaveBtn" class="btn btn-primary btn-sm" type="button" onclick="saveOwnerSidebarAds()">Save Global Ads</button>
       </div>
     </div>
   </div>
@@ -1283,7 +1480,9 @@
                   'learner-1|ast-1': 15,
                   'learner-2|ast-1': 18,
                   'learner-1|ast-2': 16
-                }
+                },
+                supportRecords: [],
+                attendanceSessions: []
               }
             ]
           };
@@ -1292,7 +1491,7 @@
           console.log('Mock saveDatabase:', data);
           return true;
         },
-        getVersion: async () => '1.0.0-mock',
+        getVersion: async () => '1.4.5-mock',
         checkForUpdates: () => {},
         downloadUpdate: () => {},
         onMenuSave: () => {},
@@ -1315,14 +1514,18 @@
   <script src="js/dashboard.js"></script>
   <script src="js/quick-grade.js"></script>
   <script src="js/learner-grades.js"></script>
+  <script src="js/support-tracker.js"></script>
   <script src="js/mobile-sync.js"></script>
   <script src="js/integrity.js"></script>
   <script src="js/calendar.js"></script>
   <script src="js/help.js"></script>
+  <script src="js/community-helper.js"></script>
+  <script src="js/help-assistant.js"></script>
   <script src="js/tour.js"></script>
   <script src="js/class-analysis.js"></script>
   <script src="js/admin.js"></script>
+  <script src="js/ad-manager.js"></script>
   <script src="js/app.js"></script>
-  <script>initFontSize(); initSidebarResizer();</script>
+  <script>initFontSize(); initSidebarResizer(); if (typeof initSidebarAd === 'function') initSidebarAd();</script>
 </body>
 </html>

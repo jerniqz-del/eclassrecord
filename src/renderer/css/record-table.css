@@ -5,14 +5,19 @@ body[data-active-view="record"] .main {
 }
 
 #recordTable {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
   border-radius: var(--radius-card);
 }
 
 #recordTable .record-scroll,
 #finalTable {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
   overflow: auto;
-  max-height: calc(100vh - 390px);
 }
 
 /* ── Shared grid ─────────────────────────────────────────── */
@@ -136,6 +141,8 @@ body[data-active-view="record"] .main {
   background: var(--color-accent-50);
   border-color: var(--color-accent-200);
   font-weight: var(--font-weight-bold);
+  font-size: 12px;
+  text-align: center;
   color: var(--color-accent-700);
 }
 
@@ -304,6 +311,13 @@ body[data-active-view="record"] .main {
   font-size: 8.5px;
   font-weight: var(--font-weight-bold);
   white-space: nowrap;
+}
+
+#recordTable .record-grid .sheet-row-label .learner-cell {
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-accent-700);
+  letter-spacing: 0;
 }
 
 #recordTable .record-grid.is-ks2 .sheet-row-label td {

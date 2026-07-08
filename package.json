@@ -1,6 +1,6 @@
 {
   "name": "eclass-record",
-  "version": "1.3.3",
+  "version": "1.4.5",
   "description": "Local, teacher-owned class record for DepEd three-term and legacy grading workflows",
   "author": "E-Class Record App",
   "license": "MIT",
@@ -12,9 +12,13 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "build": "node scripts/obfuscate.js && electron-builder --win && git checkout src/",
-    "publish": "node scripts/obfuscate.js && electron-builder --win --publish always && git checkout src/",
-    "release": "node scripts/release.js"
+    "build": "node scripts/build-obfuscated.js --win",
+    "publish": "node scripts/build-obfuscated.js --win --publish always",
+    "release": "node scripts/release.js",
+    "safe-commit": "node scripts/safe-commit.js",
+    "stable-release": "node scripts/stable-release.js",
+    "update-checkpoint": "node scripts/update-checkpoint.js",
+    "community-relay": "node community-relay/server.js"
   },
   "dependencies": {
     "electron-updater": "^6.3.0",

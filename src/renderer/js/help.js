@@ -99,10 +99,30 @@ const HELP_TOPICS = [
     `
   },
   {
+    id: 'enroll_learners',
+    category: 'roster_management',
+    title: 'Adding or Enrolling Learners in a Class',
+    keywords: 'enroll enrollment enrol enrolment register add learner learners student students roster sf1 upload import bulk transferred transferee new learner class list lrn names teaching load',
+    content: `
+      <p>In this app, enrolling learners means adding them to the selected class roster in the <strong>Teaching Load</strong> page. You can add one learner manually or use one of the import shortcuts inside the Add New Learner modal.</p>
+      <h5>Ways to Add Learners:</h5>
+      <ol>
+        <li>Open <strong>Teaching Load</strong> from the sidebar.</li>
+        <li>Select the class where the learners should be added.</li>
+        <li>Click <strong>Add Learner</strong> in the Class Roster card.</li>
+        <li>For one learner, enter the LRN, name, and sex, then click <strong>Add Learner</strong>.</li>
+        <li>For many learners, use the shortcuts under <strong>Other Ways to Add Learners</strong>: <strong>Upload SF1</strong>, <strong>Import Roster from Other Class</strong>, <strong>Bulk Add Learners</strong>, or <strong>Import Transferred Learner</strong>.</li>
+      </ol>
+      <div class="help-highlight-box">
+        <strong>Tip:</strong> Use <strong>Upload SF1</strong> when you already have the official SF1 spreadsheet. Use <strong>Bulk Add Learners</strong> when you want to paste many names at once.
+      </div>
+    `
+  },
+  {
     id: 'add_learner',
     category: 'roster_management',
     title: 'Manually Adding Learners',
-    keywords: 'add learner student lrn first name last name middle name sex boy girl male female roster entry',
+    keywords: 'add learner learners enroll enrollment enrol enrolment student lrn first name last name middle name sex boy girl male female roster entry manual encode new learner',
     content: `
       <p>You can add students manually to a class roster one at a time using the Add Learner modal.</p>
       <h5>How to Add a Learner:</h5>
@@ -111,7 +131,7 @@ const HELP_TOPICS = [
         <li>Select your active class from the dropdown menu.</li>
         <li>Click the <strong>Add Learner</strong> button at the top-right of the Class Roster card.</li>
         <li>Provide the 12-digit <strong>LRN</strong> (Learner Reference Number), <strong>Last Name</strong>, <strong>First Name</strong>, <strong>Middle Name</strong> (optional), and select their <strong>Sex</strong> (Male or Female).</li>
-        <li>Press <strong>Enter</strong> or click <strong>Save</strong> to add the learner.</li>
+        <li>Press <strong>Enter</strong> or click <strong>Add Learner</strong> to save the learner.</li>
       </ol>
     `
   },
@@ -134,13 +154,14 @@ const HELP_TOPICS = [
     id: 'import_sf1',
     category: 'roster_management',
     title: 'Importing Roster from official SF1 Excel Spreadsheet',
-    keywords: 'import sf1 excel school form 1 load roster upload spreadsheet parse automatic copy',
+    keywords: 'import sf1 excel school form 1 load roster upload spreadsheet parse automatic copy enroll enrollment learner learners student list official lis',
     content: `
       <p>Avoid typing student profiles manually by importing the official <strong>School Form 1 (SF1)</strong> spreadsheet directly into the app.</p>
       <h5>Steps to Upload SF1:</h5>
       <ol>
         <li>Select the target class section in the <strong>Teaching Load</strong> view.</li>
-        <li>Click <strong>Upload SF1 Spreadsheet</strong> on the action toolbar.</li>
+        <li>Click <strong>Add Learner</strong> in the Class Roster card.</li>
+        <li>Click <strong>Upload SF1</strong> under <strong>Other Ways to Add Learners</strong>.</li>
         <li>Select the Excel sheet (.xls / .xlsx) from your computer.</li>
         <li>The system will extract student LRNs, names, and gender details automatically, filter out duplicates, and append them directly to the roster.</li>
       </ol>
@@ -153,13 +174,14 @@ const HELP_TOPICS = [
     id: 'import_roster_class',
     category: 'roster_management',
     title: 'Cloning and Importing Rosters from Other Classes',
-    keywords: 'clone copy roster import class other section load year merge overwrite combine duplicate',
+    keywords: 'clone copy roster import class other section load year merge overwrite combine duplicate enroll enrollment learners students same section',
     content: `
       <p>If you teach multiple subjects to the same section, you can copy the roster of one class load to another without re-typing or re-uploading spreadsheets.</p>
       <h5>How to Clone a Roster:</h5>
       <ol>
         <li>Open your target class load under <strong>Teaching Load</strong>.</li>
-        <li>Click the <strong>Import Roster from Other Class</strong> action button.</li>
+        <li>Click <strong>Add Learner</strong> in the Class Roster card.</li>
+        <li>Click <strong>Import Roster from Other Class</strong> under <strong>Other Ways to Add Learners</strong>.</li>
         <li>A modal will list all other classes configured in your profile. Select the source class.</li>
         <li>Choose a Mode:
           <ul>

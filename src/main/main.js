@@ -458,6 +458,114 @@ ipcMain.handle('shell:open-external', async (_event, url) => {
   await shell.openExternal(url);
 });
 
+function normalizePreviewText(value, limit) {
+  return String(value || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, limit);
+}
+
+function decodePreviewEntities(value) {
+  return String(value || '')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function getPreviewMeta(html, patterns) {
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      return decodePreviewEntities(match[1]);
+    }
+  }
+  return '';
+}
+
+function resolvePreviewImage(imageUrl, baseUrl) {
+  if (!imageUrl) return '';
+  try {
+    return new URL(imageUrl, baseUrl).toString();
+  } catch (err) {
+    return '';
+  }
+}
+
+function parseLinkPreview(html, url) {
+  const title = getPreviewMeta(html, [
+    /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["'][^>]*>/i,
+    /<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+    /<title[^>]*>([\s\S]*?)<\/title>/i
+  ]);
+  const description = getPreviewMeta(html, [
+    /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:description["'][^>]*>/i,
+    /<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+    /<meta[^>]+name=["']twitter:description["'][^>]+content=["']([^"']+)["'][^>]*>/i
+  ]);
+  const image = getPreviewMeta(html, [
+    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["'][^>]*>/i,
+    /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["'][^>]*>/i
+  ]);
+  const siteName = getPreviewMeta(html, [
+    /<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["'][^>]*>/i
+  ]);
+
+  return {
+    title: normalizePreviewText(title, 120),
+    description: normalizePreviewText(description, 220),
+    imageUrl: resolvePreviewImage(normalizePreviewText(image, 500), url),
+    siteName: normalizePreviewText(siteName, 80),
+    url
+  };
+}
+
+async function fetchLinkPreview(url) {
+  let parsed;
+  try {
+    parsed = new URL(String(url || '').trim());
+  } catch (err) {
+    return { success: false, error: 'Invalid URL.' };
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return { success: false, error: 'Unsupported URL.' };
+  }
+
+  if (typeof fetch !== 'function') {
+    return { success: false, error: 'Preview fetch is unavailable.' };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6000);
+  try {
+    const response = await fetch(parsed.toString(), {
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        'user-agent': 'E-Class Record Link Preview'
+      }
+    });
+    const contentType = response.headers.get('content-type') || '';
+    if (!response.ok || !/text\/html|application\/xhtml\+xml/i.test(contentType)) {
+      return { success: false, error: 'Preview is unavailable.' };
+    }
+    const html = (await response.text()).slice(0, 250000);
+    return { success: true, preview: parseLinkPreview(html, response.url || parsed.toString()) };
+  } catch (err) {
+    return { success: false, error: 'Preview request failed.' };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+ipcMain.handle('link-preview:fetch', async (_event, url) => fetchLinkPreview(url));
+
 ipcMain.handle('app:confirm-exit', () => {
   isConfirmedExit = true;
   app.exit(0);

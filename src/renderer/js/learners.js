@@ -19,7 +19,7 @@ function showAddLearnerModal() {
   overlay.className = 'modal-overlay';
   overlay.style.zIndex = '12000';
   overlay.innerHTML = `
-    <div class="modal" style="max-width: 500px; width: 90%;">
+    <div class="modal" style="max-width: 620px; width: 92%;">
       <div class="modal__title">Add New Learner</div>
       <div class="modal__body">
         <div class="field" style="margin-bottom: var(--space-3);">
@@ -50,6 +50,15 @@ function showAddLearnerModal() {
             </select>
           </div>
         </div>
+        <div class="add-learner-shortcuts">
+          <div class="add-learner-shortcuts__title">Other ways to add learners</div>
+          <div class="add-learner-shortcuts__grid">
+            <button type="button" class="btn btn-success btn-sm" id="btnAddLearnerUploadSf1">Upload SF1</button>
+            <button type="button" class="btn btn-success btn-sm" id="btnAddLearnerImportRoster">Import Roster from Other Class</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btnAddLearnerBulkAdd">Bulk Add Learners</button>
+            <button type="button" class="btn btn-olive btn-sm" id="btnAddLearnerTransferred">Import Transferred Learner</button>
+          </div>
+        </div>
       </div>
       <div class="modal__actions">
         <button class="btn btn-warn btn-sm" id="btnCancelAddLearner">Cancel</button>
@@ -64,6 +73,18 @@ function showAddLearnerModal() {
   };
 
   overlay.querySelector('#btnCancelAddLearner').addEventListener('click', close);
+
+  const openShortcut = (handler) => {
+    close();
+    setTimeout(() => {
+      if (typeof handler === 'function') handler();
+    }, 0);
+  };
+
+  overlay.querySelector('#btnAddLearnerUploadSf1').addEventListener('click', () => openShortcut(importSf1));
+  overlay.querySelector('#btnAddLearnerImportRoster').addEventListener('click', () => openShortcut(showImportRosterModal));
+  overlay.querySelector('#btnAddLearnerBulkAdd').addEventListener('click', () => openShortcut(showBulkAddLearnersModal));
+  overlay.querySelector('#btnAddLearnerTransferred').addEventListener('click', () => openShortcut(initiateLearnerImport));
 
   const lrnInput = overlay.querySelector('#modalLearnerLrn');
   const lastInput = overlay.querySelector('#modalLearnerLast');
@@ -338,7 +359,7 @@ function renderLearnersRoster() {
           <th style="padding:var(--space-2);width:25%">LRN</th>
           <th style="padding:var(--space-2)">Name</th>
           <th style="padding:var(--space-2);width:15%">Sex</th>
-          <th style="padding:var(--space-2);width:10%;text-align:center">Action</th>
+          <th style="padding:var(--space-2);width:22%;text-align:center">Action</th>
         </tr>
       </thead>
       <tbody>
@@ -384,12 +405,19 @@ function renderLearnersRoster() {
         <td style="padding:var(--space-2)"><strong>${esc(learnerDisplayName(l))}</strong>${badgeHtml}</td>
         <td style="padding:var(--space-2)">${esc(l.sex || '—')}</td>
         <td style="padding:var(--space-2);text-align:center">
-          ${exportBtnHtml}
-          <button class="btn btn-warn btn-sm" style="padding:var(--space-1) var(--space-2)" 
-            title="Manage status and removal" 
-            onclick="removeLearner('${esc(l.id)}')">
-            Manage
-          </button>
+          <div class="roster-row-actions">
+            ${exportBtnHtml}
+            <button class="btn btn-olive btn-sm" style="padding:var(--space-1) var(--space-2)"
+              title="Transfer learner to another class"
+              onclick="showEasyLearnerTransferModal('${esc(l.id)}')">
+              Transfer
+            </button>
+            <button class="btn btn-warn btn-sm" style="padding:var(--space-1) var(--space-2)"
+              title="Manage status and removal"
+              onclick="removeLearner('${esc(l.id)}')">
+              Manage
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -397,6 +425,209 @@ function renderLearnersRoster() {
   
   html += '</tbody></table>';
   target.innerHTML = html;
+}
+
+/**
+ * Lists classes that can receive a learner from the current class.
+ */
+function transferableAssignments(sourceAssignment) {
+  if (!sourceAssignment) return [];
+  return (db.assignments || [])
+    .filter(item => item.id !== sourceAssignment.id)
+    .sort((left, right) => {
+      const yearDiff = String(right.schoolYear || '').localeCompare(String(left.schoolYear || ''));
+      if (yearDiff) return yearDiff;
+      const gradeDiff = String(left.gradeLevel || '').localeCompare(String(right.gradeLevel || ''), undefined, { numeric: true });
+      if (gradeDiff) return gradeDiff;
+      return String(left.section || '').localeCompare(String(right.section || ''));
+    });
+}
+
+function learnerAlreadyExistsInAssignment(targetAssignment, learner) {
+  return (targetAssignment.learners || []).some(item => {
+    const lrnMatch = item.lrn && learner.lrn && item.lrn === learner.lrn;
+    const nameMatch = String(item.lastName || '').toLowerCase() === String(learner.lastName || '').toLowerCase() &&
+      String(item.firstName || '').toLowerCase() === String(learner.firstName || '').toLowerCase();
+    return lrnMatch || nameMatch;
+  });
+}
+
+function learnerHasRecordedGrades(assignment, learner) {
+  if (!assignment || !learner) return false;
+
+  if (learner.transferredInGrades && Object.keys(learner.transferredInGrades).length > 0) {
+    return true;
+  }
+
+  const scorePrefix = `${learner.id}|`;
+  return Object.entries(assignment.scores || {}).some(([key, value]) => {
+    if (!key.startsWith(scorePrefix)) return false;
+    return value !== null && value !== undefined && String(value).trim() !== '';
+  });
+}
+
+function sortAssignmentLearners(assignment) {
+  if (!assignment || !Array.isArray(assignment.learners)) return;
+  assignment.learners.sort((x, y) => {
+    const sx = sexRank(x.sex);
+    const sy = sexRank(y.sex);
+    if (sx !== sy) return sx - sy;
+    const ax = learnerDisplayName(x).toLowerCase();
+    const ay = learnerDisplayName(y).toLowerCase();
+    return ax.localeCompare(ay, 'fil');
+  });
+}
+
+function createTransferTargetLearner(learner, completedTermGrades) {
+  const targetLearner = {
+    id: uid('learner'),
+    lrn: learner.lrn || '',
+    lastName: learner.lastName,
+    firstName: learner.firstName,
+    middleName: learner.middleName || '',
+    sex: learner.sex,
+    transferredInGrades: completedTermGrades
+  };
+  targetLearner.displayName = formatLearnerName(targetLearner.lastName, targetLearner.firstName, targetLearner.middleName);
+  return targetLearner;
+}
+
+function executeDirectLearnerTransfer(sourceAssignment, learner, targetAssignment, term) {
+  if (!sourceAssignment || !learner || !targetAssignment) return false;
+  const transferTerm = String(term || '1');
+
+  if (learnerAlreadyExistsInAssignment(targetAssignment, learner)) {
+    toast(`Transfer failed: learner is already registered in ${targetAssignment.gradeLevel} - ${targetAssignment.section}.`, 'error');
+    return false;
+  }
+
+  const hasRecordedGrades = learnerHasRecordedGrades(sourceAssignment, learner);
+
+  if (!Array.isArray(targetAssignment.learners)) targetAssignment.learners = [];
+
+  if (!hasRecordedGrades) {
+    sourceAssignment.learners = (sourceAssignment.learners || []).filter(item => item.id !== learner.id);
+    delete learner.transferredOutTerm;
+    delete learner.transferredInGrades;
+    targetAssignment.learners.push(learner);
+    sortAssignmentLearners(sourceAssignment);
+    sortAssignmentLearners(targetAssignment);
+    saveDatabase();
+    render();
+    toast(`Moved ${learnerDisplayName(learner)} to ${targetAssignment.gradeLevel} - ${targetAssignment.section} as a clean roster correction.`, 'success');
+    return true;
+  }
+
+  learner.transferredOutTerm = transferTerm;
+
+  const completedTermGrades = {};
+  for (let t = 1; t <= parseInt(transferTerm, 10); t++) {
+    const grade = getLearnerTermGradeForExport(sourceAssignment, learner.id, String(t));
+    if (grade !== null && grade !== undefined && grade !== '') {
+      completedTermGrades[String(t)] = grade;
+    }
+  }
+
+  targetAssignment.learners.push(createTransferTargetLearner(learner, completedTermGrades));
+  sortAssignmentLearners(targetAssignment);
+
+  saveDatabase();
+  render();
+  toast(`Successfully transferred ${learnerDisplayName(learner)} to ${targetAssignment.gradeLevel} - ${targetAssignment.section}.`, 'success');
+  return true;
+}
+
+/**
+ * Opens a compact transfer-only modal for moving a learner between classes.
+ */
+function showEasyLearnerTransferModal(learnerId) {
+  const sourceAssignment = currentAssignment();
+  if (!sourceAssignment) return;
+
+  const learner = (sourceAssignment.learners || []).find(item => item.id === learnerId);
+  if (!learner) return;
+
+  const targets = transferableAssignments(sourceAssignment);
+  if (targets.length === 0) {
+    toast('Add another class first before transferring a learner.', 'warning');
+    return;
+  }
+  const hasRecordedGrades = learnerHasRecordedGrades(sourceAssignment, learner);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '12000';
+  overlay.innerHTML = `
+    <div class="modal easy-transfer-modal">
+      <div class="modal__title">Transfer Learner</div>
+      <div class="modal__body">
+        <div class="easy-transfer-summary">
+          <strong>${esc(learnerDisplayName(learner))}</strong>
+          <span>${esc(sourceAssignment.gradeLevel)} - ${esc(sourceAssignment.section)} (${esc(sourceAssignment.subject)})</span>
+        </div>
+        <div class="field">
+          <label class="field-label">Transfer to Class</label>
+          <select id="easyTransferClassSelect" class="field-select">
+            <option value="">Select target class</option>
+            ${targets.map(target => `
+              <option value="${esc(target.id)}">${esc(target.schoolYear || '')} - Grade ${esc(target.gradeLevel)} ${esc(target.section)} (${esc(target.subject)})</option>
+            `).join('')}
+          </select>
+        </div>
+        ${hasRecordedGrades ? `
+        <div class="field">
+          <label class="field-label">Completed Terms to Carry Over</label>
+          <select id="easyTransferTermSelect" class="field-select">
+            <option value="1">Term 1 only</option>
+            <option value="2">Terms 1 and 2</option>
+            <option value="3">Terms 1, 2, and 3</option>
+          </select>
+          <div class="text-xs text-muted" style="margin-top: 6px;">
+            The learner will be marked Transferred Out in the current class and added as Transferred In to the selected class.
+          </div>
+        </div>
+        ` : `
+        <div class="easy-transfer-summary">
+          <strong>Clean roster correction</strong>
+          <span>No scores have been recorded yet, so this will simply move the learner to the selected class without Transferred In/Out labels.</span>
+        </div>
+        `}
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-ghost btn-sm" id="btnCancelEasyTransfer">Cancel</button>
+        <button class="btn btn-olive btn-sm" id="btnConfirmEasyTransfer" disabled>Transfer Learner</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+
+  const targetSelect = overlay.querySelector('#easyTransferClassSelect');
+  const termSelect = overlay.querySelector('#easyTransferTermSelect');
+  const confirmBtn = overlay.querySelector('#btnConfirmEasyTransfer');
+
+  overlay.querySelector('#btnCancelEasyTransfer').addEventListener('click', close);
+  targetSelect.addEventListener('change', () => {
+    confirmBtn.disabled = !targetSelect.value;
+  });
+  confirmBtn.addEventListener('click', () => {
+    const targetAssignment = db.assignments.find(item => item.id === targetSelect.value);
+    if (!targetAssignment) return;
+
+    close();
+    confirmModal(
+      'Confirm Learner Transfer',
+      hasRecordedGrades
+        ? `Transfer ${learnerDisplayName(learner)} to Grade ${targetAssignment.gradeLevel} - ${targetAssignment.section} and mark them Transferred Out after Term ${termSelect.value}?`
+        : `Move ${learnerDisplayName(learner)} to Grade ${targetAssignment.gradeLevel} - ${targetAssignment.section} as a clean roster correction? No Transferred In/Out status will be added because no scores are recorded yet.`,
+      () => executeDirectLearnerTransfer(sourceAssignment, learner, targetAssignment, termSelect ? termSelect.value : '1')
+    );
+  });
+
+  setTimeout(() => targetSelect.focus(), 80);
 }
 
 /**
@@ -411,12 +642,17 @@ function removeLearner(learnerId) {
   
   const isTransferredOut = !!learner.transferredOutTerm;
   const isTransferredIn = !!learner.transferredInGrades;
-  const otherAssignments = (db.assignments || []).filter(x => x.id !== a.id);
+  const otherAssignments = transferableAssignments(a);
+  const hasRecordedGrades = learnerHasRecordedGrades(a, learner);
 
   const transferSectionHtml = otherAssignments.length > 0 ? `
         <div style="border-bottom: 1px solid var(--border-color); margin-bottom: var(--space-4); padding-bottom: var(--space-4);">
           <h3 style="margin-top: 0; margin-bottom: var(--space-2); font-size: var(--font-size-md); font-weight: 600; color: var(--text-primary);">Transfer Student Directly</h3>
-          <p style="margin-top:0; font-size: 12px; color: var(--text-secondary);">Directly move this student to another class in this profile, preserving completed term grades.</p>
+          <p style="margin-top:0; font-size: 12px; color: var(--text-secondary);">
+            ${hasRecordedGrades
+              ? 'Directly transfer this student to another class in this profile, preserving completed term grades.'
+              : 'No scores have been recorded yet, so this will move the student as a clean roster correction with no Transferred In/Out labels.'}
+          </p>
           
           <div style="display: flex; gap: var(--space-2); align-items: flex-end;">
             <div class="field" style="flex: 1; margin-bottom: 0;">
@@ -428,6 +664,7 @@ function removeLearner(learnerId) {
                 `).join('')}
               </select>
             </div>
+            ${hasRecordedGrades ? `
             <div class="field" style="width: 140px; margin-bottom: 0;">
               <label class="field-label">Transfer Term</label>
               <select id="directTransferTermSelect" class="field-select">
@@ -436,9 +673,10 @@ function removeLearner(learnerId) {
                 <option value="3">Terms 1, 2 & 3</option>
               </select>
             </div>
+            ` : ''}
           </div>
           <button class="btn btn-olive btn-sm" id="btnDirectTransferSubmit" style="width: 100%; margin-top: var(--space-3);" disabled>
-            Execute Direct Transfer
+            ${hasRecordedGrades ? 'Execute Direct Transfer' : 'Move to Selected Class'}
           </button>
         </div>
   ` : '';
@@ -447,7 +685,7 @@ function removeLearner(learnerId) {
   overlay.className = 'modal-overlay';
   overlay.style.zIndex = '12000';
   overlay.innerHTML = `
-    <div class="modal" style="max-width: 500px; width: 90%;">
+    <div class="modal learner-manage-modal">
       <div class="modal__title">Manage Learner: ${esc(learnerDisplayName(learner))}</div>
       <div class="modal__body">
         ${(isTransferredOut || isTransferredIn) ? `
@@ -540,63 +778,20 @@ function removeLearner(learnerId) {
 
     transferSubmitBtn.addEventListener('click', () => {
       const targetClassId = transferClassSelect.value;
-      const term = overlay.querySelector('#directTransferTermSelect').value;
+      const directTermSelect = overlay.querySelector('#directTransferTermSelect');
+      const term = directTermSelect ? directTermSelect.value : '1';
       
       const targetAsg = db.assignments.find(x => x.id === targetClassId);
       if (!targetAsg) return;
-
-      const isDuplicate = targetAsg.learners.some(l => {
-        const lrnMatch = l.lrn && learner.lrn && l.lrn === learner.lrn;
-        const nameMatch = l.lastName.toLowerCase() === learner.lastName.toLowerCase() &&
-                          l.firstName.toLowerCase() === learner.firstName.toLowerCase();
-        return lrnMatch || nameMatch;
-      });
-      if (isDuplicate) {
-        toast(`Transfer failed: Student is already registered in ${targetAsg.gradeLevel} - ${targetAsg.section}.`, 'error');
-        return;
-      }
 
       close();
 
       confirmModal(
         'Confirm Direct Transfer',
-        `Are you sure you want to transfer ${learnerDisplayName(learner)} directly to ${targetAsg.gradeLevel} - ${targetAsg.section}? This will also mark them as Transferred Out in the current class after Term ${term}.`,
-        () => {
-          learner.transferredOutTerm = term;
-
-          const compGrades = {};
-          for (let t = 1; t <= parseInt(term); t++) {
-            const g = getLearnerTermGradeForExport(a, learner.id, String(t));
-            if (g !== null && g !== undefined && g !== '') {
-              compGrades[String(t)] = g;
-            }
-          }
-
-          const targetLearner = {
-            id: uid('learner'),
-            lrn: learner.lrn || '',
-            lastName: learner.lastName,
-            firstName: learner.firstName,
-            middleName: learner.middleName || '',
-            sex: learner.sex,
-            transferredInGrades: compGrades
-          };
-          targetLearner.displayName = formatLearnerName(targetLearner.lastName, targetLearner.firstName, targetLearner.middleName);
-
-          targetAsg.learners.push(targetLearner);
-          targetAsg.learners.sort((x, y) => {
-            const sx = sexRank(x.sex);
-            const sy = sexRank(y.sex);
-            if (sx !== sy) return sx - sy;
-            const ax = learnerDisplayName(x).toLowerCase();
-            const ay = learnerDisplayName(y).toLowerCase();
-            return ax.localeCompare(ay, 'fil');
-          });
-
-          saveDatabase();
-          render();
-          toast(`Successfully transferred ${learnerDisplayName(learner)} to ${targetAsg.gradeLevel} - ${targetAsg.section}!`, 'success');
-        }
+        hasRecordedGrades
+          ? `Are you sure you want to transfer ${learnerDisplayName(learner)} directly to ${targetAsg.gradeLevel} - ${targetAsg.section}? This will also mark them as Transferred Out in the current class after Term ${term}.`
+          : `Move ${learnerDisplayName(learner)} directly to ${targetAsg.gradeLevel} - ${targetAsg.section} as a clean roster correction? No Transferred In/Out status will be added because no scores are recorded yet.`,
+        () => executeDirectLearnerTransfer(a, learner, targetAsg, term)
       );
     });
   }

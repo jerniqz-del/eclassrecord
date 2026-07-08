@@ -2,11 +2,20 @@
 dist/
 out/
 
+# Local restore points and temporary checks
+.recovery-backups/
+.tmp-checks/
+.agents/
+AGENTS.md
+RTK.md
+SF 2 Daily Attendance.xlsx
+
 # Dependencies
 node_modules/
 
 # Local runtime data (generated per-user at runtime)
 data.json
+community-relay/data/
 
 # Electron packager cache
 .electron-builder-cache/

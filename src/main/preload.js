@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   downloadUpdate: () => ipcRenderer.invoke('updater:download'),
   quitAndInstall: () => ipcRenderer.invoke('updater:quit-and-install'),
   openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
+  fetchLinkPreview: (url) => ipcRenderer.invoke('link-preview:fetch', url),
 
   // Menu Event Listeners (Main to Renderer)
   onMenuSave: (callback) => ipcRenderer.on('menu-save', (_event) => callback()),

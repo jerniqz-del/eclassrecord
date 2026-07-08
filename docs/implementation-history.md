@@ -2,7 +2,7 @@
 
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
-Current app version: 1.3.3
+Current app version: 1.4.5
 Last reviewed: 2026-06-28
 
 ## 1. Project Foundation
@@ -54,6 +54,7 @@ Implemented changes:
 - Added SF1 spreadsheet import for `.xlsx`, `.xls`, `.csv`, and text-style roster sources.
 - Added roster cloning between class loads with merge and overwrite modes.
 - Added direct student transfer support with transferred-out and transferred-in grade handling.
+- Added the v1.4.0 Attendance Tracker for class-scoped attendance event logs.
 
 Worked patches:
 
@@ -64,6 +65,7 @@ Adjusted patches:
 
 - SF1 parsing was broadened to handle multiple file formats and noisy spreadsheet rows.
 - Transfer handling was adjusted so transferred learners are represented correctly in grade calculations and learner reports.
+- Learner deletion and class roster Clear All now remove attendance records along with learner scores.
 
 ## 4. Score Entry And Reporting
 
@@ -73,6 +75,7 @@ Implemented changes:
 - Added HPS editing rows and score validation.
 - Added Quick Grade Entry for sequential score input.
 - Added learner progress cards with term toggles and PDF/download support.
+- Added individual learner Term Completion Report PDFs for parent communication about pending outputs/tests.
 - Added print, PDF, CSV, JSON backup, and Excel template export paths.
 
 Worked patches:
@@ -190,8 +193,10 @@ Implemented changes:
 - Added database integrity UI in Settings.
 - Restored and merged usability patches through version 1.2.2.
 - Restored and merged usability patches through version 1.3.0.
-- Added v1.3.2 data-safety hardening and class record PDF pagination fixes before the Attendance + Intervention Tracker roadmap work.
+- Added v1.3.2 data-safety hardening and class record PDF pagination fixes before the attendance tracker roadmap work.
 - Added v1.3.3 Summary page density, term-color grouping, LRN removal, Initial Grade columns, fixed body row heights, welcome modal resizing, larger record typography, explicit zoom-default saving, Teaching Load roster Clear All, and print/PDF polish.
+- Added v1.4.0 Attendance Tracker as the first attendance feature release, with a monthly attendance grid, roll-call modal, class-scoped records, filters, statuses, and printable/PDF logs.
+- Added v1.4.5 public update work: global sidebar ads through the Cloudflare relay, hidden owner ad editing, Help Assistant polish, Dashboard grid/list and drag ordering, easy learner transfer, modal polish, Teaching Load and Grading Sheet layout refinements, and release safety helpers.
 
 Worked patches:
 
@@ -223,8 +228,10 @@ Adjusted patches:
 | v1.2.0 to v1.2.1 | Prepared release line before v1.2.2. | Continued release packaging. |
 | v1.2.2 | Added auto-close and relaunch after update download. | Update workflow was adjusted for cleaner install completion. |
 | v1.3.0 | Restored and merged usability patches up to v1.2.2, including CSS optimization, sticky record headers, simple column sorting, modal layering fixes, Class Progress Report wrapping, and release-note polish. | Established the checkpoint for the next roadmap phase. |
-| v1.3.2 | Hardened database version normalization, save metadata, manual backup metadata, pre-save database snapshots, and class record PDF pagination. | Data-safety and print/PDF patch so only the active sheet exports and full learner rosters are not clipped before adding Attendance + Intervention Tracker records. |
+| v1.3.2 | Hardened database version normalization, save metadata, manual backup metadata, pre-save database snapshots, and class record PDF pagination. | Data-safety and print/PDF patch so only the active sheet exports and full learner rosters are not clipped before adding attendance records. |
 | v1.3.3 | Matched Summary page row density to the compact term record table, added color-themed term/final groups, removed LRN from Summary output, added per-term Initial Grade columns, fixed body row heights, enlarged learner/header/title/PDF detail typography, made the Welcome modal viewport-aware, added explicit zoom-default saving, added Teaching Load roster Clear All, wrapped Summary PDF remarks, and balanced Summary/PDF column widths. | Visual polish and roster-management patch for Summary, Welcome, term records, zoom controls, Teaching Load, and PDF output; no grading formulas or data structures changed. |
+| v1.4.0 | Added a dedicated Attendance Tracker with monthly weekday grid, week color grouping, roll-call modal, class/learner attendance analytics, absence highlighting, and Attendance Log print/PDF output. | Minor feature release for attendance documentation; grades, formulas, scores, assessments, and summaries are unchanged. |
+| v1.4.5 | Added global sidebar sponsor ads through the Cloudflare relay, hidden owner ad editing, Dashboard grid/list view and class card drag ordering, easy learner transfer, Help Assistant/community polish, Terms/What's New separation, Teaching Load and Grading Sheet layout improvements, Attendance/SF2 polish, modal Escape behavior, and safe checkpoint/release helpers. | Public update release that restores the full v1.4 feature set and prepares the app for managed online sponsor content while keeping core class record data compatible. |
 
 ## Current Follow-Up Checks
 

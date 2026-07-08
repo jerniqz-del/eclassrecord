@@ -286,8 +286,11 @@ function initFontSize() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       hideZoomMenus();
+      closeTopmostModalOnEscape(e);
     }
   });
+
+  initAttendanceRollCallPolish();
 }
 
 /**
@@ -338,6 +341,179 @@ function hideZoomMenus() {
   const defaultMenu = document.getElementById('zoomDefaultMenu');
   if (dropdown) dropdown.style.display = 'none';
   if (defaultMenu) defaultMenu.style.display = 'none';
+}
+
+const MODAL_ESCAPE_CLOSE_HANDLERS = {
+  assessmentDetailsModal: 'closeAssessmentDetailsModal',
+  classAnalysisModal: 'closeClassAnalysisModal',
+  attendanceSf2PreviewModal: 'closeAttendanceSf2PreviewModal',
+  attendanceSf2OptionsModal: 'closeAttendanceSf2OptionsModal',
+  whatsNewModal: 'closeWhatsNewModal',
+  termsModal: 'closeTermsModal',
+  welcomeModal: 'closeWelcomeModal',
+  donateModal: 'closeDonateModal',
+  donateQrModal: 'closeDonateQrModal',
+  quickGradeModal: 'closeQuickGradeModal',
+  viewLearnerGradesModal: 'closeViewLearnerGradesModal',
+  importRosterModal: 'closeImportRosterModal',
+  bulkAddLearnersModal: 'closeBulkAddLearnersModal',
+  helpAssistantCommunityModal: 'closeHelpAssistantCommunityModal',
+  ownerSidebarAdsModal: 'closeSidebarAdOwnerModal'
+};
+
+function isVisibleModalOverlay(modal) {
+  if (!modal || !modal.classList || !modal.classList.contains('modal-overlay')) return false;
+  const style = window.getComputedStyle(modal);
+  return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+}
+
+function getModalZIndex(modal) {
+  const value = Number.parseInt(window.getComputedStyle(modal).zIndex, 10);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function getTopmostVisibleModal() {
+  return Array.from(document.querySelectorAll('.modal-overlay'))
+    .filter(isVisibleModalOverlay)
+    .map((modal, index) => ({ modal, index, zIndex: getModalZIndex(modal) }))
+    .sort((a, b) => (b.zIndex - a.zIndex) || (b.index - a.index))[0]?.modal || null;
+}
+
+function isWelcomeGateBlocking(modal) {
+  if (!modal || modal.id !== 'welcomeModal') return false;
+  const closeBtn = document.getElementById('welcomeCloseBtn');
+  if (closeBtn && closeBtn.disabled) return true;
+  if (typeof hasAcceptedCurrentTerms === 'function' && !hasAcceptedCurrentTerms()) return true;
+  return false;
+}
+
+function closeModalWithKnownHandler(modal) {
+  if (!modal || !modal.id) return false;
+  const handlerName = MODAL_ESCAPE_CLOSE_HANDLERS[modal.id];
+  const handler = handlerName && window[handlerName];
+  if (typeof handler !== 'function') return false;
+  handler();
+  return true;
+}
+
+function isModalButtonVisible(button) {
+  if (!button || button.disabled) return false;
+  const style = window.getComputedStyle(button);
+  return style.display !== 'none' && style.visibility !== 'hidden';
+}
+
+function isDestructiveModalButton(button) {
+  const text = `${button.textContent || ''} ${button.title || ''} ${button.getAttribute('aria-label') || ''}`.toLowerCase();
+  return /\b(clear|delete|remove|reset|erase|overwrite|restore|discard)\b/.test(text);
+}
+
+function isCancelModalButton(button) {
+  const text = `${button.textContent || ''} ${button.title || ''} ${button.getAttribute('aria-label') || ''}`.trim().toLowerCase();
+  return /^(cancel|close|dismiss|no|back)$/.test(text) || /\b(cancel|close|dismiss)\b/.test(text);
+}
+
+function findSafeCancelButton(modal) {
+  const buttons = Array.from(modal.querySelectorAll('button')).filter(isModalButtonVisible);
+  return buttons.find(button => button.matches('[data-modal-cancel], [data-dismiss="modal"]') && !isDestructiveModalButton(button))
+    || buttons.find(button => isCancelModalButton(button) && !isDestructiveModalButton(button))
+    || buttons.find(button => !button.classList.contains('btn-primary') && !isDestructiveModalButton(button))
+    || null;
+}
+
+function cancelUnknownModal(modal) {
+  const cancelButton = findSafeCancelButton(modal);
+  if (cancelButton && typeof cancelButton.click === 'function') {
+    cancelButton.click();
+    return;
+  }
+
+  if (modal.id) {
+    showEl(modal.id, false);
+    return;
+  }
+
+  modal.remove();
+}
+
+function closeTopmostModalOnEscape(event) {
+  if (!event || event.key !== 'Escape' || event.isComposing) return false;
+  const modal = getTopmostVisibleModal();
+  if (!modal || isWelcomeGateBlocking(modal)) return false;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (!closeModalWithKnownHandler(modal)) {
+    cancelUnknownModal(modal);
+  }
+
+  return true;
+}
+
+function getCurrentRollCallTerm() {
+  const currentTerm = (typeof db !== 'undefined' && db && db.currentTerm) ? db.currentTerm : '';
+  if (currentTerm) return String(currentTerm);
+  const rollCallTerm = (typeof attendanceRollCallState !== 'undefined' && attendanceRollCallState && attendanceRollCallState.term) ? attendanceRollCallState.term : '';
+  if (rollCallTerm) return String(rollCallTerm);
+  return '1';
+}
+
+function syncRollCallTermState() {
+  const term = getCurrentRollCallTerm();
+  if (typeof attendanceRollCallState !== 'undefined' && attendanceRollCallState && typeof attendanceRollCallState === 'object') {
+    attendanceRollCallState.term = term;
+  }
+  return term;
+}
+
+function hideRollCallTermControl(toolbar) {
+  const termSelectors = Array.from(toolbar.querySelectorAll('select, input')).filter((control) => {
+    const field = control.closest('.field, .form-group, label, .attendance-roll-call__control');
+    const labelText = field ? field.textContent : '';
+    const identity = `${control.id || ''} ${control.name || ''} ${control.getAttribute('aria-label') || ''} ${labelText}`;
+    return /\bterm\b/i.test(identity);
+  });
+
+  termSelectors.forEach((control) => {
+    const field = control.closest('.field, .form-group, label, .attendance-roll-call__control') || control.parentElement;
+    if (field) field.style.display = 'none';
+    control.setAttribute('aria-hidden', 'true');
+    control.tabIndex = -1;
+  });
+
+  Array.from(toolbar.querySelectorAll('label, .field-label, .settings-row__title')).forEach((label) => {
+    if (!/\bterm\b/i.test(label.textContent || '')) return;
+    const field = label.closest('.field, .form-group, .attendance-roll-call__control') || label.parentElement;
+    if (field) field.style.display = 'none';
+  });
+}
+
+function polishAttendanceRollCallModal(root = document) {
+  const modal = root.querySelector?.('.attendance-roll-call-modal') || document.querySelector('.attendance-roll-call-modal');
+  if (!modal) return;
+  const toolbar = modal.querySelector('.attendance-roll-call__toolbar');
+  if (!toolbar) return;
+
+  syncRollCallTermState();
+  hideRollCallTermControl(toolbar);
+  toolbar.querySelectorAll('.attendance-roll-call__term-badge').forEach(badge => badge.remove());
+}
+
+let attendanceRollCallPolishObserver = null;
+
+function initAttendanceRollCallPolish() {
+  if (attendanceRollCallPolishObserver || !document.body) return;
+  polishAttendanceRollCallModal();
+  attendanceRollCallPolishObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          polishAttendanceRollCallModal(node);
+        }
+      }
+    }
+  });
+  attendanceRollCallPolishObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 function updateZoomDefaultMenuState() {
@@ -442,6 +618,81 @@ function alertModal(title, message, onOk) {
  * Checks if the welcome modal should be shown on startup.
  * Called during DOMContentLoaded.
  */
+const TERMS_VERSION = '2026-07-06';
+
+function hasAcceptedCurrentTerms() {
+  return localStorage.getItem('terms_accepted_version') === TERMS_VERSION;
+}
+
+function prepareWelcomeTermsGate() {
+  const checkbox = document.getElementById('welcomeTermsCheckbox');
+  const versionEl = document.getElementById('termsModalVersion');
+  if (versionEl) {
+    versionEl.textContent = `Terms version: ${TERMS_VERSION}`;
+  }
+  if (checkbox) {
+    checkbox.checked = hasAcceptedCurrentTerms();
+  }
+  updateWelcomeTermsGate();
+}
+
+function updateWelcomeTermsGate() {
+  const checkbox = document.getElementById('welcomeTermsCheckbox');
+  const closeBtn = document.getElementById('welcomeCloseBtn');
+  if (!checkbox || !closeBtn) return;
+  closeBtn.disabled = !checkbox.checked;
+}
+
+function showWhatsNewModal() {
+  const modal = document.getElementById('whatsNewModal');
+  const titleEl = document.getElementById('whatsNewModalTitle');
+  const metaEl = document.getElementById('whatsNewModalMeta');
+  const listEl = document.getElementById('whatsNewModalList');
+  const fallbackEl = document.getElementById('whatsNewModalFallback');
+  const changelog = typeof APP_CHANGELOG !== 'undefined' ? APP_CHANGELOG : null;
+
+  if (titleEl) {
+    titleEl.textContent = changelog && changelog.version
+      ? `What's New in v${String(changelog.version).replace(/^v/, '')}`
+      : "What's New";
+  }
+  if (metaEl) {
+    metaEl.textContent = changelog && changelog.releaseDate
+      ? `Released ${changelog.releaseDate}`
+      : '';
+  }
+  if (listEl) {
+    const points = changelog && Array.isArray(changelog.points) ? changelog.points : [];
+    listEl.innerHTML = points.map(point => `<li>${esc(point)}</li>`).join('');
+    listEl.style.display = points.length ? 'block' : 'none';
+  }
+  if (fallbackEl) {
+    const hasPoints = changelog && Array.isArray(changelog.points) && changelog.points.length > 0;
+    fallbackEl.style.display = hasPoints ? 'none' : 'block';
+  }
+  showEl('whatsNewModal', true, 'flex');
+}
+
+function closeWhatsNewModal() {
+  showEl('whatsNewModal', false);
+}
+
+function showTermsModal(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const versionEl = document.getElementById('termsModalVersion');
+  if (versionEl) {
+    versionEl.textContent = `Terms version: ${TERMS_VERSION}`;
+  }
+  showEl('termsModal', true, 'flex');
+}
+
+function closeTermsModal() {
+  showEl('termsModal', false);
+}
+
 async function checkWelcomeModal() {
   // 1. Get current version and populate title version badge
   let currentVersion = '1.0.0';
@@ -452,19 +703,7 @@ async function checkWelcomeModal() {
   if (currentVerEl) {
     currentVerEl.textContent = 'v' + currentVersion.replace(/^v/, '');
   }
-
-  // 2. Populate dynamically if changelog exists
-  if (typeof APP_CHANGELOG !== 'undefined' && APP_CHANGELOG && APP_CHANGELOG.points && APP_CHANGELOG.points.length > 0) {
-    const versionEl = document.getElementById('whatsNewVersion');
-    const listEl = document.getElementById('whatsNewList');
-    const sectionEl = document.getElementById('welcomeWhatsNew');
-    
-    if (versionEl) versionEl.textContent = APP_CHANGELOG.version;
-    if (listEl) {
-      listEl.innerHTML = APP_CHANGELOG.points.map(p => `<li>${esc(p)}</li>`).join('');
-    }
-    if (sectionEl) sectionEl.style.display = 'block';
-  }
+  prepareWelcomeTermsGate();
 
   // 3. Determine whether to force show due to new version
   let forceShow = false;
@@ -484,7 +723,8 @@ async function checkWelcomeModal() {
 
   const dismissedUntil = localStorage.getItem('welcome_modal_dismissed_until');
   const todayString = new Date().toDateString();
-  const shouldShow = forceShow || dismissedUntil !== todayString;
+  const termsRequired = !hasAcceptedCurrentTerms();
+  const shouldShow = termsRequired || forceShow || dismissedUntil !== todayString;
 
   if (shouldShow) {
     showEl('profileOverlay', false);
@@ -694,6 +934,15 @@ function triggerWelcomeUpdate() {
  */
 function closeWelcomeModal() {
   console.log("closeWelcomeModal called");
+  const termsCheckbox = document.getElementById('welcomeTermsCheckbox');
+  if (!hasAcceptedCurrentTerms() && (!termsCheckbox || !termsCheckbox.checked)) {
+    updateWelcomeTermsGate();
+    toast('Please accept the Terms & Conditions before continuing.', 'warning');
+    return;
+  }
+
+  localStorage.setItem('terms_accepted_version', TERMS_VERSION);
+
   const checkbox = document.getElementById('welcomeDoNotShowCheckbox');
   if (checkbox && checkbox.checked) {
     const todayString = new Date().toDateString();

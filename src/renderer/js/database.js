@@ -123,6 +123,9 @@ function normalizeDatabase() {
     if (!a.schoolYear) {
       a.schoolYear = db.schoolYear || '2026-2027';
     }
+    if (!Number.isFinite(Number(a.dashboardOrder))) {
+      a.dashboardOrder = i;
+    }
 
     // Automatically set policy and subjectGroup based on grade, subject, and school year
     a.policy = determinePolicy(a.gradeLevel, a.subject, a.schoolYear);
@@ -134,6 +137,13 @@ function normalizeDatabase() {
     normalizeAssessmentComponents(a);
     ensureTemplateAssessments(a);
   }
+}
+
+function nextDashboardOrderForYear(schoolYear) {
+  const activeYear = schoolYear || db.schoolYear || '2026-2027';
+  const yearAssignments = (db.assignments || []).filter(a => a.schoolYear === activeYear);
+  if (yearAssignments.length === 0) return 0;
+  return Math.max(...yearAssignments.map(a => Number.isFinite(Number(a.dashboardOrder)) ? Number(a.dashboardOrder) : 0)) + 1;
 }
 
 /**
@@ -294,6 +304,7 @@ function addAssignment() {
     subjectGroup,
     policy,
     schoolYear: classSchoolYear,
+    dashboardOrder: nextDashboardOrderForYear(classSchoolYear),
     learners: [],
     assessments: [],
     scores: {}
