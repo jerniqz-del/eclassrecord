@@ -48,8 +48,8 @@ const keyStage1Template = [
   { component: 'PT', title: 'PT 2' },
   { component: 'PT', title: 'PT 3' },
   { component: 'PT', title: 'PT 4' },
-  { component: 'SA1', title: 'SA1' },
-  { component: 'SA2', title: 'SA2' },
+  { component: 'ST1', title: 'ST1' },
+  { component: 'ST2', title: 'ST2' },
   { component: 'TE', title: 'TE' }
 ];
 
@@ -63,8 +63,8 @@ const keyStage2Template = [
   { component: 'PT', title: 'PT 1' },
   { component: 'PT', title: 'PT 2' },
   { component: 'PT', title: 'PT 3' },
-  { component: 'SA1', title: 'SA1' },
-  { component: 'SA2', title: 'SA2' },
+  { component: 'ST1', title: 'ST1' },
+  { component: 'ST2', title: 'ST2' },
   { component: 'TE', title: 'TE' }
 ];
 
@@ -80,8 +80,8 @@ const juniorHighTemplate = [
   { component: 'PT', title: 'PT 3' },
   { component: 'PT', title: 'PT 4' },
   { component: 'PT', title: 'PT 5' },
-  { component: 'SA1', title: 'SA1' },
-  { component: 'SA2', title: 'SA2' },
+  { component: 'ST1', title: 'ST1' },
+  { component: 'ST2', title: 'ST2' },
   { component: 'TE', title: 'TE' }
 ];
 
@@ -96,8 +96,8 @@ const seniorHighTemplate = [
   { component: 'PT', title: 'PT 3' },
   { component: 'PT', title: 'PT 4' },
   { component: 'PT', title: 'PT 5' },
-  { component: 'SA1', title: 'SA1' },
-  { component: 'SA2', title: 'SA2' },
+  { component: 'ST1', title: 'ST1' },
+  { component: 'ST2', title: 'ST2' },
   { component: 'TE', title: 'TE' }
 ];
 
@@ -324,9 +324,87 @@ function isKeyStage2(a) {
 function normalizeAssessmentComponents(a) {
   if (!a.assessments) return;
   for (let i = 0; i < a.assessments.length; i++) {
-    if (a.assessments[i].component === 'ST1') a.assessments[i].component = 'SA1';
-    if (a.assessments[i].component === 'ST2') a.assessments[i].component = 'SA2';
+    a.assessments[i].component = canonicalAssessmentComponent(a.assessments[i].component);
+    if (a.assessments[i].title === 'SA1') a.assessments[i].title = 'ST1';
+    if (a.assessments[i].title === 'SA2') a.assessments[i].title = 'ST2';
   }
+}
+
+function canonicalAssessmentComponent(component) {
+  if (component === 'SA1') return 'ST1';
+  if (component === 'SA2') return 'ST2';
+  return component;
+}
+
+function assessmentTemplateSlotId(term, mapePart, slotIndex) {
+  return `term:${String(term)}|part:${mapePart || 'regular'}|slot:${slotIndex}`;
+}
+
+function createTemplateAssessment(term, mapePart, slotIndex, templateItem) {
+  return {
+    id: uid('assessment'),
+    term: String(term),
+    component: templateItem.component,
+    title: templateItem.title,
+    templateSlotId: assessmentTemplateSlotId(term, mapePart, slotIndex),
+    maxScore: '',
+    date: '',
+    ...(mapePart ? { mapePart } : {})
+  };
+}
+
+function keepAssessmentInTemplateSlot(assessment, term, mapePart, slotIndex, templateItem) {
+  assessment.term = String(term);
+  assessment.component = templateItem.component;
+  assessment.templateSlotId = assessmentTemplateSlotId(term, mapePart, slotIndex);
+  if (!assessment.title) assessment.title = templateItem.title;
+  if (assessment.title === 'SA1') assessment.title = 'ST1';
+  if (assessment.title === 'SA2') assessment.title = 'ST2';
+  if (mapePart) assessment.mapePart = mapePart;
+  else delete assessment.mapePart;
+  return assessment;
+}
+
+function matchingMapehPart(assessment, mapePart) {
+  return (assessment.mapePart || undefined) === (mapePart || undefined);
+}
+
+function assessmentMatchesTemplateComponent(assessment, templateItem) {
+  return canonicalAssessmentComponent(assessment.component) === canonicalAssessmentComponent(templateItem.component);
+}
+
+function templateComponentOccurrence(template, slotIndex) {
+  const component = canonicalAssessmentComponent(template[slotIndex].component);
+  let occurrence = 0;
+  for (let i = 0; i < slotIndex; i++) {
+    if (canonicalAssessmentComponent(template[i].component) === component) occurrence++;
+  }
+  return occurrence;
+}
+
+function findAssessmentForTemplate(a, usedIds, term, mapePart, slotIndex, template) {
+  const templateItem = template[slotIndex];
+  const legacyMatch = findAssessment(a, String(term), templateItem.component, templateItem.title, mapePart, usedIds);
+  if (legacyMatch) return legacyMatch;
+
+  const slotId = assessmentTemplateSlotId(term, mapePart, slotIndex);
+  const slotMatch = a.assessments.find(item =>
+    item.templateSlotId === slotId &&
+    !usedIds.has(item.id) &&
+    assessmentMatchesTemplateComponent(item, templateItem)
+  );
+  if (slotMatch) return slotMatch;
+
+  const component = canonicalAssessmentComponent(templateItem.component);
+  const occurrence = templateComponentOccurrence(template, slotIndex);
+  const sameComponent = a.assessments.filter(item =>
+    String(item.term) === String(term) &&
+    canonicalAssessmentComponent(item.component) === component &&
+    matchingMapehPart(item, mapePart)
+  );
+  const occurrenceMatch = sameComponent[occurrence];
+  if (occurrenceMatch && !usedIds.has(occurrenceMatch.id)) return occurrenceMatch;
+  return sameComponent.find(item => !usedIds.has(item.id)) || null;
 }
 
 /**
@@ -340,15 +418,7 @@ function seedTemplateAssessments(a, template) {
   for (let term = 1; term <= 3; term++) {
     for (const mapePart of parts) {
       for (let i = 0; i < template.length; i++) {
-        a.assessments.push({
-          id: uid('assessment'),
-          term: String(term),
-          component: template[i].component,
-          title: template[i].title,
-          maxScore: '',
-          date: '',
-          ...(mapePart ? { mapePart } : {})
-        });
+        a.assessments.push(createTemplateAssessment(term, mapePart, i, template[i]));
       }
     }
   }
@@ -364,49 +434,40 @@ function ensureTemplateAssessments(a) {
   const isMapeh = isMapehSubject(a.subject);
   
   const newAssessments = [];
+  const usedIds = new Set();
   const parts = isMapeh ? ['music_arts', 'pe_health'] : [undefined];
   
   for (let term = 1; term <= 3; term++) {
     for (const mapePart of parts) {
       for (let i = 0; i < template.length; i++) {
         const tItem = template[i];
-        const existing = findAssessment(a, String(term), tItem.component, tItem.title, mapePart);
+        const existing = findAssessmentForTemplate(a, usedIds, String(term), mapePart, i, template);
         if (existing) {
+          keepAssessmentInTemplateSlot(existing, term, mapePart, i, tItem);
+          usedIds.add(existing.id);
           newAssessments.push(existing);
         } else {
-          newAssessments.push({
-            id: uid('assessment'),
-            term: String(term),
-            component: tItem.component,
-            title: tItem.title,
-            maxScore: '',
-            date: '',
-            ...(mapePart ? { mapePart } : {})
-          });
+          newAssessments.push(createTemplateAssessment(term, mapePart, i, tItem));
         }
       }
     }
   }
-  
-  // Clean up scores for assessments that are discarded
-  const validIds = new Set(newAssessments.map(x => x.id));
-  for (const key in a.scores) {
-    const parts = key.split('|');
-    if (parts.length === 2) {
-      const assessId = parts[1];
-      if (!validIds.has(assessId)) {
-        delete a.scores[key];
-      }
-    }
-  }
-  
+
   a.assessments = newAssessments;
 }
 
-function findAssessment(a, term, component, title, mapePart) {
+function findAssessment(a, term, component, title, mapePart, usedIds) {
+  const componentAliases = component === 'ST1' ? ['ST1', 'SA1'] : component === 'ST2' ? ['ST2', 'SA2'] : [component];
+  const titleAliases = title === 'ST1' ? ['ST1', 'SA1'] : title === 'ST2' ? ['ST2', 'SA2'] : [title];
   for (let i = 0; i < a.assessments.length; i++) {
     const item = a.assessments[i];
-    if (String(item.term) === String(term) && item.component === component && item.title === title && item.mapePart === mapePart) {
+    if (usedIds && usedIds.has(item.id)) continue;
+    if (
+      String(item.term) === String(term) &&
+      componentAliases.includes(canonicalAssessmentComponent(item.component)) &&
+      titleAliases.includes(item.title) &&
+      matchingMapehPart(item, mapePart)
+    ) {
       return item;
     }
   }

@@ -315,7 +315,7 @@ const HELP_TOPICS = [
       <h5>Universal Trimester Layout:</h5>
       <ul>
         <li>In <strong>Settings</strong>, you can enable <strong>Use Universal Trimester Layout</strong>.</li>
-        <li>This forces all classes to use the Key Stage 2 structure: <strong>5 WW columns, 3 PT columns, and 3 SA/TE columns</strong> per term.</li>
+        <li>This forces all classes to use the Key Stage 2 structure: <strong>5 WW columns, 3 PT columns, and 3 ST/TE columns</strong> per term.</li>
         <li>Warning: Enabling or disabling this resets assessment headers that mismatch the new format, so configure this preference before scoring!</li>
       </ul>
     `

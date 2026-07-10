@@ -333,49 +333,43 @@ function positionPopover(targetEl, preferredAlign = 'bottom') {
   if (!popover || !targetEl) return;
 
   const rect = targetEl.getBoundingClientRect();
-  const popWidth = popover.offsetWidth || 320;
-  const popHeight = popover.offsetHeight || 150;
-
-  const scrollY = window.scrollY;
-  const scrollX = window.scrollX;
+  const padding = 16;
+  const gap = 12;
+  popover.style.maxWidth = `${Math.max(220, window.innerWidth - (padding * 2))}px`;
+  popover.style.maxHeight = `${Math.max(180, window.innerHeight - (padding * 2))}px`;
+  const popWidth = Math.min(popover.offsetWidth || 320, window.innerWidth - (padding * 2));
+  const popHeight = Math.min(popover.offsetHeight || 150, window.innerHeight - (padding * 2));
 
   let top = 0;
   let left = 0;
   let align = preferredAlign;
 
-  // Basic boundary checks (if top is not enough space, flip to bottom)
-  if (align === 'top' && rect.top - popHeight - 16 < 0) {
+  if (align === 'top' && rect.top - popHeight - gap < padding) {
     align = 'bottom';
-  } else if (align === 'bottom' && rect.bottom + popHeight + 16 > window.innerHeight) {
+  } else if (align === 'bottom' && rect.bottom + popHeight + gap > window.innerHeight - padding) {
     align = 'top';
+  } else if (align === 'left' && rect.left - popWidth - gap < padding) {
+    align = 'right';
+  } else if (align === 'right' && rect.right + popWidth + gap > window.innerWidth - padding) {
+    align = 'left';
   }
 
   if (align === 'top') {
-    top = rect.top + scrollY - popHeight - 12;
-    left = rect.left + scrollX + (rect.width - popWidth) / 2;
+    top = rect.top - popHeight - gap;
+    left = rect.left + (rect.width - popWidth) / 2;
   } else if (align === 'bottom') {
-    top = rect.bottom + scrollY + 12;
-    left = rect.left + scrollX + (rect.width - popWidth) / 2;
+    top = rect.bottom + gap;
+    left = rect.left + (rect.width - popWidth) / 2;
   } else if (align === 'left') {
-    top = rect.top + scrollY + (rect.height - popHeight) / 2;
-    left = rect.left + scrollX - popWidth - 12;
+    top = rect.top + (rect.height - popHeight) / 2;
+    left = rect.left - popWidth - gap;
   } else if (align === 'right') {
-    top = rect.top + scrollY + (rect.height - popHeight) / 2;
-    left = rect.right + scrollX + 12;
+    top = rect.top + (rect.height - popHeight) / 2;
+    left = rect.right + gap;
   }
 
-  // Make sure popover doesn't overflow screen bounds horizontally
-  const padding = 16;
-  if (left < padding) {
-    left = padding;
-  } else if (left + popWidth > window.innerWidth - padding) {
-    left = window.innerWidth - popWidth - padding;
-  }
-
-  // Make sure popover doesn't overflow screen bounds vertically
-  if (top < padding) {
-    top = padding;
-  }
+  left = Math.min(Math.max(left, padding), Math.max(padding, window.innerWidth - popWidth - padding));
+  top = Math.min(Math.max(top, padding), Math.max(padding, window.innerHeight - popHeight - padding));
 
   popover.className = `tour-popover tour-popover--${align}`;
   popover.style.top = `${top}px`;

@@ -2,7 +2,7 @@
 
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
-Current app version: 1.4.5
+Current app version: 1.4.6
 Last reviewed: 2026-06-28
 
 ## 1. Project Foundation
@@ -197,6 +197,7 @@ Implemented changes:
 - Added v1.3.3 Summary page density, term-color grouping, LRN removal, Initial Grade columns, fixed body row heights, welcome modal resizing, larger record typography, explicit zoom-default saving, Teaching Load roster Clear All, and print/PDF polish.
 - Added v1.4.0 Attendance Tracker as the first attendance feature release, with a monthly attendance grid, roll-call modal, class-scoped records, filters, statuses, and printable/PDF logs.
 - Added v1.4.5 public update work: global sidebar ads through the Cloudflare relay, hidden owner ad editing, Help Assistant polish, Dashboard grid/list and drag ordering, easy learner transfer, modal polish, Teaching Load and Grading Sheet layout refinements, and release safety helpers.
+- Added v1.4.6 patch update work: SF2 present-count totals, Excused/No Classes attendance fixes, Assessment Details data-loss protection, fixed assessment group ordering, grading arrow-key navigation, Transfer Scores preview polish, compact attendance statistics, and tour/modal boundary fixes.
 
 Worked patches:
 
@@ -232,6 +233,7 @@ Adjusted patches:
 | v1.3.3 | Matched Summary page row density to the compact term record table, added color-themed term/final groups, removed LRN from Summary output, added per-term Initial Grade columns, fixed body row heights, enlarged learner/header/title/PDF detail typography, made the Welcome modal viewport-aware, added explicit zoom-default saving, added Teaching Load roster Clear All, wrapped Summary PDF remarks, and balanced Summary/PDF column widths. | Visual polish and roster-management patch for Summary, Welcome, term records, zoom controls, Teaching Load, and PDF output; no grading formulas or data structures changed. |
 | v1.4.0 | Added a dedicated Attendance Tracker with monthly weekday grid, week color grouping, roll-call modal, class/learner attendance analytics, absence highlighting, and Attendance Log print/PDF output. | Minor feature release for attendance documentation; grades, formulas, scores, assessments, and summaries are unchanged. |
 | v1.4.5 | Added global sidebar sponsor ads through the Cloudflare relay, hidden owner ad editing, Dashboard grid/list view and class card drag ordering, easy learner transfer, Help Assistant/community polish, Terms/What's New separation, Teaching Load and Grading Sheet layout improvements, Attendance/SF2 polish, modal Escape behavior, and safe checkpoint/release helpers. | Public update release that restores the full v1.4 feature set and prepares the app for managed online sponsor content while keeping core class record data compatible. |
+| v1.4.6 | Fixed SF2 present totals, Excused/No Classes roll-call clearing, attendance table/legend/stat consistency, Assessment Details data preservation, permanent assessment column grouping, grading arrow-key navigation, Transfer Scores preview polish, and tour/modal boundary behavior. | Patch update for v1.4.5 users focused on attendance correctness, score-entry safety, modal stability, and reliable update delivery. |
 
 ## Current Follow-Up Checks
 

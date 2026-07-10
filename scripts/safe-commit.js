@@ -34,7 +34,9 @@ const STAGE_ALLOWLIST = [
   'docs/release-notes-v1.4.0.md',
   'docs/facebook-post-v1.4.0.md',
   'docs/release-notes-v1.4.5.md',
-  'docs/facebook-post-v1.4.5.md'
+  'docs/facebook-post-v1.4.5.md',
+  'docs/release-notes-v1.4.6.md',
+  'docs/facebook-post-v1.4.6.md'
 ];
 
 const NEVER_STAGE = [
@@ -215,7 +217,7 @@ function main() {
   const commitMessage = process.argv.slice(2).join(' ').trim();
   if (!commitMessage) {
     console.error('Commit message is required.');
-    console.error('Example: npm run safe-commit -- "release v1.4.5 public update"');
+    console.error('Example: npm run safe-commit -- "release v1.4.6 patch update"');
     process.exit(1);
   }
 

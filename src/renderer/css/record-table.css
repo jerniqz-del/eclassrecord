@@ -206,14 +206,16 @@ body[data-active-view="record"] .main {
 }
 
 /* Summative Assessment 1 — teal */
-#recordTable .record-grid th.c-comp-sa1 {
+#recordTable .record-grid th.c-comp-sa1,
+#recordTable .record-grid th.c-comp-st1 {
   background: #ccfbf1;
   color: #0f766e;
   border-bottom-color: #99f6e4;
 }
 
 /* Summative Assessment 2 — emerald */
-#recordTable .record-grid th.c-comp-sa2 {
+#recordTable .record-grid th.c-comp-sa2,
+#recordTable .record-grid th.c-comp-st2 {
   background: #dcfce7;
   color: #15803d;
   border-bottom-color: #bbf7d0;
@@ -592,6 +594,15 @@ body[data-active-view="record"] .main {
   top: 0;
   z-index: 12;
   transition: filter var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+#recordTable .record-grid th.assessment-header-cell .assessment-header-label {
+  display: inline-block;
+  max-width: 100%;
+  padding-right: 12px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 #recordTable .record-grid th.assessment-header-cell:hover {

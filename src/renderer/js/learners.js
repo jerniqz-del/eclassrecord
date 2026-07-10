@@ -61,7 +61,7 @@ function showAddLearnerModal() {
         </div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-warn btn-sm" id="btnCancelAddLearner">Cancel</button>
+        <button class="btn btn-cancel btn-sm" id="btnCancelAddLearner">Cancel</button>
         <button class="btn btn-primary btn-sm" id="btnConfirmAddLearner">Add Learner</button>
       </div>
     </div>
@@ -594,7 +594,7 @@ function showEasyLearnerTransferModal(learnerId) {
         `}
       </div>
       <div class="modal__actions">
-        <button class="btn btn-ghost btn-sm" id="btnCancelEasyTransfer">Cancel</button>
+        <button class="btn btn-cancel btn-sm" id="btnCancelEasyTransfer">Cancel</button>
         <button class="btn btn-olive btn-sm" id="btnConfirmEasyTransfer" disabled>Transfer Learner</button>
       </div>
     </div>
@@ -946,7 +946,7 @@ function showBulkAddLearnersModal() {
         </div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-warn btn-sm" id="btnCancelBulkAdd">Cancel</button>
+        <button class="btn btn-cancel btn-sm" id="btnCancelBulkAdd">Cancel</button>
         <button class="btn btn-primary btn-sm" id="btnConfirmBulkAdd" disabled>Add Learners (0)</button>
       </div>
     </div>

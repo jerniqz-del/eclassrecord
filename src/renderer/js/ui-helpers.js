@@ -177,11 +177,11 @@ function confirmModal(title, message, onConfirm) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay modal-z-confirm';
   overlay.innerHTML = `
-    <div class="modal">
-      <div class="modal__title">${esc(title)}</div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle" tabindex="-1">
+      <div class="modal__title" id="confirmModalTitle">${esc(title)}</div>
       <div class="modal__body">${esc(message)}</div>
       <div class="modal__actions">
-        <button class="btn btn-warn btn-sm" id="confirmModalCancel">Cancel</button>
+        <button class="btn btn-cancel btn-sm" id="confirmModalCancel">Cancel</button>
         <button class="btn btn-primary btn-sm" id="confirmModalConfirm">Confirm</button>
       </div>
     </div>
@@ -190,16 +190,38 @@ function confirmModal(title, message, onConfirm) {
   
   const cancelBtn = overlay.querySelector('#confirmModalCancel');
   const confirmBtn = overlay.querySelector('#confirmModalConfirm');
+  let closed = false;
   
   const close = () => {
+    closed = true;
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+
+  const confirm = () => {
+    if (closed) return;
+    close();
+    onConfirm();
   };
   
   cancelBtn.addEventListener('click', close);
-  confirmBtn.addEventListener('click', () => {
-    close();
-    onConfirm();
+  confirmBtn.addEventListener('click', confirm);
+  overlay.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+      return;
+    }
+    if (event.key === 'Enter' && event.target !== cancelBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      confirm();
+    }
   });
+
+  setTimeout(() => {
+    if (!closed && confirmBtn) confirmBtn.focus();
+  }, 0);
 }
 
 /**
@@ -354,6 +376,8 @@ const MODAL_ESCAPE_CLOSE_HANDLERS = {
   donateModal: 'closeDonateModal',
   donateQrModal: 'closeDonateQrModal',
   quickGradeModal: 'closeQuickGradeModal',
+  scoreTransferPreviewModal: 'closeScoreTransferPreviewModal',
+  scoreTransferModal: 'closeScoreTransferModal',
   viewLearnerGradesModal: 'closeViewLearnerGradesModal',
   importRosterModal: 'closeImportRosterModal',
   bulkAddLearnersModal: 'closeBulkAddLearnersModal',

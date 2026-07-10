@@ -240,7 +240,7 @@
         </div>
         <div class="action-cluster">
           <button class="btn btn-primary btn-sm" onclick="runImport()">Process Import</button>
-          <button class="btn btn-warn btn-sm" onclick="toggleImport('')">Cancel</button>
+          <button class="btn btn-cancel btn-sm" onclick="toggleImport('')">Cancel</button>
         </div>
       </section>
 
@@ -456,6 +456,15 @@
                 </svg>
                 Quick Grade Entry
               </button>
+              <button id="transferScoresBtn" class="btn btn-transfer btn-lg" onclick="showScoreTransferModal()" title="Move or copy raw scores between assessments" style="display:none">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M7 7h11"></path>
+                  <path d="m15 4 3 3-3 3"></path>
+                  <path d="M17 17H6"></path>
+                  <path d="m9 14-3 3 3 3"></path>
+                </svg>
+                Transfer Scores
+              </button>
               <button id="viewLearnerGradesBtn" class="btn btn-olive btn-lg" onclick="showViewLearnerGradesModal()" title="View individual learner's grades summary" style="display:none">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -596,7 +605,7 @@
             <div class="settings-row__left">
               <div class="settings-row__title">Use Universal Trimester Layout</div>
               <div class="settings-row__desc u-text-danger u-text-strong">
-                ⚠ Caution: Enabling this will apply the Key Stage 2 Trimester calculation/layout (5 WW, 3 PT, 3 SA/TE columns) to all grade levels. It will reconstruct columns for existing class records, resetting mismatching scores.
+                ⚠ Caution: Enabling this will apply the Key Stage 2 Trimester calculation/layout (5 WW, 3 PT, 3 ST/TE columns) to all grade levels. It will reconstruct columns for existing class records, resetting mismatching scores.
               </div>
             </div>
             <label class="welcome-checkbox-label checkbox-row">
@@ -759,7 +768,7 @@
 
       </div>
       <div class="modal__actions">
-        <button class="btn btn-warn btn-sm" onclick="hideAddClassLoadModal()">Cancel</button>
+        <button class="btn btn-cancel btn-sm" onclick="hideAddClassLoadModal()">Cancel</button>
         <button class="btn btn-primary btn-sm" onclick="addAssignment()">Add Teaching Load</button>
       </div>
     </div>
@@ -796,8 +805,8 @@
         </p>
       </div>
       <div class="modal__actions">
-        <button id="donateCancelExitBtn" class="btn btn-warn btn-sm" style="display:none" onclick="hideDonateModal()">Cancel</button>
-        <button id="donateCloseBtn" class="btn btn-warn btn-sm" onclick="hideDonateModal()">Close</button>
+        <button id="donateCancelExitBtn" class="btn btn-cancel btn-sm" style="display:none" onclick="hideDonateModal()">Cancel</button>
+        <button id="donateCloseBtn" class="btn btn-cancel btn-sm" onclick="hideDonateModal()">Close</button>
         <button id="donateConfirmExitBtn" class="btn btn-primary btn-sm" style="display:none" onclick="confirmAppExit()">Continue to Exit</button>
       </div>
     </div>
@@ -902,7 +911,7 @@
         </div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-warn btn-sm" onclick="hideQuickGradeModal()">Close</button>
+        <button class="btn btn-cancel btn-sm" onclick="hideQuickGradeModal()">Close</button>
       </div>
     </div>
   </div>
@@ -1061,7 +1070,7 @@
             Do not show again today
           </label>
         </div>
-        <button id="welcomeCloseBtn" class="btn btn-warn btn-sm" onclick="closeWelcomeModal()" disabled>Close</button>
+        <button id="welcomeCloseBtn" class="btn btn-cancel btn-sm" onclick="closeWelcomeModal()" disabled>Close</button>
       </div>
     </div>
   </div>
@@ -1207,7 +1216,7 @@
 
       </div>
       <div class="modal__actions no-print-modal">
-        <button class="btn btn-warn btn-sm" onclick="hideViewLearnerGradesModal()">Close</button>
+        <button class="btn btn-cancel btn-sm" onclick="hideViewLearnerGradesModal()">Close</button>
         <button id="openLearnerAttendanceBtn" class="btn btn-sm" onclick="openLearnerAttendanceLog(currentSelectedLearnerId)" style="display:none">
           Open Attendance Log
         </button>
@@ -1233,7 +1242,7 @@
       <div class="modal__actions class-report-actions">
         <button class="btn btn-ghost btn-sm" onclick="printClassReport()">Print</button>
         <button class="btn btn-primary btn-sm" onclick="downloadClassReportPdf()">Download PDF</button>
-        <button class="btn btn-warn btn-sm" onclick="closeClassAnalysisModal()">Close</button>
+        <button class="btn btn-cancel btn-sm" onclick="closeClassAnalysisModal()">Close</button>
       </div>
     </div>
   </div>
@@ -1296,8 +1305,113 @@
         </div>
       </div>
       <div class="modal__actions assessment-details-actions">
-        <button class="btn btn-warn btn-sm" onclick="closeAssessmentDetailsModal()">Cancel</button>
+        <button class="btn btn-transfer btn-sm" onclick="showScoreTransferFromAssessmentDetails()">Transfer Scores</button>
+        <button class="btn btn-cancel btn-sm" onclick="closeAssessmentDetailsModal()">Cancel</button>
         <button class="btn btn-primary btn-sm" onclick="saveAssessmentDetails()">Save Details</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transfer Scores Modal -->
+  <div id="scoreTransferModal" class="modal-overlay modal-z-assessment" style="display:none;">
+    <div class="modal modal--wide score-transfer-modal">
+      <div class="modal__title">Transfer Scores</div>
+      <div class="modal__body score-transfer-body">
+        <div class="score-transfer-grid">
+          <section class="score-transfer-panel">
+            <div class="score-transfer-panel__title">From</div>
+            <div class="field">
+              <label class="field-label">Source Class</label>
+              <select id="scoreTransferSourceClass" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+            </div>
+            <div class="split-row">
+              <div class="field">
+                <label class="field-label">Term</label>
+                <select id="scoreTransferSourceTerm" class="field-select" onchange="handleScoreTransferSelectionChange()">
+                  <option value="1">Term 1</option>
+                  <option value="2">Term 2</option>
+                  <option value="3">Term 3</option>
+                </select>
+              </div>
+              <div id="scoreTransferSourcePartRow" class="field">
+                <label class="field-label">MAPEH Strand</label>
+                <select id="scoreTransferSourcePart" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Source Assessment</label>
+              <select id="scoreTransferSourceAssessment" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+            </div>
+          </section>
+
+          <section class="score-transfer-panel">
+            <div class="score-transfer-panel__title">To</div>
+            <div class="field">
+              <label class="field-label">Target Class</label>
+              <select id="scoreTransferTargetClass" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+            </div>
+            <div class="split-row">
+              <div class="field">
+                <label class="field-label">Term</label>
+                <select id="scoreTransferTargetTerm" class="field-select" onchange="handleScoreTransferSelectionChange()">
+                  <option value="1">Term 1</option>
+                  <option value="2">Term 2</option>
+                  <option value="3">Term 3</option>
+                </select>
+              </div>
+              <div id="scoreTransferTargetPartRow" class="field">
+                <label class="field-label">MAPEH Strand</label>
+                <select id="scoreTransferTargetPart" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Target Assessment</label>
+              <select id="scoreTransferTargetAssessment" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+            </div>
+          </section>
+        </div>
+
+        <div class="score-transfer-options">
+          <label class="field compact-field">
+            <span class="field-label">Transfer Mode</span>
+            <select id="scoreTransferMode" class="field-select" onchange="clearScoreTransferPreview()">
+              <option value="move">Move scores and clear successful source cells</option>
+              <option value="copy">Copy scores and keep source cells</option>
+            </select>
+          </label>
+          <label class="field compact-field">
+            <span class="field-label">If Target Has Scores</span>
+            <select id="scoreTransferConflictMode" class="field-select" onchange="clearScoreTransferPreview()">
+              <option value="skip">Skip filled target scores</option>
+              <option value="overwrite">Overwrite target scores</option>
+            </select>
+          </label>
+          <label class="score-transfer-check">
+            <input id="scoreTransferCopyHps" type="checkbox" onchange="clearScoreTransferPreview()" />
+            <span>Copy HPS to target only if target HPS is blank</span>
+          </label>
+        </div>
+
+        <div id="scoreTransferPreview" class="score-transfer-preview">
+          Choose source and target assessments, then preview the transfer.
+        </div>
+      </div>
+      <div class="modal__actions score-transfer-actions">
+        <button class="btn btn-cancel btn-sm" onclick="closeScoreTransferModal()">Cancel</button>
+        <button class="btn btn-secondary btn-sm" onclick="previewScoreTransfer()">Preview</button>
+        <button id="scoreTransferApplyBtn" class="btn btn-primary btn-sm" onclick="applyScoreTransfer()" disabled>Apply Transfer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transfer Scores Full Preview Modal -->
+  <div id="scoreTransferPreviewModal" class="modal-overlay modal-z-top" style="display:none;">
+    <div class="modal modal--wide score-transfer-preview-modal">
+      <div class="modal__title">Transfer Scores Preview</div>
+      <div id="scoreTransferPreviewModalBody" class="modal__body score-transfer-preview-modal__body"></div>
+      <div class="modal__actions score-transfer-actions">
+        <button class="btn btn-cancel btn-sm" onclick="closeScoreTransferPreviewModal()">Back</button>
+        <button id="scoreTransferPreviewApplyBtn" class="btn btn-primary btn-sm" onclick="applyScoreTransferFromPreview()">Apply Transfer</button>
       </div>
     </div>
   </div>
@@ -1318,7 +1432,7 @@
       <div class="modal__actions owner-sidebar-ads-actions">
         <button class="btn btn-ghost btn-sm" type="button" onclick="addOwnerSidebarAdRow()">Add Link</button>
         <button class="btn btn-ghost btn-sm" type="button" onclick="resetOwnerSidebarAds()">Reset Defaults</button>
-        <button class="btn btn-warn btn-sm" type="button" onclick="closeSidebarAdOwnerModal()">Cancel</button>
+        <button class="btn btn-cancel btn-sm" type="button" onclick="closeSidebarAdOwnerModal()">Cancel</button>
         <button id="ownerSidebarAdsSaveBtn" class="btn btn-primary btn-sm" type="button" onclick="saveOwnerSidebarAds()">Save Global Ads</button>
       </div>
     </div>
@@ -1491,7 +1605,7 @@
           console.log('Mock saveDatabase:', data);
           return true;
         },
-        getVersion: async () => '1.4.5-mock',
+        getVersion: async () => '1.4.6-mock',
         checkForUpdates: () => {},
         downloadUpdate: () => {},
         onMenuSave: () => {},
@@ -1525,6 +1639,7 @@
   <script src="js/class-analysis.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/ad-manager.js"></script>
+  <script src="js/attendance-excused.js"></script>
   <script src="js/app.js"></script>
   <script>initFontSize(); initSidebarResizer(); if (typeof initSidebarAd === 'function') initSidebarAd();</script>
 </body>

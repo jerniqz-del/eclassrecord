@@ -21,6 +21,7 @@ let lastTerm = null;
 let lastMapehSubTab = null;
 let assessmentDetailsAssessmentId = null;
 let recordSortState = { key: null, direction: null };
+let scoreTransferState = { preview: null, preselectedAssessmentId: '' };
 
 function getMapehConsolidatedTermResult(a, learner, term) {
   const music = computeTerm(a, learner.id, term, 'music_arts');
@@ -152,9 +153,25 @@ function getSheetSnapshot() {
   const a = currentAssignment();
   if (!a) return null;
   return {
+    assignmentId: a.id,
     scores: JSON.parse(JSON.stringify(a.scores || {})),
     assessments: JSON.parse(JSON.stringify(a.assessments || []))
   };
+}
+
+function getAssignmentsSnapshot(assignments) {
+  const unique = [];
+  const seen = new Set();
+  (assignments || []).forEach(assignment => {
+    if (!assignment || seen.has(assignment.id)) return;
+    seen.add(assignment.id);
+    unique.push({
+      id: assignment.id,
+      scores: JSON.parse(JSON.stringify(assignment.scores || {})),
+      assessments: JSON.parse(JSON.stringify(assignment.assessments || []))
+    });
+  });
+  return unique.length ? { assignments: unique } : null;
 }
 
 /**
@@ -172,6 +189,29 @@ function pushHistoryState() {
   
   redoStack = [];
   updateUndoRedoUI();
+}
+
+function pushTransferHistoryState(assignments) {
+  const snapshot = getAssignmentsSnapshot(assignments);
+  if (!snapshot) return;
+
+  undoStack.push(snapshot);
+  if (undoStack.length > 100) {
+    undoStack.shift();
+  }
+
+  redoStack = [];
+  updateUndoRedoUI();
+}
+
+function getCurrentSnapshotForHistoryTarget(targetSnapshot) {
+  if (targetSnapshot && Array.isArray(targetSnapshot.assignments)) {
+    const assignments = targetSnapshot.assignments
+      .map(item => db.assignments.find(candidate => candidate.id === item.id))
+      .filter(Boolean);
+    return getAssignmentsSnapshot(assignments);
+  }
+  return getSheetSnapshot();
 }
 
 /**
@@ -192,6 +232,18 @@ function updateUndoRedoUI() {
  * Restores the database state from a snapshot.
  */
 function restoreSheetSnapshot(snapshot) {
+  if (snapshot && Array.isArray(snapshot.assignments)) {
+    snapshot.assignments.forEach(item => {
+      const assignment = db.assignments.find(candidate => candidate.id === item.id);
+      if (!assignment) return;
+      assignment.scores = JSON.parse(JSON.stringify(item.scores || {}));
+      assignment.assessments = JSON.parse(JSON.stringify(item.assessments || []));
+    });
+    saveDatabase();
+    render();
+    return;
+  }
+
   const a = currentAssignment();
   if (!a) return;
   a.scores = JSON.parse(JSON.stringify(snapshot.scores));
@@ -207,11 +259,11 @@ function restoreSheetSnapshot(snapshot) {
 function triggerUndo() {
   if (undoStack.length === 0) return;
   
-  const currentSnapshot = getSheetSnapshot();
+  const previousSnapshot = undoStack.pop();
+  const currentSnapshot = getCurrentSnapshotForHistoryTarget(previousSnapshot);
   if (!currentSnapshot) return;
   
   redoStack.push(currentSnapshot);
-  const previousSnapshot = undoStack.pop();
   restoreSheetSnapshot(previousSnapshot);
   updateUndoRedoUI();
 }
@@ -222,11 +274,11 @@ function triggerUndo() {
 function triggerRedo() {
   if (redoStack.length === 0) return;
   
-  const currentSnapshot = getSheetSnapshot();
+  const nextSnapshot = redoStack.pop();
+  const currentSnapshot = getCurrentSnapshotForHistoryTarget(nextSnapshot);
   if (!currentSnapshot) return;
   
   undoStack.push(currentSnapshot);
-  const nextSnapshot = redoStack.pop();
   restoreSheetSnapshot(nextSnapshot);
   updateUndoRedoUI();
 }
@@ -263,6 +315,13 @@ function checkActiveSheetChange() {
   }
 }
 
+function updateRecordActionButtons(hasUsableSheet) {
+  const shouldShow = !!hasUsableSheet && currentView === 'record';
+  showEl('quickGradeBtn', shouldShow, 'inline-flex');
+  showEl('transferScoresBtn', shouldShow, 'inline-flex');
+  showEl('viewLearnerGradesBtn', shouldShow, 'inline-flex');
+}
+
 /**
  * Renders the active term class record grid.
  */
@@ -270,6 +329,7 @@ function renderRecordTable() {
   checkActiveSheetChange();
   const a = currentAssignment();
   if (!a) {
+    updateRecordActionButtons(false);
     recordRowCount = 0;
     recordColCount = 0;
     document.getElementById('recordTable').innerHTML = emptyState(
@@ -282,6 +342,7 @@ function renderRecordTable() {
   ensureTemplateAssessments(a);
   
   if (a.learners.length === 0) {
+    updateRecordActionButtons(false);
     recordRowCount = 0;
     recordColCount = 0;
     document.getElementById('recordTable').innerHTML = emptyState(
@@ -299,9 +360,11 @@ function renderRecordTable() {
   
   const isMapeh = isMapehSubject(a.subject);
   if (isMapeh && currentMapehSubTab === 'consolidated') {
+    updateRecordActionButtons(false);
     renderConsolidatedMapehTable(a);
     return;
   }
+  updateRecordActionButtons(true);
   
   const mapePart = isMapeh ? currentMapehSubTab : undefined;
   const items = termAssessments(a, db.currentTerm, mapePart);
@@ -322,9 +385,10 @@ function renderRecordTable() {
       <th class="c-sex">Sex</th>`;
     for (let gi = 0; gi < items.length; gi++) {
       const compClass = `c-comp-${items[gi].component.toLowerCase()}`;
-      html += `<th class="c-score ${compClass} assessment-header-cell" role="button" tabindex="0" title="${esc(componentFullName(items[gi].component) + ' - ' + (items[gi].title || ''))}" onclick="openAssessmentDetailsFromHeader(event, '${esc(items[gi].id)}')" onkeydown="return openAssessmentDetailsFromHeaderKey(event, '${esc(items[gi].id)}')">
-        ${esc(compactAssessmentLabel(items[gi]))}
-        ${recordSortButton('assessment:' + items[gi].id, compactAssessmentLabel(items[gi]))}
+      const headerLabel = assessmentHeaderLabel(items[gi], items);
+      html += `<th class="c-score ${compClass} assessment-header-cell" role="button" tabindex="0" title="${esc(assessmentHeaderTitle(items[gi], headerLabel))}" onclick="openAssessmentDetailsFromHeader(event, '${esc(items[gi].id)}')" onkeydown="return openAssessmentDetailsFromHeaderKey(event, '${esc(items[gi].id)}')">
+        <span class="assessment-header-label">${esc(headerLabel)}</span>
+        ${recordSortButton('assessment:' + items[gi].id, headerLabel)}
       </th>`;
       if (gi === 4) html += `<th class="c-calc c-comp-ww" title="Written Works Total">T</th><th class="c-calc c-comp-ww" title="Written Works Percentage">%</th><th class="c-calc c-comp-ww" title="Written Works Weighted Score">WS</th>`;
       if (gi === 7) html += `<th class="c-calc c-comp-pt" title="Performance Task Total">T</th><th class="c-calc c-comp-pt" title="Performance Task Percentage">%</th><th class="c-calc c-comp-pt" title="Performance Task Weighted Score">WS</th>`;
@@ -341,10 +405,10 @@ function renderRecordTable() {
       <th class="c-sex">Sex</th>`;
     for (let i = 0; i < items.length; i++) {
       const compClass = `c-comp-${items[i].component.toLowerCase()}`;
-      html += `<th class="c-score ${compClass} assessment-header-cell" role="button" tabindex="0" title="${esc(componentFullName(items[i].component) + ' - ' + (items[i].title || ''))}" onclick="openAssessmentDetailsFromHeader(event, '${esc(items[i].id)}')" onkeydown="return openAssessmentDetailsFromHeaderKey(event, '${esc(items[i].id)}')">
-        ${esc(componentLabel(items[i].component))}<br/>
-        <span class="text-xs text-muted">${esc(items[i].title)}</span>
-        ${recordSortButton('assessment:' + items[i].id, `${componentLabel(items[i].component)} ${items[i].title || ''}`)}
+      const headerLabel = assessmentHeaderLabel(items[i], items);
+      html += `<th class="c-score ${compClass} assessment-header-cell" role="button" tabindex="0" title="${esc(assessmentHeaderTitle(items[i], headerLabel))}" onclick="openAssessmentDetailsFromHeader(event, '${esc(items[i].id)}')" onkeydown="return openAssessmentDetailsFromHeaderKey(event, '${esc(items[i].id)}')">
+        <span class="assessment-header-label">${esc(headerLabel)}</span>
+        ${recordSortButton('assessment:' + items[i].id, headerLabel)}
       </th>`;
     }
     html += `
@@ -412,7 +476,7 @@ function renderRecordTable() {
       const isPerfect = maxNum > 0 && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) === maxNum;
       const isSimilar = maxNum > 0 && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= maxNum * 0.9 && parseFloat(val) < maxNum;
       
-      const scoreTitle = `${learnerDisplayName(learner)} - ${componentFullName(items[j].component)} ${items[j].title || ''} ${maxNum > 0 ? '(max ' + maxNum + ')' : ''}`;
+      const scoreTitle = `${learnerDisplayName(learner)} - ${componentFullName(items[j].component)} ${assessmentHeaderLabel(items[j], items)} ${maxNum > 0 ? '(max ' + maxNum + ')' : ''}`;
       
       html += `<td class="c-score">
         <input id="sc-${r}-${j}" class="score-input${overMax ? ' invalid' : ''}${isPerfect ? ' perfect' : ''}${isSimilar ? ' similar' : ''}" title="${esc(scoreTitle)}" value="${isDisabled ? '' : esc(val)}"
@@ -634,17 +698,17 @@ function renderFinalOnly() {
       <tr>
         <th class="summary-term-head summary-term-1" title="Written Works Weighted Score">WW</th>
         <th class="summary-term-head summary-term-1" title="Performance Task Weighted Score">PT</th>
-        <th class="summary-term-head summary-term-1" title="Summative Assessment and Term Examination Weighted Score">STE</th>
+        <th class="summary-term-head summary-term-1" title="Summative Test and Term Examination Weighted Score">STE</th>
         <th class="summary-term-head summary-term-1" title="Initial Grade">IG</th>
         <th class="summary-term-head summary-term-1" title="Total Grade">TG</th>
         <th class="summary-term-head summary-term-2" title="Written Works Weighted Score">WW</th>
         <th class="summary-term-head summary-term-2" title="Performance Task Weighted Score">PT</th>
-        <th class="summary-term-head summary-term-2" title="Summative Assessment and Term Examination Weighted Score">STE</th>
+        <th class="summary-term-head summary-term-2" title="Summative Test and Term Examination Weighted Score">STE</th>
         <th class="summary-term-head summary-term-2" title="Initial Grade">IG</th>
         <th class="summary-term-head summary-term-2" title="Total Grade">TG</th>
         <th class="summary-term-head summary-term-3" title="Written Works Weighted Score">WW</th>
         <th class="summary-term-head summary-term-3" title="Performance Task Weighted Score">PT</th>
-        <th class="summary-term-head summary-term-3" title="Summative Assessment and Term Examination Weighted Score">STE</th>
+        <th class="summary-term-head summary-term-3" title="Summative Test and Term Examination Weighted Score">STE</th>
         <th class="summary-term-head summary-term-3" title="Initial Grade">IG</th>
         <th class="summary-term-head summary-term-3" title="Total Grade">TG</th>
       </tr>
@@ -962,17 +1026,29 @@ document.addEventListener('focusin', (e) => {
 });
 
 function scoreNav(event, r, j, learnerId, assessmentId) {
+  const key = event.key || '';
   const code = event.keyCode || event.which;
-  if (code !== 13 && code !== 9) return true; // Enter or Tab
+  const isArrow = key.startsWith('Arrow');
+  if (code !== 13 && code !== 9 && !isArrow) return true; // Enter, Tab, or arrows
   
   const input = event.target;
   const value = input ? input.value : '';
   let targetId = null;
   
-  if (code === 13) {
+  if (key === 'ArrowRight') {
+    if (j + 1 < recordColCount) targetId = `sc-${r}-${j + 1}`;
+  } else if (key === 'ArrowLeft') {
+    if (j > 0) targetId = `sc-${r}-${j - 1}`;
+  } else if (key === 'ArrowDown') {
+    if (r + 1 < recordRowCount) targetId = `sc-${r + 1}-${j}`;
+  } else if (key === 'ArrowUp') {
+    targetId = r > 0 ? `sc-${r - 1}-${j}` : `hps-${j}`;
+  } else if (code === 13) {
     // Enter goes down
-    const nr = r + 1;
-    if (nr < recordRowCount) {
+    const nr = r + (event.shiftKey ? -1 : 1);
+    if (nr < 0) {
+      targetId = `hps-${j}`;
+    } else if (nr < recordRowCount) {
       targetId = `sc-${nr}-${j}`;
     } else if (j + 1 < recordColCount) {
       targetId = `sc-0-${j + 1}`;
@@ -1005,19 +1081,27 @@ function scoreNav(event, r, j, learnerId, assessmentId) {
  * Keyboard navigation inside HPS (Highest Possible Score) row.
  */
 function maxNav(event, h, assessmentId) {
+  const key = event.key || '';
   const code = event.keyCode || event.which;
-  if (code !== 13 && code !== 9) return true;
+  const isArrow = key.startsWith('Arrow');
+  if (code !== 13 && code !== 9 && !isArrow) return true;
   
   const input = event.target;
   const value = input ? input.value : '';
   let targetId = null;
   
-  if (code === 13) {
+  if (key === 'ArrowRight') {
+    if (h + 1 < recordColCount) targetId = `hps-${h + 1}`;
+  } else if (key === 'ArrowLeft') {
+    if (h > 0) targetId = `hps-${h - 1}`;
+  } else if (key === 'ArrowDown' || code === 13) {
     if (recordRowCount > 0) {
       targetId = `sc-0-${h}`;
     } else if (h + 1 < recordColCount) {
       targetId = `hps-${h + 1}`;
     }
+  } else if (key === 'ArrowUp') {
+    targetId = `hps-${h}`;
   } else {
     const nh = h + (event.shiftKey ? -1 : 1);
     if (nh >= 0 && nh < recordColCount) {
@@ -1125,12 +1209,23 @@ function termAssessments(a, term, mapePart) {
 }
 
 function assessmentOrder(item) {
+  const slotIndex = assessmentSlotIndex(item);
+  if (slotIndex !== null) return slotIndex;
+
   for (let i = 0; i < keyStage2Template.length; i++) {
     if (keyStage2Template[i].component === item.component && keyStage2Template[i].title === item.title) {
       return i;
     }
   }
   return 100;
+}
+
+function assessmentSlotIndex(item) {
+  if (!item || !item.templateSlotId) return null;
+  const match = String(item.templateSlotId).match(/\|slot:(\d+)$/);
+  if (!match) return null;
+  const index = Number(match[1]);
+  return Number.isFinite(index) ? index : null;
 }
 
 /**
@@ -1154,8 +1249,8 @@ function finalRemark(a, grade) {
 function componentLabel(component) {
   if (component === 'WW') return 'WW';
   if (component === 'PT') return 'PT';
-  if (component === 'SA1' || component === 'ST1') return 'SA1';
-  if (component === 'SA2' || component === 'ST2') return 'SA2';
+  if (component === 'SA1' || component === 'ST1') return 'ST1';
+  if (component === 'SA2' || component === 'ST2') return 'ST2';
   if (component === 'TE') return 'TE';
   return component;
 }
@@ -1163,20 +1258,524 @@ function componentLabel(component) {
 function componentFullName(component) {
   if (component === 'WW') return 'Written Works';
   if (component === 'PT') return 'Performance Task';
-  if (component === 'SA' || component === 'SA1' || component === 'SA2' || component === 'ST1' || component === 'ST2') return 'Summative Assessment';
+  if (component === 'SA' || component === 'SA1' || component === 'SA2' || component === 'ST1' || component === 'ST2') return 'Summative Test';
   if (component === 'TE') return 'Term Examination';
   return component || 'Assessment';
 }
 
-function compactAssessmentLabel(item) {
-  let title = trim(item.title || '');
-  if (title) {
-    title = title.replace(/\s+/g, '');
-    title = title.replace(/^WW/i, 'W');
-    title = title.replace(/^PT/i, 'P');
-    return title;
+function assessmentHeaderComponent(component) {
+  if (component === 'SA1') return 'ST1';
+  if (component === 'SA2') return 'ST2';
+  return component;
+}
+
+function assessmentHeaderOccurrence(item, items, component) {
+  let count = 0;
+  for (let i = 0; i < items.length; i++) {
+    const current = items[i];
+    if (assessmentHeaderComponent(current.component) === component) count++;
+    if (current.id === item.id) return count;
   }
-  return componentLabel(item.component);
+  return count || 1;
+}
+
+function assessmentHeaderLabel(item, items) {
+  const component = assessmentHeaderComponent(item.component);
+  if (component === 'WW') return `W${assessmentHeaderOccurrence(item, items, component)}`;
+  if (component === 'PT') return `P${assessmentHeaderOccurrence(item, items, component)}`;
+  if (component === 'ST1' || component === 'ST2') return component;
+  if (component === 'TE') return 'TE';
+  return componentLabel(component);
+}
+
+function assessmentHeaderTitle(item, label) {
+  return `Open details for ${componentFullName(item.component)} ${label}`;
+}
+
+function scoreTransferAssignments() {
+  const activeYear = db.schoolYear || '2026-2027';
+  return (db.assignments || []).filter(assignment => assignment.schoolYear === activeYear);
+}
+
+function scoreTransferClassLabel(assignment) {
+  if (!assignment) return 'Unknown class';
+  return `Grade ${assignment.gradeLevel || ''} - ${assignment.section || ''} (${assignment.subject || 'Subject'})`;
+}
+
+function scoreTransferMapehParts(assignment) {
+  if (!assignment || !isMapehSubject(assignment.subject)) {
+    return [{ value: '', label: 'All assessments' }];
+  }
+  return [
+    { value: 'music_arts', label: 'Music & Arts' },
+    { value: 'pe_health', label: 'PE & Health' }
+  ];
+}
+
+function scoreTransferFindAssignment(assignmentId) {
+  return (db.assignments || []).find(assignment => assignment.id === assignmentId) || null;
+}
+
+function scoreTransferFindAssessment(assignment, assessmentId) {
+  if (!assignment || !Array.isArray(assignment.assessments)) return null;
+  return assignment.assessments.find(assessment => assessment.id === assessmentId) || null;
+}
+
+function scoreTransferSetOptions(select, options, selectedValue) {
+  if (!select) return '';
+  select.innerHTML = '';
+  options.forEach(option => {
+    const el = document.createElement('option');
+    el.value = option.value;
+    el.textContent = option.label;
+    select.appendChild(el);
+  });
+  const hasSelected = options.some(option => option.value === selectedValue);
+  const nextValue = hasSelected ? selectedValue : (options[0] ? options[0].value : '');
+  select.value = nextValue;
+  select.disabled = options.length === 0;
+  return nextValue;
+}
+
+function scoreTransferAssessmentLabel(assessment, items) {
+  const label = assessmentHeaderLabel(assessment, items);
+  const title = trim(assessment.title || '');
+  const customTitle = title && title !== label && title !== componentLabel(assessment.component) ? ` - ${title}` : '';
+  return `${label}${customTitle} (${componentFullName(assessment.component)})`;
+}
+
+function scoreTransferGetItems(assignment, term, part) {
+  if (!assignment) return [];
+  ensureTemplateAssessments(assignment);
+  const mapePart = isMapehSubject(assignment.subject) ? (part || 'music_arts') : undefined;
+  return termAssessments(assignment, term || '1', mapePart);
+}
+
+function scoreTransferPopulateClassSelect(selectId, selectedValue) {
+  const select = document.getElementById(selectId);
+  const assignments = scoreTransferAssignments();
+  return scoreTransferSetOptions(select, assignments.map(assignment => ({
+    value: assignment.id,
+    label: scoreTransferClassLabel(assignment)
+  })), selectedValue);
+}
+
+function scoreTransferPopulatePartSelect(side, assignment, selectedValue) {
+  const row = document.getElementById(`scoreTransfer${side}PartRow`);
+  const select = document.getElementById(`scoreTransfer${side}Part`);
+  const parts = scoreTransferMapehParts(assignment);
+  if (row) row.style.display = isMapehSubject(assignment && assignment.subject) ? '' : 'none';
+  return scoreTransferSetOptions(select, parts, selectedValue || parts[0].value);
+}
+
+function scoreTransferPopulateAssessmentSelect(side, assignment, term, part, selectedValue) {
+  const select = document.getElementById(`scoreTransfer${side}Assessment`);
+  const items = scoreTransferGetItems(assignment, term, part);
+  return scoreTransferSetOptions(select, items.map(assessment => ({
+    value: assessment.id,
+    label: scoreTransferAssessmentLabel(assessment, items)
+  })), selectedValue);
+}
+
+function scoreTransferReadValues() {
+  const valueOf = id => {
+    const el = document.getElementById(id);
+    return el ? el.value : '';
+  };
+  const checked = id => {
+    const el = document.getElementById(id);
+    return !!(el && el.checked);
+  };
+  return {
+    sourceAssignmentId: valueOf('scoreTransferSourceClass'),
+    sourceTerm: valueOf('scoreTransferSourceTerm') || '1',
+    sourcePart: valueOf('scoreTransferSourcePart'),
+    sourceAssessmentId: valueOf('scoreTransferSourceAssessment'),
+    targetAssignmentId: valueOf('scoreTransferTargetClass'),
+    targetTerm: valueOf('scoreTransferTargetTerm') || '1',
+    targetPart: valueOf('scoreTransferTargetPart'),
+    targetAssessmentId: valueOf('scoreTransferTargetAssessment'),
+    mode: valueOf('scoreTransferMode') || 'move',
+    conflictMode: valueOf('scoreTransferConflictMode') || 'skip',
+    copyHps: checked('scoreTransferCopyHps')
+  };
+}
+
+function scoreTransferCurrentConfig() {
+  const values = scoreTransferReadValues();
+  const sourceAssignment = scoreTransferFindAssignment(values.sourceAssignmentId);
+  const targetAssignment = scoreTransferFindAssignment(values.targetAssignmentId);
+  return {
+    ...values,
+    sourceAssignment,
+    targetAssignment,
+    sourceAssessment: scoreTransferFindAssessment(sourceAssignment, values.sourceAssessmentId),
+    targetAssessment: scoreTransferFindAssessment(targetAssignment, values.targetAssessmentId)
+  };
+}
+
+function clearScoreTransferPreview() {
+  scoreTransferState.preview = null;
+  const preview = document.getElementById('scoreTransferPreview');
+  if (preview) preview.innerHTML = 'Selections changed. Preview the transfer again before applying.';
+  const applyBtn = document.getElementById('scoreTransferApplyBtn');
+  if (applyBtn) applyBtn.disabled = true;
+}
+
+function refreshScoreTransferSelectors() {
+  const values = scoreTransferReadValues();
+  const current = currentAssignment();
+  const defaultAssignmentId = current ? current.id : '';
+  const sourceAssignmentId = scoreTransferPopulateClassSelect('scoreTransferSourceClass', values.sourceAssignmentId || defaultAssignmentId);
+  const targetAssignmentId = scoreTransferPopulateClassSelect('scoreTransferTargetClass', values.targetAssignmentId || defaultAssignmentId);
+  const sourceAssignment = scoreTransferFindAssignment(sourceAssignmentId);
+  const targetAssignment = scoreTransferFindAssignment(targetAssignmentId);
+
+  const sourceTerm = values.sourceTerm || String(db.currentTerm || '1');
+  const targetTerm = values.targetTerm || sourceTerm;
+  const sourceTermEl = document.getElementById('scoreTransferSourceTerm');
+  const targetTermEl = document.getElementById('scoreTransferTargetTerm');
+  if (sourceTermEl) sourceTermEl.value = sourceTerm;
+  if (targetTermEl) targetTermEl.value = targetTerm;
+
+  const sourcePart = scoreTransferPopulatePartSelect('Source', sourceAssignment, values.sourcePart || currentMapehSubTab);
+  const targetPart = scoreTransferPopulatePartSelect('Target', targetAssignment, values.targetPart || sourcePart);
+  const preferredSourceAssessmentId = scoreTransferState.preselectedAssessmentId || values.sourceAssessmentId;
+  scoreTransferPopulateAssessmentSelect('Source', sourceAssignment, sourceTerm, sourcePart, preferredSourceAssessmentId);
+  scoreTransferState.preselectedAssessmentId = '';
+  scoreTransferPopulateAssessmentSelect('Target', targetAssignment, targetTerm, targetPart, values.targetAssessmentId);
+}
+
+function handleScoreTransferSelectionChange() {
+  refreshScoreTransferSelectors();
+  clearScoreTransferPreview();
+}
+
+function showScoreTransferModal(preselectedAssessmentId) {
+  const a = currentAssignment();
+  if (!a) {
+    toast('No class load selected.', 'warning');
+    return;
+  }
+  if (!Array.isArray(a.learners) || a.learners.length === 0) {
+    toast('Please add learners before transferring scores.', 'warning');
+    return;
+  }
+  scoreTransferState = { preview: null, preselectedAssessmentId: preselectedAssessmentId || '' };
+  const currentTerm = String(db.currentTerm || '1');
+  const sourceTermEl = document.getElementById('scoreTransferSourceTerm');
+  const targetTermEl = document.getElementById('scoreTransferTargetTerm');
+  if (sourceTermEl) sourceTermEl.value = currentTerm;
+  if (targetTermEl) targetTermEl.value = currentTerm;
+  showEl('scoreTransferModal', true, 'flex');
+  refreshScoreTransferSelectors();
+  clearScoreTransferPreview();
+}
+
+function showScoreTransferFromAssessmentDetails() {
+  const assessmentId = assessmentDetailsAssessmentId;
+  closeAssessmentDetailsModal();
+  showScoreTransferModal(assessmentId);
+}
+
+function closeScoreTransferModal() {
+  scoreTransferState = { preview: null, preselectedAssessmentId: '' };
+  closeScoreTransferPreviewModal();
+  showEl('scoreTransferModal', false);
+}
+
+function normalizeScoreTransferLrn(learner) {
+  return String((learner && learner.lrn) || '').replace(/\D/g, '').trim();
+}
+
+function normalizeScoreTransferName(learner) {
+  if (!learner) return '';
+  return learnerDisplayName(learner)
+    .toLowerCase()
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function findScoreTransferTargetLearner(sourceLearner, targetLearners) {
+  const learners = targetLearners || [];
+  const sourceLrn = normalizeScoreTransferLrn(sourceLearner);
+  if (sourceLrn) {
+    const byLrn = learners.find(learner => normalizeScoreTransferLrn(learner) === sourceLrn);
+    if (byLrn) return { learner: byLrn, matchType: 'LRN' };
+    return { learner: null, matchType: 'unmatched' };
+  }
+
+  const sourceName = normalizeScoreTransferName(sourceLearner);
+  if (!sourceName) return { learner: null, matchType: 'unmatched' };
+  const byName = learners.find(learner => normalizeScoreTransferName(learner) === sourceName);
+  return byName ? { learner: byName, matchType: 'Name' } : { learner: null, matchType: 'unmatched' };
+}
+
+function hasScoreTransferValue(value) {
+  return value !== undefined && value !== null && value !== '' && !Number.isNaN(parseFloat(value));
+}
+
+function buildScoreTransferPreview(config) {
+  const result = {
+    valid: false,
+    error: '',
+    transferable: [],
+    conflicts: [],
+    unmatched: [],
+    rows: [],
+    blankSource: 0,
+    hpsWarning: '',
+    willCopyHps: false,
+    mode: config.mode === 'copy' ? 'copy' : 'move',
+    conflictMode: config.conflictMode === 'overwrite' ? 'overwrite' : 'skip'
+  };
+
+  if (!config.sourceAssignment || !config.targetAssignment || !config.sourceAssessment || !config.targetAssessment) {
+    result.error = 'Select a valid source and target class and assessment.';
+    return result;
+  }
+  if (config.sourceAssignment.id === config.targetAssignment.id && config.sourceAssessment.id === config.targetAssessment.id) {
+    result.error = 'Source and target assessment cannot be the same.';
+    return result;
+  }
+
+  const sourceMax = number(config.sourceAssessment.maxScore);
+  const targetMax = number(config.targetAssessment.maxScore);
+  if (sourceMax > 0 && targetMax > 0 && sourceMax !== targetMax) {
+    result.hpsWarning = `HPS differs: source is ${sourceMax}, target is ${targetMax}. Scores will be copied as raw values.`;
+  }
+  if (config.copyHps && sourceMax > 0 && !(targetMax > 0)) {
+    result.willCopyHps = true;
+  }
+
+  (config.sourceAssignment.learners || []).forEach(sourceLearner => {
+    const sourceKey = `${sourceLearner.id}|${config.sourceAssessment.id}`;
+    const sourceValue = config.sourceAssignment.scores ? config.sourceAssignment.scores[sourceKey] : undefined;
+    if (!hasScoreTransferValue(sourceValue)) {
+      result.blankSource++;
+      result.rows.push({
+        sourceLearner,
+        targetLearner: null,
+        sourceValue: '',
+        targetValue: '',
+        matchType: '',
+        status: 'blank',
+        action: 'No source score'
+      });
+      return;
+    }
+
+    const match = findScoreTransferTargetLearner(sourceLearner, config.targetAssignment.learners || []);
+    if (!match.learner) {
+      result.unmatched.push({ sourceLearner, sourceValue });
+      result.rows.push({
+        sourceLearner,
+        targetLearner: null,
+        sourceValue,
+        targetValue: '',
+        matchType: '',
+        status: 'unmatched',
+        action: 'No matching learner'
+      });
+      return;
+    }
+
+    const targetKey = `${match.learner.id}|${config.targetAssessment.id}`;
+    const targetValue = config.targetAssignment.scores ? config.targetAssignment.scores[targetKey] : undefined;
+    const hasConflict = hasScoreTransferValue(targetValue);
+    if (hasConflict && result.conflictMode !== 'overwrite') {
+      result.conflicts.push({ sourceLearner, targetLearner: match.learner, sourceValue, targetValue, matchType: match.matchType });
+      result.rows.push({
+        sourceLearner,
+        targetLearner: match.learner,
+        sourceValue,
+        targetValue,
+        matchType: match.matchType,
+        status: 'conflict',
+        action: 'Skipped - target has score'
+      });
+      return;
+    }
+
+    const row = {
+      sourceLearner,
+      targetLearner: match.learner,
+      sourceKey,
+      targetKey,
+      sourceValue,
+      targetValue,
+      matchType: match.matchType,
+      willOverwrite: hasConflict,
+      willClearSource: result.mode === 'move',
+      status: hasConflict ? 'overwrite' : 'transfer',
+      action: hasConflict ? 'Overwrite target score' : (result.mode === 'move' ? 'Move score' : 'Copy score')
+    };
+    result.transferable.push(row);
+    result.rows.push(row);
+  });
+
+  result.valid = true;
+  return result;
+}
+
+function renderScoreTransferPreview(plan, config) {
+  if (!plan.valid) {
+    return `<div class="score-transfer-empty">${esc(plan.error || 'Unable to preview transfer.')}</div>`;
+  }
+
+  const summary = scoreTransferPreviewSummary(plan, config);
+  return `
+    ${summary}
+    <div class="score-transfer-note">A full student-by-student preview is open. Review every row there before applying.</div>
+  `;
+}
+
+function scoreTransferPreviewSummary(plan, config) {
+  const sourceItems = scoreTransferGetItems(config.sourceAssignment, config.sourceTerm, config.sourcePart);
+  const targetItems = scoreTransferGetItems(config.targetAssignment, config.targetTerm, config.targetPart);
+  const sourceLabel = scoreTransferAssessmentLabel(config.sourceAssessment, sourceItems);
+  const targetLabel = scoreTransferAssessmentLabel(config.targetAssessment, targetItems);
+  const modeLabel = plan.mode === 'copy' ? 'Copy' : 'Move';
+  const conflictLabel = plan.conflictMode === 'overwrite' ? 'overwrite filled target scores' : 'skip filled target scores';
+
+  const conflictText = plan.conflicts.length
+    ? `<div class="score-transfer-warning">${plan.conflicts.length} filled target score(s) will be skipped unless you choose overwrite.</div>`
+    : '';
+  const unmatchedText = plan.unmatched.length
+    ? `<div class="score-transfer-warning">${plan.unmatched.length} source learner(s) were not matched in the target class.</div>`
+    : '';
+  const hpsText = plan.hpsWarning
+    ? `<div class="score-transfer-warning">${esc(plan.hpsWarning)}</div>`
+    : '';
+  const copyHpsText = plan.willCopyHps
+    ? '<div class="score-transfer-note">Target HPS is blank. Source HPS will be copied to the target assessment.</div>'
+    : '';
+
+  return `
+    <div class="score-transfer-summary">
+      <strong>${esc(modeLabel)} ${plan.transferable.length} score(s)</strong>
+      <span>${esc(sourceLabel)} to ${esc(targetLabel)}</span>
+      <span>${esc(conflictLabel)}. ${plan.mode === 'move' ? 'Only successfully written source scores will be cleared.' : 'Source scores will stay in place.'}</span>
+      <span>${plan.rows.length} learner(s) reviewed: ${plan.transferable.length} ready, ${plan.conflicts.length} conflict(s), ${plan.unmatched.length} unmatched, ${plan.blankSource} blank source.</span>
+    </div>
+    ${hpsText}
+    ${copyHpsText}
+    ${conflictText}
+    ${unmatchedText}
+  `;
+}
+
+function scoreTransferRowStatusLabel(row) {
+  if (row.status === 'transfer') return 'Ready';
+  if (row.status === 'overwrite') return 'Overwrite';
+  if (row.status === 'conflict') return 'Skipped';
+  if (row.status === 'unmatched') return 'Unmatched';
+  if (row.status === 'blank') return 'Blank';
+  return row.status || '';
+}
+
+function renderScoreTransferFullPreview(plan, config) {
+  if (!plan.valid) {
+    return `<div class="score-transfer-empty">${esc(plan.error || 'Unable to preview transfer.')}</div>`;
+  }
+
+  const rows = (plan.rows || []).map((row, index) => `
+    <tr class="score-transfer-preview-row score-transfer-preview-row--${esc(row.status || 'unknown')}">
+      <td>${index + 1}</td>
+      <td>${esc(learnerDisplayName(row.sourceLearner))}</td>
+      <td>${row.targetLearner ? esc(learnerDisplayName(row.targetLearner)) : '<span class="text-muted">No match</span>'}</td>
+      <td>${row.matchType ? esc(row.matchType) : '<span class="text-muted">-</span>'}</td>
+      <td>${hasScoreTransferValue(row.sourceValue) ? esc(row.sourceValue) : '<span class="text-muted">Blank</span>'}</td>
+      <td>${hasScoreTransferValue(row.targetValue) ? esc(row.targetValue) : '<span class="text-muted">Blank</span>'}</td>
+      <td><span class="score-transfer-status score-transfer-status--${esc(row.status || 'unknown')}">${esc(scoreTransferRowStatusLabel(row))}</span></td>
+      <td>${esc(row.action || '')}${row.willClearSource ? '<div class="text-muted text-xs">Source will clear after success.</div>' : ''}</td>
+    </tr>
+  `).join('');
+
+  return `
+    ${scoreTransferPreviewSummary(plan, config)}
+    <table class="score-transfer-table">
+      <thead>
+        <tr><th>No.</th><th>Source Learner</th><th>Target Learner</th><th>Match</th><th>Source Score</th><th>Target Now</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody>${rows || '<tr><td colspan="8">No learners found for preview.</td></tr>'}</tbody>
+    </table>
+  `;
+}
+
+function previewScoreTransfer() {
+  const config = scoreTransferCurrentConfig();
+  const plan = buildScoreTransferPreview(config);
+  scoreTransferState.preview = { config, plan };
+
+  const preview = document.getElementById('scoreTransferPreview');
+  if (preview) preview.innerHTML = renderScoreTransferPreview(plan, config);
+  const applyBtn = document.getElementById('scoreTransferApplyBtn');
+  if (applyBtn) applyBtn.disabled = !plan.valid || plan.transferable.length === 0;
+  showScoreTransferPreviewModal(plan, config);
+}
+
+function showScoreTransferPreviewModal(plan, config) {
+  const body = document.getElementById('scoreTransferPreviewModalBody');
+  if (body) body.innerHTML = renderScoreTransferFullPreview(plan, config);
+  const applyBtn = document.getElementById('scoreTransferPreviewApplyBtn');
+  if (applyBtn) applyBtn.disabled = !plan.valid || plan.transferable.length === 0;
+  showEl('scoreTransferPreviewModal', true, 'flex');
+}
+
+function closeScoreTransferPreviewModal() {
+  showEl('scoreTransferPreviewModal', false);
+}
+
+function applyScoreTransferFromPreview() {
+  closeScoreTransferPreviewModal();
+  applyScoreTransfer();
+}
+
+function applyScoreTransfer() {
+  const config = scoreTransferCurrentConfig();
+  const plan = buildScoreTransferPreview(config);
+  if (!plan.valid) {
+    toast(plan.error || 'Unable to apply transfer.', 'warning');
+    previewScoreTransfer();
+    return;
+  }
+  if (plan.transferable.length === 0) {
+    toast('No scores are ready to transfer.', 'warning');
+    previewScoreTransfer();
+    return;
+  }
+
+  if (!config.targetAssignment.scores) config.targetAssignment.scores = {};
+  if (!config.sourceAssignment.scores) config.sourceAssignment.scores = {};
+
+  const rollbackSnapshot = getAssignmentsSnapshot([config.sourceAssignment, config.targetAssignment]);
+  pushTransferHistoryState([config.sourceAssignment, config.targetAssignment]);
+
+  try {
+    plan.transferable.forEach(item => {
+      config.targetAssignment.scores[item.targetKey] = number(item.sourceValue);
+      if (plan.mode === 'move') {
+        delete config.sourceAssignment.scores[item.sourceKey];
+      }
+    });
+
+    if (plan.willCopyHps) {
+      config.targetAssessment.maxScore = config.sourceAssessment.maxScore;
+    }
+
+    saveDatabase();
+    closeScoreTransferModal();
+    render();
+    toast(`${plan.mode === 'copy' ? 'Copied' : 'Moved'} ${plan.transferable.length} score(s).`, 'success');
+  } catch (error) {
+    if (rollbackSnapshot) restoreSheetSnapshot(rollbackSnapshot);
+    undoStack.pop();
+    updateUndoRedoUI();
+    console.error(error);
+    toast('Score transfer failed. No scores were changed.', 'error');
+  }
 }
 
 function clearColumnScores(assessmentId) {
@@ -1348,9 +1947,10 @@ function saveAssessmentDetails() {
   assessment.title = trim(titleEl ? titleEl.value : assessment.title) || componentLabel(assessment.component);
   assessment.date = dateEl ? dateEl.value : '';
   assessment.descriptionHtml = sanitizeAssessmentDescription(editor ? editor.innerHTML : '');
+  assessment.description = plainAssessmentText(assessment.descriptionHtml);
   saveDatabase();
-  render();
   closeAssessmentDetailsModal();
+  render();
   toast('Assessment details saved.', 'success');
 }
 
