@@ -197,6 +197,8 @@ function createWindow() {
           const termToggle = advisoryPage.querySelector('[data-toggle-advisory-terms]');
           termToggle.click();
           if ([...advisoryPage.querySelectorAll('.advisory-grade-matrix thead th')].some(cell => cell.textContent.trim() === 'T1')) throw new Error('Terms 1–3 were not hidden.');
+          const finalHeaderWidths = [...advisoryPage.querySelectorAll('.advisory-grade-matrix thead tr:nth-child(2) th')].map(cell => Math.round(cell.getBoundingClientRect().width));
+          if (!finalHeaderWidths.length || Math.max(...finalHeaderWidths) - Math.min(...finalHeaderWidths) > 1 || finalHeaderWidths[0] > 100) throw new Error('Final-only subject columns are not evenly distributed: ' + finalHeaderWidths.join(', '));
           advisoryPage.querySelector('[data-toggle-advisory-terms]').click();
           const mathSort = () => [...advisoryPage.querySelectorAll('[data-sort-advisory-subject]')].find(button => button.title.startsWith('Mathematics'));
           mathSort().click();

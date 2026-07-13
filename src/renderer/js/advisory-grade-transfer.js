@@ -880,7 +880,7 @@
           ${colgroup}
           <thead>
             <tr>
-              <th rowspan="2">LRN / Official Name</th>
+              <th rowspan="2" class="advisory-learner-heading">LRN / Official Name</th>
               ${subjectGroups.map(subject => {
                 const activeSort = advisorySubjectSort.subjectId === subject.id ? advisorySubjectSort.direction : '';
                 const sortLabel = activeSort === 'desc' ? '&darr;' : activeSort === 'asc' ? '&uarr;' : '&#8597;';
