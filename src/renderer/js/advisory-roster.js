@@ -236,6 +236,7 @@
       </tr>`).join('') : '<tr><td colspan="7"><div class="advisory-roster__empty">No learners yet. Import an existing roster, add learners manually, paste a list, or upload a supported SF1 file.</div></td></tr>';
     body.querySelectorAll('[data-edit-advisory-learner]').forEach(button => button.addEventListener('click', () => showLearnerForm(button.dataset.editAdvisoryLearner)));
     body.querySelectorAll('[data-remove-advisory-learner]').forEach(button => button.addEventListener('click', () => removeLearner(button.dataset.removeAdvisoryLearner)));
+    if (globalScope.AdvisoryGradeTransfer?.renderWorkspacePanel) globalScope.AdvisoryGradeTransfer.renderWorkspacePanel(overlay, advisoryClass);
   }
 
   function openWorkspace(event) {
@@ -258,11 +259,13 @@
             <button class="btn btn-primary btn-sm" type="button" data-advisory-add-manual>Add Learner</button>
             <button class="btn btn-olive btn-sm" type="button" data-advisory-add-bulk>Bulk Add</button>
             <button class="btn btn-success btn-sm" type="button" data-advisory-import-sf1>Upload SF1</button>
+            <button class="btn btn-primary btn-sm" type="button" data-advisory-import-grades>Import Subject Grades</button>
             <button class="btn btn-ghost btn-sm" type="button" data-advisory-edit-class>Edit Class Details</button>
             <span class="advisory-workspace__count" data-advisory-roster-count></span>
           </div>
           <div class="advisory-workspace__body">
-            <div class="advisory-roster-table-wrap"><table class="advisory-roster-table"><thead><tr><th>#</th><th>LRN</th><th>Official Name</th><th>Sex</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody data-advisory-roster-body></tbody></table></div>
+            <h3 class="advisory-section-title">Learner Roster</h3><div class="advisory-roster-table-wrap"><table class="advisory-roster-table"><thead><tr><th>#</th><th>LRN</th><th>Official Name</th><th>Sex</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody data-advisory-roster-body></tbody></table></div>
+            <section class="advisory-grade-panel" data-advisory-grade-panel></section>
           </div>
         </div>`;
       document.body.appendChild(overlay);
@@ -271,6 +274,7 @@
       overlay.querySelector('[data-advisory-add-manual]').addEventListener('click', () => showLearnerForm());
       overlay.querySelector('[data-advisory-add-bulk]').addEventListener('click', showBulkModal);
       overlay.querySelector('[data-advisory-import-sf1]').addEventListener('click', importSf1Roster);
+      overlay.querySelector('[data-advisory-import-grades]').addEventListener('click', () => globalScope.importAdvisorySubjectGrades());
       overlay.querySelector('[data-advisory-edit-class]').addEventListener('click', globalScope.showAdvisoryClassSetupModal);
     }
     renderWorkspace();

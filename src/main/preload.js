@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File Backup & Migration Dialogs
   exportJson: (jsonString, defaultFileName) => ipcRenderer.invoke('dialog:export-json', jsonString, defaultFileName),
   importJson: () => ipcRenderer.invoke('dialog:import-json'),
+  exportGradeTransfer: (jsonString, defaultFileName) => ipcRenderer.invoke('dialog:export-grade-transfer', jsonString, defaultFileName),
+  importGradeTransfer: () => ipcRenderer.invoke('dialog:import-grade-transfer'),
   selectFolder: () => ipcRenderer.invoke('dialog:select-folder'),
   importSf1: () => ipcRenderer.invoke('dialog:import-sf1'),
   exportCsv: (csvString) => ipcRenderer.invoke('dialog:export-csv', csvString),

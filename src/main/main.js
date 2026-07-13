@@ -218,7 +218,29 @@ ipcMain.handle('dialog:import-json', async () => {
   });
   if (result.canceled || result.filePaths.length === 0) return { success: false };
   const content = fileIO.readFile(result.filePaths[0]);
-  return { success: true, content: content };
+  return { success: true, content: content, name: path.basename(result.filePaths[0]) };
+});
+
+ipcMain.handle('dialog:export-grade-transfer', async (_event, jsonString, defaultFileName) => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Save Grade Transfer File',
+    defaultPath: path.join(app.getPath('desktop'), defaultFileName || 'ECR_Grades.json'),
+    filters: [{ name: 'Grade Transfer Files', extensions: ['json'] }]
+  });
+  if (result.canceled || !result.filePath) return { success: false };
+  fileIO.writeFile(result.filePath, jsonString);
+  return { success: true, path: result.filePath };
+});
+
+ipcMain.handle('dialog:import-grade-transfer', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select Grade Transfer File',
+    filters: [{ name: 'Grade Transfer Files', extensions: ['json'] }],
+    properties: ['openFile']
+  });
+  if (result.canceled || result.filePaths.length === 0) return { success: false };
+  const filePath = result.filePaths[0];
+  return { success: true, content: fileIO.readFile(filePath), name: path.basename(filePath) };
 });
 
 ipcMain.handle('dialog:select-folder', async () => {

@@ -196,6 +196,9 @@ function renderDashboardOverview() {
         </div>
 
         <div class="dashboard-card__actions" onclick="event.stopPropagation();">
+          <button class="btn btn-primary btn-sm dashboard-card__export-btn" type="button" onclick="showGradeTransferExportModal('${esc(a.id)}')">
+            Export Final Grades
+          </button>
           <button class="btn btn-olive btn-sm dashboard-card__report-btn" type="button" onclick="openDashboardReport(this, '${esc(a.id)}')">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 20V10"></path>
