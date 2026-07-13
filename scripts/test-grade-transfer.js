@@ -141,6 +141,16 @@ function validPayload(data = fixture()) {
   assert.strictEqual(Transfer.subjectDisplayName('Araling Panlipunan'), 'Aral. Pan.');
   assert.strictEqual(Transfer.subjectDisplayName('Good Manners and Right Conduct (GMRC)'), 'GMRC');
   assert.strictEqual(Transfer.subjectDisplayName('Values Education'), 'Val. Ed.');
+  assert.strictEqual(Transfer.subjectCompactName('Filipino'), 'FIL');
+  assert.strictEqual(Transfer.subjectCompactName('English'), 'ENG');
+  assert.strictEqual(Transfer.subjectCompactName('Mathematics'), 'MATH');
+  assert.strictEqual(Transfer.subjectCompactName('Science'), 'SCI');
+  assert.strictEqual(Transfer.subjectCompactName('Araling Panlipunan'), 'AP');
+  assert.strictEqual(Transfer.subjectCompactName('Music & Arts'), 'M&A');
+  assert.strictEqual(Transfer.subjectCompactName('PE & Health'), 'PE&H');
+  assert.strictEqual(Transfer.subjectCompactName('Language'), 'LANG');
+  assert.strictEqual(Transfer.subjectCompactName('Reading and Literacy'), 'R&L');
+  assert.strictEqual(Transfer.subjectCompactName('Makabansa'), 'MKB');
   const learners = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
   const grades = [
     ...['1', '2', '3'].map(term => ({ advisoryLearnerId: 'a', advisorySubjectId: 'subject', term, finalGrade: 80 })),

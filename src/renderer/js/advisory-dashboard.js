@@ -130,6 +130,11 @@
     const profileDb = activeDb();
     const schoolYear = profileDb.schoolYear || '2026-2027';
     const existing = getClassForYear(profileDb, schoolYear);
+    if (existing) {
+      globalScope.openAdvisoryClassPage?.();
+      globalScope.AdvisoryGradeTransfer?.setPanelTab?.('settings', document.querySelector('.advisory-page'));
+      return;
+    }
     const escHtml = globalScope.esc || (value => String(value ?? ''));
     const gradeLevels = ['Kindergarten', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
     const supportedGrades = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
@@ -287,8 +292,7 @@
       showSetupModal();
       return;
     }
-    // Phase 3 replaces this setup entry point with the complete roster workspace.
-    showSetupModal();
+    globalScope.openAdvisoryClassPage?.(event);
   }
 
   const api = { getClassForYear, summarize, renderCard, showSetupModal, currentClass };

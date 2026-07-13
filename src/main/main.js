@@ -194,12 +194,16 @@ function createWindow() {
           if (getComputedStyle(advisoryPage.querySelector('.advisory-subject-end')).borderRightWidth !== '3px') throw new Error('Subject group boundaries are not visually separated.');
           const firstLearnerCell = advisoryPage.querySelector('.advisory-grade-matrix tbody td:first-child');
           if (getComputedStyle(firstLearnerCell).position !== 'sticky') throw new Error('LRN / Official Name column is not frozen during horizontal scrolling.');
-          const termToggle = advisoryPage.querySelector('[data-toggle-advisory-terms]');
-          termToggle.click();
-          if ([...advisoryPage.querySelectorAll('.advisory-grade-matrix thead th')].some(cell => cell.textContent.trim() === 'T1')) throw new Error('Terms 1–3 were not hidden.');
+          if (advisoryPage.querySelector('[data-toggle-advisory-terms]')) throw new Error('The old shared term toggle is still rendered.');
+          if ([...advisoryPage.querySelectorAll('.advisory-grade-matrix thead th')].some(cell => cell.textContent.trim() === 'T1')) throw new Error('Final-only view is not the default.');
           const finalHeaderWidths = [...advisoryPage.querySelectorAll('.advisory-grade-matrix thead tr:nth-child(2) th')].map(cell => Math.round(cell.getBoundingClientRect().width));
           if (!finalHeaderWidths.length || Math.max(...finalHeaderWidths) - Math.min(...finalHeaderWidths) > 1 || finalHeaderWidths[0] > 100) throw new Error('Final-only subject columns are not evenly distributed: ' + finalHeaderWidths.join(', '));
-          advisoryPage.querySelector('[data-toggle-advisory-terms]').click();
+          const finalWrap = advisoryPage.querySelector('[data-advisory-panel="grades"] .advisory-grade-matrix-wrap');
+          if (finalWrap.scrollWidth > finalWrap.clientWidth + 2) throw new Error('Final-only subject areas overflow the visible grade matrix: ' + finalWrap.scrollWidth + 'x' + finalWrap.clientWidth + '.');
+          const mathExpand = [...advisoryPage.querySelectorAll('[data-expand-advisory-subject]')].find(button => button.getAttribute('aria-label').includes('Mathematics'));
+          mathExpand.click();
+          if ([...advisoryPage.querySelectorAll('.advisory-grade-matrix thead th')].filter(cell => cell.textContent.trim() === 'T1').length !== 1) throw new Error('Subject term expansion affected more than one subject.');
+          [...advisoryPage.querySelectorAll('[data-expand-advisory-subject]')].find(button => button.getAttribute('aria-label').includes('Mathematics')).click();
           const mathSort = () => [...advisoryPage.querySelectorAll('[data-sort-advisory-subject]')].find(button => button.title.startsWith('Mathematics'));
           mathSort().click();
           mathSort().click();
@@ -208,9 +212,14 @@ function createWindow() {
           advisoryPage.querySelector('[data-advisory-page-tab="sources"]').click();
           if (!advisoryPage.querySelector('[data-advisory-panel="grades"]').hidden || advisoryPage.querySelector('[data-advisory-panel="sources"]').hidden || !advisoryPage.textContent.includes('Assign Source')) throw new Error('Grade Sources tab did not open its dedicated panel.');
           advisoryPage.querySelector('[data-advisory-page-tab="roster"]').click();
-          if (advisoryPage.querySelector('[data-advisory-panel="roster"]').hidden || !advisoryPage.querySelector('[data-open-advisory-roster-tools]') || !advisoryPage.querySelector('[data-advisory-panel="roster"]').textContent.includes('123456789012')) throw new Error('Manage Roster tab did not open its page panel.');
+          if (advisoryPage.querySelector('[data-advisory-panel="roster"]').hidden || !advisoryPage.querySelector('[data-advisory-add-manual]') || !advisoryPage.querySelector('[data-advisory-import-class]') || !advisoryPage.querySelector('[data-remove-advisory-learner]') || !advisoryPage.querySelector('[data-advisory-panel="roster"]').textContent.includes('123456789012')) throw new Error('Manage Roster tools were not rendered inline.');
+          if (advisoryPage.querySelector('[data-open-advisory-roster-tools]')) throw new Error('Manage Roster still depends on a separate manager modal.');
           advisoryPage.querySelector('[data-advisory-page-tab="settings"]').click();
-          if (advisoryPage.querySelector('[data-advisory-panel="settings"]').hidden || !advisoryPage.querySelector('[data-open-advisory-settings]') || !advisoryPage.querySelector('[data-advisory-panel="settings"]').textContent.includes('Offline')) throw new Error('Advisory Settings tab did not open its page panel.');
+          if (advisoryPage.querySelector('[data-advisory-panel="settings"]').hidden || !advisoryPage.querySelector('[data-advisory-settings-form]') || !advisoryPage.querySelector('#advisoryInlineGrade') || !advisoryPage.querySelector('#advisoryInlineSection') || !advisoryPage.querySelector('[data-advisory-panel="settings"]').textContent.includes('Managed in Global Settings')) throw new Error('Editable Advisory-only settings were not rendered inline.');
+          if (advisoryPage.querySelector('[data-open-advisory-settings]')) throw new Error('Advisory Settings still depends on an edit modal.');
+          advisoryPage.querySelector('[data-advisory-page-tab="grades"]').click();
+          showAdvisoryClassSetupModal();
+          if (document.querySelector('[data-advisory-setup-modal]') || advisoryPage.querySelector('[data-advisory-panel="settings"]').hidden) throw new Error('Editing an existing Advisory Class did not redirect to the inline Settings tab.');
           advisoryPage.querySelector('[data-advisory-page-tab="grades"]').click();
           advisoryPage.querySelector('[data-add-advisory-subject]').click();
           const subjectModal = document.querySelector('.advisory-nested-modal');
@@ -224,10 +233,7 @@ function createWindow() {
           if (subjectModal.querySelector('[data-local-source-class]')?.hidden || !subjectModal.querySelector('[data-local-source-class] option[value="smoke-subject"]')) throw new Error('Matching local class source choices were not shown.');
           subjectModal.remove();
           advisoryPage.querySelector('[data-advisory-page-tab="roster"]').click();
-          advisoryPage.querySelector('[data-open-advisory-roster-tools]').click();
-          const rosterModal = document.querySelector('[data-advisory-roster-manager]');
-          if (!rosterModal || !rosterModal.querySelector('[data-remove-advisory-learner]')) throw new Error('Separate roster manager did not open.');
-          rosterModal.querySelector('[data-advisory-import-class]').click();
+          advisoryPage.querySelector('[data-advisory-import-class]').click();
           const classChooser = document.querySelector('.advisory-nested-modal');
           const sourceSelect = classChooser?.querySelector('[data-source-class]');
           if (!sourceSelect?.querySelector('option[value="smoke-subject"]')) throw new Error('Import from Other Class chooser did not list the Dashboard class.');
@@ -237,12 +243,10 @@ function createWindow() {
           const rosterPreview = document.querySelector('.advisory-preview-modal');
           if (!rosterPreview || !rosterPreview.textContent.toUpperCase().includes('REYES')) throw new Error('Other Class roster did not reach review preview.');
           rosterPreview.closest('.modal-overlay').remove();
-          rosterModal.querySelector('[data-remove-advisory-learner]').click();
+          advisoryPage.querySelector('[data-remove-advisory-learner]').click();
           const confirmation = document.querySelector('.modal-z-confirm');
           if (!confirmation) throw new Error('Remove Advisory Learner confirmation did not open.');
-          if (Number(getComputedStyle(confirmation).zIndex) <= Number(getComputedStyle(rosterModal).zIndex)) throw new Error('Remove confirmation is behind the roster modal.');
           confirmation.querySelector('#confirmModalCancel').click();
-          rosterModal.querySelector('[data-close-advisory-roster]').click();
           advisoryPage.querySelector('[data-advisory-page-reset]').click();
           const resetModal = document.querySelector('[data-advisory-reset-modal]');
           if (!resetModal?.querySelector('[data-reset-backup]') || !resetModal.querySelector('[data-reset-without]')) throw new Error('Reset backup choices were not rendered.');
@@ -253,12 +257,38 @@ function createWindow() {
           updateProfile();
           if (runtimeProfile.district !== 'Smoke Test District') throw new Error('District profile field did not update the active profile.');
 
-          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, rosterTab: true, settingsTab: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, termToggle: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, rosterModal: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
+          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }
         })()`);
         if (result?.__error) throw new Error(result.__error);
+        const zoomChecks = [];
+        for (const factor of [1, 1.25, 1.5, 2]) {
+          mainWindow.webContents.setZoomFactor(factor);
+          await new Promise(resolve => setTimeout(resolve, 80));
+          const zoomResult = await mainWindow.webContents.executeJavaScript(`(() => {
+            const page = document.querySelector('.advisory-page');
+            AdvisoryGradeTransfer.setPanelTab('grades', page);
+            const wrap = page.querySelector('[data-advisory-panel="grades"] .advisory-grade-matrix-wrap');
+            const matrix = wrap.querySelector('.advisory-grade-matrix--finals-only');
+            const general = matrix?.querySelector('.advisory-general-average');
+            const learner = matrix?.querySelector('tbody td:first-child');
+            const compact = matrix?.querySelector('.advisory-subject-name--compact');
+            return {
+              overflow: wrap.scrollWidth - wrap.clientWidth,
+              generalVisible: Boolean(general && general.getBoundingClientRect().right <= wrap.getBoundingClientRect().right + 1),
+              learnerWrap: learner ? getComputedStyle(learner).whiteSpace === 'normal' : false,
+              compactVisible: compact ? getComputedStyle(compact).display !== 'none' : false
+            };
+          })()`);
+          if (zoomResult.overflow > 2 || !zoomResult.generalVisible || !zoomResult.learnerWrap || (factor > 1 && !zoomResult.compactVisible)) {
+            throw new Error(`Final-only layout failed at ${factor * 100}% zoom: ${JSON.stringify(zoomResult)}`);
+          }
+          zoomChecks.push(factor);
+        }
+        mainWindow.webContents.setZoomFactor(1);
+        result.zoomFactors = zoomChecks;
         clearTimeout(smokeTimeout);
         if (rendererErrors.length) {
           console.error('SMOKE_FAIL Renderer console errors: ' + rendererErrors.join(' | '));

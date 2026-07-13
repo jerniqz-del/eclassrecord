@@ -13,6 +13,7 @@ Run this checklist on a disposable profile and retain screenshots or notes for f
 
 ## Roster
 
+- [ ] Open **Manage Roster** and confirm import, SF1, bulk add, manual add, edit, and remove controls are inside the tab rather than a separate roster manager.
 - [ ] Add, edit, and remove a learner manually; verify LRN and required-name validation.
 - [ ] Bulk-paste valid, malformed, duplicate-LRN, and duplicate-name rows; import only selected valid rows.
 - [ ] Upload a representative SF1 file and review extracted learners before saving.
@@ -48,6 +49,15 @@ Run this checklist on a disposable profile and retain screenshots or notes for f
 - [ ] Run Database Integrity Check; confirm Advisory issues are reported without automatic deletion.
 - [ ] Disconnect networking and repeat export/import/undo; confirm all actions work locally.
 - [ ] Restart and verify Dashboard completion and grade matrix are unchanged.
+
+## Advisory page layout and settings
+
+- [ ] Open **Grade Record** and confirm finals are shown by default with no shared Terms 1–3 toggle.
+- [ ] Expand one subject and confirm only that subject reveals T1, T2, T3, and Final; collapse it again.
+- [ ] Test the app zoom controls through the supported range; confirm every subject final and General Average remain visible, compact subject labels appear when needed, and long learner names wrap.
+- [ ] Confirm the Filipino Final header is centered like the other final headers.
+- [ ] Open **Advisory Settings** and edit grade level or section directly in the tab. Confirm school, adviser, school year, and location fields remain managed by Global Settings.
+- [ ] From the Dashboard, choose **Edit Details** for an existing Advisory Class and confirm the app opens the Advisory Settings tab instead of a modal.
 
 ## Automated companion checks
 

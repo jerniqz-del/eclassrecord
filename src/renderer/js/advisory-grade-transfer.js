@@ -16,7 +16,7 @@
   const SCHEMA_VERSION = '1.0';
   const MAPEH_AVERAGE_ID = '__mapeh_average__';
   let advisoryPanelTab = 'grades';
-  let showAdvisoryTerms = true;
+  const expandedAdvisorySubjects = new Set();
   let advisorySubjectSort = { subjectId: '', direction: '' };
 
   function text(value) {
@@ -60,6 +60,40 @@
     if (key.includes('GOOD MANNERS AND RIGHT CONDUCT') || key.includes('GOOD MORAL AND RIGHT CONDUCT') || key === 'GMRC') return 'GMRC';
     if (key === 'VALUES EDUCATION') return 'Val. Ed.';
     return text(subjectName);
+  }
+
+  function subjectCompactName(subjectName) {
+    const key = normalizeSubjectKey(subjectName);
+    if (key === 'FILIPINO') return 'FIL';
+    if (key === 'ENGLISH') return 'ENG';
+    if (key === 'MATHEMATICS') return 'MATH';
+    if (key === 'SCIENCE') return 'SCI';
+    if (key === 'ARALING PANLIPUNAN') return 'AP';
+    if (key === 'MUSIC ARTS') return 'M&A';
+    if (key === 'PE HEALTH' || key.includes('ARTS AND PHYSICAL EDUCATION')) return 'PE&H';
+    if (key === 'LANGUAGE') return 'LANG';
+    if (key.includes('READING') && key.includes('LITERACY')) return 'R&L';
+    if (key === 'MAKABANSA') return 'MKB';
+    if (key.includes('EDUKASYONG PANTAHANAN AT PANGKABUHAYAN') || /(^| )EPP($| )/.test(key)) return 'EPP';
+    if (key.includes('TECHNOLOGY AND LIVELIHOOD EDUCATION') || /(^| )TLE($| )/.test(key)) return 'TLE';
+    if (key.includes('GOOD MANNERS AND RIGHT CONDUCT') || key.includes('GOOD MORAL AND RIGHT CONDUCT') || key === 'GMRC') return 'GMRC';
+    if (key === 'VALUES EDUCATION') return 'Val.Ed';
+    if (key === 'MAPEH AVERAGE') return 'MAPEH';
+    return subjectDisplayName(subjectName);
+  }
+
+  function classSections(profileDb, advisoryClass) {
+    const seen = new Set();
+    return (profileDb.assignments || [])
+      .filter(item => item.schoolYear === advisoryClass.schoolYear)
+      .map(item => text(item.section))
+      .filter(section => {
+        const key = section.toLocaleUpperCase();
+        if (!section || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((left, right) => left.localeCompare(right, 'fil'));
   }
 
   function ensureGradeLevelSubjects(profileDb, advisoryClass) {
@@ -869,14 +903,15 @@
         : [])
     ]);
     const sortedLearners = sortLearnersBySubject(learners, grades, advisorySubjectSort.subjectId, advisorySubjectSort.direction, subjects);
-    const subjectColumnCount = showAdvisoryTerms ? 4 : 1;
-    const colgroup = `<colgroup><col class="advisory-learner-col">${subjectGroups.map(() => showAdvisoryTerms
+    const hasExpandedSubject = subjectGroups.some(subject => expandedAdvisorySubjects.has(subject.id));
+    const totalSubjectColumns = subjectGroups.reduce((total, subject) => total + (expandedAdvisorySubjects.has(subject.id) ? 4 : 1), 0);
+    const colgroup = `<colgroup><col class="advisory-learner-col">${subjectGroups.map(subject => expandedAdvisorySubjects.has(subject.id)
       ? '<col class="advisory-term-col"><col class="advisory-term-col"><col class="advisory-term-col"><col class="advisory-final-col">'
       : '<col class="advisory-final-col">').join('')}<col class="advisory-general-col"></colgroup>`;
 
     const matrix = subjects.length ? `
       <div class="advisory-grade-matrix-wrap">
-        <table class="advisory-roster-table advisory-grade-matrix ${showAdvisoryTerms ? '' : 'advisory-grade-matrix--finals-only'}">
+        <table class="advisory-roster-table advisory-grade-matrix ${hasExpandedSubject ? '' : 'advisory-grade-matrix--finals-only'}">
           ${colgroup}
           <thead>
             <tr>
@@ -884,27 +919,28 @@
               ${subjectGroups.map(subject => {
                 const activeSort = advisorySubjectSort.subjectId === subject.id ? advisorySubjectSort.direction : '';
                 const sortLabel = activeSort === 'desc' ? '&darr;' : activeSort === 'asc' ? '&uarr;' : '&#8597;';
-                return `<th colspan="${subjectColumnCount}" class="advisory-subject-heading advisory-subject-end ${subject.derived ? 'advisory-mapeh-average' : ''}"><button type="button" class="advisory-subject-sort" data-sort-advisory-subject="${globalScope.esc(subject.id)}" aria-label="Sort learners by ${globalScope.esc(subject.subjectName)} final grade" aria-pressed="${activeSort ? 'true' : 'false'}" title="${globalScope.esc(subject.subjectName)} — sort by final grade"><span>${globalScope.esc(subjectDisplayName(subject.subjectName))}</span><small aria-hidden="true">${sortLabel}</small></button></th>`;
+                const expanded = expandedAdvisorySubjects.has(subject.id);
+                return `<th colspan="${expanded ? 4 : 1}" class="advisory-subject-heading advisory-subject-end ${subject.derived ? 'advisory-mapeh-average' : ''}"><div class="advisory-subject-heading__controls"><button type="button" class="advisory-subject-sort" data-sort-advisory-subject="${globalScope.esc(subject.id)}" aria-label="Sort learners by ${globalScope.esc(subject.subjectName)} final grade" aria-pressed="${activeSort ? 'true' : 'false'}" title="${globalScope.esc(subject.subjectName)} — sort by final grade"><span class="advisory-subject-name--full">${globalScope.esc(subjectDisplayName(subject.subjectName))}</span><span class="advisory-subject-name--compact">${globalScope.esc(subjectCompactName(subject.subjectName))}</span><small aria-hidden="true">${sortLabel}</small></button><button type="button" class="advisory-subject-expand" data-expand-advisory-subject="${globalScope.esc(subject.id)}" aria-expanded="${expanded}" aria-label="${expanded ? 'Hide' : 'Show'} term grades for ${globalScope.esc(subject.subjectName)}" title="${expanded ? 'Hide Terms 1–3' : 'Show Terms 1–3'}"><span aria-hidden="true">${expanded ? '−' : '+'}</span></button></div></th>`;
               }).join('')}
               <th rowspan="2" class="advisory-general-average">General Average</th>
             </tr>
-            <tr>${subjectGroups.map(subject => showAdvisoryTerms
+            <tr>${subjectGroups.map(subject => expandedAdvisorySubjects.has(subject.id)
               ? `<th class="${subject.derived ? 'advisory-mapeh-average' : ''}">T1</th><th class="${subject.derived ? 'advisory-mapeh-average' : ''}">T2</th><th class="${subject.derived ? 'advisory-mapeh-average' : ''}">T3</th><th class="advisory-final-column advisory-subject-end ${subject.derived ? 'advisory-mapeh-average' : ''}">Final</th>`
               : `<th class="advisory-final-column advisory-subject-end ${subject.derived ? 'advisory-mapeh-average' : ''}">Final</th>`).join('')}</tr>
           </thead>
           <tbody>${sortedLearners.length ? sortedLearners.map(learner => {
             const subjectCells = subjectGroups.map(subject => {
               if (subject.derived) {
-                const termCells = showAdvisoryTerms ? ['1', '2', '3'].map(term => calculatedGradeCell(calculateMapehTermAverage(grades, learner.id, subjects, term), `MAPEH Term ${term} average`, 'advisory-mapeh-average')).join('') : '';
+                const termCells = expandedAdvisorySubjects.has(subject.id) ? ['1', '2', '3'].map(term => calculatedGradeCell(calculateMapehTermAverage(grades, learner.id, subjects, term), `MAPEH Term ${term} average`, 'advisory-mapeh-average')).join('') : '';
                 return `${termCells}${calculatedGradeCell(calculateMapehFinal(grades, learner.id, subjects), 'Average of the three MAPEH term averages', 'advisory-final-column advisory-subject-end advisory-mapeh-average')}`;
               }
-              const termCells = showAdvisoryTerms ? ['1', '2', '3'].map(term => gradeCell(grades.find(item => item.advisoryLearnerId === learner.id && item.advisorySubjectId === subject.id && item.term === term))).join('') : '';
+              const termCells = expandedAdvisorySubjects.has(subject.id) ? ['1', '2', '3'].map(term => gradeCell(grades.find(item => item.advisoryLearnerId === learner.id && item.advisorySubjectId === subject.id && item.term === term))).join('') : '';
               const finalGrade = calculateSubjectFinal(grades, learner.id, subject.id);
               return `${termCells}${calculatedGradeCell(finalGrade, 'Average of Terms 1–3', 'advisory-final-column advisory-subject-end')}`;
             }).join('');
             const generalAverage = calculateGeneralAverage(grades, learner.id, subjects);
             return `<tr><td><small>${globalScope.esc(learner.lrn || 'No LRN')}</small><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</strong></td>${subjectCells}<td class="advisory-general-average ${generalAverage === null ? 'is-missing' : 'has-grade'}" title="Available when every subject has all three term grades">${generalAverage === null ? '&mdash;' : generalAverage}</td></tr>`;
-          }).join('') : `<tr><td colspan="${subjectGroups.length * subjectColumnCount + 2}"><div class="advisory-roster__empty">No learners are in the official roster. Use Manage Roster to import or add learners.</div></td></tr>`}</tbody>
+          }).join('') : `<tr><td colspan="${totalSubjectColumns + 2}"><div class="advisory-roster__empty">No learners are in the official roster. Use Manage Roster to import or add learners.</div></td></tr>`}</tbody>
         </table>
       </div>` : '<div class="advisory-roster__empty">No subjects have been configured. Import the first Grade Transfer File or add a subject manually.</div>';
 
@@ -918,23 +954,14 @@
 
     const historyRows = batches.length ? batches.map(batch => `<tr><td>${globalScope.esc(batch.importedAt || '—')}</td><td>${globalScope.esc(batch.filename || 'Unknown file')}<small>${globalScope.esc(batch.sourceTeacher || '')} · ${globalScope.esc(batch.sourceClass || '')}</small></td><td>${globalScope.esc(batch.subject)} · Term ${globalScope.esc(batch.term)}</td><td>${batch.importedCount} imported · ${batch.updatedCount} updated · ${batch.skippedCount} skipped · ${batch.conflictCount} conflicts</td><td>${globalScope.esc(batch.status)}</td></tr>`).join('') : '<tr><td colspan="5">No grade imports recorded.</td></tr>';
 
-    const rosterRows = rosterLearners.length ? rosterLearners.map((learner, index) => `<tr><td>${index + 1}</td><td class="advisory-roster__lrn">${globalScope.esc(learner.lrn || '—')}</td><td><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</strong></td><td>${globalScope.esc(learner.sex || '—')}</td><td>${globalScope.esc(learner.enrollmentStatus || 'active')}</td><td>${globalScope.esc(learner.source || 'manual')}</td></tr>`).join('') : '<tr><td colspan="6"><div class="advisory-roster__empty">No learners yet. Open Roster Tools to import or add learners.</div></td></tr>';
-
-    const settingsItems = [
-      ['School Year', advisoryClass.schoolYear],
-      ['Grade Level', advisoryClass.gradeLevel],
-      ['Section', advisoryClass.section],
-      ['Adviser', advisoryClass.adviserName],
-      ['School', advisoryClass.schoolName || profileDb.schoolName],
-      ['School ID', advisoryClass.schoolId || profileDb.schoolId],
-      ['District', advisoryClass.district || profileDb.district],
-      ['Division', advisoryClass.division || profileDb.division],
-      ['Region', advisoryClass.region || profileDb.region]
-    ];
+    const rosterRows = rosterLearners.length ? rosterLearners.map((learner, index) => `<tr><td>${index + 1}</td><td class="advisory-roster__lrn">${globalScope.esc(learner.lrn || '—')}</td><td><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</strong></td><td>${globalScope.esc(learner.sex || '—')}</td><td>${globalScope.esc(learner.enrollmentStatus || 'active')}</td><td>${globalScope.esc(learner.source || 'manual')}</td><td><div class="advisory-roster-row-actions"><button class="btn btn-ghost btn-sm" type="button" data-edit-advisory-learner="${globalScope.esc(learner.id)}">Edit</button><button class="btn btn-danger btn-sm" type="button" data-remove-advisory-learner="${globalScope.esc(learner.id)}">Remove</button></div></td></tr>`).join('') : '<tr><td colspan="7"><div class="advisory-roster__empty">No learners yet. Use the roster actions above to import or add learners.</div></td></tr>';
+    const availableSections = classSections(profileDb, advisoryClass);
+    const hasListedSection = availableSections.some(section => section.toLocaleUpperCase() === text(advisoryClass.section).toLocaleUpperCase());
+    const sectionOptions = availableSections.map(section => `<option value="${globalScope.esc(section)}" ${hasListedSection && section.toLocaleUpperCase() === text(advisoryClass.section).toLocaleUpperCase() ? 'selected' : ''}>${globalScope.esc(section)}</option>`).join('');
 
     panel.innerHTML = `
       <section id="advisoryGradeRecordPanel" role="tabpanel" data-advisory-panel="grades">
-        <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Term grades, computed subject finals, and the completed general average. Missing records remain visible.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-terms aria-pressed="${showAdvisoryTerms}">${showAdvisoryTerms ? 'Hide Terms 1–3' : 'Show Terms 1–3'}</button><button class="btn btn-ghost btn-sm" type="button" data-add-advisory-subject>Add Other Subject</button><button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
+        <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Final grades are shown by default. Use the + beside any subject to reveal its Terms 1–3.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-add-advisory-subject>Add Other Subject</button><button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
         ${matrix}
       </section>
       <section id="advisoryGradeSourcesPanel" role="tabpanel" data-advisory-panel="sources" hidden>
@@ -942,27 +969,83 @@
         <div class="advisory-import-history"><div class="advisory-grade-panel__header"><div><h3>Import History</h3><p>Audit trail for every confirmed Grade Transfer File.</p></div><button class="btn btn-ghost btn-sm" data-undo-latest-import ${latestUndoableBatch(profileDb, advisoryClass.id) ? '' : 'disabled'}>Undo Latest Import</button></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Imported</th><th>File / Source</th><th>Subject / Term</th><th>Results</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div></div>
       </section>
       <section id="advisoryRosterPanel" role="tabpanel" data-advisory-panel="roster" hidden>
-        <div class="advisory-grade-panel__header"><div><h3>Manage Roster</h3><p>Review the official Advisory Class roster, then open the roster tools to import, add, edit, or remove learners.</p></div><button class="btn btn-primary btn-sm" type="button" data-open-advisory-roster-tools>Open Roster Tools</button></div>
-        <div class="advisory-roster-table-wrap advisory-page-roster-table"><table class="advisory-roster-table"><thead><tr><th>#</th><th>LRN</th><th>Official Name</th><th>Sex</th><th>Status</th><th>Source</th></tr></thead><tbody>${rosterRows}</tbody></table></div>
+        <div class="advisory-grade-panel__header"><div><h3>Manage Roster</h3><p>Import, add, edit, or remove learners directly from this tab.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-advisory-import-class>Import from Class</button><button class="btn btn-ghost btn-sm" type="button" data-advisory-import-sf1>Import SF1</button><button class="btn btn-ghost btn-sm" type="button" data-advisory-add-bulk>Bulk Add</button><button class="btn btn-primary btn-sm" type="button" data-advisory-add-manual>Add Learner</button></div></div>
+        <div class="advisory-roster-table-wrap advisory-page-roster-table"><table class="advisory-roster-table"><thead><tr><th>#</th><th>LRN</th><th>Official Name</th><th>Sex</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody>${rosterRows}</tbody></table></div>
       </section>
       <section id="advisorySettingsPanel" role="tabpanel" data-advisory-panel="settings" hidden>
-        <div class="advisory-grade-panel__header"><div><h3>Advisory Settings</h3><p>Review the active class identity and school details used to validate Grade Transfer Files.</p></div><button class="btn btn-primary btn-sm" type="button" data-open-advisory-settings>Edit Advisory Settings</button></div>
-        <dl class="advisory-settings-grid">${settingsItems.map(([label, value]) => `<div><dt>${globalScope.esc(label)}</dt><dd>${globalScope.esc(value || 'Not provided')}</dd></div>`).join('')}</dl>
+        <div class="advisory-grade-panel__header"><div><h3>Advisory Settings</h3><p>Edit details that belong specifically to this Advisory Class.</p></div></div>
+        <form class="advisory-settings-form" data-advisory-settings-form>
+          <div class="split-row">
+            <div class="field"><label class="field-label" for="advisoryInlineGrade">Grade Level</label><select class="field-select" id="advisoryInlineGrade" required>${Array.from({ length: 10 }, (_, index) => index + 1).map(level => `<option value="${level}" ${String(level) === String(advisoryClass.gradeLevel) ? 'selected' : ''}>Grade ${level}</option>`).join('')}</select></div>
+            <div class="field"><label class="field-label" for="advisoryInlineSection">Section</label><select class="field-select" id="advisoryInlineSection" required><option value="">Select a section</option>${sectionOptions}<option value="__custom__" ${hasListedSection ? '' : 'selected'}>Add a different section...</option></select><input class="field-input advisory-custom-section" id="advisoryInlineCustomSection" value="${globalScope.esc(hasListedSection ? '' : advisoryClass.section)}" placeholder="Enter the section name" ${hasListedSection ? 'hidden' : ''}></div>
+          </div>
+          <label class="checkbox-row"><input type="checkbox" id="advisoryInlineArchived" ${advisoryClass.isArchived ? 'checked' : ''}> Archive this Advisory Class</label>
+          <div class="advisory-settings-managed"><strong>Managed in Global Settings</strong><span>School Year: ${globalScope.esc(profileDb.schoolYear || advisoryClass.schoolYear)} · Adviser: ${globalScope.esc(profileDb.teacherName || advisoryClass.adviserName || 'Not provided')} · School: ${globalScope.esc(profileDb.schoolName || advisoryClass.schoolName || 'Not provided')}</span><span>School ID, district, division, and region also come from your global teacher profile.</span></div>
+          <div class="advisory-settings-form__actions"><button class="btn btn-primary btn-sm" type="submit">Save Advisory Settings</button></div>
+        </form>
       </section>`;
     panel.querySelector('[data-import-subject-grades]')?.addEventListener('click', selectImportFile);
     panel.querySelector('[data-add-advisory-subject]')?.addEventListener('click', () => showSubjectModal());
-    panel.querySelector('[data-toggle-advisory-terms]')?.addEventListener('click', () => {
-      showAdvisoryTerms = !showAdvisoryTerms;
+    panel.querySelectorAll('[data-expand-advisory-subject]').forEach(button => button.addEventListener('click', () => {
+      const subjectId = button.dataset.expandAdvisorySubject;
+      if (expandedAdvisorySubjects.has(subjectId)) expandedAdvisorySubjects.delete(subjectId);
+      else expandedAdvisorySubjects.add(subjectId);
       renderWorkspacePanel(workspace, advisoryClass);
-    });
+    }));
     panel.querySelectorAll('[data-sort-advisory-subject]').forEach(button => button.addEventListener('click', () => {
       cycleSubjectSort(button.dataset.sortAdvisorySubject);
       renderWorkspacePanel(workspace, advisoryClass);
     }));
     panel.querySelectorAll('[data-edit-advisory-subject]').forEach(button => button.addEventListener('click', () => showSubjectModal(button.dataset.editAdvisorySubject)));
     panel.querySelector('[data-undo-latest-import]')?.addEventListener('click', () => requestUndoLatest(advisoryClass.id));
-    panel.querySelector('[data-open-advisory-roster-tools]')?.addEventListener('click', () => globalScope.AdvisoryRoster?.openRosterManager?.());
-    panel.querySelector('[data-open-advisory-settings]')?.addEventListener('click', () => globalScope.showAdvisoryClassSetupModal?.());
+    panel.querySelector('[data-advisory-import-class]')?.addEventListener('click', () => globalScope.AdvisoryRoster?.showClassImportChooser?.());
+    panel.querySelector('[data-advisory-import-sf1]')?.addEventListener('click', () => globalScope.AdvisoryRoster?.importSf1Roster?.());
+    panel.querySelector('[data-advisory-add-bulk]')?.addEventListener('click', () => globalScope.AdvisoryRoster?.showBulkModal?.());
+    panel.querySelector('[data-advisory-add-manual]')?.addEventListener('click', () => globalScope.AdvisoryRoster?.showLearnerForm?.());
+    panel.querySelectorAll('[data-edit-advisory-learner]').forEach(button => button.addEventListener('click', () => globalScope.AdvisoryRoster?.showLearnerForm?.(button.dataset.editAdvisoryLearner)));
+    panel.querySelectorAll('[data-remove-advisory-learner]').forEach(button => button.addEventListener('click', () => globalScope.AdvisoryRoster?.removeLearner?.(button.dataset.removeAdvisoryLearner)));
+    const settingsForm = panel.querySelector('[data-advisory-settings-form]');
+    const sectionSelect = settingsForm?.querySelector('#advisoryInlineSection');
+    const customSection = settingsForm?.querySelector('#advisoryInlineCustomSection');
+    const syncCustomSection = () => {
+      const isCustom = sectionSelect?.value === '__custom__';
+      if (!customSection) return;
+      customSection.hidden = !isCustom;
+      customSection.required = isCustom;
+    };
+    sectionSelect?.addEventListener('change', syncCustomSection);
+    syncCustomSection();
+    settingsForm?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const gradeLevel = settingsForm.querySelector('#advisoryInlineGrade').value.trim();
+      const section = sectionSelect.value === '__custom__' ? customSection.value.trim() : sectionSelect.value.trim();
+      if (!gradeLevel || !section) {
+        globalScope.toast('Grade level and section are required.', 'warning');
+        (!gradeLevel ? settingsForm.querySelector('#advisoryInlineGrade') : (sectionSelect.value === '__custom__' ? customSection : sectionSelect)).focus();
+        return;
+      }
+      const archived = settingsForm.querySelector('#advisoryInlineArchived').checked;
+      const savedClass = globalScope.AdvisoryData.updateClass(profileDb, advisoryClass.id, {
+        schoolYear: profileDb.schoolYear || advisoryClass.schoolYear,
+        gradeLevel,
+        section,
+        adviserName: profileDb.teacherName || advisoryClass.adviserName,
+        schoolName: profileDb.schoolName || advisoryClass.schoolName,
+        schoolId: profileDb.schoolId || advisoryClass.schoolId,
+        district: profileDb.district || advisoryClass.district,
+        division: profileDb.division || advisoryClass.division,
+        region: profileDb.region || advisoryClass.region,
+        isActive: !archived,
+        isArchived: archived
+      });
+      ensureGradeLevelSubjects(profileDb, savedClass);
+      await globalScope.saveDatabase();
+      globalScope.renderDashboardOverview();
+      globalScope.syncAdvisorySidebarButton?.();
+      globalScope.toast('Advisory settings saved.', 'success');
+      if (archived) globalScope.showView?.('dashboard');
+      else globalScope.renderAdvisoryClassPage?.();
+    });
     setPanelTab(advisoryPanelTab, workspace);
   }
 
@@ -992,6 +1075,7 @@
     calculateMapehFinal,
     calculateGeneralAverage,
     subjectDisplayName,
+    subjectCompactName,
     sortLearnersBySubject,
     setPanelTab,
     showExportModal,
