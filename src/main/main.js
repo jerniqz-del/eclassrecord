@@ -88,7 +88,8 @@ function createWindow() {
     mainWindow.webContents.once('did-finish-load', async () => {
       try {
         const result = await mainWindow.webContents.executeJavaScript(`(() => {
-          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset'];
+          try {
+          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage'];
           const missing = required.filter(name => !globalThis[name]);
           if (missing.length) throw new Error('Missing renderer modules: ' + missing.join(', '));
           if (typeof getActiveProfileDatabase !== 'function') throw new Error('Active profile database accessor is unavailable.');
@@ -112,6 +113,7 @@ function createWindow() {
           }];
           runtimeProfile.advisory = AdvisoryData.createAdvisoryStore();
           renderDashboardOverview();
+          if (!document.getElementById('navAdvisory')?.hidden) throw new Error('Advisory sidebar button should be hidden before setup.');
 
           const setupButton = document.querySelector('.dashboard-card--advisory .btn-primary');
           if (!setupButton) throw new Error('Set Up Advisory Class button was not rendered.');
@@ -119,7 +121,13 @@ function createWindow() {
           const setupModal = document.querySelector('[data-advisory-setup-modal]');
           if (!setupModal) throw new Error('Set Up Advisory Class button did not open its modal.');
           if (setupModal.querySelector('#advisoryGradeLevel')?.tagName !== 'SELECT') throw new Error('Advisory grade level is not a dropdown.');
+          if (!setupModal.querySelector('#advisoryGradeLevel option[value="Kindergarten"]')?.disabled || !setupModal.querySelector('#advisoryGradeLevel option[value="11"]')?.disabled || !setupModal.querySelector('#advisoryGradeLevel option[value="12"]')?.disabled) throw new Error('Unsupported Advisory grade levels are not disabled.');
+          if (setupModal.querySelector('#advisorySectionSelect')?.tagName !== 'SELECT' || !setupModal.querySelector('#advisorySectionSelect option[value="__custom__"]')) throw new Error('Advisory section choices are unavailable.');
           if (!setupModal.querySelector('#advisorySetupSourceClass option[value="smoke-subject"]')) throw new Error('Setup-time roster source is unavailable.');
+          const setupSource = setupModal.querySelector('#advisorySetupSourceClass');
+          setupSource.value = 'smoke-subject';
+          setupSource.dispatchEvent(new Event('change'));
+          if (setupModal.querySelector('#advisoryGradeLevel').value !== '4' || setupModal.querySelector('#advisorySectionSelect').value !== 'Offline') throw new Error('Roster source did not populate grade and section.');
           setupModal.remove();
 
           const runtimeClass = AdvisoryData.createClass(runtimeProfile, {
@@ -140,6 +148,7 @@ function createWindow() {
             term, finalGrade: 88 + index
           }));
           renderDashboardOverview();
+          if (document.getElementById('navAdvisory')?.hidden) throw new Error('Advisory sidebar button was not shown after setup.');
           if (!document.querySelector('.dashboard-card__subject-logo.subject-logo--mathematics')) throw new Error('Mathematics subject logo was not rendered.');
 
           const exportButton = document.querySelector('.dashboard-card__export-btn');
@@ -150,10 +159,11 @@ function createWindow() {
           exportModal.remove();
 
           openAdvisoryClassDashboard();
-          const workspace = document.querySelector('[data-advisory-workspace]');
-          if (!workspace || !workspace.querySelector('[data-advisory-grade-panel]')) throw new Error('Advisory grade workspace did not open.');
-          if (!workspace.querySelector('.advisory-final-column') || !workspace.querySelector('.advisory-general-average')) throw new Error('Final-grade columns were not rendered.');
-          workspace.querySelector('[data-advisory-manage-roster]').click();
+          const advisoryPage = document.querySelector('.advisory-page');
+          if (document.querySelector('.advisory-page-view')?.style.display === 'none' || !advisoryPage?.querySelector('[data-advisory-grade-panel]')) throw new Error('Dedicated Advisory Class page did not open.');
+          if (document.querySelector('[data-advisory-workspace]')) throw new Error('Advisory Class still opened as a workspace modal.');
+          if (!advisoryPage.querySelector('.advisory-final-column') || !advisoryPage.querySelector('.advisory-general-average')) throw new Error('Final-grade columns were not rendered.');
+          advisoryPage.querySelector('[data-advisory-page-roster]').click();
           const rosterModal = document.querySelector('[data-advisory-roster-manager]');
           if (!rosterModal || !rosterModal.querySelector('[data-remove-advisory-learner]')) throw new Error('Separate roster manager did not open.');
           rosterModal.querySelector('[data-advisory-import-class]').click();
@@ -172,19 +182,22 @@ function createWindow() {
           if (Number(getComputedStyle(confirmation).zIndex) <= Number(getComputedStyle(rosterModal).zIndex)) throw new Error('Remove confirmation is behind the roster modal.');
           confirmation.querySelector('#confirmModalCancel').click();
           rosterModal.querySelector('[data-close-advisory-roster]').click();
-          workspace.querySelector('[data-advisory-reset-class]').click();
+          advisoryPage.querySelector('[data-advisory-page-reset]').click();
           const resetModal = document.querySelector('[data-advisory-reset-modal]');
           if (!resetModal?.querySelector('[data-reset-backup]') || !resetModal.querySelector('[data-reset-without]')) throw new Error('Reset backup choices were not rendered.');
           resetModal.remove();
-          workspace.remove();
           const districtField = document.getElementById('schoolDistrict');
           if (!districtField) throw new Error('District profile field was not rendered.');
           districtField.value = 'Smoke Test District';
           updateProfile();
           if (runtimeProfile.district !== 'Smoke Test District') throw new Error('District profile field did not update the active profile.');
 
-          return { modules: required.length, setupClick: true, exportClick: true, rosterImportReview: true, rosterModal: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
+          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, exportClick: true, rosterImportReview: true, rosterModal: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
+          } catch (error) {
+            return { __error: String(error?.stack || error?.message || error) };
+          }
         })()`);
+        if (result?.__error) throw new Error(result.__error);
         clearTimeout(smokeTimeout);
         if (rendererErrors.length) {
           console.error('SMOKE_FAIL Renderer console errors: ' + rendererErrors.join(' | '));

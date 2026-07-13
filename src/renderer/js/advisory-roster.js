@@ -287,7 +287,11 @@
 
   function renderWorkspace() {
     const overlay = workspaceElement();
-    if (!overlay) return;
+    if (!overlay) {
+      globalScope.renderAdvisoryClassPage?.();
+      renderRosterManager();
+      return;
+    }
     const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
     if (!advisoryClass) { closeElement(overlay); globalScope.showAdvisoryClassSetupModal(); return; }
     const roster = rosterForClass(activeDb(), advisoryClass.id);

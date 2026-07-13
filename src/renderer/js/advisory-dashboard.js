@@ -132,8 +132,22 @@
     const existing = getClassForYear(profileDb, schoolYear);
     const escHtml = globalScope.esc || (value => String(value ?? ''));
     const gradeLevels = ['Kindergarten', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+    const supportedGrades = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
     const selectedGrade = existing?.gradeLevel || '';
     const sourceClasses = (profileDb.assignments || []).filter(item => item.schoolYear === schoolYear && Array.isArray(item.learners));
+    const sections = [];
+    const seenSections = new Set();
+    sourceClasses.forEach(item => {
+      const section = String(item.section || '').trim();
+      const key = section.toLocaleUpperCase();
+      if (!section || seenSections.has(key)) return;
+      seenSections.add(key);
+      sections.push({ value: section, gradeLevel: String(item.gradeLevel || '').trim() });
+    });
+    sections.sort((left, right) => left.value.localeCompare(right.value, 'fil'));
+    const existingSectionKey = String(existing?.section || '').trim().toLocaleUpperCase();
+    const selectedSection = sections.find(item => item.value.toLocaleUpperCase() === existingSectionKey)?.value || '';
+    const useCustomSection = Boolean(existing?.section && !selectedSection);
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.style.zIndex = '11800';
@@ -144,18 +158,18 @@
         <div class="modal__body advisory-setup-modal__body">
           <p class="text-muted" style="margin-top:0">This is the adviser&apos;s central record for School Year ${escHtml(schoolYear)}. Previous school-year records are preserved.</p>
           <div class="split-row">
-            <div class="field"><label class="field-label" for="advisoryGradeLevel">Grade Level</label><select class="field-select" id="advisoryGradeLevel" required><option value="">Select grade level</option>${gradeLevels.map(level => `<option value="${escHtml(level)}" ${selectedGrade === level ? 'selected' : ''}>${level === 'Kindergarten' ? level : `Grade ${level}`}</option>`).join('')}</select></div>
-            <div class="field"><label class="field-label" for="advisorySection">Section</label><input class="field-input" id="advisorySection" value="${escHtml(existing?.section || '')}" required /></div>
+            <div class="field"><label class="field-label" for="advisoryGradeLevel">Grade Level <span aria-hidden="true">*</span></label><select class="field-select" id="advisoryGradeLevel" required><option value="">Select grade level</option>${gradeLevels.map(level => `<option value="${escHtml(level)}" ${selectedGrade === level ? 'selected' : ''} ${supportedGrades.has(level) ? '' : 'disabled'}>${level === 'Kindergarten' ? level : `Grade ${level}`}${supportedGrades.has(level) ? '' : ' (Not yet available)'}</option>`).join('')}</select></div>
+            <div class="field"><label class="field-label" for="advisorySectionSelect">Section <span aria-hidden="true">*</span></label><select class="field-select" id="advisorySectionSelect" required><option value="">Select a section</option>${sections.map(item => `<option value="${escHtml(item.value)}" ${selectedSection === item.value ? 'selected' : ''}>${escHtml(item.value)}${item.gradeLevel ? ` (Grade ${escHtml(item.gradeLevel)})` : ''}</option>`).join('')}<option value="__custom__" ${useCustomSection ? 'selected' : ''}>Add a different section...</option></select><input class="field-input advisory-custom-section" id="advisoryCustomSection" value="${escHtml(useCustomSection ? existing.section : '')}" placeholder="Enter the section name" ${useCustomSection ? '' : 'hidden'} /></div>
           </div>
-          <div class="field"><label class="field-label" for="advisoryAdviserName">Adviser Name</label><input class="field-input" id="advisoryAdviserName" value="${escHtml(existing?.adviserName || profileDb.teacherName || '')}" required /></div>
-          <div class="field"><label class="field-label" for="advisorySchoolName">School Name</label><input class="field-input" id="advisorySchoolName" value="${escHtml(existing?.schoolName || profileDb.schoolName || '')}" /></div>
+          <div class="field"><label class="field-label" for="advisoryAdviserName">Adviser Name <span aria-hidden="true">*</span></label><input class="field-input" id="advisoryAdviserName" value="${escHtml(existing?.adviserName || profileDb.teacherName || '')}" required /></div>
+          <div class="field"><label class="field-label" for="advisorySchoolName">School Name <span aria-hidden="true">*</span></label><input class="field-input" id="advisorySchoolName" value="${escHtml(existing?.schoolName || profileDb.schoolName || '')}" required /></div>
           <div class="split-row">
-            <div class="field"><label class="field-label" for="advisorySchoolId">School ID</label><input class="field-input" id="advisorySchoolId" value="${escHtml(existing?.schoolId || profileDb.schoolId || '')}" /></div>
-            <div class="field"><label class="field-label" for="advisoryDistrict">District</label><input class="field-input" id="advisoryDistrict" value="${escHtml(existing?.district || '')}" /></div>
+            <div class="field"><label class="field-label" for="advisorySchoolId">School ID <span aria-hidden="true">*</span></label><input class="field-input" id="advisorySchoolId" value="${escHtml(existing?.schoolId || profileDb.schoolId || '')}" required /></div>
+            <div class="field"><label class="field-label" for="advisoryDistrict">District <span aria-hidden="true">*</span></label><input class="field-input" id="advisoryDistrict" value="${escHtml(existing?.district || profileDb.district || '')}" required /></div>
           </div>
           <div class="split-row">
-            <div class="field"><label class="field-label" for="advisoryDivision">Division</label><input class="field-input" id="advisoryDivision" value="${escHtml(existing?.division || profileDb.division || '')}" /></div>
-            <div class="field"><label class="field-label" for="advisoryRegion">Region</label><input class="field-input" id="advisoryRegion" value="${escHtml(existing?.region || profileDb.region || '')}" /></div>
+            <div class="field"><label class="field-label" for="advisoryDivision">Division <span aria-hidden="true">*</span></label><input class="field-input" id="advisoryDivision" value="${escHtml(existing?.division || profileDb.division || '')}" required /></div>
+            <div class="field"><label class="field-label" for="advisoryRegion">Region <span aria-hidden="true">*</span></label><input class="field-input" id="advisoryRegion" value="${escHtml(existing?.region || profileDb.region || '')}" required /></div>
           </div>
           <div class="advisory-setup-roster-source">
             <div><strong>${existing ? 'Import additional learners' : 'Start with an existing class roster'}</strong><p>Optional. Select a class already on the Dashboard. You will review learners before anything is added, and the source class will remain unchanged.</p></div>
@@ -172,11 +186,43 @@
     const close = () => overlay.remove();
     overlay.querySelector('[data-advisory-cancel]').addEventListener('click', close);
     overlay.addEventListener('click', event => { if (event.target === overlay) close(); });
+    const gradeInput = overlay.querySelector('#advisoryGradeLevel');
+    const sectionSelect = overlay.querySelector('#advisorySectionSelect');
+    const customSection = overlay.querySelector('#advisoryCustomSection');
+    const sourceSelect = overlay.querySelector('#advisorySetupSourceClass');
+    const setSection = section => {
+      const normalized = String(section || '').trim();
+      const matched = Array.from(sectionSelect.options).find(option => option.value !== '__custom__' && option.value.toLocaleUpperCase() === normalized.toLocaleUpperCase());
+      sectionSelect.value = matched ? matched.value : '__custom__';
+      customSection.hidden = Boolean(matched);
+      customSection.required = !matched;
+      customSection.value = matched ? '' : normalized;
+    };
+    const syncCustomSection = () => {
+      const isCustom = sectionSelect.value === '__custom__';
+      customSection.hidden = !isCustom;
+      customSection.required = isCustom;
+      if (isCustom) setTimeout(() => customSection.focus(), 0);
+    };
+    sectionSelect.addEventListener('change', syncCustomSection);
+    sourceSelect.addEventListener('change', () => {
+      const sourceClass = sourceClasses.find(item => String(item.id) === sourceSelect.value);
+      if (!sourceClass) return;
+      const sourceGrade = String(sourceClass.gradeLevel || '').trim();
+      if (supportedGrades.has(sourceGrade)) gradeInput.value = sourceGrade;
+      else {
+        gradeInput.value = '';
+        globalScope.toast(`Grade ${sourceGrade || 'level'} is not yet available for Advisory Class.`, 'warning');
+      }
+      setSection(sourceClass.section);
+    });
+    syncCustomSection();
     overlay.querySelector('[data-advisory-save]').addEventListener('click', async () => {
+      const section = sectionSelect.value === '__custom__' ? customSection.value.trim() : sectionSelect.value.trim();
       const values = {
         schoolYear,
-        gradeLevel: overlay.querySelector('#advisoryGradeLevel').value.trim(),
-        section: overlay.querySelector('#advisorySection').value.trim(),
+        gradeLevel: gradeInput.value.trim(),
+        section,
         adviserName: overlay.querySelector('#advisoryAdviserName').value.trim(),
         schoolName: overlay.querySelector('#advisorySchoolName').value.trim(),
         schoolId: overlay.querySelector('#advisorySchoolId').value.trim(),
@@ -186,9 +232,27 @@
         isActive: existing ? !overlay.querySelector('#advisoryArchived').checked : true,
         isArchived: existing ? overlay.querySelector('#advisoryArchived').checked : false
       };
-      const sourceClassId = overlay.querySelector('#advisorySetupSourceClass').value;
-      if (!values.gradeLevel || !values.section || !values.adviserName) {
-        globalScope.toast('Grade level, section, and adviser name are required.', 'warning');
+      const sourceClassId = sourceSelect.value;
+      const requiredFields = [
+        [gradeInput, values.gradeLevel, 'Grade level'],
+        [sectionSelect.value === '__custom__' ? customSection : sectionSelect, values.section, 'Section'],
+        [overlay.querySelector('#advisoryAdviserName'), values.adviserName, 'Adviser name'],
+        [overlay.querySelector('#advisorySchoolName'), values.schoolName, 'School name'],
+        [overlay.querySelector('#advisorySchoolId'), values.schoolId, 'School ID'],
+        [overlay.querySelector('#advisoryDistrict'), values.district, 'District'],
+        [overlay.querySelector('#advisoryDivision'), values.division, 'Division'],
+        [overlay.querySelector('#advisoryRegion'), values.region, 'Region']
+      ];
+      requiredFields.forEach(([input, value]) => input.setAttribute('aria-invalid', value ? 'false' : 'true'));
+      const missing = requiredFields.filter(([, value]) => !value);
+      if (missing.length) {
+        globalScope.toast(`Complete all required fields: ${missing.map(([, , label]) => label).join(', ')}.`, 'warning');
+        missing[0][0].focus();
+        return;
+      }
+      if (!supportedGrades.has(values.gradeLevel)) {
+        globalScope.toast('Advisory Class is currently available only for Grades 1 to 10.', 'warning');
+        gradeInput.focus();
         return;
       }
       try {
@@ -198,6 +262,8 @@
         await globalScope.saveDatabase();
         close();
         globalScope.renderDashboardOverview();
+        globalScope.syncAdvisorySidebarButton?.();
+        if (savedClass.isActive && !savedClass.isArchived) globalScope.openAdvisoryClassPage?.();
         globalScope.toast(existing ? 'Advisory Class details updated.' : 'Advisory Class created.', 'success');
         if (sourceClassId && globalScope.AdvisoryRoster?.startClassImport) {
           globalScope.AdvisoryRoster.startClassImport(sourceClassId, savedClass);

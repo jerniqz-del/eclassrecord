@@ -51,8 +51,15 @@ const css = fs.readFileSync(path.join(root, 'src/renderer/css/advisory.css'), 'u
 assert(css.includes('.modal-z-confirm { z-index: 12500; }'));
 assert(css.includes('.advisory-roster-modal-overlay { z-index: 11800;'));
 assert(css.includes('.advisory-reset-modal-overlay { z-index: 12300; }'));
+assert(css.includes('.advisory-page__body'));
+assert(css.includes('.advisory-setup-modal__body { flex: 1 1 auto; min-height: 0; overflow: auto;'));
 const setup = fs.readFileSync(path.join(root, 'src/renderer/js/advisory-dashboard.js'), 'utf8');
 assert(setup.includes('<select class="field-select" id="advisoryGradeLevel"'));
+assert(setup.includes('supportedGrades'));
+assert(setup.includes('id="advisorySectionSelect"'));
+assert(setup.includes('value="__custom__"'));
+assert(setup.includes("sourceSelect.addEventListener('change'"));
+assert(setup.includes('Complete all required fields'));
 assert(setup.includes('Import learners from Other Class'));
 assert(setup.includes('AdvisoryRoster.startClassImport'));
 const dashboard = fs.readFileSync(path.join(root, 'src/renderer/js/dashboard.js'), 'utf8');
@@ -61,5 +68,11 @@ assert(dashboard.includes('subjectLogoMarkup'));
 const html = fs.readFileSync(path.join(root, 'src/renderer/index.html'), 'utf8');
 assert(html.includes('id="schoolDistrict"'));
 assert(html.includes('js/advisory-reset.js'));
+assert(html.includes('id="navAdvisory"'));
+assert(html.includes('data-view="advisory"'));
+assert(html.includes('js/advisory-page.js'));
+const page = fs.readFileSync(path.join(root, 'src/renderer/js/advisory-page.js'), 'utf8');
+assert(page.includes("globalScope.openAdvisoryClassDashboard = openPage"));
+assert(page.includes("nav.hidden = !configured"));
 
-console.log('Advisory redesign, final-grade calculation, modal layering, subject logos, and ZIP reset backup tests passed.');
+console.log('Advisory page, dynamic navigation, setup workflow, final-grade calculation, modal layering, subject logos, and ZIP reset backup tests passed.');

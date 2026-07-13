@@ -94,6 +94,8 @@
     document.querySelector('[data-advisory-roster-manager]')?.remove();
     document.querySelector('[data-advisory-workspace]')?.remove();
     globalScope.renderDashboardOverview();
+    globalScope.syncAdvisorySidebarButton?.();
+    if (document.querySelector('.advisory-page-view')?.style.display !== 'none') globalScope.setView?.('dashboard');
     globalScope.toast('Advisory Class reset completed. Subject classes were not changed.', 'success');
   }
 

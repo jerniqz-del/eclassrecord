@@ -150,6 +150,7 @@ function renderDashboardOverview() {
   const target = document.getElementById('dashboardTable');
   if (!target) return;
   if (typeof syncDistrictProfileField === 'function') syncDistrictProfileField();
+  if (typeof syncAdvisorySidebarButton === 'function') syncAdvisorySidebarButton();
   renderDashboardViewToggle();
 
   const activeYear = db.schoolYear || '2026-2027';

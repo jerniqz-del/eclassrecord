@@ -89,9 +89,21 @@
 .advisory-card__status-item.is-warning { color: var(--color-warning-600); }
 .advisory-card__status-item.is-conflict { color: var(--color-error-600); }
 .advisory-card__actions { flex-wrap: wrap; gap: var(--space-2); }
-.advisory-setup-modal { max-height: min(90vh, 760px); }
-.advisory-setup-modal__body { overflow-y: auto; }
-[data-advisory-setup-modal] { z-index: 12100 !important; }
+.advisory-setup-modal {
+  width: min(94vw, 900px);
+  max-width: 900px;
+  max-height: min(92vh, 820px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+.advisory-setup-modal .modal__title { flex: 0 0 auto; padding: var(--space-5); border-bottom: 1px solid var(--border-subtle); }
+.advisory-setup-modal__body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: var(--space-4) var(--space-5); }
+.advisory-setup-modal .modal__actions { flex: 0 0 auto; margin: 0; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border-subtle); background: var(--bg-surface); }
+[data-advisory-setup-modal] { z-index: 12100 !important; padding: var(--space-3); overflow-y: auto; }
+.advisory-custom-section { margin-top: var(--space-2); }
+.advisory-custom-section[hidden] { display: none !important; }
 .advisory-setup-roster-source { margin-top: var(--space-4); padding: var(--space-4); border: 1px solid color-mix(in srgb, var(--color-primary-400) 35%, var(--border-subtle)); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--color-primary-50) 55%, var(--bg-surface)); }
 .advisory-setup-roster-source > div:first-child strong { color: var(--color-primary-800); }
 .advisory-setup-roster-source > div:first-child p { margin: 4px 0 var(--space-3); color: var(--text-secondary); font-size: var(--font-size-xs); line-height: 1.45; }
@@ -131,6 +143,14 @@
 }
 
 .advisory-workspace-overlay { z-index: 11500; padding: var(--space-3); }
+.advisory-page-view { min-width: 0; }
+.advisory-page { min-width: 0; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); background: var(--bg-surface); box-shadow: var(--shadow-sm); }
+.advisory-page__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-5); border-bottom: 1px solid var(--border-subtle); background: linear-gradient(135deg, color-mix(in srgb, #0f4c5c 9%, var(--bg-surface)), var(--bg-surface)); }
+.advisory-page__header h1 { margin: var(--space-1) 0 0; color: var(--text-primary); font-size: clamp(1.35rem, 2.5vw, 2rem); }
+.advisory-page__header p { margin: var(--space-1) 0 0; color: var(--text-secondary); }
+.advisory-page__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border-subtle); background: var(--bg-muted); }
+.advisory-page__body { min-width: 0; padding: var(--space-4) var(--space-5) var(--space-6); }
+.advisory-page__body .advisory-grade-panel { margin-top: 0; padding-top: 0; border-top: 0; }
 .advisory-roster-modal-overlay { z-index: 11800; padding: var(--space-3); }
 .advisory-roster-modal {
   width: min(94vw, 1180px);
@@ -246,6 +266,17 @@
 .advisory-reset-actions { flex-wrap: wrap; }
 
 @media (max-width: 700px) {
+  [data-advisory-setup-modal] { padding: 0; align-items: stretch; }
+  .advisory-setup-modal { width: 100vw; max-width: none; max-height: 100vh; min-height: 100vh; border-radius: 0; }
+  .advisory-setup-modal .modal__title,
+  .advisory-setup-modal__body,
+  .advisory-setup-modal .modal__actions { padding-left: var(--space-3); padding-right: var(--space-3); }
+  .advisory-setup-modal .split-row { grid-template-columns: minmax(0, 1fr); }
+  .advisory-page { border-radius: var(--radius-lg); }
+  .advisory-page__header,
+  .advisory-page__body { padding: var(--space-3); }
+  .advisory-page__toolbar { padding: var(--space-3); }
+  .advisory-page__toolbar .btn { flex: 1 1 150px; }
   .advisory-workspace-overlay { padding: 0; }
   .advisory-workspace { width: 100vw; max-height: 100vh; height: 100vh; border-radius: 0; }
   .advisory-roster-modal { width: 100vw; max-height: 100vh; height: 100vh; border-radius: 0; }
