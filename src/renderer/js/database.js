@@ -5,7 +5,7 @@
  * scores, and configuration through Electron IPC bridge.
  */
 
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const ROOT_DB_VERSION = 3;
 
 function timestampNow() {
@@ -71,7 +71,8 @@ let db = {
   currentTerm: '1',
   activeView: 'dashboard',
   autoBlur: false,
-  assignments: []
+  assignments: [],
+  advisory: createAdvisoryStore()
 };
 
 let currentView = 'dashboard';
@@ -91,6 +92,7 @@ function normalizeDatabase() {
   if (db.region === undefined) db.region = '';
   if (db.division === undefined) db.division = '';
   if (db.autoBlur === undefined) db.autoBlur = false;
+  normalizeAdvisoryData(db);
   
   for (let i = 0; i < db.assignments.length; i++) {
     const a = db.assignments[i];
@@ -179,6 +181,7 @@ async function loadDatabase() {
  * Saves current application data to file via Electron IPC.
  */
 async function saveDatabase() {
+  normalizeDatabase();
   updateProfile();
   db.activeView = currentView;
   db.recordTab = recordTab;
@@ -511,7 +514,8 @@ function clearLocalData() {
           currentTerm: '1',
           activeView: 'dashboard',
           autoBlur: false,
-          assignments: []
+          assignments: [],
+          advisory: createAdvisoryStore()
         };
         currentProfilePin = '';
         currentView = 'dashboard';
