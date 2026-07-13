@@ -262,12 +262,12 @@
       <section class="view-section advisory-page-view" data-view="advisory" style="display:none">
         <div class="advisory-page">
           <header class="advisory-page__header" data-advisory-page-header></header>
-          <div class="advisory-page__toolbar">
-            <button class="btn btn-primary btn-sm advisory-page-tab" type="button" data-advisory-page-tab="grades" aria-pressed="true">Grade Record</button>
-            <button class="btn btn-ghost btn-sm advisory-page-tab" type="button" data-advisory-page-tab="sources" aria-pressed="false">Grade Sources</button>
+          <div class="advisory-page__toolbar" role="tablist" aria-label="Advisory Class pages">
+            <button class="btn btn-primary btn-sm advisory-page-tab" type="button" role="tab" data-advisory-page-tab="grades" aria-selected="true" aria-controls="advisoryGradeRecordPanel">Grade Record</button>
+            <button class="btn btn-ghost btn-sm advisory-page-tab" type="button" role="tab" data-advisory-page-tab="sources" aria-selected="false" aria-controls="advisoryGradeSourcesPanel" tabindex="-1">Grade Sources</button>
+            <button class="btn btn-ghost btn-sm advisory-page-tab" type="button" role="tab" data-advisory-page-tab="roster" aria-selected="false" aria-controls="advisoryRosterPanel" tabindex="-1">Manage Roster</button>
+            <button class="btn btn-ghost btn-sm advisory-page-tab" type="button" role="tab" data-advisory-page-tab="settings" aria-selected="false" aria-controls="advisorySettingsPanel" tabindex="-1">Advisory Settings</button>
             <span class="advisory-page__toolbar-divider" aria-hidden="true"></span>
-            <button class="btn btn-ghost btn-sm" type="button" data-advisory-page-roster>Manage Roster</button>
-            <button class="btn btn-ghost btn-sm" type="button" data-advisory-page-settings>Advisory Settings</button>
             <span class="advisory-workspace__count" data-advisory-page-roster-count></span>
           </div>
           <main class="advisory-page__body">

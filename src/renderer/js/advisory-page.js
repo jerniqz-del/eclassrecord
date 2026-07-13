@@ -82,9 +82,18 @@
     const page = document.querySelector('.advisory-page');
     if (!page || page.dataset.bound === 'true') return;
     page.dataset.bound = 'true';
-    page.querySelector('[data-advisory-page-roster]')?.addEventListener('click', () => globalScope.AdvisoryRoster?.openRosterManager?.());
-    page.querySelector('[data-advisory-page-settings]')?.addEventListener('click', () => globalScope.showAdvisoryClassSetupModal?.());
-    page.querySelectorAll('[data-advisory-page-tab]').forEach(button => button.addEventListener('click', () => globalScope.AdvisoryGradeTransfer?.setPanelTab?.(button.dataset.advisoryPageTab, page)));
+    const tabs = Array.from(page.querySelectorAll('[data-advisory-page-tab]'));
+    tabs.forEach(button => button.addEventListener('click', () => globalScope.AdvisoryGradeTransfer?.setPanelTab?.(button.dataset.advisoryPageTab, page)));
+    page.querySelector('.advisory-page__toolbar')?.addEventListener('keydown', event => {
+      const currentIndex = tabs.indexOf(event.target.closest?.('[data-advisory-page-tab]'));
+      if (currentIndex < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const nextIndex = event.key === 'Home' ? 0
+        : event.key === 'End' ? tabs.length - 1
+          : (currentIndex + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      tabs[nextIndex].focus();
+      tabs[nextIndex].click();
+    });
   }
 
   function initialize() {

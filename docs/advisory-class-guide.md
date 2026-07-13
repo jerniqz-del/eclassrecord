@@ -50,7 +50,7 @@ Exact duplicate files and corrected re-exports are identified. Existing grades a
 - Choose **Hide Terms 1–3** to focus on subject finals and the General Average; choose **Show Terms 1–3** to restore the term columns.
 - Select a subject heading to sort learners by that subject final. Select it again to reverse the order, and a third time to restore roster order. Learners with missing finals stay at the end.
 - The standard **Subjects** are supplied automatically from the Advisory Class grade level.
-- **Grade Record** and **Grade Sources** are separate tabs. Grade Sources also contains Import History.
+- **Grade Record**, **Grade Sources**, **Manage Roster**, and **Advisory Settings** are separate page tabs. Grade Sources also contains Import History; roster and settings edits open their focused tools from the corresponding page.
 - Long headings wrap and use EPP, TLE, Aral. Pan., GMRC, and Val. Ed. MAPEH is tracked as separate **Music & Arts** and **PE & Health** subjects.
 - **Grade Sources** lets you choose Grade Transfer File, a matching class in this app, or manual entry. There is no “Expected Source Class” to type for a Grade Transfer File because the file identifies its source automatically.
 - **Import History** records filename, export ID, timestamps, counts, conflicts, and decisions.
@@ -58,7 +58,7 @@ Exact duplicate files and corrected re-exports are identified. Existing grades a
 
 Dashboard completion is calculated from valid learner grades for every configured subject and all three terms; simply importing a file does not mark incomplete data as complete.
 
-The main Advisory Class table displays Term 1, Term 2, Term 3, and a computed final for every subject. A subject final appears after all three term grades are available. The General Average appears after every configured subject has a complete final.
+The main Advisory Class table displays Term 1, Term 2, Term 3, and a computed final for every subject. Equal-width grade columns and stronger borders separate each subject group. A subject final appears after all three term grades are available. Music & Arts and PE & Health produce a **MAPEH Average** for each term and a MAPEH final; only that combined MAPEH final is counted with the other subjects in the General Average. The General Average appears after every required subject has a complete final.
 
 ## Reset an Advisory Class
 

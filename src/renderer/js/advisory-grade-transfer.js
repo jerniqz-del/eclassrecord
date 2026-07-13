@@ -14,6 +14,7 @@
 
   const FORMAT = 'eclass-record-grade-export';
   const SCHEMA_VERSION = '1.0';
+  const MAPEH_AVERAGE_ID = '__mapeh_average__';
   let advisoryPanelTab = 'grades';
   let showAdvisoryTerms = true;
   let advisorySubjectSort = { subjectId: '', direction: '' };
@@ -754,18 +755,52 @@
       : null;
   }
 
+  function mapehComponents(subjects) {
+    const musicArts = (subjects || []).find(subject => normalizeSubjectKey(subject.subjectName) === 'MUSIC ARTS');
+    const peHealth = (subjects || []).find(subject => normalizeSubjectKey(subject.subjectName) === 'PE HEALTH');
+    return musicArts && peHealth ? { musicArts, peHealth } : null;
+  }
+
+  function calculateMapehTermAverage(grades, learnerId, subjects, term) {
+    const components = mapehComponents(subjects);
+    if (!components) return null;
+    const values = [components.musicArts, components.peHealth].map(subject => {
+      const record = grades.find(item => item.advisoryLearnerId === learnerId && item.advisorySubjectId === subject.id && item.term === String(term));
+      return record && Number.isFinite(Number(record.finalGrade)) ? Number(record.finalGrade) : null;
+    });
+    return values.every(value => value !== null)
+      ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+      : null;
+  }
+
+  function calculateMapehFinal(grades, learnerId, subjects) {
+    const values = ['1', '2', '3'].map(term => calculateMapehTermAverage(grades, learnerId, subjects, term));
+    return values.every(value => value !== null)
+      ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+      : null;
+  }
+
   function calculateGeneralAverage(grades, learnerId, subjects) {
     if (!subjects.length) return null;
-    const finals = subjects.map(subject => calculateSubjectFinal(grades, learnerId, subject.id));
+    const components = mapehComponents(subjects);
+    const regularSubjects = components
+      ? subjects.filter(subject => ![components.musicArts.id, components.peHealth.id].includes(subject.id))
+      : subjects;
+    const finals = regularSubjects.map(subject => calculateSubjectFinal(grades, learnerId, subject.id));
+    if (components) finals.push(calculateMapehFinal(grades, learnerId, subjects));
     return finals.every(value => value !== null)
       ? Math.round(finals.reduce((sum, value) => sum + value, 0) / finals.length)
       : null;
   }
 
-  function gradeCell(record) {
-    if (!record) return '<td class="is-missing" title="Missing grade">—</td>';
+  function gradeCell(record, extraClass = '') {
+    if (!record) return `<td class="is-missing ${extraClass}" title="Missing grade">&mdash;</td>`;
     const conflict = record.conflictStatus && !['none', 'resolved'].includes(record.conflictStatus);
-    return `<td class="${conflict ? 'has-conflict' : 'has-grade'}" title="${globalScope.esc(record.sourceClassName || record.sourceType)}">${globalScope.esc(record.finalGrade)}</td>`;
+    return `<td class="${conflict ? 'has-conflict' : 'has-grade'} ${extraClass}" title="${globalScope.esc(record.sourceClassName || record.sourceType)}">${globalScope.esc(record.finalGrade)}</td>`;
+  }
+
+  function calculatedGradeCell(value, title, extraClass = '') {
+    return `<td class="${value === null ? 'is-missing' : 'has-grade'} ${extraClass}" title="${globalScope.esc(title)}">${value === null ? '&mdash;' : value}</td>`;
   }
 
   function sourceSummary(subject) {
@@ -779,21 +814,28 @@
   }
 
   function setPanelTab(tab, workspace = document) {
-    advisoryPanelTab = tab === 'sources' ? 'sources' : 'grades';
+    advisoryPanelTab = ['grades', 'sources', 'roster', 'settings'].includes(tab) ? tab : 'grades';
     workspace?.querySelectorAll?.('[data-advisory-panel]').forEach(section => {
       section.hidden = section.dataset.advisoryPanel !== advisoryPanelTab;
     });
     workspace?.querySelectorAll?.('[data-advisory-page-tab]').forEach(button => {
       const active = button.dataset.advisoryPageTab === advisoryPanelTab;
-      button.setAttribute('aria-pressed', String(active));
+      button.setAttribute('aria-selected', String(active));
+      button.setAttribute('tabindex', active ? '0' : '-1');
       button.classList.toggle('btn-primary', active);
       button.classList.toggle('btn-ghost', !active);
     });
   }
 
-  function sortLearnersBySubject(learners, grades, subjectId, direction) {
+  function sortLearnersBySubject(learners, grades, subjectId, direction, subjects = []) {
     if (!subjectId || !['asc', 'desc'].includes(direction)) return learners.slice();
-    return learners.map((learner, index) => ({ learner, index, grade: calculateSubjectFinal(grades, learner.id, subjectId) }))
+    return learners.map((learner, index) => ({
+      learner,
+      index,
+      grade: subjectId === MAPEH_AVERAGE_ID
+        ? calculateMapehFinal(grades, learner.id, subjects)
+        : calculateSubjectFinal(grades, learner.id, subjectId)
+    }))
       .sort((left, right) => {
         if (left.grade === null && right.grade === null) return left.index - right.index;
         if (left.grade === null) return 1;
@@ -815,36 +857,54 @@
     const profileDb = activeDb();
     const store = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb);
     const subjects = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id).sort((a, b) => a.displayOrder - b.displayOrder);
-    const learners = store.learners.filter(item => item.advisoryClassId === advisoryClass.id && item.enrollmentStatus !== 'inactive');
+    const rosterLearners = store.learners.filter(item => item.advisoryClassId === advisoryClass.id);
+    const learners = rosterLearners.filter(item => item.enrollmentStatus !== 'inactive');
     const grades = store.grades.filter(item => item.advisoryClassId === advisoryClass.id);
     const batches = store.importBatches.filter(item => item.advisoryClassId === advisoryClass.id).sort((a, b) => text(b.importedAt).localeCompare(text(a.importedAt)));
-    const sortedLearners = sortLearnersBySubject(learners, grades, advisorySubjectSort.subjectId, advisorySubjectSort.direction);
+    const components = mapehComponents(subjects);
+    const subjectGroups = subjects.flatMap(subject => [
+      { ...subject, derived: false },
+      ...(components && subject.id === components.peHealth.id
+        ? [{ id: MAPEH_AVERAGE_ID, subjectName: 'MAPEH Average', derived: true }]
+        : [])
+    ]);
+    const sortedLearners = sortLearnersBySubject(learners, grades, advisorySubjectSort.subjectId, advisorySubjectSort.direction, subjects);
     const subjectColumnCount = showAdvisoryTerms ? 4 : 1;
+    const colgroup = `<colgroup><col class="advisory-learner-col">${subjectGroups.map(() => showAdvisoryTerms
+      ? '<col class="advisory-term-col"><col class="advisory-term-col"><col class="advisory-term-col"><col class="advisory-final-col">'
+      : '<col class="advisory-final-col">').join('')}<col class="advisory-general-col"></colgroup>`;
 
     const matrix = subjects.length ? `
       <div class="advisory-grade-matrix-wrap">
-        <table class="advisory-roster-table advisory-grade-matrix">
+        <table class="advisory-roster-table advisory-grade-matrix ${showAdvisoryTerms ? '' : 'advisory-grade-matrix--finals-only'}">
+          ${colgroup}
           <thead>
             <tr>
               <th rowspan="2">LRN / Official Name</th>
-              ${subjects.map(subject => {
+              ${subjectGroups.map(subject => {
                 const activeSort = advisorySubjectSort.subjectId === subject.id ? advisorySubjectSort.direction : '';
                 const sortLabel = activeSort === 'desc' ? '&darr;' : activeSort === 'asc' ? '&uarr;' : '&#8597;';
-                return `<th colspan="${subjectColumnCount}" class="advisory-subject-heading"><button type="button" class="advisory-subject-sort" data-sort-advisory-subject="${globalScope.esc(subject.id)}" aria-label="Sort learners by ${globalScope.esc(subject.subjectName)} final grade" aria-pressed="${activeSort ? 'true' : 'false'}" title="${globalScope.esc(subject.subjectName)} — sort by final grade"><span>${globalScope.esc(subjectDisplayName(subject.subjectName))}</span><small aria-hidden="true">${sortLabel}</small></button></th>`;
+                return `<th colspan="${subjectColumnCount}" class="advisory-subject-heading advisory-subject-end ${subject.derived ? 'advisory-mapeh-average' : ''}"><button type="button" class="advisory-subject-sort" data-sort-advisory-subject="${globalScope.esc(subject.id)}" aria-label="Sort learners by ${globalScope.esc(subject.subjectName)} final grade" aria-pressed="${activeSort ? 'true' : 'false'}" title="${globalScope.esc(subject.subjectName)} — sort by final grade"><span>${globalScope.esc(subjectDisplayName(subject.subjectName))}</span><small aria-hidden="true">${sortLabel}</small></button></th>`;
               }).join('')}
               <th rowspan="2" class="advisory-general-average">General Average</th>
             </tr>
-            <tr>${subjects.map(() => showAdvisoryTerms ? '<th>T1</th><th>T2</th><th>T3</th><th class="advisory-final-column">Final</th>' : '<th class="advisory-final-column">Final</th>').join('')}</tr>
+            <tr>${subjectGroups.map(subject => showAdvisoryTerms
+              ? `<th class="${subject.derived ? 'advisory-mapeh-average' : ''}">T1</th><th class="${subject.derived ? 'advisory-mapeh-average' : ''}">T2</th><th class="${subject.derived ? 'advisory-mapeh-average' : ''}">T3</th><th class="advisory-final-column advisory-subject-end ${subject.derived ? 'advisory-mapeh-average' : ''}">Final</th>`
+              : `<th class="advisory-final-column advisory-subject-end ${subject.derived ? 'advisory-mapeh-average' : ''}">Final</th>`).join('')}</tr>
           </thead>
           <tbody>${sortedLearners.length ? sortedLearners.map(learner => {
-            const subjectCells = subjects.map(subject => {
+            const subjectCells = subjectGroups.map(subject => {
+              if (subject.derived) {
+                const termCells = showAdvisoryTerms ? ['1', '2', '3'].map(term => calculatedGradeCell(calculateMapehTermAverage(grades, learner.id, subjects, term), `MAPEH Term ${term} average`, 'advisory-mapeh-average')).join('') : '';
+                return `${termCells}${calculatedGradeCell(calculateMapehFinal(grades, learner.id, subjects), 'Average of the three MAPEH term averages', 'advisory-final-column advisory-subject-end advisory-mapeh-average')}`;
+              }
               const termCells = showAdvisoryTerms ? ['1', '2', '3'].map(term => gradeCell(grades.find(item => item.advisoryLearnerId === learner.id && item.advisorySubjectId === subject.id && item.term === term))).join('') : '';
               const finalGrade = calculateSubjectFinal(grades, learner.id, subject.id);
-              return `${termCells}<td class="advisory-final-column ${finalGrade === null ? 'is-missing' : 'has-grade'}" title="Average of Terms 1–3">${finalGrade === null ? '&mdash;' : finalGrade}</td>`;
+              return `${termCells}${calculatedGradeCell(finalGrade, 'Average of Terms 1–3', 'advisory-final-column advisory-subject-end')}`;
             }).join('');
             const generalAverage = calculateGeneralAverage(grades, learner.id, subjects);
             return `<tr><td><small>${globalScope.esc(learner.lrn || 'No LRN')}</small><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</strong></td>${subjectCells}<td class="advisory-general-average ${generalAverage === null ? 'is-missing' : 'has-grade'}" title="Available when every subject has all three term grades">${generalAverage === null ? '&mdash;' : generalAverage}</td></tr>`;
-          }).join('') : `<tr><td colspan="${subjects.length * subjectColumnCount + 2}"><div class="advisory-roster__empty">No learners are in the official roster. Use Manage Roster to import or add learners.</div></td></tr>`}</tbody>
+          }).join('') : `<tr><td colspan="${subjectGroups.length * subjectColumnCount + 2}"><div class="advisory-roster__empty">No learners are in the official roster. Use Manage Roster to import or add learners.</div></td></tr>`}</tbody>
         </table>
       </div>` : '<div class="advisory-roster__empty">No subjects have been configured. Import the first Grade Transfer File or add a subject manually.</div>';
 
@@ -858,14 +918,36 @@
 
     const historyRows = batches.length ? batches.map(batch => `<tr><td>${globalScope.esc(batch.importedAt || '—')}</td><td>${globalScope.esc(batch.filename || 'Unknown file')}<small>${globalScope.esc(batch.sourceTeacher || '')} · ${globalScope.esc(batch.sourceClass || '')}</small></td><td>${globalScope.esc(batch.subject)} · Term ${globalScope.esc(batch.term)}</td><td>${batch.importedCount} imported · ${batch.updatedCount} updated · ${batch.skippedCount} skipped · ${batch.conflictCount} conflicts</td><td>${globalScope.esc(batch.status)}</td></tr>`).join('') : '<tr><td colspan="5">No grade imports recorded.</td></tr>';
 
+    const rosterRows = rosterLearners.length ? rosterLearners.map((learner, index) => `<tr><td>${index + 1}</td><td class="advisory-roster__lrn">${globalScope.esc(learner.lrn || '—')}</td><td><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</strong></td><td>${globalScope.esc(learner.sex || '—')}</td><td>${globalScope.esc(learner.enrollmentStatus || 'active')}</td><td>${globalScope.esc(learner.source || 'manual')}</td></tr>`).join('') : '<tr><td colspan="6"><div class="advisory-roster__empty">No learners yet. Open Roster Tools to import or add learners.</div></td></tr>';
+
+    const settingsItems = [
+      ['School Year', advisoryClass.schoolYear],
+      ['Grade Level', advisoryClass.gradeLevel],
+      ['Section', advisoryClass.section],
+      ['Adviser', advisoryClass.adviserName],
+      ['School', advisoryClass.schoolName || profileDb.schoolName],
+      ['School ID', advisoryClass.schoolId || profileDb.schoolId],
+      ['District', advisoryClass.district || profileDb.district],
+      ['Division', advisoryClass.division || profileDb.division],
+      ['Region', advisoryClass.region || profileDb.region]
+    ];
+
     panel.innerHTML = `
-      <section data-advisory-panel="grades">
+      <section id="advisoryGradeRecordPanel" role="tabpanel" data-advisory-panel="grades">
         <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Term grades, computed subject finals, and the completed general average. Missing records remain visible.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-terms aria-pressed="${showAdvisoryTerms}">${showAdvisoryTerms ? 'Hide Terms 1–3' : 'Show Terms 1–3'}</button><button class="btn btn-ghost btn-sm" type="button" data-add-advisory-subject>Add Other Subject</button><button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
         ${matrix}
       </section>
-      <section data-advisory-panel="sources" hidden>
+      <section id="advisoryGradeSourcesPanel" role="tabpanel" data-advisory-panel="sources" hidden>
         <div class="advisory-source-management"><div class="advisory-source-heading"><h3>Grade Sources</h3><p>Subjects are based on Grade ${globalScope.esc(advisoryClass.gradeLevel)}. Choose how each subject's grades will arrive. Grade Transfer Files identify their own school year, subject, and term.</p></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Subject</th><th>Grade Source</th><th>Last Import</th><th>Received</th><th>Missing</th><th>Conflicts</th><th></th></tr></thead><tbody>${sourceRows}</tbody></table></div></div>
         <div class="advisory-import-history"><div class="advisory-grade-panel__header"><div><h3>Import History</h3><p>Audit trail for every confirmed Grade Transfer File.</p></div><button class="btn btn-ghost btn-sm" data-undo-latest-import ${latestUndoableBatch(profileDb, advisoryClass.id) ? '' : 'disabled'}>Undo Latest Import</button></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Imported</th><th>File / Source</th><th>Subject / Term</th><th>Results</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div></div>
+      </section>
+      <section id="advisoryRosterPanel" role="tabpanel" data-advisory-panel="roster" hidden>
+        <div class="advisory-grade-panel__header"><div><h3>Manage Roster</h3><p>Review the official Advisory Class roster, then open the roster tools to import, add, edit, or remove learners.</p></div><button class="btn btn-primary btn-sm" type="button" data-open-advisory-roster-tools>Open Roster Tools</button></div>
+        <div class="advisory-roster-table-wrap advisory-page-roster-table"><table class="advisory-roster-table"><thead><tr><th>#</th><th>LRN</th><th>Official Name</th><th>Sex</th><th>Status</th><th>Source</th></tr></thead><tbody>${rosterRows}</tbody></table></div>
+      </section>
+      <section id="advisorySettingsPanel" role="tabpanel" data-advisory-panel="settings" hidden>
+        <div class="advisory-grade-panel__header"><div><h3>Advisory Settings</h3><p>Review the active class identity and school details used to validate Grade Transfer Files.</p></div><button class="btn btn-primary btn-sm" type="button" data-open-advisory-settings>Edit Advisory Settings</button></div>
+        <dl class="advisory-settings-grid">${settingsItems.map(([label, value]) => `<div><dt>${globalScope.esc(label)}</dt><dd>${globalScope.esc(value || 'Not provided')}</dd></div>`).join('')}</dl>
       </section>`;
     panel.querySelector('[data-import-subject-grades]')?.addEventListener('click', selectImportFile);
     panel.querySelector('[data-add-advisory-subject]')?.addEventListener('click', () => showSubjectModal());
@@ -879,6 +961,8 @@
     }));
     panel.querySelectorAll('[data-edit-advisory-subject]').forEach(button => button.addEventListener('click', () => showSubjectModal(button.dataset.editAdvisorySubject)));
     panel.querySelector('[data-undo-latest-import]')?.addEventListener('click', () => requestUndoLatest(advisoryClass.id));
+    panel.querySelector('[data-open-advisory-roster-tools]')?.addEventListener('click', () => globalScope.AdvisoryRoster?.openRosterManager?.());
+    panel.querySelector('[data-open-advisory-settings]')?.addEventListener('click', () => globalScope.showAdvisoryClassSetupModal?.());
     setPanelTab(advisoryPanelTab, workspace);
   }
 
@@ -904,6 +988,8 @@
     undoImportBatch,
     latestUndoableBatch,
     calculateSubjectFinal,
+    calculateMapehTermAverage,
+    calculateMapehFinal,
     calculateGeneralAverage,
     subjectDisplayName,
     sortLearnersBySubject,

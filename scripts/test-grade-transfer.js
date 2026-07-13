@@ -150,6 +150,31 @@ function validPayload(data = fixture()) {
   assert.deepStrictEqual(Transfer.sortLearnersBySubject(learners, grades, 'subject', 'asc').map(item => item.id), ['a', 'b', 'c']);
 }
 
+// Music & Arts and PE & Health produce one MAPEH result for every term and count once in the General Average.
+{
+  const subjects = [
+    { id: 'math', subjectName: 'Mathematics' },
+    { id: 'science', subjectName: 'Science' },
+    { id: 'music-arts', subjectName: 'Music & Arts' },
+    { id: 'pe-health', subjectName: 'PE & Health' }
+  ];
+  const values = {
+    math: [89, 90, 91],
+    science: [92, 93, 94],
+    'music-arts': [80, 82, 84],
+    'pe-health': [90, 92, 94]
+  };
+  const grades = Object.entries(values).flatMap(([subjectId, termGrades]) => termGrades.map((finalGrade, index) => ({
+    advisoryLearnerId: 'learner', advisorySubjectId: subjectId, term: String(index + 1), finalGrade
+  })));
+  assert.strictEqual(Transfer.calculateMapehTermAverage(grades, 'learner', subjects, '1'), 85);
+  assert.strictEqual(Transfer.calculateMapehTermAverage(grades, 'learner', subjects, '2'), 87);
+  assert.strictEqual(Transfer.calculateMapehTermAverage(grades, 'learner', subjects, '3'), 89);
+  assert.strictEqual(Transfer.calculateMapehFinal(grades, 'learner', subjects), 87);
+  assert.strictEqual(Transfer.calculateGeneralAverage(grades, 'learner', subjects), 90, 'MAPEH must count once instead of counting its two components separately');
+  assert.strictEqual(Transfer.calculateMapehFinal(grades.slice(0, -1), 'learner', subjects), null, 'incomplete components must not produce a MAPEH final');
+}
+
 // Planning is read-only; exact LRN and safe name fallback match correctly.
 {
   const data = fixture();

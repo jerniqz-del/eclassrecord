@@ -149,6 +149,8 @@ function createWindow() {
             lastName: 'Reyes', firstName: 'Maria', sex: 'F'
           });
           const runtimeSubject = AdvisoryData.normalizeAdvisoryData(runtimeProfile).subjects.find(item => item.advisoryClassId === runtimeClass.id && item.normalizedSubjectKey === 'MATHEMATICS');
+          const runtimeMusicArts = AdvisoryData.normalizeAdvisoryData(runtimeProfile).subjects.find(item => item.advisoryClassId === runtimeClass.id && item.normalizedSubjectKey === 'MUSIC ARTS');
+          const runtimePeHealth = AdvisoryData.normalizeAdvisoryData(runtimeProfile).subjects.find(item => item.advisoryClassId === runtimeClass.id && item.normalizedSubjectKey === 'PE HEALTH');
           ['1', '2', '3'].forEach((term, index) => AdvisoryData.createGrade(runtimeProfile, {
             advisoryClassId: runtimeClass.id, advisoryLearnerId: runtimeLearner.id,
             advisorySubjectId: runtimeSubject.id, schoolYear: runtimeProfile.schoolYear,
@@ -159,6 +161,12 @@ function createWindow() {
             advisorySubjectId: runtimeSubject.id, schoolYear: runtimeProfile.schoolYear,
             term, finalGrade: 70 + index
           }));
+          ['1', '2', '3'].forEach((term, index) => {
+            AdvisoryData.createGrade(runtimeProfile, { advisoryClassId: runtimeClass.id, advisoryLearnerId: runtimeLearner.id, advisorySubjectId: runtimeMusicArts.id, schoolYear: runtimeProfile.schoolYear, term, finalGrade: 80 + index * 2 });
+            AdvisoryData.createGrade(runtimeProfile, { advisoryClassId: runtimeClass.id, advisoryLearnerId: runtimeLearner.id, advisorySubjectId: runtimePeHealth.id, schoolYear: runtimeProfile.schoolYear, term, finalGrade: 90 + index * 2 });
+            AdvisoryData.createGrade(runtimeProfile, { advisoryClassId: runtimeClass.id, advisoryLearnerId: runtimeLearnerTwo.id, advisorySubjectId: runtimeMusicArts.id, schoolYear: runtimeProfile.schoolYear, term, finalGrade: 70 + index * 2 });
+            AdvisoryData.createGrade(runtimeProfile, { advisoryClassId: runtimeClass.id, advisoryLearnerId: runtimeLearnerTwo.id, advisorySubjectId: runtimePeHealth.id, schoolYear: runtimeProfile.schoolYear, term, finalGrade: 80 + index * 2 });
+          });
           renderDashboardOverview();
           if (document.getElementById('navAdvisory')?.hidden) throw new Error('Advisory sidebar button was not shown after setup.');
           if (!document.querySelector('.dashboard-card__subject-logo.subject-logo--mathematics')) throw new Error('Mathematics subject logo was not rendered.');
@@ -181,7 +189,9 @@ function createWindow() {
           if (!advisoryPage.querySelector('.advisory-final-column') || !advisoryPage.querySelector('.advisory-general-average')) throw new Error('Final-grade columns were not rendered.');
           const runtimeSubjects = AdvisoryData.normalizeAdvisoryData(runtimeProfile).subjects.filter(item => item.advisoryClassId === runtimeClass.id);
           if (runtimeSubjects.length !== 9 || !runtimeSubjects.some(item => item.subjectName === 'Music & Arts') || !runtimeSubjects.some(item => item.subjectName === 'PE & Health')) throw new Error('Grade-level subjects and split MAPEH components were not populated automatically.');
+          if (!advisoryPage.textContent.includes('MAPEH Average') || ![...advisoryPage.querySelectorAll('.advisory-mapeh-average')].some(cell => cell.textContent.trim() === '87')) throw new Error('Derived MAPEH term and final averages were not rendered.');
           if (!advisoryPage.querySelector('.advisory-subject-sort') || !advisoryPage.textContent.includes('Aral. Pan.') || !advisoryPage.textContent.includes('GMRC') || !advisoryPage.textContent.includes('EPP')) throw new Error('Wrapped subject abbreviations and sort controls were not rendered.');
+          if (getComputedStyle(advisoryPage.querySelector('.advisory-subject-end')).borderRightWidth !== '3px') throw new Error('Subject group boundaries are not visually separated.');
           const firstLearnerCell = advisoryPage.querySelector('.advisory-grade-matrix tbody td:first-child');
           if (getComputedStyle(firstLearnerCell).position !== 'sticky') throw new Error('LRN / Official Name column is not frozen during horizontal scrolling.');
           const termToggle = advisoryPage.querySelector('[data-toggle-advisory-terms]');
@@ -195,16 +205,24 @@ function createWindow() {
           if (!advisoryPage.querySelector('.advisory-page__header [data-advisory-page-reset]') || advisoryPage.querySelector('.advisory-page__toolbar [data-advisory-page-reset]')) throw new Error('Reset Advisory Class is not in the page header.');
           advisoryPage.querySelector('[data-advisory-page-tab="sources"]').click();
           if (!advisoryPage.querySelector('[data-advisory-panel="grades"]').hidden || advisoryPage.querySelector('[data-advisory-panel="sources"]').hidden || !advisoryPage.textContent.includes('Assign Source')) throw new Error('Grade Sources tab did not open its dedicated panel.');
+          advisoryPage.querySelector('[data-advisory-page-tab="roster"]').click();
+          if (advisoryPage.querySelector('[data-advisory-panel="roster"]').hidden || !advisoryPage.querySelector('[data-open-advisory-roster-tools]') || !advisoryPage.querySelector('[data-advisory-panel="roster"]').textContent.includes('123456789012')) throw new Error('Manage Roster tab did not open its page panel.');
+          advisoryPage.querySelector('[data-advisory-page-tab="settings"]').click();
+          if (advisoryPage.querySelector('[data-advisory-panel="settings"]').hidden || !advisoryPage.querySelector('[data-open-advisory-settings]') || !advisoryPage.querySelector('[data-advisory-panel="settings"]').textContent.includes('Offline')) throw new Error('Advisory Settings tab did not open its page panel.');
           advisoryPage.querySelector('[data-advisory-page-tab="grades"]').click();
           advisoryPage.querySelector('[data-add-advisory-subject]').click();
           const subjectModal = document.querySelector('.advisory-nested-modal');
           if (!subjectModal || subjectModal.textContent.includes('Expected Source Class') || subjectModal.textContent.includes('Normalized Subject Key')) throw new Error('Grade source assignment still exposes technical fields (modal=' + Boolean(subjectModal) + ', expectedClass=' + Boolean(subjectModal?.textContent.includes('Expected Source Class')) + ', normalizedKey=' + Boolean(subjectModal?.textContent.includes('Normalized Subject Key')) + ').');
+          const advisoryCancelColor = getComputedStyle(subjectModal.querySelector('[data-cancel]')).color;
+          const advisoryResetColor = getComputedStyle(advisoryPage.querySelector('[data-advisory-page-reset]')).backgroundColor;
+          if (!advisoryCancelColor.includes('185, 28, 28') || !advisoryResetColor.includes('220, 38, 38')) throw new Error('Advisory cancel and destructive actions do not use the shared red palette (cancel=' + advisoryCancelColor + ', reset=' + advisoryResetColor + ').');
           if (!subjectModal.textContent.includes('school year, grade and section, subject, and term directly')) throw new Error('Grade Transfer File automatic identification is not explained.');
           const localSourceRadio = subjectModal.querySelector('input[value="local-subject-class"]');
           localSourceRadio.click();
           if (subjectModal.querySelector('[data-local-source-class]')?.hidden || !subjectModal.querySelector('[data-local-source-class] option[value="smoke-subject"]')) throw new Error('Matching local class source choices were not shown.');
           subjectModal.remove();
-          advisoryPage.querySelector('[data-advisory-page-roster]').click();
+          advisoryPage.querySelector('[data-advisory-page-tab="roster"]').click();
+          advisoryPage.querySelector('[data-open-advisory-roster-tools]').click();
           const rosterModal = document.querySelector('[data-advisory-roster-manager]');
           if (!rosterModal || !rosterModal.querySelector('[data-remove-advisory-learner]')) throw new Error('Separate roster manager did not open.');
           rosterModal.querySelector('[data-advisory-import-class]').click();
@@ -233,7 +251,7 @@ function createWindow() {
           updateProfile();
           if (runtimeProfile.district !== 'Smoke Test District') throw new Error('District profile field did not update the active profile.');
 
-          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, gradeTabs: true, frozenLearnerColumn: true, termToggle: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, rosterModal: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
+          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, rosterTab: true, settingsTab: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, termToggle: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, rosterModal: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }

@@ -224,8 +224,9 @@ const HELP_TOPICS = [
         <li>A subject teacher opens a teaching-load card, chooses <strong>Export Grades</strong>, selects one term, reviews the privacy notice, and saves the JSON Grade Transfer File. For MAPEH, save <strong>Music &amp; Arts</strong> and <strong>PE &amp; Health</strong> as separate files.</li>
         <li>The adviser opens the Advisory Class and selects <strong>Import Grade Transfer File</strong>. The app reads the school year, grade, section, subject, and term from the file and validates them before showing learner matches.</li>
         <li>Use <strong>Assign Source</strong> beside a subject to choose a Grade Transfer File, a matching class in this app, or manual entry. A Grade Transfer File does not require an expected class or term because those details are detected automatically.</li>
-        <li>Open the separate <strong>Grade Sources</strong> tab to inspect provenance and Import History or safely undo the latest applicable import.</li>
-        <li>The <strong>Grade Record</strong> tab freezes LRN / Official Name while you scroll. Hide or show Terms 1–3, and select a subject heading to sort learners by that subject final.</li>
+        <li>Use the <strong>Grade Sources</strong>, <strong>Manage Roster</strong>, and <strong>Advisory Settings</strong> page tabs to inspect provenance, review learners, or review class details. Focused editing tools open from their corresponding page.</li>
+        <li>The <strong>Grade Record</strong> tab freezes LRN / Official Name while you scroll. Equal-width grade columns and stronger borders separate subjects. Hide or show Terms 1–3, and select a subject heading to sort learners by that subject final.</li>
+        <li>Music &amp; Arts and PE &amp; Health produce one <strong>MAPEH Average</strong> for every term and one MAPEH final. Only the combined MAPEH final is counted with the other subjects in the General Average.</li>
         <li>The red <strong>Reset Advisory Class</strong> button in the upper-right can save a ZIP with separate subject-term files before removal.</li>
       </ol>
       <div class="help-highlight-box">
