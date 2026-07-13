@@ -183,6 +183,18 @@
 .advisory-grade-matrix td:first-child small { color: var(--text-secondary); }
 .advisory-grade-matrix td.has-grade { color: var(--color-success-700); font-weight: var(--font-weight-bold); background: color-mix(in srgb, var(--color-success-50) 35%, var(--bg-surface)); }
 .advisory-grade-matrix td.is-missing { color: var(--color-warning-600); background: color-mix(in srgb, var(--color-warning-50) 25%, var(--bg-surface)); }
+.advisory-grade-matrix td.has-conflict { color: var(--color-error-700); font-weight: var(--font-weight-bold); background: color-mix(in srgb, var(--color-error-50) 55%, var(--bg-surface)); }
+.advisory-conflict-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-warning-300); border-radius: var(--radius-md); background: color-mix(in srgb, var(--color-warning-50) 40%, var(--bg-surface)); }
+.advisory-conflict-bulk span { margin-right: auto; color: var(--text-secondary); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
+.advisory-conflict-select,
+.advisory-match-select { margin-top: var(--space-2); width: 100%; }
+.advisory-preview-row--conflict { border-color: var(--color-warning-400); background: color-mix(in srgb, var(--color-warning-50) 45%, var(--bg-surface)); }
+.advisory-source-management,
+.advisory-import-history { margin-top: var(--space-6); }
+.advisory-source-management h3 { margin: 0 0 var(--space-3); }
+.advisory-source-management td small,
+.advisory-import-history td small { display: block; margin-top: 3px; color: var(--text-secondary); font-size: 10px; }
+.advisory-grade-panel__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 @media (max-width: 700px) {
   .advisory-workspace-overlay { padding: 0; }

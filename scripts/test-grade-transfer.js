@@ -120,8 +120,9 @@ function validPayload(data = fixture()) {
   assert(store.grades.every(grade => grade.importBatchId === result.batch.id));
 
   const secondPlan = Transfer.planImport(data.profile, data.advisoryClass, payload, 'math-t1-again.json');
-  assert(secondPlan.rows.every(row => row.status === 'existing-grade'));
-  assert.strictEqual(secondPlan.canImport, false, 'existing grades must never be silently overwritten');
+  assert(secondPlan.rows.every(row => row.status === 'conflict'));
+  assert(secondPlan.errors.some(message => /already been imported/.test(message)));
+  assert.strictEqual(secondPlan.canImport, false, 'duplicate files and existing grades must never be silently overwritten');
 }
 
 // UI wiring uses local file bridges and has no network dependency.

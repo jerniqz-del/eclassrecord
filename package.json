@@ -12,11 +12,12 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "test": "npm run test:advisory-data && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer",
+    "test": "npm run test:advisory-data && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer && npm run test:grade-conflicts",
     "test:advisory-data": "node scripts/test-advisory-data.js",
     "test:advisory-dashboard": "node scripts/test-advisory-dashboard.js",
     "test:advisory-roster": "node scripts/test-advisory-roster.js",
     "test:grade-transfer": "node scripts/test-grade-transfer.js",
+    "test:grade-conflicts": "node scripts/test-grade-conflicts.js",
     "build": "node scripts/build-obfuscated.js --win",
     "publish": "node scripts/build-obfuscated.js --win --publish always",
     "release": "node scripts/release.js",
