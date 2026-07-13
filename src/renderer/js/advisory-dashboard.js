@@ -131,6 +131,9 @@
     const schoolYear = profileDb.schoolYear || '2026-2027';
     const existing = getClassForYear(profileDb, schoolYear);
     const escHtml = globalScope.esc || (value => String(value ?? ''));
+    const gradeLevels = ['Kindergarten', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+    const selectedGrade = existing?.gradeLevel || '';
+    const sourceClasses = (profileDb.assignments || []).filter(item => item.schoolYear === schoolYear && Array.isArray(item.learners));
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.style.zIndex = '11800';
@@ -141,7 +144,7 @@
         <div class="modal__body advisory-setup-modal__body">
           <p class="text-muted" style="margin-top:0">This is the adviser&apos;s central record for School Year ${escHtml(schoolYear)}. Previous school-year records are preserved.</p>
           <div class="split-row">
-            <div class="field"><label class="field-label" for="advisoryGradeLevel">Grade Level</label><input class="field-input" id="advisoryGradeLevel" value="${escHtml(existing?.gradeLevel || '')}" inputmode="numeric" required /></div>
+            <div class="field"><label class="field-label" for="advisoryGradeLevel">Grade Level</label><select class="field-select" id="advisoryGradeLevel" required><option value="">Select grade level</option>${gradeLevels.map(level => `<option value="${escHtml(level)}" ${selectedGrade === level ? 'selected' : ''}>${level === 'Kindergarten' ? level : `Grade ${level}`}</option>`).join('')}</select></div>
             <div class="field"><label class="field-label" for="advisorySection">Section</label><input class="field-input" id="advisorySection" value="${escHtml(existing?.section || '')}" required /></div>
           </div>
           <div class="field"><label class="field-label" for="advisoryAdviserName">Adviser Name</label><input class="field-input" id="advisoryAdviserName" value="${escHtml(existing?.adviserName || profileDb.teacherName || '')}" required /></div>
@@ -153,6 +156,10 @@
           <div class="split-row">
             <div class="field"><label class="field-label" for="advisoryDivision">Division</label><input class="field-input" id="advisoryDivision" value="${escHtml(existing?.division || profileDb.division || '')}" /></div>
             <div class="field"><label class="field-label" for="advisoryRegion">Region</label><input class="field-input" id="advisoryRegion" value="${escHtml(existing?.region || profileDb.region || '')}" /></div>
+          </div>
+          <div class="advisory-setup-roster-source">
+            <div><strong>${existing ? 'Import additional learners' : 'Start with an existing class roster'}</strong><p>Optional. Select a class already on the Dashboard. You will review learners before anything is added, and the source class will remain unchanged.</p></div>
+            <div class="field"><label class="field-label" for="advisorySetupSourceClass">Import learners from Other Class</label><select class="field-select" id="advisorySetupSourceClass"><option value="">Do not import a roster now</option>${sourceClasses.map(item => `<option value="${escHtml(item.id)}">Grade ${escHtml(item.gradeLevel)} - ${escHtml(item.section)} (${escHtml(item.subject)}) · ${item.learners.length} learners</option>`).join('')}</select></div>
           </div>
           ${existing ? '<label class="checkbox-row"><input type="checkbox" id="advisoryArchived" ' + (existing.isArchived ? 'checked' : '') + '> Archive this Advisory Class</label>' : ''}
         </div>
@@ -179,17 +186,22 @@
         isActive: existing ? !overlay.querySelector('#advisoryArchived').checked : true,
         isArchived: existing ? overlay.querySelector('#advisoryArchived').checked : false
       };
+      const sourceClassId = overlay.querySelector('#advisorySetupSourceClass').value;
       if (!values.gradeLevel || !values.section || !values.adviserName) {
         globalScope.toast('Grade level, section, and adviser name are required.', 'warning');
         return;
       }
       try {
-        if (existing) globalScope.AdvisoryData.updateClass(profileDb, existing.id, values);
-        else globalScope.AdvisoryData.createClass(profileDb, values);
+        const savedClass = existing
+          ? globalScope.AdvisoryData.updateClass(profileDb, existing.id, values)
+          : globalScope.AdvisoryData.createClass(profileDb, values);
         await globalScope.saveDatabase();
         close();
         globalScope.renderDashboardOverview();
         globalScope.toast(existing ? 'Advisory Class details updated.' : 'Advisory Class created.', 'success');
+        if (sourceClassId && globalScope.AdvisoryRoster?.startClassImport) {
+          globalScope.AdvisoryRoster.startClassImport(sourceClassId, savedClass);
+        }
       } catch (error) {
         console.error('Advisory Class setup failed:', error);
         globalScope.toast(error.message || 'Advisory Class could not be saved.', 'error');

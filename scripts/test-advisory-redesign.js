@@ -1,0 +1,65 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+global.AdvisoryData = require('../src/renderer/js/advisory-data.js');
+global.AdvisoryRoster = require('../src/renderer/js/advisory-roster.js');
+const Transfer = require('../src/renderer/js/advisory-grade-transfer.js');
+const Reset = require('../src/renderer/js/advisory-reset.js');
+const Zip = require('../src/main/zip-archive.js');
+
+const profile = { schoolYear: '2026-2027', assignments: [] };
+AdvisoryData.normalizeAdvisoryData(profile);
+const advisoryClass = AdvisoryData.createClass(profile, { id: 'class-1', schoolYear: profile.schoolYear, gradeLevel: '4', section: 'Molave', adviserName: 'Teacher', isActive: true });
+const learner = AdvisoryData.createLearner(profile, { id: 'learner-1', advisoryClassId: advisoryClass.id, lrn: '123456789012', lastName: 'Cruz', firstName: 'Juan' });
+const subjects = ['Mathematics', 'Science'].map((name, index) => AdvisoryData.createSubject(profile, { id: `subject-${index + 1}`, advisoryClassId: advisoryClass.id, subjectName: name, normalizedSubjectKey: name.toUpperCase(), displayOrder: index }));
+subjects.forEach((subject, subjectIndex) => ['1', '2', '3'].forEach((term, termIndex) => AdvisoryData.createGrade(profile, {
+  advisoryClassId: advisoryClass.id,
+  advisoryLearnerId: learner.id,
+  advisorySubjectId: subject.id,
+  schoolYear: profile.schoolYear,
+  term,
+  finalGrade: 85 + subjectIndex + termIndex
+})));
+
+assert.strictEqual(Transfer.calculateSubjectFinal(profile.advisory.grades, learner.id, subjects[0].id), 86);
+assert.strictEqual(Transfer.calculateGeneralAverage(profile.advisory.grades, learner.id, subjects), 87);
+
+const files = Reset.buildResetBackupFiles(profile, advisoryClass, '2026-07-13T00:00:00.000Z');
+assert.strictEqual(files.length, 11, 'five metadata files plus three term files per subject are required');
+subjects.forEach((subject, index) => ['1', '2', '3'].forEach(term => {
+  const prefix = `subjects/${String(index + 1).padStart(2, '0')}_${subject.subjectName}/Term_${term}.json`;
+  assert(files.some(file => file.name === prefix), `missing ${prefix}`);
+}));
+const archive = Zip.createZip(files, new Date('2026-07-13T00:00:00.000Z'));
+assert.strictEqual(archive.readUInt32LE(0), 0x04034b50);
+assert(archive.includes(Buffer.from('subjects/01_Mathematics/Term_1.json')));
+assert(archive.includes(Buffer.from('subjects/02_Science/Term_3.json')));
+assert.strictEqual(archive.readUInt32LE(archive.length - 22), 0x06054b50);
+
+const resetProfile = JSON.parse(JSON.stringify(profile));
+resetProfile.assignments = [{ id: 'subject-class-kept', learners: [{ id: 'subject-learner-kept' }], scores: { kept: 99 } }];
+assert.strictEqual(Reset.resetAdvisoryData(resetProfile, advisoryClass.id), true);
+assert.strictEqual(resetProfile.advisory.classes.length, 0);
+assert.strictEqual(resetProfile.advisory.learners.length, 0);
+assert.strictEqual(resetProfile.advisory.subjects.length, 0);
+assert.strictEqual(resetProfile.advisory.grades.length, 0);
+assert.deepStrictEqual(resetProfile.assignments, [{ id: 'subject-class-kept', learners: [{ id: 'subject-learner-kept' }], scores: { kept: 99 } }]);
+
+const root = path.join(__dirname, '..');
+const css = fs.readFileSync(path.join(root, 'src/renderer/css/advisory.css'), 'utf8');
+assert(css.includes('.modal-z-confirm { z-index: 12500; }'));
+assert(css.includes('.advisory-roster-modal-overlay { z-index: 11800;'));
+assert(css.includes('.advisory-reset-modal-overlay { z-index: 12300; }'));
+const setup = fs.readFileSync(path.join(root, 'src/renderer/js/advisory-dashboard.js'), 'utf8');
+assert(setup.includes('<select class="field-select" id="advisoryGradeLevel"'));
+assert(setup.includes('Import learners from Other Class'));
+assert(setup.includes('AdvisoryRoster.startClassImport'));
+const dashboard = fs.readFileSync(path.join(root, 'src/renderer/js/dashboard.js'), 'utf8');
+assert(dashboard.includes('subjectLogoMarkup'));
+['language', 'reading', 'makabansa', 'mathematics', 'values', 'araling-panlipunan', 'english', 'filipino', 'science', 'mapeh', 'epp-tle'].forEach(key => assert(dashboard.includes(key)));
+const html = fs.readFileSync(path.join(root, 'src/renderer/index.html'), 'utf8');
+assert(html.includes('id="schoolDistrict"'));
+assert(html.includes('js/advisory-reset.js'));
+
+console.log('Advisory redesign, final-grade calculation, modal layering, subject logos, and ZIP reset backup tests passed.');

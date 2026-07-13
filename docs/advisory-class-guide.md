@@ -6,12 +6,13 @@ The fixed **Advisory Class** card is the adviser’s central workspace for one g
 
 1. Open the first card on the Dashboard.
 2. Enter the school year, grade level, section, adviser, and available school details.
-3. Save. Only one Advisory Class can be active for the same school year.
-4. To preserve a past class, edit it and select **Archive**. Archived data remains in backups.
+3. Optionally choose **Import learners from Other Class** to review a roster already present on the Dashboard immediately after setup.
+4. Save. Only one Advisory Class can be active for the same school year.
+5. To preserve a past class, edit it and select **Archive**. Archived data remains in backups.
 
 ## 2. Build and maintain the official roster
 
-Open **Manage Roster**, then choose one of these local sources:
+Open the Advisory Class grade table, then choose **Manage Roster**. Roster and learner settings open in a separate dialog so the consolidated grades remain uncluttered. Choose one of these local sources:
 
 - **Copy from class** previews learners from an existing teaching load. The source class is not changed.
 - **Upload SF1** reads an official local spreadsheet using the app’s existing SF1 reader.
@@ -48,6 +49,18 @@ Exact duplicate files and corrected re-exports are identified. Existing grades a
 - **Undo** safely reverses an applicable import. It refuses to overwrite a grade that was changed after that import.
 
 Dashboard completion is calculated from valid learner grades for every configured subject and all three terms; simply importing a file does not mark incomplete data as complete.
+
+The main Advisory Class table displays Term 1, Term 2, Term 3, and a computed final for every subject. A subject final appears after all three term grades are available. The General Average appears after every configured subject has a complete final.
+
+## Reset an Advisory Class
+
+Choose **Reset Advisory Class** from the main workspace. The app offers three explicit choices:
+
+- **Backup & Reset** saves a ZIP first. It contains the class settings, roster, import history, source mappings, and a separate JSON file for every configured subject and each of Terms 1–3. Reset proceeds only after the ZIP is saved successfully.
+- **Reset Without Backup** removes the Advisory Class immediately after the explicit choice.
+- **Cancel** leaves everything unchanged.
+
+Resetting does not alter any subject teaching load or its roster, assessments, scores, or attendance.
 
 ## Privacy, offline use, and backups
 

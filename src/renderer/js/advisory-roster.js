@@ -219,6 +219,72 @@
     return document.querySelector('[data-advisory-workspace]');
   }
 
+  function rosterManagerElement() {
+    return document.querySelector('[data-advisory-roster-manager]');
+  }
+
+  function renderRosterManager() {
+    const overlay = rosterManagerElement();
+    if (!overlay) return;
+    const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
+    if (!advisoryClass) { closeElement(overlay); return; }
+    const roster = rosterForClass(activeDb(), advisoryClass.id);
+    const escHtml = globalScope.esc;
+    const body = overlay.querySelector('[data-advisory-manager-roster-body]');
+    const count = overlay.querySelector('[data-advisory-manager-roster-count]');
+    if (count) count.textContent = `${roster.length} learner${roster.length === 1 ? '' : 's'}`;
+    body.innerHTML = roster.length ? roster.map((learner, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td class="advisory-roster__lrn">${escHtml(learner.lrn || '—')}</td>
+        <td><strong>${escHtml(displayName(learner))}</strong></td>
+        <td>${escHtml(learner.sex || '—')}</td>
+        <td>${escHtml(learner.enrollmentStatus || 'active')}</td>
+        <td>${escHtml(learner.source || 'manual')}</td>
+        <td class="advisory-roster__actions">
+          <button class="btn btn-ghost btn-sm" type="button" data-edit-advisory-learner="${escHtml(learner.id)}">Edit</button>
+          <button class="btn btn-danger btn-sm" type="button" data-remove-advisory-learner="${escHtml(learner.id)}">Remove</button>
+        </td>
+      </tr>`).join('') : '<tr><td colspan="7"><div class="advisory-roster__empty">No learners yet. Import an existing roster, add learners manually, paste a list, or upload a supported SF1 file.</div></td></tr>';
+    body.querySelectorAll('[data-edit-advisory-learner]').forEach(button => button.addEventListener('click', () => showLearnerForm(button.dataset.editAdvisoryLearner)));
+    body.querySelectorAll('[data-remove-advisory-learner]').forEach(button => button.addEventListener('click', () => removeLearner(button.dataset.removeAdvisoryLearner)));
+  }
+
+  function openRosterManager() {
+    const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
+    if (!advisoryClass) { globalScope.showAdvisoryClassSetupModal(); return; }
+    let overlay = rosterManagerElement();
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'modal-overlay advisory-roster-modal-overlay';
+      overlay.setAttribute('data-advisory-roster-manager', 'true');
+      overlay.innerHTML = `
+        <div class="modal advisory-roster-modal" role="dialog" aria-modal="true" aria-labelledby="advisoryRosterTitle">
+          <div class="advisory-workspace__header">
+            <div><span class="advisory-card__eyebrow">Roster and learner settings</span><h2 id="advisoryRosterTitle">Official Advisory Class Roster</h2><p>Grade ${globalScope.esc(advisoryClass.gradeLevel)} - ${globalScope.esc(advisoryClass.section)} · School Year ${globalScope.esc(advisoryClass.schoolYear)}</p></div>
+            <button class="btn btn-ghost btn-sm" type="button" data-close-advisory-roster>Close</button>
+          </div>
+          <div class="advisory-workspace__toolbar advisory-action-toolbar">
+            <button class="btn btn-sm advisory-action-btn" type="button" data-advisory-import-class>Import from Other Class</button>
+            <button class="btn btn-sm advisory-action-btn" type="button" data-advisory-add-manual>Add Learner</button>
+            <button class="btn btn-sm advisory-action-btn" type="button" data-advisory-add-bulk>Bulk Add</button>
+            <button class="btn btn-sm advisory-action-btn" type="button" data-advisory-import-sf1>Upload SF1</button>
+            <span class="advisory-workspace__count" data-advisory-manager-roster-count></span>
+          </div>
+          <div class="advisory-workspace__body">
+            <div class="advisory-roster-table-wrap"><table class="advisory-roster-table"><thead><tr><th>#</th><th>LRN</th><th>Official Name</th><th>Sex</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody data-advisory-manager-roster-body></tbody></table></div>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      overlay.querySelector('[data-close-advisory-roster]').addEventListener('click', () => closeElement(overlay));
+      overlay.querySelector('[data-advisory-import-class]').addEventListener('click', showClassImportChooser);
+      overlay.querySelector('[data-advisory-add-manual]').addEventListener('click', () => showLearnerForm());
+      overlay.querySelector('[data-advisory-add-bulk]').addEventListener('click', showBulkModal);
+      overlay.querySelector('[data-advisory-import-sf1]').addEventListener('click', importSf1Roster);
+    }
+    renderRosterManager();
+  }
+
   function renderWorkspace() {
     const overlay = workspaceElement();
     if (!overlay) return;
@@ -245,6 +311,7 @@
     body.querySelectorAll('[data-edit-advisory-learner]').forEach(button => button.addEventListener('click', () => showLearnerForm(button.dataset.editAdvisoryLearner)));
     body.querySelectorAll('[data-remove-advisory-learner]').forEach(button => button.addEventListener('click', () => removeLearner(button.dataset.removeAdvisoryLearner)));
     if (globalScope.AdvisoryGradeTransfer?.renderWorkspacePanel) globalScope.AdvisoryGradeTransfer.renderWorkspacePanel(overlay, advisoryClass);
+    renderRosterManager();
   }
 
   function openWorkspace(event) {
@@ -263,27 +330,21 @@
             <button class="btn btn-ghost btn-sm" type="button" data-close-advisory-workspace aria-label="Close Advisory Class">Close</button>
           </div>
           <div class="advisory-workspace__toolbar">
-            <button class="btn btn-primary btn-sm" type="button" data-advisory-import-class>Import Existing Class</button>
-            <button class="btn btn-primary btn-sm" type="button" data-advisory-add-manual>Add Learner</button>
-            <button class="btn btn-olive btn-sm" type="button" data-advisory-add-bulk>Bulk Add</button>
-            <button class="btn btn-success btn-sm" type="button" data-advisory-import-sf1>Upload SF1</button>
-            <button class="btn btn-primary btn-sm" type="button" data-advisory-import-grades>Import Subject Grades</button>
-            <button class="btn btn-ghost btn-sm" type="button" data-advisory-edit-class>Edit Class Details</button>
+            <button class="btn btn-primary btn-sm" type="button" data-advisory-manage-roster>Manage Roster</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-advisory-edit-class>Advisory Settings</button>
+            <button class="btn btn-danger btn-sm" type="button" data-advisory-reset-class>Reset Advisory Class</button>
             <span class="advisory-workspace__count" data-advisory-roster-count></span>
           </div>
           <div class="advisory-workspace__body">
-            <h3 class="advisory-section-title">Learner Roster</h3><div class="advisory-roster-table-wrap"><table class="advisory-roster-table"><thead><tr><th>#</th><th>LRN</th><th>Official Name</th><th>Sex</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody data-advisory-roster-body></tbody></table></div>
+            <div class="advisory-hidden-roster-cache" hidden><table><tbody data-advisory-roster-body></tbody></table></div>
             <section class="advisory-grade-panel" data-advisory-grade-panel></section>
           </div>
         </div>`;
       document.body.appendChild(overlay);
       overlay.querySelector('[data-close-advisory-workspace]').addEventListener('click', () => closeElement(overlay));
-      overlay.querySelector('[data-advisory-import-class]').addEventListener('click', showClassImportChooser);
-      overlay.querySelector('[data-advisory-add-manual]').addEventListener('click', () => showLearnerForm());
-      overlay.querySelector('[data-advisory-add-bulk]').addEventListener('click', showBulkModal);
-      overlay.querySelector('[data-advisory-import-sf1]').addEventListener('click', importSf1Roster);
-      overlay.querySelector('[data-advisory-import-grades]').addEventListener('click', () => globalScope.importAdvisorySubjectGrades());
+      overlay.querySelector('[data-advisory-manage-roster]').addEventListener('click', openRosterManager);
       overlay.querySelector('[data-advisory-edit-class]').addEventListener('click', globalScope.showAdvisoryClassSetupModal);
+      overlay.querySelector('[data-advisory-reset-class]').addEventListener('click', () => globalScope.showAdvisoryResetModal?.());
     }
     renderWorkspace();
   }
@@ -337,10 +398,17 @@
     select.addEventListener('change', () => { review.disabled = !select.value; });
     overlay.querySelector('[data-cancel]').addEventListener('click', () => closeElement(overlay));
     review.addEventListener('click', () => {
-      const sourceClass = classes.find(item => item.id === select.value);
       closeElement(overlay);
-      showImportPreview(sourceClass.learners, `existing-class:${sourceClass.id}`, 'Review Existing Class Roster');
+      startClassImport(select.value);
     });
+  }
+
+  function startClassImport(sourceClassId) {
+    const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
+    if (!advisoryClass) { globalScope.toast('Set up the Advisory Class before importing its roster.', 'warning'); return; }
+    const sourceClass = (activeDb().assignments || []).find(item => item.id === sourceClassId && item.schoolYear === advisoryClass.schoolYear && Array.isArray(item.learners));
+    if (!sourceClass) { globalScope.toast('The selected source class is no longer available.', 'error'); return; }
+    showImportPreview(sourceClass.learners, `existing-class:${sourceClass.id}`, 'Review Existing Class Roster');
   }
 
   function showImportPreview(incoming, source, title) {
@@ -417,7 +485,10 @@
     commitReviewedLearners,
     parseBulkText,
     rosterForClass,
+    startClassImport,
     openWorkspace,
+    openRosterManager,
+    renderRosterManager,
     renderWorkspace
   };
   globalScope.AdvisoryRoster = api;

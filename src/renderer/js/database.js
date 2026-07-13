@@ -98,6 +98,7 @@ function normalizeDatabase() {
   if (db.schoolId === undefined) db.schoolId = '';
   if (db.region === undefined) db.region = '';
   if (db.division === undefined) db.division = '';
+  if (db.district === undefined) db.district = '';
   if (db.autoBlur === undefined) db.autoBlur = false;
   normalizeAdvisoryData(db);
   
@@ -386,6 +387,7 @@ function updateProfile() {
   const schoolIdEl = document.getElementById('schoolId');
   const regionEl = document.getElementById('schoolRegion');
   const divisionEl = document.getElementById('schoolDivision');
+  const districtEl = document.getElementById('schoolDistrict');
   const yearEl = document.getElementById('schoolYear');
   
   if (teacherEl) db.teacherName = teacherEl.value;
@@ -393,7 +395,13 @@ function updateProfile() {
   if (schoolIdEl) db.schoolId = schoolIdEl.value;
   if (regionEl) db.region = regionEl.value;
   if (divisionEl) db.division = divisionEl.value;
+  if (districtEl) db.district = districtEl.value;
   if (yearEl) db.schoolYear = yearEl.value;
+}
+
+function syncDistrictProfileField() {
+  const districtEl = document.getElementById('schoolDistrict');
+  if (districtEl) districtEl.value = db.district || '';
 }
 
 /**
@@ -516,6 +524,7 @@ function clearLocalData() {
           schoolId: '',
           region: '',
           division: '',
+          district: '',
           schoolYear: '2026-2027',
           currentAssignmentId: '',
           currentTerm: '1',

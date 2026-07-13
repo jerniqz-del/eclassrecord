@@ -117,7 +117,7 @@
           </svg>
           <span class="nav-btn__label">Collapse Sidebar</span>
         </button>
-        <button id="navSettings" class="nav-btn" onclick="setView('settings')" title="Settings">
+        <button id="navSettings" class="nav-btn" onclick="setView('settings'); syncDistrictProfileField()" title="Settings">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -562,6 +562,10 @@
             <div class="field">
               <label class="field-label">Division</label>
               <select id="schoolDivision" class="field-select" onchange="updateProfile(); saveDatabase()"></select>
+            </div>
+            <div class="field">
+              <label class="field-label">District</label>
+              <input id="schoolDistrict" class="field-input" placeholder="e.g. Irosin II District" onkeyup="updateProfile()" onchange="updateProfile(); saveDatabase()" />
             </div>
           </div>
         </div>
@@ -1614,6 +1618,7 @@
         onMenuImportJson: () => {},
         exportGradeTransfer: async () => ({ success: false }),
         importGradeTransfer: async () => ({ success: false }),
+        exportAdvisoryResetBackup: async () => ({ success: false }),
         onUpdateStatus: () => {}
       };
     }
@@ -1634,6 +1639,7 @@
   <script src="js/dashboard.js"></script>
   <script src="js/advisory-roster.js"></script>
   <script src="js/advisory-grade-transfer.js"></script>
+  <script src="js/advisory-reset.js"></script>
   <script src="js/quick-grade.js"></script>
   <script src="js/learner-grades.js"></script>
   <script src="js/support-tracker.js"></script>

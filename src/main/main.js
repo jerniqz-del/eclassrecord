@@ -11,12 +11,14 @@ const fs = require('fs');
 const fileIO = require('./file-io');
 const updater = require('./updater');
 const crypto = require('crypto');
+const zipArchive = require('./zip-archive');
 
 let mainWindow = null;
 let isConfirmedExit = false;
 let selectBluetoothDeviceCallback = null;
 const isSmokeTest = process.argv.includes('--smoke-test') || process.argv.includes('--offline-smoke-test');
 const isOfflineSmokeTest = process.argv.includes('--offline-smoke-test');
+if (isSmokeTest) app.setPath('userData', path.join(app.getPath('temp'), `eclass-record-smoke-${process.pid}`));
 
 function attachmentRoot() {
   return path.join(app.getPath('appData'), 'EClassRecordPortable', 'attachments');
@@ -86,7 +88,7 @@ function createWindow() {
     mainWindow.webContents.once('did-finish-load', async () => {
       try {
         const result = await mainWindow.webContents.executeJavaScript(`(() => {
-          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup'];
+          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset'];
           const missing = required.filter(name => !globalThis[name]);
           if (missing.length) throw new Error('Missing renderer modules: ' + missing.join(', '));
           if (typeof getActiveProfileDatabase !== 'function') throw new Error('Active profile database accessor is unavailable.');
@@ -104,7 +106,9 @@ function createWindow() {
           runtimeProfile.schoolYear = '2099-2100';
           runtimeProfile.assignments = [{
             id: 'smoke-subject', schoolYear: runtimeProfile.schoolYear, gradeLevel: '4',
-            section: 'Offline', subject: 'Mathematics', learners: [], assessments: [], scores: {}
+            section: 'Offline', subject: 'Mathematics', learners: [{
+              id: 'source-learner', lrn: '123456789013', lastName: 'Reyes', firstName: 'Maria', sex: 'F'
+            }], assessments: [], scores: {}
           }];
           runtimeProfile.advisory = AdvisoryData.createAdvisoryStore();
           renderDashboardOverview();
@@ -114,7 +118,29 @@ function createWindow() {
           setupButton.click();
           const setupModal = document.querySelector('[data-advisory-setup-modal]');
           if (!setupModal) throw new Error('Set Up Advisory Class button did not open its modal.');
+          if (setupModal.querySelector('#advisoryGradeLevel')?.tagName !== 'SELECT') throw new Error('Advisory grade level is not a dropdown.');
+          if (!setupModal.querySelector('#advisorySetupSourceClass option[value="smoke-subject"]')) throw new Error('Setup-time roster source is unavailable.');
           setupModal.remove();
+
+          const runtimeClass = AdvisoryData.createClass(runtimeProfile, {
+            id: 'runtime-advisory', schoolYear: runtimeProfile.schoolYear, gradeLevel: '4',
+            section: 'Offline', adviserName: 'Smoke Test', isActive: true
+          });
+          const runtimeLearner = AdvisoryData.createLearner(runtimeProfile, {
+            id: 'runtime-learner', advisoryClassId: runtimeClass.id, lrn: '123456789012',
+            lastName: 'Cruz', firstName: 'Juan', sex: 'M'
+          });
+          const runtimeSubject = AdvisoryData.createSubject(runtimeProfile, {
+            id: 'runtime-math', advisoryClassId: runtimeClass.id, subjectName: 'Mathematics',
+            normalizedSubjectKey: 'MATHEMATICS', displayOrder: 0
+          });
+          ['1', '2', '3'].forEach((term, index) => AdvisoryData.createGrade(runtimeProfile, {
+            advisoryClassId: runtimeClass.id, advisoryLearnerId: runtimeLearner.id,
+            advisorySubjectId: runtimeSubject.id, schoolYear: runtimeProfile.schoolYear,
+            term, finalGrade: 88 + index
+          }));
+          renderDashboardOverview();
+          if (!document.querySelector('.dashboard-card__subject-logo.subject-logo--mathematics')) throw new Error('Mathematics subject logo was not rendered.');
 
           const exportButton = document.querySelector('.dashboard-card__export-btn');
           if (!exportButton) throw new Error('Export Final Grades button was not rendered.');
@@ -123,7 +149,41 @@ function createWindow() {
           if (!exportModal) throw new Error('Export Final Grades button did not open its modal.');
           exportModal.remove();
 
-          return { modules: required.length, classes: profile.advisory.classes.length, setupClick: true, exportClick: true, offline: ${isOfflineSmokeTest} };
+          openAdvisoryClassDashboard();
+          const workspace = document.querySelector('[data-advisory-workspace]');
+          if (!workspace || !workspace.querySelector('[data-advisory-grade-panel]')) throw new Error('Advisory grade workspace did not open.');
+          if (!workspace.querySelector('.advisory-final-column') || !workspace.querySelector('.advisory-general-average')) throw new Error('Final-grade columns were not rendered.');
+          workspace.querySelector('[data-advisory-manage-roster]').click();
+          const rosterModal = document.querySelector('[data-advisory-roster-manager]');
+          if (!rosterModal || !rosterModal.querySelector('[data-remove-advisory-learner]')) throw new Error('Separate roster manager did not open.');
+          rosterModal.querySelector('[data-advisory-import-class]').click();
+          const classChooser = document.querySelector('.advisory-nested-modal');
+          const sourceSelect = classChooser?.querySelector('[data-source-class]');
+          if (!sourceSelect?.querySelector('option[value="smoke-subject"]')) throw new Error('Import from Other Class chooser did not list the Dashboard class.');
+          sourceSelect.value = 'smoke-subject';
+          sourceSelect.dispatchEvent(new Event('change'));
+          classChooser.querySelector('[data-review]').click();
+          const rosterPreview = document.querySelector('.advisory-preview-modal');
+          if (!rosterPreview || !rosterPreview.textContent.toUpperCase().includes('REYES')) throw new Error('Other Class roster did not reach review preview.');
+          rosterPreview.closest('.modal-overlay').remove();
+          rosterModal.querySelector('[data-remove-advisory-learner]').click();
+          const confirmation = document.querySelector('.modal-z-confirm');
+          if (!confirmation) throw new Error('Remove Advisory Learner confirmation did not open.');
+          if (Number(getComputedStyle(confirmation).zIndex) <= Number(getComputedStyle(rosterModal).zIndex)) throw new Error('Remove confirmation is behind the roster modal.');
+          confirmation.querySelector('#confirmModalCancel').click();
+          rosterModal.querySelector('[data-close-advisory-roster]').click();
+          workspace.querySelector('[data-advisory-reset-class]').click();
+          const resetModal = document.querySelector('[data-advisory-reset-modal]');
+          if (!resetModal?.querySelector('[data-reset-backup]') || !resetModal.querySelector('[data-reset-without]')) throw new Error('Reset backup choices were not rendered.');
+          resetModal.remove();
+          workspace.remove();
+          const districtField = document.getElementById('schoolDistrict');
+          if (!districtField) throw new Error('District profile field was not rendered.');
+          districtField.value = 'Smoke Test District';
+          updateProfile();
+          if (runtimeProfile.district !== 'Smoke Test District') throw new Error('District profile field did not update the active profile.');
+
+          return { modules: required.length, setupClick: true, exportClick: true, rosterImportReview: true, rosterModal: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
         })()`);
         clearTimeout(smokeTimeout);
         if (rendererErrors.length) {
@@ -313,6 +373,20 @@ ipcMain.handle('dialog:import-grade-transfer', async () => {
   if (result.canceled || result.filePaths.length === 0) return { success: false };
   const filePath = result.filePaths[0];
   return { success: true, content: fileIO.readFile(filePath), name: path.basename(filePath) };
+});
+
+ipcMain.handle('dialog:export-advisory-reset-backup', async (_event, request) => {
+  const files = Array.isArray(request?.files) ? request.files : [];
+  const defaultFileName = String(request?.defaultFileName || 'ECR_Advisory_Backup.zip').replace(/[^a-zA-Z0-9._-]+/g, '_');
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Save Advisory Class Backup',
+    defaultPath: path.join(app.getPath('desktop'), defaultFileName.endsWith('.zip') ? defaultFileName : `${defaultFileName}.zip`),
+    filters: [{ name: 'Advisory Class ZIP Backup', extensions: ['zip'] }]
+  });
+  if (result.canceled || !result.filePath) return { success: false };
+  const archive = zipArchive.createZip(files.map(file => ({ name: file.name, content: file.content })));
+  fs.writeFileSync(result.filePath, archive);
+  return { success: true, path: result.filePath, fileCount: files.length };
 });
 
 ipcMain.handle('dialog:select-folder', async () => {
