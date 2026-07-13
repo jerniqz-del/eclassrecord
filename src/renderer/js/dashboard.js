@@ -118,32 +118,13 @@ function renderDashboardOverview() {
   const target = document.getElementById('dashboardTable');
   if (!target) return;
   renderDashboardViewToggle();
-  
-  if (!db.assignments || db.assignments.length === 0) {
-    target.innerHTML = emptyState(
-      'Welcome to E-Class Record',
-      'Start by adding a teaching load for the selected school year.',
-      'Add Your First Teaching Load',
-      "handleAddFirstClassLoad()"
-    );
-    return;
-  }
 
   const activeYear = db.schoolYear || '2026-2027';
   const filtered = getOrderedDashboardAssignments(activeYear);
 
-  if (filtered.length === 0) {
-    target.innerHTML = emptyState(
-      'No Teaching Load',
-      `You have no teaching loads registered for school year ${esc(activeYear)}. Setup a new class load to get started.`,
-      'Add a Teaching Load',
-      "showAddClassLoadModal()"
-    );
-    return;
-  }
-
   const viewMode = getDashboardViewMode();
   let html = `<div class="dashboard-cards-grid dashboard-cards--${viewMode}">`;
+  html += AdvisoryDashboard.renderCard(db, activeYear, viewMode, esc);
   for (let i = 0; i < filtered.length; i++) {
     const a = filtered[i];
     const isActive = a.id === db.currentAssignmentId;
@@ -256,7 +237,10 @@ function handleDashboardCardClick(event, assignmentId) {
 
 function handleDashboardCardDragStart(event) {
   const card = event.currentTarget;
-  if (!card || !card.dataset.assignmentId) return;
+  if (!card || card.dataset.dashboardFixed === 'true' || !card.dataset.assignmentId) {
+    event.preventDefault();
+    return;
+  }
   if (event.target.closest('button, input, select, textarea, a, .dashboard-view-toggle, .dashboard-card__selectors, .dashboard-card__actions')) {
     event.preventDefault();
     return;

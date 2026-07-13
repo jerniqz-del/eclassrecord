@@ -12,8 +12,9 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "test": "npm run test:advisory-data",
+    "test": "npm run test:advisory-data && npm run test:advisory-dashboard",
     "test:advisory-data": "node scripts/test-advisory-data.js",
+    "test:advisory-dashboard": "node scripts/test-advisory-dashboard.js",
     "build": "node scripts/build-obfuscated.js --win",
     "publish": "node scripts/build-obfuscated.js --win --publish always",
     "release": "node scripts/release.js",
