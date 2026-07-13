@@ -14,6 +14,9 @@
 
   const FORMAT = 'eclass-record-grade-export';
   const SCHEMA_VERSION = '1.0';
+  let advisoryPanelTab = 'grades';
+  let showAdvisoryTerms = true;
+  let advisorySubjectSort = { subjectId: '', direction: '' };
 
   function text(value) {
     return value === undefined || value === null ? '' : String(value).trim();
@@ -28,24 +31,48 @@
     return text(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, ' ').trim().toUpperCase();
   }
 
+  function splitMapehSubjects(subjects) {
+    return (subjects || []).flatMap(subjectName => /mapeh|music, arts, physical education, and health/i.test(subjectName)
+      ? ['Music & Arts', 'PE & Health']
+      : [subjectName]);
+  }
+
   function standardSubjectsForGrade(gradeLevel) {
     if (typeof globalScope.getSubjectsForGrade === 'function') {
-      return globalScope.getSubjectsForGrade(gradeLevel);
+      return splitMapehSubjects(globalScope.getSubjectsForGrade(gradeLevel));
     }
     const grade = Number.parseInt(gradeLevel, 10);
     if (grade === 1) return ['Language', 'Reading and Literacy', 'Mathematics', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Arts and Physical Education'];
-    if (grade === 2) return ['Filipino', 'English', 'Mathematics', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Music, Arts, Physical Education, and Health (MAPEH)'];
-    if (grade === 3) return ['Filipino', 'English', 'Mathematics', 'Science', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Music, Arts, Physical Education, and Health (MAPEH)'];
-    if (grade >= 4 && grade <= 5) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Good Manners and Right Conduct (GMRC)', 'Edukasyong Pantahanan at Pangkabuhayan (EPP)', 'MAPEH'];
-    if (grade === 6) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Good Manners and Right Conduct (GMRC)', 'Technology and Livelihood Education (TLE)', 'MAPEH'];
-    if (grade >= 7 && grade <= 10) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Values Education', 'Technology and Livelihood Education (TLE)', 'MAPEH'];
+    if (grade === 2) return ['Filipino', 'English', 'Mathematics', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Music & Arts', 'PE & Health'];
+    if (grade === 3) return ['Filipino', 'English', 'Mathematics', 'Science', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Music & Arts', 'PE & Health'];
+    if (grade >= 4 && grade <= 5) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Good Manners and Right Conduct (GMRC)', 'Edukasyong Pantahanan at Pangkabuhayan (EPP)', 'Music & Arts', 'PE & Health'];
+    if (grade === 6) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Good Manners and Right Conduct (GMRC)', 'Technology and Livelihood Education (TLE)', 'Music & Arts', 'PE & Health'];
+    if (grade >= 7 && grade <= 10) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Values Education', 'Technology and Livelihood Education (TLE)', 'Music & Arts', 'PE & Health'];
     return [];
+  }
+
+  function subjectDisplayName(subjectName) {
+    const key = normalizeSubjectKey(subjectName);
+    if (key.includes('EDUKASYONG PANTAHANAN AT PANGKABUHAYAN') || /(^| )EPP($| )/.test(key)) return 'EPP';
+    if (key.includes('TECHNOLOGY AND LIVELIHOOD EDUCATION') || /(^| )TLE($| )/.test(key)) return 'TLE';
+    if (key === 'ARALING PANLIPUNAN') return 'Aral. Pan.';
+    if (key.includes('GOOD MANNERS AND RIGHT CONDUCT') || key.includes('GOOD MORAL AND RIGHT CONDUCT') || key === 'GMRC') return 'GMRC';
+    if (key === 'VALUES EDUCATION') return 'Val. Ed.';
+    return text(subjectName);
   }
 
   function ensureGradeLevelSubjects(profileDb, advisoryClass) {
     if (!profileDb || !advisoryClass) return [];
     const store = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb);
-    const existing = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id);
+    let existing = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id);
+    const legacyMapeh = existing.find(item => item.normalizedSubjectKey === 'MAPEH' || /MUSIC ARTS PHYSICAL EDUCATION AND HEALTH/.test(item.normalizedSubjectKey));
+    if (legacyMapeh && !store.grades.some(grade => grade.advisorySubjectId === legacyMapeh.id)) {
+      globalScope.AdvisoryData.updateSubject(profileDb, legacyMapeh.id, {
+        subjectName: 'Music & Arts',
+        normalizedSubjectKey: normalizeSubjectKey('Music & Arts')
+      });
+      existing = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb).subjects.filter(item => item.advisoryClassId === advisoryClass.id);
+    }
     const existingKeys = new Set(existing.map(item => item.normalizedSubjectKey));
     const created = [];
     standardSubjectsForGrade(advisoryClass.gradeLevel).forEach(subjectName => {
@@ -111,11 +138,12 @@
     const assignment = options.assignment;
     const profileDb = options.profileDb || {};
     const termNumber = Number(options.term);
+    const subjectName = text(options.subjectName || assignment?.subject);
     if (!assignment || !assignment.id) throw new Error('A subject class is required.');
     if (![1, 2, 3].includes(termNumber)) throw new Error('Select a valid term.');
     if (typeof options.getFinalGrade !== 'function') throw new Error('The final-grade reader is unavailable.');
     const learners = (assignment.learners || []).map(learner => {
-      const grade = options.getFinalGrade(assignment, learner.id, String(termNumber));
+      const grade = options.getFinalGrade(assignment, learner.id, String(termNumber), text(options.mapePart));
       if (grade === null || grade === undefined || grade === '' || grade === 'T/O' || !Number.isFinite(Number(grade))) return null;
       return {
         learnerId: text(learner.id),
@@ -152,9 +180,10 @@
         section: text(assignment.section)
       },
       subject: {
-        id: text(assignment.subjectId) || normalizeSubjectKey(assignment.subject).toLowerCase().replace(/\s+/g, '-'),
-        name: text(assignment.subject),
-        normalizedKey: normalizeSubjectKey(assignment.subject)
+        id: text(assignment.subjectId) ? `${text(assignment.subjectId)}${options.mapePart ? `-${text(options.mapePart)}` : ''}` : normalizeSubjectKey(subjectName).toLowerCase().replace(/\s+/g, '-'),
+        name: subjectName,
+        normalizedKey: normalizeSubjectKey(subjectName),
+        strand: text(options.mapePart)
       },
       term: { number: termNumber, label: `Term ${termNumber}` },
       learners
@@ -489,17 +518,26 @@
       .sort((left, right) => text(right.importedAt).localeCompare(text(left.importedAt)))[0] || null;
   }
 
-  async function exportAssignment(assignmentId, term) {
+  async function exportAssignment(assignmentId, term, mapePart = '') {
     const profileDb = activeDb();
     const assignment = (profileDb.assignments || []).find(item => item.id === assignmentId);
     if (!assignment) throw new Error('The selected subject class was not found.');
+    const strand = mapePart === 'music_arts'
+      ? { name: 'Music & Arts', key: 'music_arts' }
+      : mapePart === 'pe_health'
+        ? { name: 'PE & Health', key: 'pe_health' }
+        : null;
     const appVersion = await globalScope.electronAPI.getVersion();
     const payload = buildExportPayload({
       assignment,
       profileDb,
       term,
       appVersion,
-      getFinalGrade: globalScope.getLearnerTermGradeForExport
+      subjectName: strand?.name,
+      mapePart: strand?.key,
+      getFinalGrade: (source, learnerId, selectedTerm, selectedPart) => selectedPart
+        ? globalScope.computeTerm(source, learnerId, selectedTerm, selectedPart).termGrade
+        : globalScope.getLearnerTermGradeForExport(source, learnerId, selectedTerm)
     });
     if (!payload.learners.length) throw new Error('No saved final grades were found for the selected term.');
     const result = await globalScope.electronAPI.exportGradeTransfer(JSON.stringify(payload, null, 2), gradeTransferFilename(payload));
@@ -511,9 +549,14 @@
     const assignment = (profileDb.assignments || []).find(item => item.id === assignmentId);
     if (!assignment) { globalScope.toast('The selected subject class was not found.', 'error'); return; }
     const overlay = document.createElement('div');
+    const isMapeh = /mapeh|music, arts, physical education, and health/i.test(text(assignment.subject));
     overlay.className = 'modal-overlay advisory-nested-modal';
     overlay.innerHTML = `<div class="modal"><div class="modal__title">Export Final Grades</div><div class="modal__body"><div class="advisory-transfer-summary"><strong>Grade ${globalScope.esc(assignment.gradeLevel)} - ${globalScope.esc(assignment.section)}</strong><span>${globalScope.esc(assignment.subject)} · SY ${globalScope.esc(assignment.schoolYear || profileDb.schoolYear)}</span></div><div class="field"><label class="field-label">Term</label><select class="field-select" data-export-term><option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option></select></div><label class="advisory-privacy-notice"><input type="checkbox" data-privacy-confirm><span><strong>Privacy reminder</strong>This Grade Transfer File contains learner names, LRNs, and final grades. Store and share it securely.</span></label></div><div class="modal__actions"><button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-export disabled>Continue &amp; Save File</button></div></div>`;
     document.body.appendChild(overlay);
+    if (isMapeh) {
+      const termField = overlay.querySelector('[data-export-term]')?.closest('.field');
+      termField?.insertAdjacentHTML('afterend', '<div class="field"><label class="field-label">MAPEH Submission</label><select class="field-select" data-export-mape-part><option value="music_arts">Music &amp; Arts</option><option value="pe_health">PE &amp; Health</option></select><p class="field-help">Save and send each MAPEH component as a separate Grade Transfer File.</p></div>');
+    }
     const privacy = overlay.querySelector('[data-privacy-confirm]');
     const exportButton = overlay.querySelector('[data-export]');
     privacy.addEventListener('change', () => { exportButton.disabled = !privacy.checked; });
@@ -521,7 +564,7 @@
     exportButton.addEventListener('click', async () => {
       exportButton.disabled = true;
       try {
-        const { result } = await exportAssignment(assignmentId, overlay.querySelector('[data-export-term]').value);
+        const { result } = await exportAssignment(assignmentId, overlay.querySelector('[data-export-term]').value, overlay.querySelector('[data-export-mape-part]')?.value || '');
         if (result?.success) { overlay.remove(); globalScope.toast('Grade Transfer File saved successfully.', 'success'); }
       } catch (error) {
         console.error('Grade export failed:', error);
@@ -735,6 +778,37 @@
     return '<strong>Grade Transfer File</strong><small>School year, subject, and term are identified automatically.</small>';
   }
 
+  function setPanelTab(tab, workspace = document) {
+    advisoryPanelTab = tab === 'sources' ? 'sources' : 'grades';
+    workspace?.querySelectorAll?.('[data-advisory-panel]').forEach(section => {
+      section.hidden = section.dataset.advisoryPanel !== advisoryPanelTab;
+    });
+    workspace?.querySelectorAll?.('[data-advisory-page-tab]').forEach(button => {
+      const active = button.dataset.advisoryPageTab === advisoryPanelTab;
+      button.setAttribute('aria-pressed', String(active));
+      button.classList.toggle('btn-primary', active);
+      button.classList.toggle('btn-ghost', !active);
+    });
+  }
+
+  function sortLearnersBySubject(learners, grades, subjectId, direction) {
+    if (!subjectId || !['asc', 'desc'].includes(direction)) return learners.slice();
+    return learners.map((learner, index) => ({ learner, index, grade: calculateSubjectFinal(grades, learner.id, subjectId) }))
+      .sort((left, right) => {
+        if (left.grade === null && right.grade === null) return left.index - right.index;
+        if (left.grade === null) return 1;
+        if (right.grade === null) return -1;
+        const gradeOrder = direction === 'asc' ? left.grade - right.grade : right.grade - left.grade;
+        return gradeOrder || left.index - right.index;
+      }).map(item => item.learner);
+  }
+
+  function cycleSubjectSort(subjectId) {
+    if (advisorySubjectSort.subjectId !== subjectId) advisorySubjectSort = { subjectId, direction: 'desc' };
+    else if (advisorySubjectSort.direction === 'desc') advisorySubjectSort = { subjectId, direction: 'asc' };
+    else advisorySubjectSort = { subjectId: '', direction: '' };
+  }
+
   function renderWorkspacePanel(workspace, advisoryClass) {
     const panel = workspace?.querySelector('[data-advisory-grade-panel]');
     if (!panel) return;
@@ -744,23 +818,33 @@
     const learners = store.learners.filter(item => item.advisoryClassId === advisoryClass.id && item.enrollmentStatus !== 'inactive');
     const grades = store.grades.filter(item => item.advisoryClassId === advisoryClass.id);
     const batches = store.importBatches.filter(item => item.advisoryClassId === advisoryClass.id).sort((a, b) => text(b.importedAt).localeCompare(text(a.importedAt)));
+    const sortedLearners = sortLearnersBySubject(learners, grades, advisorySubjectSort.subjectId, advisorySubjectSort.direction);
+    const subjectColumnCount = showAdvisoryTerms ? 4 : 1;
 
     const matrix = subjects.length ? `
       <div class="advisory-grade-matrix-wrap">
         <table class="advisory-roster-table advisory-grade-matrix">
           <thead>
-            <tr><th rowspan="2">LRN / Official Name</th>${subjects.map(subject => `<th colspan="4">${globalScope.esc(subject.subjectName)}</th>`).join('')}<th rowspan="2" class="advisory-general-average">General Average</th></tr>
-            <tr>${subjects.map(() => '<th>T1</th><th>T2</th><th>T3</th><th class="advisory-final-column">Final</th>').join('')}</tr>
+            <tr>
+              <th rowspan="2">LRN / Official Name</th>
+              ${subjects.map(subject => {
+                const activeSort = advisorySubjectSort.subjectId === subject.id ? advisorySubjectSort.direction : '';
+                const sortLabel = activeSort === 'desc' ? '&darr;' : activeSort === 'asc' ? '&uarr;' : '&#8597;';
+                return `<th colspan="${subjectColumnCount}" class="advisory-subject-heading"><button type="button" class="advisory-subject-sort" data-sort-advisory-subject="${globalScope.esc(subject.id)}" aria-label="Sort learners by ${globalScope.esc(subject.subjectName)} final grade" aria-pressed="${activeSort ? 'true' : 'false'}" title="${globalScope.esc(subject.subjectName)} — sort by final grade"><span>${globalScope.esc(subjectDisplayName(subject.subjectName))}</span><small aria-hidden="true">${sortLabel}</small></button></th>`;
+              }).join('')}
+              <th rowspan="2" class="advisory-general-average">General Average</th>
+            </tr>
+            <tr>${subjects.map(() => showAdvisoryTerms ? '<th>T1</th><th>T2</th><th>T3</th><th class="advisory-final-column">Final</th>' : '<th class="advisory-final-column">Final</th>').join('')}</tr>
           </thead>
-          <tbody>${learners.length ? learners.map(learner => {
+          <tbody>${sortedLearners.length ? sortedLearners.map(learner => {
             const subjectCells = subjects.map(subject => {
-              const termCells = ['1', '2', '3'].map(term => gradeCell(grades.find(item => item.advisoryLearnerId === learner.id && item.advisorySubjectId === subject.id && item.term === term))).join('');
+              const termCells = showAdvisoryTerms ? ['1', '2', '3'].map(term => gradeCell(grades.find(item => item.advisoryLearnerId === learner.id && item.advisorySubjectId === subject.id && item.term === term))).join('') : '';
               const finalGrade = calculateSubjectFinal(grades, learner.id, subject.id);
-              return `${termCells}<td class="advisory-final-column ${finalGrade === null ? 'is-missing' : 'has-grade'}" title="Average of Terms 1–3">${finalGrade === null ? '—' : finalGrade}</td>`;
+              return `${termCells}<td class="advisory-final-column ${finalGrade === null ? 'is-missing' : 'has-grade'}" title="Average of Terms 1–3">${finalGrade === null ? '&mdash;' : finalGrade}</td>`;
             }).join('');
             const generalAverage = calculateGeneralAverage(grades, learner.id, subjects);
-            return `<tr><td><small>${globalScope.esc(learner.lrn || 'No LRN')}</small><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</strong></td>${subjectCells}<td class="advisory-general-average ${generalAverage === null ? 'is-missing' : 'has-grade'}" title="Available when every subject has all three term grades">${generalAverage === null ? '—' : generalAverage}</td></tr>`;
-          }).join('') : `<tr><td colspan="${subjects.length * 4 + 2}"><div class="advisory-roster__empty">No learners are in the official roster. Use Manage Roster to import or add learners.</div></td></tr>`}</tbody>
+            return `<tr><td><small>${globalScope.esc(learner.lrn || 'No LRN')}</small><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</strong></td>${subjectCells}<td class="advisory-general-average ${generalAverage === null ? 'is-missing' : 'has-grade'}" title="Available when every subject has all three term grades">${generalAverage === null ? '&mdash;' : generalAverage}</td></tr>`;
+          }).join('') : `<tr><td colspan="${subjects.length * subjectColumnCount + 2}"><div class="advisory-roster__empty">No learners are in the official roster. Use Manage Roster to import or add learners.</div></td></tr>`}</tbody>
         </table>
       </div>` : '<div class="advisory-roster__empty">No subjects have been configured. Import the first Grade Transfer File or add a subject manually.</div>';
 
@@ -775,14 +859,27 @@
     const historyRows = batches.length ? batches.map(batch => `<tr><td>${globalScope.esc(batch.importedAt || '—')}</td><td>${globalScope.esc(batch.filename || 'Unknown file')}<small>${globalScope.esc(batch.sourceTeacher || '')} · ${globalScope.esc(batch.sourceClass || '')}</small></td><td>${globalScope.esc(batch.subject)} · Term ${globalScope.esc(batch.term)}</td><td>${batch.importedCount} imported · ${batch.updatedCount} updated · ${batch.skippedCount} skipped · ${batch.conflictCount} conflicts</td><td>${globalScope.esc(batch.status)}</td></tr>`).join('') : '<tr><td colspan="5">No grade imports recorded.</td></tr>';
 
     panel.innerHTML = `
-      <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Term grades, computed subject finals, and the completed general average. Missing records remain visible.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-add-advisory-subject>Add Other Subject</button><button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
-      ${matrix}
-      <section class="advisory-source-management"><div class="advisory-source-heading"><h3>Grade Sources</h3><p>Subjects are based on Grade ${globalScope.esc(advisoryClass.gradeLevel)}. Choose how each subject's grades will arrive. Grade Transfer Files identify their own school year, subject, and term.</p></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Subject</th><th>Grade Source</th><th>Last Import</th><th>Received</th><th>Missing</th><th>Conflicts</th><th></th></tr></thead><tbody>${sourceRows}</tbody></table></div></section>
-      <section class="advisory-import-history"><div class="advisory-grade-panel__header"><div><h3>Import History</h3><p>Audit trail for every confirmed Grade Transfer File.</p></div><button class="btn btn-ghost btn-sm" data-undo-latest-import ${latestUndoableBatch(profileDb, advisoryClass.id) ? '' : 'disabled'}>Undo Latest Import</button></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Imported</th><th>File / Source</th><th>Subject / Term</th><th>Results</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>`;
-    panel.querySelector('[data-import-subject-grades]').addEventListener('click', selectImportFile);
-    panel.querySelector('[data-add-advisory-subject]').addEventListener('click', () => showSubjectModal());
+      <section data-advisory-panel="grades">
+        <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Term grades, computed subject finals, and the completed general average. Missing records remain visible.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-terms aria-pressed="${showAdvisoryTerms}">${showAdvisoryTerms ? 'Hide Terms 1–3' : 'Show Terms 1–3'}</button><button class="btn btn-ghost btn-sm" type="button" data-add-advisory-subject>Add Other Subject</button><button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
+        ${matrix}
+      </section>
+      <section data-advisory-panel="sources" hidden>
+        <div class="advisory-source-management"><div class="advisory-source-heading"><h3>Grade Sources</h3><p>Subjects are based on Grade ${globalScope.esc(advisoryClass.gradeLevel)}. Choose how each subject's grades will arrive. Grade Transfer Files identify their own school year, subject, and term.</p></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Subject</th><th>Grade Source</th><th>Last Import</th><th>Received</th><th>Missing</th><th>Conflicts</th><th></th></tr></thead><tbody>${sourceRows}</tbody></table></div></div>
+        <div class="advisory-import-history"><div class="advisory-grade-panel__header"><div><h3>Import History</h3><p>Audit trail for every confirmed Grade Transfer File.</p></div><button class="btn btn-ghost btn-sm" data-undo-latest-import ${latestUndoableBatch(profileDb, advisoryClass.id) ? '' : 'disabled'}>Undo Latest Import</button></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Imported</th><th>File / Source</th><th>Subject / Term</th><th>Results</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div></div>
+      </section>`;
+    panel.querySelector('[data-import-subject-grades]')?.addEventListener('click', selectImportFile);
+    panel.querySelector('[data-add-advisory-subject]')?.addEventListener('click', () => showSubjectModal());
+    panel.querySelector('[data-toggle-advisory-terms]')?.addEventListener('click', () => {
+      showAdvisoryTerms = !showAdvisoryTerms;
+      renderWorkspacePanel(workspace, advisoryClass);
+    });
+    panel.querySelectorAll('[data-sort-advisory-subject]').forEach(button => button.addEventListener('click', () => {
+      cycleSubjectSort(button.dataset.sortAdvisorySubject);
+      renderWorkspacePanel(workspace, advisoryClass);
+    }));
     panel.querySelectorAll('[data-edit-advisory-subject]').forEach(button => button.addEventListener('click', () => showSubjectModal(button.dataset.editAdvisorySubject)));
-    panel.querySelector('[data-undo-latest-import]').addEventListener('click', () => requestUndoLatest(advisoryClass.id));
+    panel.querySelector('[data-undo-latest-import]')?.addEventListener('click', () => requestUndoLatest(advisoryClass.id));
+    setPanelTab(advisoryPanelTab, workspace);
   }
 
   const api = {
@@ -808,6 +905,9 @@
     latestUndoableBatch,
     calculateSubjectFinal,
     calculateGeneralAverage,
+    subjectDisplayName,
+    sortLearnersBySubject,
+    setPanelTab,
     showExportModal,
     showSubjectModal,
     selectImportFile,

@@ -263,9 +263,11 @@
         <div class="advisory-page">
           <header class="advisory-page__header" data-advisory-page-header></header>
           <div class="advisory-page__toolbar">
-            <button class="btn btn-primary btn-sm" type="button" data-advisory-page-roster>Manage Roster</button>
+            <button class="btn btn-primary btn-sm advisory-page-tab" type="button" data-advisory-page-tab="grades" aria-pressed="true">Grade Record</button>
+            <button class="btn btn-ghost btn-sm advisory-page-tab" type="button" data-advisory-page-tab="sources" aria-pressed="false">Grade Sources</button>
+            <span class="advisory-page__toolbar-divider" aria-hidden="true"></span>
+            <button class="btn btn-ghost btn-sm" type="button" data-advisory-page-roster>Manage Roster</button>
             <button class="btn btn-ghost btn-sm" type="button" data-advisory-page-settings>Advisory Settings</button>
-            <button class="btn btn-danger btn-sm" type="button" data-advisory-page-reset>Reset Advisory Class</button>
             <span class="advisory-workspace__count" data-advisory-page-roster-count></span>
           </div>
           <main class="advisory-page__body">

@@ -221,11 +221,12 @@ const HELP_TOPICS = [
       <ol>
         <li>Open the first Dashboard card, select the grade level, enter the section, adviser, school year, and school details. The standard subjects for that grade level are added automatically. You may immediately choose a Dashboard class to begin the roster.</li>
         <li>Use <strong>Manage Roster</strong> to open the separate roster dialog, then copy another class, upload SF1, bulk-paste, or add learners manually. Review warnings before saving.</li>
-        <li>A subject teacher opens a teaching-load card, chooses <strong>Export Grades</strong>, selects one term, reviews the privacy notice, and saves the JSON Grade Transfer File.</li>
+        <li>A subject teacher opens a teaching-load card, chooses <strong>Export Grades</strong>, selects one term, reviews the privacy notice, and saves the JSON Grade Transfer File. For MAPEH, save <strong>Music &amp; Arts</strong> and <strong>PE &amp; Health</strong> as separate files.</li>
         <li>The adviser opens the Advisory Class and selects <strong>Import Grade Transfer File</strong>. The app reads the school year, grade, section, subject, and term from the file and validates them before showing learner matches.</li>
         <li>Use <strong>Assign Source</strong> beside a subject to choose a Grade Transfer File, a matching class in this app, or manual entry. A Grade Transfer File does not require an expected class or term because those details are detected automatically.</li>
-        <li>Use Grade Sources and Import History to inspect provenance or safely undo the latest applicable import.</li>
-        <li>The main table shows every learner&apos;s three term grades, subject final, and completed general average. <strong>Reset Advisory Class</strong> can save a ZIP with separate subject-term files before removal.</li>
+        <li>Open the separate <strong>Grade Sources</strong> tab to inspect provenance and Import History or safely undo the latest applicable import.</li>
+        <li>The <strong>Grade Record</strong> tab freezes LRN / Official Name while you scroll. Hide or show Terms 1–3, and select a subject heading to sort learners by that subject final.</li>
+        <li>The red <strong>Reset Advisory Class</strong> button in the upper-right can save a ZIP with separate subject-term files before removal.</li>
       </ol>
       <div class="help-highlight-box">
         <strong>Privacy and safety:</strong> Confirm the destination before sharing a file. Keep backups because transfer files contain learner names, LRNs, and final grades. Reimporting the same file is detected, and existing grades are never silently overwritten.

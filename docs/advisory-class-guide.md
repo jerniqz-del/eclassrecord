@@ -27,6 +27,7 @@ The app matches learners by 12-digit LRN first. A normalized name is used only w
 
 1. On the Dashboard, find the subject teaching-load card and choose **Export Grades**.
 2. Select one term and review the class, subject, teacher, and learner totals.
+   - For MAPEH, also choose **Music & Arts** or **PE & Health**. Save and send both components as separate Grade Transfer Files.
 3. Read and accept the privacy confirmation.
 4. Save the `.json` Grade Transfer File to a local folder or removable drive.
 
@@ -45,7 +46,12 @@ Exact duplicate files and corrected re-exports are identified. Existing grades a
 ## 5. Review consolidated records
 
 - The grade matrix shows received and missing final grades by learner, subject, and term.
+- The **LRN / Official Name** column stays visible while the grade table scrolls horizontally.
+- Choose **Hide Terms 1–3** to focus on subject finals and the General Average; choose **Show Terms 1–3** to restore the term columns.
+- Select a subject heading to sort learners by that subject final. Select it again to reverse the order, and a third time to restore roster order. Learners with missing finals stay at the end.
 - The standard **Subjects** are supplied automatically from the Advisory Class grade level.
+- **Grade Record** and **Grade Sources** are separate tabs. Grade Sources also contains Import History.
+- Long headings wrap and use EPP, TLE, Aral. Pan., GMRC, and Val. Ed. MAPEH is tracked as separate **Music & Arts** and **PE & Health** subjects.
 - **Grade Sources** lets you choose Grade Transfer File, a matching class in this app, or manual entry. There is no “Expected Source Class” to type for a Grade Transfer File because the file identifies its source automatically.
 - **Import History** records filename, export ID, timestamps, counts, conflicts, and decisions.
 - **Undo** safely reverses an applicable import. It refuses to overwrite a grade that was changed after that import.
@@ -56,7 +62,7 @@ The main Advisory Class table displays Term 1, Term 2, Term 3, and a computed fi
 
 ## Reset an Advisory Class
 
-Choose **Reset Advisory Class** from the main workspace. The app offers three explicit choices:
+Choose the red **Reset Advisory Class** button in the upper-right of the Advisory Class page. The app offers three explicit choices:
 
 - **Backup & Reset** saves a ZIP first. It contains the class settings, roster, import history, source mappings, and a separate JSON file for every configured subject and each of Terms 1–3. Reset proceeds only after the ZIP is saved successfully.
 - **Reset Without Backup** removes the Advisory Class immediately after the explicit choice.

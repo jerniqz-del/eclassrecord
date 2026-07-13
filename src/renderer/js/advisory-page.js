@@ -59,7 +59,9 @@
         <span class="advisory-card__eyebrow">School Year ${escHtml(advisoryClass.schoolYear)}</span>
         <h1>Advisory Class</h1>
         <p>Grade ${escHtml(advisoryClass.gradeLevel)} - ${escHtml(advisoryClass.section)} <span aria-hidden="true">&middot;</span> ${escHtml(advisoryClass.adviserName)}</p>
-      </div>`;
+      </div>
+      <button class="btn btn-danger btn-sm advisory-page__reset" type="button" data-advisory-page-reset>Reset Advisory Class</button>`;
+    header.querySelector('[data-advisory-page-reset]')?.addEventListener('click', () => globalScope.showAdvisoryResetModal?.());
     page.querySelector('[data-advisory-page-roster-count]').textContent = `${count} learner${count === 1 ? '' : 's'}`;
     globalScope.AdvisoryGradeTransfer?.renderWorkspacePanel?.(page, advisoryClass);
     syncSidebarButton();
@@ -82,7 +84,7 @@
     page.dataset.bound = 'true';
     page.querySelector('[data-advisory-page-roster]')?.addEventListener('click', () => globalScope.AdvisoryRoster?.openRosterManager?.());
     page.querySelector('[data-advisory-page-settings]')?.addEventListener('click', () => globalScope.showAdvisoryClassSetupModal?.());
-    page.querySelector('[data-advisory-page-reset]')?.addEventListener('click', () => globalScope.showAdvisoryResetModal?.());
+    page.querySelectorAll('[data-advisory-page-tab]').forEach(button => button.addEventListener('click', () => globalScope.AdvisoryGradeTransfer?.setPanelTab?.(button.dataset.advisoryPageTab, page)));
   }
 
   function initialize() {

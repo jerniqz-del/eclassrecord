@@ -98,19 +98,56 @@ function validPayload(data = fixture()) {
   const created = Transfer.ensureGradeLevelSubjects(data.profile, data.advisoryClass);
   assert.deepStrictEqual(Transfer.standardSubjectsForGrade('4'), [
     'Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan',
-    'Good Manners and Right Conduct (GMRC)', 'Edukasyong Pantahanan at Pangkabuhayan (EPP)', 'MAPEH'
+    'Good Manners and Right Conduct (GMRC)', 'Edukasyong Pantahanan at Pangkabuhayan (EPP)', 'Music & Arts', 'PE & Health'
   ]);
-  assert.strictEqual(created.length, 8);
+  assert.strictEqual(created.length, 9);
   assert(created.every(subject => subject.sourceType === 'grade-transfer-file'));
   assert(created.every(subject => subject.expectedSchoolYear === data.advisoryClass.schoolYear));
   assert.strictEqual(Transfer.ensureGradeLevelSubjects(data.profile, data.advisoryClass).length, 0, 'automatic subject setup must not create duplicates');
   const plan = Transfer.planImport(data.profile, data.advisoryClass, validPayload(data), 'math-t1.json');
   assert.strictEqual(plan.subject?.subjectName, 'Mathematics', 'file metadata should identify the preconfigured subject automatically');
   assert.strictEqual(plan.payload.term.number, 1, 'file metadata should identify the term automatically');
-  [['1', 6], ['2', 6], ['3', 7], ['4', 8], ['5', 8], ['6', 8], ['7', 8], ['10', 8]].forEach(([grade, count]) => {
+  [['1', 6], ['2', 7], ['3', 8], ['4', 9], ['5', 9], ['6', 9], ['7', 9], ['10', 9]].forEach(([grade, count]) => {
     assert.strictEqual(Transfer.standardSubjectsForGrade(grade).length, count, `Grade ${grade} should have its standard subject list`);
   });
   assert.deepStrictEqual(Transfer.standardSubjectsForGrade('11'), []);
+}
+
+// MAPEH exports identify and calculate Music & Arts and PE & Health separately.
+{
+  const data = fixture();
+  data.assignment.subject = 'MAPEH';
+  const seenParts = [];
+  const payload = Transfer.buildExportPayload({
+    assignment: data.assignment,
+    profileDb: data.profile,
+    term: 2,
+    appVersion: '1.5.0',
+    subjectName: 'Music & Arts',
+    mapePart: 'music_arts',
+    getFinalGrade: (_assignment, _learnerId, _term, part) => { seenParts.push(part); return 89; }
+  });
+  assert.strictEqual(payload.subject.name, 'Music & Arts');
+  assert.strictEqual(payload.subject.normalizedKey, 'MUSIC ARTS');
+  assert.strictEqual(payload.subject.strand, 'music_arts');
+  assert(seenParts.every(part => part === 'music_arts'));
+  assert(Transfer.gradeTransferFilename(payload).includes('Music-&-Arts'));
+}
+
+// Long subject names have compact display labels, while sorting uses computed finals and keeps missing grades last.
+{
+  assert.strictEqual(Transfer.subjectDisplayName('Edukasyong Pantahanan at Pangkabuhayan (EPP)'), 'EPP');
+  assert.strictEqual(Transfer.subjectDisplayName('Technology and Livelihood Education (TLE)'), 'TLE');
+  assert.strictEqual(Transfer.subjectDisplayName('Araling Panlipunan'), 'Aral. Pan.');
+  assert.strictEqual(Transfer.subjectDisplayName('Good Manners and Right Conduct (GMRC)'), 'GMRC');
+  assert.strictEqual(Transfer.subjectDisplayName('Values Education'), 'Val. Ed.');
+  const learners = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  const grades = [
+    ...['1', '2', '3'].map(term => ({ advisoryLearnerId: 'a', advisorySubjectId: 'subject', term, finalGrade: 80 })),
+    ...['1', '2', '3'].map(term => ({ advisoryLearnerId: 'b', advisorySubjectId: 'subject', term, finalGrade: 90 }))
+  ];
+  assert.deepStrictEqual(Transfer.sortLearnersBySubject(learners, grades, 'subject', 'desc').map(item => item.id), ['b', 'a', 'c']);
+  assert.deepStrictEqual(Transfer.sortLearnersBySubject(learners, grades, 'subject', 'asc').map(item => item.id), ['a', 'b', 'c']);
 }
 
 // Planning is read-only; exact LRN and safe name fallback match correctly.
