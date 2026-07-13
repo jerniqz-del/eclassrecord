@@ -125,6 +125,7 @@
     const escHtml = globalScope.esc || (value => String(value ?? ''));
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.style.zIndex = '11800';
     overlay.setAttribute('data-advisory-setup-modal', 'true');
     overlay.innerHTML = `
       <div class="modal modal--wide advisory-setup-modal" role="dialog" aria-modal="true" aria-labelledby="advisorySetupTitle">
