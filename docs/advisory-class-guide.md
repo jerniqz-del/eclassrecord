@@ -10,6 +10,8 @@ The fixed **Advisory Class** card is the adviser’s central workspace for one g
 4. Save. Only one Advisory Class can be active for the same school year.
 5. To preserve a past class, edit it and select **Archive**. Archived data remains in backups.
 
+After saving, the app automatically adds the standard subjects for the selected grade level. Open **Grade Sources** and choose **Assign Source** only when you want to change how a subject&apos;s grades will arrive. Use **Add Other Subject** only for a subject that is not on the standard list.
+
 ## 2. Build and maintain the official roster
 
 Open the Advisory Class grade table, then choose **Manage Roster**. Roster and learner settings open in a separate dialog so the consolidated grades remain uncluttered. Choose one of these local sources:
@@ -32,8 +34,8 @@ The file contains only the selected term’s numeric final grades plus the minim
 
 ## 4. Import grades as the adviser
 
-1. Open the Advisory Class and choose **Import Grade File**.
-2. Select the JSON file and review its school year, grade, section, subject, term, teacher, export time, and validation results.
+1. Open the Advisory Class and choose **Import Grade Transfer File**.
+2. Select the JSON file. The app automatically reads its school year, grade, section, subject, and term, then compares them with the active Advisory Class before showing the review.
 3. Resolve unmatched rows by mapping each one to a different Advisory learner. Rows with invalid grades cannot be imported.
 4. If a learner already has a grade for that subject and term, explicitly choose **Keep existing** or **Replace**. You may apply one decision to all displayed conflicts.
 5. Confirm the import. Previewing never changes the database.
@@ -43,8 +45,8 @@ Exact duplicate files and corrected re-exports are identified. Existing grades a
 ## 5. Review consolidated records
 
 - The grade matrix shows received and missing final grades by learner, subject, and term.
-- **Subjects** controls the expected subject list and source details.
-- **Grade Sources** shows which teacher, class, export, and import batch supplied each grade set.
+- The standard **Subjects** are supplied automatically from the Advisory Class grade level.
+- **Grade Sources** lets you choose Grade Transfer File, a matching class in this app, or manual entry. There is no “Expected Source Class” to type for a Grade Transfer File because the file identifies its source automatically.
 - **Import History** records filename, export ID, timestamps, counts, conflicts, and decisions.
 - **Undo** safely reverses an applicable import. It refuses to overwrite a grade that was changed after that import.
 

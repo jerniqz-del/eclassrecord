@@ -219,11 +219,12 @@ const HELP_TOPICS = [
       <p>The fixed <strong>Advisory Class</strong> card is the adviser&apos;s central roster and grade-consolidation workspace. Grade Transfer Files move final grades by USB drive, local folder, or another offline method; they never contain raw scores or attendance.</p>
       <h5>Set Up and Consolidate Grades:</h5>
       <ol>
-        <li>Open the first Dashboard card, select the grade level, enter the section, adviser, school year, and school details. You may immediately choose a Dashboard class to begin the roster.</li>
+        <li>Open the first Dashboard card, select the grade level, enter the section, adviser, school year, and school details. The standard subjects for that grade level are added automatically. You may immediately choose a Dashboard class to begin the roster.</li>
         <li>Use <strong>Manage Roster</strong> to open the separate roster dialog, then copy another class, upload SF1, bulk-paste, or add learners manually. Review warnings before saving.</li>
         <li>A subject teacher opens a teaching-load card, chooses <strong>Export Grades</strong>, selects one term, reviews the privacy notice, and saves the JSON Grade Transfer File.</li>
-        <li>The adviser opens the Advisory Class, selects <strong>Import Grade File</strong>, checks the class context and learner matches, resolves unmatched learners or existing-grade conflicts, then confirms.</li>
-        <li>Use Subjects, Grade Sources, and Import History to inspect provenance or safely undo the latest applicable import.</li>
+        <li>The adviser opens the Advisory Class and selects <strong>Import Grade Transfer File</strong>. The app reads the school year, grade, section, subject, and term from the file and validates them before showing learner matches.</li>
+        <li>Use <strong>Assign Source</strong> beside a subject to choose a Grade Transfer File, a matching class in this app, or manual entry. A Grade Transfer File does not require an expected class or term because those details are detected automatically.</li>
+        <li>Use Grade Sources and Import History to inspect provenance or safely undo the latest applicable import.</li>
         <li>The main table shows every learner&apos;s three term grades, subject final, and completed general average. <strong>Reset Advisory Class</strong> can save a ZIP with separate subject-term files before removal.</li>
       </ol>
       <div class="help-highlight-box">

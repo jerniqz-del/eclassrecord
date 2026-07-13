@@ -92,6 +92,27 @@ function validPayload(data = fixture()) {
   assert.strictEqual(plan.errors.length, 3);
 }
 
+// Standard Advisory subjects are created from the grade level and the operation is idempotent.
+{
+  const data = fixture();
+  const created = Transfer.ensureGradeLevelSubjects(data.profile, data.advisoryClass);
+  assert.deepStrictEqual(Transfer.standardSubjectsForGrade('4'), [
+    'Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan',
+    'Good Manners and Right Conduct (GMRC)', 'Edukasyong Pantahanan at Pangkabuhayan (EPP)', 'MAPEH'
+  ]);
+  assert.strictEqual(created.length, 8);
+  assert(created.every(subject => subject.sourceType === 'grade-transfer-file'));
+  assert(created.every(subject => subject.expectedSchoolYear === data.advisoryClass.schoolYear));
+  assert.strictEqual(Transfer.ensureGradeLevelSubjects(data.profile, data.advisoryClass).length, 0, 'automatic subject setup must not create duplicates');
+  const plan = Transfer.planImport(data.profile, data.advisoryClass, validPayload(data), 'math-t1.json');
+  assert.strictEqual(plan.subject?.subjectName, 'Mathematics', 'file metadata should identify the preconfigured subject automatically');
+  assert.strictEqual(plan.payload.term.number, 1, 'file metadata should identify the term automatically');
+  [['1', 6], ['2', 6], ['3', 7], ['4', 8], ['5', 8], ['6', 8], ['7', 8], ['10', 8]].forEach(([grade, count]) => {
+    assert.strictEqual(Transfer.standardSubjectsForGrade(grade).length, count, `Grade ${grade} should have its standard subject list`);
+  });
+  assert.deepStrictEqual(Transfer.standardSubjectsForGrade('11'), []);
+}
+
 // Planning is read-only; exact LRN and safe name fallback match correctly.
 {
   const data = fixture();
@@ -130,6 +151,8 @@ function validPayload(data = fixture()) {
   const source = fs.readFileSync(path.join(__dirname, '../src/renderer/js/advisory-grade-transfer.js'), 'utf8');
   assert(source.includes('electronAPI.exportGradeTransfer'));
   assert(source.includes('electronAPI.importGradeTransfer'));
+  assert(source.includes('Automatically identified from the file'));
+  assert(!source.includes('<label class="field-label">Expected Source Class</label>'));
   assert(!/\bfetch\s*\(/.test(source));
   const dashboard = fs.readFileSync(path.join(__dirname, '../src/renderer/js/dashboard.js'), 'utf8');
   assert(dashboard.includes('showGradeTransferExportModal'));

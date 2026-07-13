@@ -134,14 +134,12 @@ function createWindow() {
             id: 'runtime-advisory', schoolYear: runtimeProfile.schoolYear, gradeLevel: '4',
             section: 'Offline', adviserName: 'Smoke Test', isActive: true
           });
+          AdvisoryGradeTransfer.ensureGradeLevelSubjects(runtimeProfile, runtimeClass);
           const runtimeLearner = AdvisoryData.createLearner(runtimeProfile, {
             id: 'runtime-learner', advisoryClassId: runtimeClass.id, lrn: '123456789012',
             lastName: 'Cruz', firstName: 'Juan', sex: 'M'
           });
-          const runtimeSubject = AdvisoryData.createSubject(runtimeProfile, {
-            id: 'runtime-math', advisoryClassId: runtimeClass.id, subjectName: 'Mathematics',
-            normalizedSubjectKey: 'MATHEMATICS', displayOrder: 0
-          });
+          const runtimeSubject = AdvisoryData.normalizeAdvisoryData(runtimeProfile).subjects.find(item => item.advisoryClassId === runtimeClass.id && item.normalizedSubjectKey === 'MATHEMATICS');
           ['1', '2', '3'].forEach((term, index) => AdvisoryData.createGrade(runtimeProfile, {
             advisoryClassId: runtimeClass.id, advisoryLearnerId: runtimeLearner.id,
             advisorySubjectId: runtimeSubject.id, schoolYear: runtimeProfile.schoolYear,
@@ -163,10 +161,16 @@ function createWindow() {
           if (document.querySelector('.advisory-page-view')?.style.display === 'none' || !advisoryPage?.querySelector('[data-advisory-grade-panel]')) throw new Error('Dedicated Advisory Class page did not open.');
           if (document.querySelector('[data-advisory-workspace]')) throw new Error('Advisory Class still opened as a workspace modal.');
           if (!advisoryPage.querySelector('.advisory-final-column') || !advisoryPage.querySelector('.advisory-general-average')) throw new Error('Final-grade columns were not rendered.');
+          const runtimeSubjects = AdvisoryData.normalizeAdvisoryData(runtimeProfile).subjects.filter(item => item.advisoryClassId === runtimeClass.id);
+          if (runtimeSubjects.length !== 8 || !runtimeSubjects.some(item => item.subjectName === 'Araling Panlipunan')) throw new Error('Grade-level subjects were not populated automatically.');
+          if (!advisoryPage.textContent.includes('Assign Source')) throw new Error('Per-subject source assignment action was not rendered.');
           advisoryPage.querySelector('[data-add-advisory-subject]').click();
           const subjectModal = document.querySelector('.advisory-nested-modal');
-          if (!subjectModal || subjectModal.textContent.includes('Normalized Subject Key') || subjectModal.querySelector('[data-subject-field="normalizedSubjectKey"]')) throw new Error('Add Advisory Subject still exposes the internal normalized subject key.');
-          if (!subjectModal.textContent.includes('Used automatically to match this subject')) throw new Error('Add Advisory Subject does not explain automatic subject matching.');
+          if (!subjectModal || subjectModal.textContent.includes('Expected Source Class') || subjectModal.textContent.includes('Normalized Subject Key')) throw new Error('Grade source assignment still exposes technical fields (modal=' + Boolean(subjectModal) + ', expectedClass=' + Boolean(subjectModal?.textContent.includes('Expected Source Class')) + ', normalizedKey=' + Boolean(subjectModal?.textContent.includes('Normalized Subject Key')) + ').');
+          if (!subjectModal.textContent.includes('school year, grade and section, subject, and term directly')) throw new Error('Grade Transfer File automatic identification is not explained.');
+          const localSourceRadio = subjectModal.querySelector('input[value="local-subject-class"]');
+          localSourceRadio.click();
+          if (subjectModal.querySelector('[data-local-source-class]')?.hidden || !subjectModal.querySelector('[data-local-source-class] option[value="smoke-subject"]')) throw new Error('Matching local class source choices were not shown.');
           subjectModal.remove();
           advisoryPage.querySelector('[data-advisory-page-roster]').click();
           const rosterModal = document.querySelector('[data-advisory-roster-manager]');
@@ -197,7 +201,7 @@ function createWindow() {
           updateProfile();
           if (runtimeProfile.district !== 'Smoke Test District') throw new Error('District profile field did not update the active profile.');
 
-          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjectKey: true, exportClick: true, rosterImportReview: true, rosterModal: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
+          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, rosterModal: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }

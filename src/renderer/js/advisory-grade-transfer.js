@@ -28,6 +28,45 @@
     return text(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, ' ').trim().toUpperCase();
   }
 
+  function standardSubjectsForGrade(gradeLevel) {
+    if (typeof globalScope.getSubjectsForGrade === 'function') {
+      return globalScope.getSubjectsForGrade(gradeLevel);
+    }
+    const grade = Number.parseInt(gradeLevel, 10);
+    if (grade === 1) return ['Language', 'Reading and Literacy', 'Mathematics', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Arts and Physical Education'];
+    if (grade === 2) return ['Filipino', 'English', 'Mathematics', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Music, Arts, Physical Education, and Health (MAPEH)'];
+    if (grade === 3) return ['Filipino', 'English', 'Mathematics', 'Science', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Music, Arts, Physical Education, and Health (MAPEH)'];
+    if (grade >= 4 && grade <= 5) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Good Manners and Right Conduct (GMRC)', 'Edukasyong Pantahanan at Pangkabuhayan (EPP)', 'MAPEH'];
+    if (grade === 6) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Good Manners and Right Conduct (GMRC)', 'Technology and Livelihood Education (TLE)', 'MAPEH'];
+    if (grade >= 7 && grade <= 10) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Values Education', 'Technology and Livelihood Education (TLE)', 'MAPEH'];
+    return [];
+  }
+
+  function ensureGradeLevelSubjects(profileDb, advisoryClass) {
+    if (!profileDb || !advisoryClass) return [];
+    const store = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb);
+    const existing = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id);
+    const existingKeys = new Set(existing.map(item => item.normalizedSubjectKey));
+    const created = [];
+    standardSubjectsForGrade(advisoryClass.gradeLevel).forEach(subjectName => {
+      const normalizedSubjectKey = normalizeSubjectKey(subjectName);
+      if (!normalizedSubjectKey || existingKeys.has(normalizedSubjectKey)) return;
+      created.push(globalScope.AdvisoryData.createSubject(profileDb, {
+        advisoryClassId: advisoryClass.id,
+        subjectName,
+        normalizedSubjectKey,
+        expectedGradeLevel: advisoryClass.gradeLevel,
+        expectedSection: advisoryClass.section,
+        expectedSchoolYear: advisoryClass.schoolYear,
+        expectedTerm: '',
+        sourceType: 'grade-transfer-file',
+        displayOrder: existing.length + created.length
+      }));
+      existingKeys.add(normalizedSubjectKey);
+    });
+    return created;
+  }
+
   function sanitizeFilenamePart(value) {
     return text(value)
       .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
@@ -515,6 +554,7 @@
       const statusLabel = { 'matched-lrn': 'Matched by LRN', 'matched-name': 'Matched by name', 'matched-manual': 'Manually matched', unmatched: 'Unmatched', ambiguous: 'Ambiguous', conflict: 'Existing grade conflict' };
       const roster = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb()).learners.filter(item => item.advisoryClassId === plan.advisoryClass.id && item.enrollmentStatus !== 'inactive');
       overlay.innerHTML = `<div class="modal advisory-preview-modal"><div class="modal__title">Review Grade Import</div><div class="modal__body advisory-scroll-body"><div class="advisory-transfer-summary"><strong>${globalScope.esc(plan.payload?.subject?.name || 'Unknown subject')} · Term ${globalScope.esc(plan.payload?.term?.number || '—')}</strong><span>${globalScope.esc(plan.payload?.class?.name || '')} · SY ${globalScope.esc(plan.payload?.schoolYear || '')} · ${globalScope.esc(plan.filename)}</span></div>${plan.errors.length ? `<div class="advisory-import-messages advisory-import-messages--error">${plan.errors.map(message => `<div>${globalScope.esc(message)}</div>`).join('')}</div>` : ''}${plan.warnings.length ? `<div class="advisory-import-messages advisory-import-messages--warning">${plan.warnings.map(message => `<div>${globalScope.esc(message)}</div>`).join('')}</div>` : ''}<div class="advisory-import-summary"><span><strong>${plan.importableCount}</strong> ready</span><span><strong>${plan.unmatchedCount}</strong> unmatched</span><span><strong>${plan.conflictCount}</strong> conflicts</span><span><strong>${plan.unresolvedConflictCount}</strong> decisions needed</span></div>${plan.conflictCount ? '<div class="advisory-conflict-bulk"><span>Apply to all conflicts:</span><button class="btn btn-ghost btn-sm" data-keep-all>Keep Existing</button><button class="btn btn-primary btn-sm" data-replace-all>Replace with Imported</button></div>' : ''}<div class="advisory-preview-list">${plan.rows.map(row => `<div class="advisory-preview-row advisory-preview-row--${row.status}"><span><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(row.incoming))} · Incoming ${globalScope.esc(row.incoming.finalGrade)}</strong><small>${globalScope.esc(row.incoming.lrn || 'No LRN')} · ${globalScope.esc(statusLabel[row.status] || row.status)}${row.warning ? ` · ${globalScope.esc(row.warning)}` : ''}</small>${row.status === 'conflict' ? `<select class="field-select advisory-conflict-select" data-conflict-row="${row.index}"><option value="">Choose a decision</option><option value="keep" ${row.conflictDecision === 'keep' ? 'selected' : ''}>Keep existing grade (${globalScope.esc(row.existingGrade.finalGrade)})</option><option value="replace" ${row.conflictDecision === 'replace' ? 'selected' : ''}>Replace with imported grade (${globalScope.esc(row.incoming.finalGrade)})</option></select>` : ''}${['unmatched','ambiguous'].includes(row.status) ? `<select class="field-select advisory-match-select" data-match-row="${row.index}"><option value="">Leave unmatched</option>${roster.map(learner => `<option value="${globalScope.esc(learner.id)}">${globalScope.esc(learner.lrn || 'No LRN')} · ${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</option>`).join('')}</select>` : ''}</span></div>`).join('')}</div></div><div class="modal__actions"><button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-confirm ${plan.canImport ? '' : 'disabled'}>Confirm Import</button></div></div>`;
+      overlay.querySelector('.advisory-transfer-summary')?.insertAdjacentHTML('afterbegin', '<span class="advisory-auto-detected">Automatically identified from the file</span>');
       overlay.querySelector('[data-cancel]').addEventListener('click', () => overlay.remove());
       overlay.querySelector('[data-keep-all]')?.addEventListener('click', () => { applyConflictDecisionToAll(plan, 'keep'); renderPreview(); });
       overlay.querySelector('[data-replace-all]')?.addEventListener('click', () => { applyConflictDecisionToAll(plan, 'replace'); renderPreview(); });
@@ -547,29 +587,63 @@
     const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
     const store = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb());
     const existing = subjectId ? store.subjects.find(item => item.id === subjectId && item.advisoryClassId === advisoryClass.id) : null;
+    const localClasses = (activeDb().assignments || []).filter(item => text(item.schoolYear || activeDb().schoolYear) === text(advisoryClass.schoolYear)
+      && text(item.gradeLevel) === text(advisoryClass.gradeLevel)
+      && globalScope.AdvisoryRoster.normalizeMatchText(item.section) === globalScope.AdvisoryRoster.normalizeMatchText(advisoryClass.section)
+      && (!existing || normalizeSubjectKey(item.subject) === existing.normalizedSubjectKey));
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay advisory-nested-modal';
     const value = (field, fallback = '') => globalScope.esc(existing?.[field] ?? fallback);
     overlay.innerHTML = `
       <div class="modal modal--wide">
-        <div class="modal__title">${existing ? 'Edit Subject & Grade Source' : 'Add Advisory Subject'}</div>
+        <div class="modal__title">${existing ? 'Assign Grade Source' : 'Add Another Subject'}</div>
         <div class="modal__body advisory-scroll-body">
-          <div class="field"><label class="field-label">Subject Name</label><input class="field-input" data-subject-field="subjectName" value="${value('subjectName')}" required><p class="field-help">Used automatically to match this subject with Grade Transfer Files.</p></div>
-          <div class="split-row"><div class="field"><label class="field-label">Expected Source Teacher</label><input class="field-input" data-subject-field="expectedSourceTeacher" value="${value('expectedSourceTeacher')}"></div><div class="field"><label class="field-label">Expected Source Class</label><input class="field-input" data-subject-field="expectedSourceClass" value="${value('expectedSourceClass')}"></div></div>
-          <div class="split-row"><div class="field"><label class="field-label">Expected Grade Level</label><input class="field-input" data-subject-field="expectedGradeLevel" value="${value('expectedGradeLevel', advisoryClass.gradeLevel)}"></div><div class="field"><label class="field-label">Expected Section</label><input class="field-input" data-subject-field="expectedSection" value="${value('expectedSection', advisoryClass.section)}"></div></div>
-          <div class="split-row"><div class="field"><label class="field-label">Expected School Year</label><input class="field-input" data-subject-field="expectedSchoolYear" value="${value('expectedSchoolYear', advisoryClass.schoolYear)}"></div><div class="field"><label class="field-label">Expected Term</label><select class="field-select" data-subject-field="expectedTerm"><option value="">Any term</option><option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option></select></div></div>
-          <div class="split-row"><div class="field"><label class="field-label">Source Type</label><select class="field-select" data-subject-field="sourceType"><option value="grade-transfer-file">Grade Transfer File</option><option value="local-subject-class">Existing local subject class</option><option value="manual">Manual entry</option><option value="corrected-grade-transfer-file">Corrected Grade Transfer File</option></select></div><div class="field"><label class="field-label">Display Order</label><input type="number" min="0" class="field-input" data-subject-field="displayOrder" value="${value('displayOrder', store.subjects.filter(item => item.advisoryClassId === advisoryClass.id).length)}"></div></div>
+          <div class="field"><label class="field-label">Subject</label><input class="field-input" data-subject-field="subjectName" value="${value('subjectName')}" ${existing ? 'readonly' : ''} required><p class="field-help">Subjects are filled in automatically from Grade ${globalScope.esc(advisoryClass.gradeLevel)}. Add another subject only when it is not on the standard list.</p></div>
+          <fieldset class="advisory-source-choice"><legend>Where will the grades come from?</legend>
+            <label class="advisory-source-option"><input type="radio" name="advisorySourceType" value="grade-transfer-file"><span><strong>Grade Transfer File</strong><small>Recommended when another subject teacher sends the final grades.</small></span></label>
+            <label class="advisory-source-option"><input type="radio" name="advisorySourceType" value="local-subject-class"><span><strong>A class in this app</strong><small>Choose a matching class already available on this device.</small></span></label>
+            <label class="advisory-source-option"><input type="radio" name="advisorySourceType" value="manual"><span><strong>Manual entry</strong><small>Use when grades will be entered by the adviser.</small></span></label>
+          </fieldset>
+          <div class="advisory-source-explanation" data-source-help="grade-transfer-file"><strong>No additional setup needed.</strong><span>The app reads the school year, grade and section, subject, and term directly from the Grade Transfer File, then checks them before showing the import preview.</span></div>
+          <div class="field" data-source-help="local-subject-class" hidden><label class="field-label">Choose the class</label><select class="field-select" data-local-source-class><option value="">Select a class</option>${localClasses.map(item => `<option value="${globalScope.esc(item.id)}">${globalScope.esc(item.subject)} · Grade ${globalScope.esc(item.gradeLevel)} - ${globalScope.esc(item.section)}</option>`).join('')}</select><p class="field-help">Only classes matching this Advisory Class school year, grade level, and section are listed.</p></div>
+          <div class="advisory-source-explanation" data-source-help="manual" hidden><strong>Manual source selected.</strong><span>The subject remains ready for grades entered by the adviser.</span></div>
         </div>
-        <div class="modal__actions">${existing ? '<button class="btn btn-danger btn-sm" data-delete-subject>Remove Subject</button>' : ''}<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-save>Save Subject</button></div>
+        <div class="modal__actions">${existing ? '<button class="btn btn-danger btn-sm" data-delete-subject>Remove Subject</button>' : ''}<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-save>${existing ? 'Save Source' : 'Add Subject'}</button></div>
       </div>`;
     document.body.appendChild(overlay);
-    overlay.querySelector('[data-subject-field="expectedTerm"]').value = existing?.expectedTerm || '';
-    overlay.querySelector('[data-subject-field="sourceType"]').value = existing?.sourceType || 'grade-transfer-file';
+    const selectedSourceType = existing?.sourceType === 'local-subject-class' || existing?.sourceType === 'manual' ? existing.sourceType : 'grade-transfer-file';
+    const sourceRadios = Array.from(overlay.querySelectorAll('input[name="advisorySourceType"]'));
+    const localSourceSelect = overlay.querySelector('[data-local-source-class]');
+    const matchingLocalClass = localClasses.find(item => item.id === existing?.expectedSourceClassId || text(item.name) === text(existing?.expectedSourceClass));
+    if (matchingLocalClass) localSourceSelect.value = matchingLocalClass.id;
+    const syncSourceHelp = () => {
+      const sourceType = sourceRadios.find(input => input.checked)?.value || 'grade-transfer-file';
+      overlay.querySelectorAll('[data-source-help]').forEach(section => { section.hidden = section.dataset.sourceHelp !== sourceType; });
+      localSourceSelect.required = sourceType === 'local-subject-class';
+    };
+    sourceRadios.forEach(input => {
+      input.checked = input.value === selectedSourceType;
+      input.addEventListener('change', syncSourceHelp);
+    });
+    syncSourceHelp();
     overlay.querySelector('[data-cancel]').addEventListener('click', () => overlay.remove());
     overlay.querySelector('[data-save]').addEventListener('click', async () => {
-      const values = {};
-      overlay.querySelectorAll('[data-subject-field]').forEach(input => { values[input.dataset.subjectField] = input.value; });
-      values.subjectName = text(values.subjectName);
+      const subjectName = text(overlay.querySelector('[data-subject-field="subjectName"]').value);
+      const sourceType = sourceRadios.find(input => input.checked)?.value || 'grade-transfer-file';
+      const selectedLocalClass = localClasses.find(item => item.id === localSourceSelect.value);
+      if (sourceType === 'local-subject-class' && !selectedLocalClass) { globalScope.toast('Choose the class that will provide these grades.', 'warning'); localSourceSelect.focus(); return; }
+      const values = {
+        subjectName,
+        sourceType,
+        expectedSourceTeacher: sourceType === 'local-subject-class' ? text(selectedLocalClass?.teacherName || activeDb().teacherName) : '',
+        expectedSourceClass: sourceType === 'local-subject-class' ? text(selectedLocalClass?.name || `${selectedLocalClass?.subject} · Grade ${selectedLocalClass?.gradeLevel} - ${selectedLocalClass?.section}`) : '',
+        expectedSourceClassId: sourceType === 'local-subject-class' ? text(selectedLocalClass?.id) : '',
+        expectedGradeLevel: advisoryClass.gradeLevel,
+        expectedSection: advisoryClass.section,
+        expectedSchoolYear: advisoryClass.schoolYear,
+        expectedTerm: '',
+        displayOrder: existing?.displayOrder ?? store.subjects.filter(item => item.advisoryClassId === advisoryClass.id).length
+      };
       values.normalizedSubjectKey = existing?.normalizedSubjectKey || normalizeSubjectKey(values.subjectName);
       if (!values.subjectName || !values.normalizedSubjectKey) { globalScope.toast('Subject name is required.', 'warning'); return; }
       const duplicate = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb()).subjects.some(item => item.advisoryClassId === advisoryClass.id && item.id !== existing?.id && item.normalizedSubjectKey === values.normalizedSubjectKey);
@@ -651,6 +725,16 @@
     return `<td class="${conflict ? 'has-conflict' : 'has-grade'}" title="${globalScope.esc(record.sourceClassName || record.sourceType)}">${globalScope.esc(record.finalGrade)}</td>`;
   }
 
+  function sourceSummary(subject) {
+    if (subject.sourceType === 'local-subject-class') {
+      return `<strong>Class in this app</strong><small>${globalScope.esc(subject.expectedSourceClass || 'Source class not selected')}</small>`;
+    }
+    if (subject.sourceType === 'manual') {
+      return '<strong>Manual entry</strong><small>The adviser will enter the grades.</small>';
+    }
+    return '<strong>Grade Transfer File</strong><small>School year, subject, and term are identified automatically.</small>';
+  }
+
   function renderWorkspacePanel(workspace, advisoryClass) {
     const panel = workspace?.querySelector('[data-advisory-grade-panel]');
     if (!panel) return;
@@ -685,15 +769,15 @@
       const lastBatch = batches.find(batch => normalizeSubjectKey(batch.subject) === subject.normalizedSubjectKey && batch.status !== 'undone');
       const expected = learners.length * 3;
       const conflicts = subjectGrades.filter(grade => grade.conflictStatus && !['none', 'resolved'].includes(grade.conflictStatus)).length;
-      return `<tr><td><strong>${globalScope.esc(subject.subjectName)}</strong></td><td>${globalScope.esc(subject.expectedSourceTeacher || 'Any teacher')}<small>${globalScope.esc(subject.expectedSourceClass || subject.sourceType)}</small></td><td>${lastBatch ? `${globalScope.esc(lastBatch.filename)}<small>${globalScope.esc(lastBatch.importedAt)}</small>` : 'Not imported'}</td><td>${subjectGrades.length}</td><td>${Math.max(0, expected - subjectGrades.length)}</td><td>${conflicts}</td><td><button class="btn btn-ghost btn-sm" data-edit-advisory-subject="${globalScope.esc(subject.id)}">Edit</button></td></tr>`;
+      return `<tr><td><strong>${globalScope.esc(subject.subjectName)}</strong></td><td>${sourceSummary(subject)}</td><td>${lastBatch ? `${globalScope.esc(lastBatch.filename)}<small>${globalScope.esc(lastBatch.importedAt)}</small>` : 'Not imported'}</td><td>${subjectGrades.length}</td><td>${Math.max(0, expected - subjectGrades.length)}</td><td>${conflicts}</td><td><button class="btn btn-ghost btn-sm" data-edit-advisory-subject="${globalScope.esc(subject.id)}">Assign Source</button></td></tr>`;
     }).join('') : '<tr><td colspan="7">No subjects configured.</td></tr>';
 
     const historyRows = batches.length ? batches.map(batch => `<tr><td>${globalScope.esc(batch.importedAt || '—')}</td><td>${globalScope.esc(batch.filename || 'Unknown file')}<small>${globalScope.esc(batch.sourceTeacher || '')} · ${globalScope.esc(batch.sourceClass || '')}</small></td><td>${globalScope.esc(batch.subject)} · Term ${globalScope.esc(batch.term)}</td><td>${batch.importedCount} imported · ${batch.updatedCount} updated · ${batch.skippedCount} skipped · ${batch.conflictCount} conflicts</td><td>${globalScope.esc(batch.status)}</td></tr>`).join('') : '<tr><td colspan="5">No grade imports recorded.</td></tr>';
 
     panel.innerHTML = `
-      <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Term grades, computed subject finals, and the completed general average. Missing records remain visible.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-add-advisory-subject>Add Subject</button><button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Subject Grades</button></div></div>
+      <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Term grades, computed subject finals, and the completed general average. Missing records remain visible.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-add-advisory-subject>Add Other Subject</button><button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
       ${matrix}
-      <section class="advisory-source-management"><h3>Grade Source Management</h3><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Subject</th><th>Expected Source</th><th>Last Import</th><th>Received</th><th>Missing</th><th>Conflicts</th><th></th></tr></thead><tbody>${sourceRows}</tbody></table></div></section>
+      <section class="advisory-source-management"><div class="advisory-source-heading"><h3>Grade Sources</h3><p>Subjects are based on Grade ${globalScope.esc(advisoryClass.gradeLevel)}. Choose how each subject's grades will arrive. Grade Transfer Files identify their own school year, subject, and term.</p></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Subject</th><th>Grade Source</th><th>Last Import</th><th>Received</th><th>Missing</th><th>Conflicts</th><th></th></tr></thead><tbody>${sourceRows}</tbody></table></div></section>
       <section class="advisory-import-history"><div class="advisory-grade-panel__header"><div><h3>Import History</h3><p>Audit trail for every confirmed Grade Transfer File.</p></div><button class="btn btn-ghost btn-sm" data-undo-latest-import ${latestUndoableBatch(profileDb, advisoryClass.id) ? '' : 'disabled'}>Undo Latest Import</button></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Imported</th><th>File / Source</th><th>Subject / Term</th><th>Results</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>`;
     panel.querySelector('[data-import-subject-grades]').addEventListener('click', selectImportFile);
     panel.querySelector('[data-add-advisory-subject]').addEventListener('click', () => showSubjectModal());
@@ -705,6 +789,8 @@
     FORMAT,
     SCHEMA_VERSION,
     normalizeSubjectKey,
+    standardSubjectsForGrade,
+    ensureGradeLevelSubjects,
     sanitizeFilenamePart,
     gradeTransferFilename,
     fileFingerprint,
@@ -723,6 +809,7 @@
     calculateSubjectFinal,
     calculateGeneralAverage,
     showExportModal,
+    showSubjectModal,
     selectImportFile,
     renderWorkspacePanel
   };

@@ -259,6 +259,7 @@
         const savedClass = existing
           ? globalScope.AdvisoryData.updateClass(profileDb, existing.id, values)
           : globalScope.AdvisoryData.createClass(profileDb, values);
+        globalScope.AdvisoryGradeTransfer?.ensureGradeLevelSubjects?.(profileDb, savedClass);
         await globalScope.saveDatabase();
         close();
         globalScope.renderDashboardOverview();

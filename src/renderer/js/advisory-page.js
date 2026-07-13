@@ -49,6 +49,8 @@
       if (isPageVisible()) globalScope.setView?.('dashboard');
       return;
     }
+    const addedSubjects = globalScope.AdvisoryGradeTransfer?.ensureGradeLevelSubjects?.(activeDb(), advisoryClass) || [];
+    if (addedSubjects.length) globalScope.queueMicrotask?.(() => globalScope.saveDatabase?.());
     const escHtml = globalScope.esc || (value => String(value ?? ''));
     const count = rosterCount(advisoryClass);
     const header = page.querySelector('[data-advisory-page-header]');

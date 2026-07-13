@@ -77,6 +77,9 @@ assert(page.includes("nav.hidden = !configured"));
 const transferUi = fs.readFileSync(path.join(root, 'src/renderer/js/advisory-grade-transfer.js'), 'utf8');
 assert(!transferUi.includes('<label class="field-label">Normalized Subject Key</label>'));
 assert(transferUi.includes('existing?.normalizedSubjectKey || normalizeSubjectKey(values.subjectName)'));
-assert(transferUi.includes('Used automatically to match this subject with Grade Transfer Files.'));
+assert(transferUi.includes('ensureGradeLevelSubjects'));
+assert(transferUi.includes('Where will the grades come from?'));
+assert(transferUi.includes('The app reads the school year, grade and section, subject, and term directly'));
+assert(!transferUi.includes('<label class="field-label">Expected Source Class</label>'));
 
 console.log('Advisory page, dynamic navigation, setup workflow, final-grade calculation, modal layering, subject logos, and ZIP reset backup tests passed.');
