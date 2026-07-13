@@ -4,6 +4,14 @@
 (function initAdvisoryGradeTransfer(globalScope) {
   'use strict';
 
+  function activeDb() {
+    const profileDb = typeof globalScope.getActiveProfileDatabase === 'function'
+      ? globalScope.getActiveProfileDatabase()
+      : globalScope.db;
+    if (!profileDb) throw new Error('The active profile database is unavailable.');
+    return profileDb;
+  }
+
   const FORMAT = 'eclass-record-grade-export';
   const SCHEMA_VERSION = '1.0';
 
@@ -437,18 +445,19 @@
   }
 
   function latestUndoableBatch(profileDb, advisoryClassId) {
-    return globalScope.AdvisoryData.normalizeAdvisoryData(profileDb).importBatches
+    return globalScope.AdvisoryData.normalizeAdvisoryData(profileDb || activeDb()).importBatches
       .filter(item => item.advisoryClassId === advisoryClassId && item.status !== 'undone' && Array.isArray(item.undoMetadata?.entries) && item.undoMetadata.entries.length)
       .sort((left, right) => text(right.importedAt).localeCompare(text(left.importedAt)))[0] || null;
   }
 
   async function exportAssignment(assignmentId, term) {
-    const assignment = (globalScope.db.assignments || []).find(item => item.id === assignmentId);
+    const profileDb = activeDb();
+    const assignment = (profileDb.assignments || []).find(item => item.id === assignmentId);
     if (!assignment) throw new Error('The selected subject class was not found.');
     const appVersion = await globalScope.electronAPI.getVersion();
     const payload = buildExportPayload({
       assignment,
-      profileDb: globalScope.db,
+      profileDb,
       term,
       appVersion,
       getFinalGrade: globalScope.getLearnerTermGradeForExport
@@ -459,11 +468,12 @@
   }
 
   function showExportModal(assignmentId) {
-    const assignment = (globalScope.db.assignments || []).find(item => item.id === assignmentId);
+    const profileDb = activeDb();
+    const assignment = (profileDb.assignments || []).find(item => item.id === assignmentId);
     if (!assignment) { globalScope.toast('The selected subject class was not found.', 'error'); return; }
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay advisory-nested-modal';
-    overlay.innerHTML = `<div class="modal"><div class="modal__title">Export Final Grades</div><div class="modal__body"><div class="advisory-transfer-summary"><strong>Grade ${globalScope.esc(assignment.gradeLevel)} - ${globalScope.esc(assignment.section)}</strong><span>${globalScope.esc(assignment.subject)} · SY ${globalScope.esc(assignment.schoolYear || globalScope.db.schoolYear)}</span></div><div class="field"><label class="field-label">Term</label><select class="field-select" data-export-term><option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option></select></div><label class="advisory-privacy-notice"><input type="checkbox" data-privacy-confirm><span><strong>Privacy reminder</strong>This Grade Transfer File contains learner names, LRNs, and final grades. Store and share it securely.</span></label></div><div class="modal__actions"><button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-export disabled>Continue &amp; Save File</button></div></div>`;
+    overlay.innerHTML = `<div class="modal"><div class="modal__title">Export Final Grades</div><div class="modal__body"><div class="advisory-transfer-summary"><strong>Grade ${globalScope.esc(assignment.gradeLevel)} - ${globalScope.esc(assignment.section)}</strong><span>${globalScope.esc(assignment.subject)} · SY ${globalScope.esc(assignment.schoolYear || profileDb.schoolYear)}</span></div><div class="field"><label class="field-label">Term</label><select class="field-select" data-export-term><option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option></select></div><label class="advisory-privacy-notice"><input type="checkbox" data-privacy-confirm><span><strong>Privacy reminder</strong>This Grade Transfer File contains learner names, LRNs, and final grades. Store and share it securely.</span></label></div><div class="modal__actions"><button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-export disabled>Continue &amp; Save File</button></div></div>`;
     document.body.appendChild(overlay);
     const privacy = overlay.querySelector('[data-privacy-confirm]');
     const exportButton = overlay.querySelector('[data-export]');
@@ -490,7 +500,7 @@
       let payload;
       try { payload = JSON.parse(result.content); }
       catch (_error) { globalScope.toast('This file is not valid JSON.', 'error'); return; }
-      showImportPreview(planImport(globalScope.db, advisoryClass, payload, result.name));
+      showImportPreview(planImport(activeDb(), advisoryClass, payload, result.name));
     } catch (error) {
       console.error('Grade import selection failed:', error);
       globalScope.toast(error.message || 'The Grade Transfer File could not be opened.', 'error');
@@ -503,7 +513,7 @@
     document.body.appendChild(overlay);
     const renderPreview = () => {
       const statusLabel = { 'matched-lrn': 'Matched by LRN', 'matched-name': 'Matched by name', 'matched-manual': 'Manually matched', unmatched: 'Unmatched', ambiguous: 'Ambiguous', conflict: 'Existing grade conflict' };
-      const roster = globalScope.AdvisoryData.normalizeAdvisoryData(globalScope.db).learners.filter(item => item.advisoryClassId === plan.advisoryClass.id && item.enrollmentStatus !== 'inactive');
+      const roster = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb()).learners.filter(item => item.advisoryClassId === plan.advisoryClass.id && item.enrollmentStatus !== 'inactive');
       overlay.innerHTML = `<div class="modal advisory-preview-modal"><div class="modal__title">Review Grade Import</div><div class="modal__body advisory-scroll-body"><div class="advisory-transfer-summary"><strong>${globalScope.esc(plan.payload?.subject?.name || 'Unknown subject')} · Term ${globalScope.esc(plan.payload?.term?.number || '—')}</strong><span>${globalScope.esc(plan.payload?.class?.name || '')} · SY ${globalScope.esc(plan.payload?.schoolYear || '')} · ${globalScope.esc(plan.filename)}</span></div>${plan.errors.length ? `<div class="advisory-import-messages advisory-import-messages--error">${plan.errors.map(message => `<div>${globalScope.esc(message)}</div>`).join('')}</div>` : ''}${plan.warnings.length ? `<div class="advisory-import-messages advisory-import-messages--warning">${plan.warnings.map(message => `<div>${globalScope.esc(message)}</div>`).join('')}</div>` : ''}<div class="advisory-import-summary"><span><strong>${plan.importableCount}</strong> ready</span><span><strong>${plan.unmatchedCount}</strong> unmatched</span><span><strong>${plan.conflictCount}</strong> conflicts</span><span><strong>${plan.unresolvedConflictCount}</strong> decisions needed</span></div>${plan.conflictCount ? '<div class="advisory-conflict-bulk"><span>Apply to all conflicts:</span><button class="btn btn-ghost btn-sm" data-keep-all>Keep Existing</button><button class="btn btn-primary btn-sm" data-replace-all>Replace with Imported</button></div>' : ''}<div class="advisory-preview-list">${plan.rows.map(row => `<div class="advisory-preview-row advisory-preview-row--${row.status}"><span><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(row.incoming))} · Incoming ${globalScope.esc(row.incoming.finalGrade)}</strong><small>${globalScope.esc(row.incoming.lrn || 'No LRN')} · ${globalScope.esc(statusLabel[row.status] || row.status)}${row.warning ? ` · ${globalScope.esc(row.warning)}` : ''}</small>${row.status === 'conflict' ? `<select class="field-select advisory-conflict-select" data-conflict-row="${row.index}"><option value="">Choose a decision</option><option value="keep" ${row.conflictDecision === 'keep' ? 'selected' : ''}>Keep existing grade (${globalScope.esc(row.existingGrade.finalGrade)})</option><option value="replace" ${row.conflictDecision === 'replace' ? 'selected' : ''}>Replace with imported grade (${globalScope.esc(row.incoming.finalGrade)})</option></select>` : ''}${['unmatched','ambiguous'].includes(row.status) ? `<select class="field-select advisory-match-select" data-match-row="${row.index}"><option value="">Leave unmatched</option>${roster.map(learner => `<option value="${globalScope.esc(learner.id)}">${globalScope.esc(learner.lrn || 'No LRN')} · ${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</option>`).join('')}</select>` : ''}</span></div>`).join('')}</div></div><div class="modal__actions"><button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-confirm ${plan.canImport ? '' : 'disabled'}>Confirm Import</button></div></div>`;
       overlay.querySelector('[data-cancel]').addEventListener('click', () => overlay.remove());
       overlay.querySelector('[data-keep-all]')?.addEventListener('click', () => { applyConflictDecisionToAll(plan, 'keep'); renderPreview(); });
@@ -513,12 +523,12 @@
         renderPreview();
       }));
       overlay.querySelectorAll('[data-match-row]').forEach(select => select.addEventListener('change', () => {
-        if (select.value) assignUnmatchedLearner(globalScope.db, plan, Number(select.dataset.matchRow), select.value);
+        if (select.value) assignUnmatchedLearner(activeDb(), plan, Number(select.dataset.matchRow), select.value);
         renderPreview();
       }));
       overlay.querySelector('[data-confirm]').addEventListener('click', async () => {
         try {
-          const result = applyImportPlan(globalScope.db, plan);
+          const result = applyImportPlan(activeDb(), plan);
           await globalScope.saveDatabase();
           overlay.remove();
           if (globalScope.AdvisoryRoster.renderWorkspace) globalScope.AdvisoryRoster.renderWorkspace();
@@ -535,7 +545,7 @@
 
   function showSubjectModal(subjectId) {
     const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
-    const store = globalScope.AdvisoryData.normalizeAdvisoryData(globalScope.db);
+    const store = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb());
     const existing = subjectId ? store.subjects.find(item => item.id === subjectId && item.advisoryClassId === advisoryClass.id) : null;
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay advisory-nested-modal';
@@ -551,10 +561,10 @@
       values.subjectName = text(values.subjectName);
       values.normalizedSubjectKey = normalizeSubjectKey(values.normalizedSubjectKey || values.subjectName);
       if (!values.subjectName || !values.normalizedSubjectKey) { globalScope.toast('Subject name is required.', 'warning'); return; }
-      const duplicate = globalScope.AdvisoryData.normalizeAdvisoryData(globalScope.db).subjects.some(item => item.advisoryClassId === advisoryClass.id && item.id !== existing?.id && item.normalizedSubjectKey === values.normalizedSubjectKey);
+      const duplicate = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb()).subjects.some(item => item.advisoryClassId === advisoryClass.id && item.id !== existing?.id && item.normalizedSubjectKey === values.normalizedSubjectKey);
       if (duplicate) { globalScope.toast('This Advisory subject already exists.', 'warning'); return; }
-      if (existing) globalScope.AdvisoryData.updateSubject(globalScope.db, existing.id, values);
-      else globalScope.AdvisoryData.createSubject(globalScope.db, { ...values, advisoryClassId: advisoryClass.id });
+      if (existing) globalScope.AdvisoryData.updateSubject(activeDb(), existing.id, values);
+      else globalScope.AdvisoryData.createSubject(activeDb(), { ...values, advisoryClassId: advisoryClass.id });
       await globalScope.saveDatabase();
       overlay.remove();
       globalScope.AdvisoryRoster.renderWorkspace();
@@ -564,7 +574,7 @@
     overlay.querySelector('[data-delete-subject]')?.addEventListener('click', () => {
       const gradeCount = store.grades.filter(item => item.advisorySubjectId === existing.id).length;
       globalScope.confirmModal('Remove Advisory Subject', `Remove ${existing.subjectName}? ${gradeCount ? `This will also remove ${gradeCount} saved final grade record(s).` : 'No saved grades are attached.'}`, async () => {
-        globalScope.AdvisoryData.deleteSubject(globalScope.db, existing.id);
+        globalScope.AdvisoryData.deleteSubject(activeDb(), existing.id);
         await globalScope.saveDatabase();
         overlay.remove();
         globalScope.AdvisoryRoster.renderWorkspace();
@@ -575,11 +585,11 @@
   }
 
   function requestUndoLatest(advisoryClassId) {
-    const batch = latestUndoableBatch(globalScope.db, advisoryClassId);
+    const batch = latestUndoableBatch(activeDb(), advisoryClassId);
     if (!batch) { globalScope.toast('No safely undoable import batch is available.', 'info'); return; }
     globalScope.confirmModal('Undo Latest Grade Import', `Undo ${batch.filename || batch.subject}? Grades created by this batch will be removed and replaced grades will be restored.`, async () => {
       try {
-        undoImportBatch(globalScope.db, batch.id);
+        undoImportBatch(activeDb(), batch.id);
         await globalScope.saveDatabase();
         globalScope.AdvisoryRoster.renderWorkspace();
         globalScope.renderDashboardOverview();
@@ -594,7 +604,7 @@
   function renderWorkspacePanel(workspace, advisoryClass) {
     const panel = workspace?.querySelector('[data-advisory-grade-panel]');
     if (!panel) return;
-    const store = globalScope.AdvisoryData.normalizeAdvisoryData(globalScope.db);
+    const store = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb());
     const subjects = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id).sort((a, b) => a.displayOrder - b.displayOrder);
     const learners = store.learners.filter(item => item.advisoryClassId === advisoryClass.id && item.enrollmentStatus !== 'inactive');
     const grades = store.grades.filter(item => item.advisoryClassId === advisoryClass.id);

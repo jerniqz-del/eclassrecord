@@ -89,6 +89,7 @@ function createWindow() {
           const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup'];
           const missing = required.filter(name => !globalThis[name]);
           if (missing.length) throw new Error('Missing renderer modules: ' + missing.join(', '));
+          if (typeof getActiveProfileDatabase !== 'function') throw new Error('Active profile database accessor is unavailable.');
           const profile = { version: 3, schoolYear: '2099-2100', assignments: [] };
           AdvisoryData.normalizeAdvisoryData(profile);
           const advisoryClass = AdvisoryData.createClass(profile, {
@@ -99,7 +100,30 @@ function createWindow() {
           if (!card.includes('data-dashboard-fixed="true"') || !card.includes(advisoryClass.id)) {
             throw new Error('Advisory dashboard card invariant failed.');
           }
-          return { modules: required.length, classes: profile.advisory.classes.length, offline: ${isOfflineSmokeTest} };
+          const runtimeProfile = getActiveProfileDatabase();
+          runtimeProfile.schoolYear = '2099-2100';
+          runtimeProfile.assignments = [{
+            id: 'smoke-subject', schoolYear: runtimeProfile.schoolYear, gradeLevel: '4',
+            section: 'Offline', subject: 'Mathematics', learners: [], assessments: [], scores: {}
+          }];
+          runtimeProfile.advisory = AdvisoryData.createAdvisoryStore();
+          renderDashboardOverview();
+
+          const setupButton = document.querySelector('.dashboard-card--advisory .btn-primary');
+          if (!setupButton) throw new Error('Set Up Advisory Class button was not rendered.');
+          setupButton.click();
+          const setupModal = document.querySelector('[data-advisory-setup-modal]');
+          if (!setupModal) throw new Error('Set Up Advisory Class button did not open its modal.');
+          setupModal.remove();
+
+          const exportButton = document.querySelector('.dashboard-card__export-btn');
+          if (!exportButton) throw new Error('Export Final Grades button was not rendered.');
+          exportButton.click();
+          const exportModal = document.querySelector('.advisory-nested-modal');
+          if (!exportModal) throw new Error('Export Final Grades button did not open its modal.');
+          exportModal.remove();
+
+          return { modules: required.length, classes: profile.advisory.classes.length, setupClick: true, exportClick: true, offline: ${isOfflineSmokeTest} };
         })()`);
         clearTimeout(smokeTimeout);
         if (rendererErrors.length) {

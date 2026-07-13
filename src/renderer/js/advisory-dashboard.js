@@ -4,6 +4,14 @@
 (function initAdvisoryDashboard(globalScope) {
   'use strict';
 
+  function activeDb() {
+    const profileDb = typeof globalScope.getActiveProfileDatabase === 'function'
+      ? globalScope.getActiveProfileDatabase()
+      : globalScope.db;
+    if (!profileDb) throw new Error('The active profile database is unavailable.');
+    return profileDb;
+  }
+
   function getClassForYear(profileDb, schoolYear) {
     const store = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb);
     return store.classes.find(item => item.schoolYear === schoolYear && item.isActive && !item.isArchived)
@@ -113,13 +121,13 @@
   }
 
   function currentClass() {
-    const schoolYear = globalScope.db?.schoolYear || '2026-2027';
-    return getClassForYear(globalScope.db, schoolYear);
+    const profileDb = activeDb();
+    const schoolYear = profileDb.schoolYear || '2026-2027';
+    return getClassForYear(profileDb, schoolYear);
   }
 
   function showSetupModal() {
-    const profileDb = globalScope.db;
-    if (!profileDb) return;
+    const profileDb = activeDb();
     const schoolYear = profileDb.schoolYear || '2026-2027';
     const existing = getClassForYear(profileDb, schoolYear);
     const escHtml = globalScope.esc || (value => String(value ?? ''));

@@ -75,6 +75,13 @@ let db = {
   advisory: createAdvisoryStore()
 };
 
+// Feature modules run in their own closures, while the legacy active profile
+// is a top-level lexical binding. Expose a read accessor instead of copying db
+// onto window, which could become stale whenever profile loading replaces it.
+function getActiveProfileDatabase() {
+  return db;
+}
+
 let currentView = 'dashboard';
 let recordTab = '1';
 let importMode = '';

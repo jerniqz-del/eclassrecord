@@ -5,6 +5,14 @@
 (function initAdvisoryRoster(globalScope) {
   'use strict';
 
+  function activeDb() {
+    const profileDb = typeof globalScope.getActiveProfileDatabase === 'function'
+      ? globalScope.getActiveProfileDatabase()
+      : globalScope.db;
+    if (!profileDb) throw new Error('The active profile database is unavailable.');
+    return profileDb;
+  }
+
   function text(value) {
     return value === undefined || value === null ? '' : String(value).trim();
   }
@@ -216,7 +224,7 @@
     if (!overlay) return;
     const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
     if (!advisoryClass) { closeElement(overlay); globalScope.showAdvisoryClassSetupModal(); return; }
-    const roster = rosterForClass(globalScope.db, advisoryClass.id);
+    const roster = rosterForClass(activeDb(), advisoryClass.id);
     const escHtml = globalScope.esc;
     const body = overlay.querySelector('[data-advisory-roster-body]');
     const count = overlay.querySelector('[data-advisory-roster-count]');
@@ -282,7 +290,7 @@
 
   function showLearnerForm(learnerId) {
     const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
-    const store = globalScope.AdvisoryData.normalizeAdvisoryData(globalScope.db);
+    const store = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb());
     const existing = learnerId ? store.learners.find(item => item.id === learnerId && item.advisoryClassId === advisoryClass.id) : null;
     const escHtml = globalScope.esc;
     const overlay = document.createElement('div');
@@ -302,12 +310,12 @@
       overlay.querySelectorAll('[data-field]').forEach(input => { values[input.dataset.field] = input.value; });
       const normalized = normalizeIncoming(values, existing?.source || 'manual');
       const errors = validateLearner(normalized);
-      const otherRoster = rosterForClass(globalScope.db, advisoryClass.id).filter(item => item.id !== existing?.id);
+      const otherRoster = rosterForClass(activeDb(), advisoryClass.id).filter(item => item.id !== existing?.id);
       if (normalized.lrn && otherRoster.some(item => item.lrn === normalized.lrn)) errors.push('This LRN already belongs to another Advisory learner.');
       if (otherRoster.some(item => nameKey(item) === nameKey(normalized))) errors.push('A learner with this official name already exists.');
       if (errors.length) { globalScope.toast(errors[0], 'warning'); return; }
-      if (existing) globalScope.AdvisoryData.updateLearner(globalScope.db, existing.id, normalized);
-      else globalScope.AdvisoryData.createLearner(globalScope.db, { ...normalized, advisoryClassId: advisoryClass.id });
+      if (existing) globalScope.AdvisoryData.updateLearner(activeDb(), existing.id, normalized);
+      else globalScope.AdvisoryData.createLearner(activeDb(), { ...normalized, advisoryClassId: advisoryClass.id });
       await globalScope.saveDatabase();
       closeElement(overlay);
       renderWorkspace();
@@ -318,7 +326,7 @@
 
   function showClassImportChooser() {
     const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
-    const classes = (globalScope.db.assignments || []).filter(item => item.schoolYear === advisoryClass.schoolYear && Array.isArray(item.learners));
+    const classes = (activeDb().assignments || []).filter(item => item.schoolYear === advisoryClass.schoolYear && Array.isArray(item.learners));
     if (!classes.length) { globalScope.toast('No subject-class roster is available for this school year.', 'info'); return; }
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay advisory-nested-modal';
@@ -337,7 +345,7 @@
 
   function showImportPreview(incoming, source, title) {
     const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
-    const rows = reviewLearners(globalScope.db, advisoryClass.id, incoming, source);
+    const rows = reviewLearners(activeDb(), advisoryClass.id, incoming, source);
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay advisory-nested-modal';
     const statusLabel = { add: 'Will add', 'existing-lrn': 'Already exists · LRN', 'existing-name': 'Name match', ambiguous: 'Needs review', invalid: 'Invalid', 'duplicate-incoming': 'Duplicate in file' };
@@ -346,7 +354,7 @@
     overlay.querySelector('[data-cancel]').addEventListener('click', () => closeElement(overlay));
     overlay.querySelector('[data-confirm]').addEventListener('click', async () => {
       const selected = new Set(Array.from(overlay.querySelectorAll('[data-row-index]:checked')).map(input => Number(input.dataset.rowIndex)));
-      const created = commitReviewedLearners(globalScope.db, advisoryClass.id, rows, selected);
+      const created = commitReviewedLearners(activeDb(), advisoryClass.id, rows, selected);
       if (!created.length) { globalScope.toast('No new valid learners were selected.', 'warning'); return; }
       await globalScope.saveDatabase();
       closeElement(overlay);
@@ -387,11 +395,11 @@
   }
 
   function removeLearner(learnerId) {
-    const store = globalScope.AdvisoryData.normalizeAdvisoryData(globalScope.db);
+    const store = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb());
     const learner = store.learners.find(item => item.id === learnerId);
     if (!learner) return;
     globalScope.confirmModal('Remove Advisory Learner', `Remove ${displayName(learner)} from this Advisory Class? Subject-class rosters will not be changed.`, async () => {
-      globalScope.AdvisoryData.deleteLearner(globalScope.db, learnerId);
+      globalScope.AdvisoryData.deleteLearner(activeDb(), learnerId);
       await globalScope.saveDatabase();
       renderWorkspace();
       globalScope.renderDashboardOverview();

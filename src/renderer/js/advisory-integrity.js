@@ -17,7 +17,10 @@
   }
 
   globalScope.runDatabaseIntegrityCheck = function runDatabaseIntegrityCheckWithAdvisory() {
-    const advisoryReport = globalScope.AdvisoryData.checkAdvisoryIntegrity(globalScope.db);
+    const profileDb = typeof globalScope.getActiveProfileDatabase === 'function'
+      ? globalScope.getActiveProfileDatabase()
+      : globalScope.db;
+    const advisoryReport = globalScope.AdvisoryData.checkAdvisoryIntegrity(profileDb);
     const existingResult = originalRun.apply(this, arguments);
     setTimeout(() => appendAdvisoryReport(advisoryReport), 0);
     return { existingResult, advisoryReport };
