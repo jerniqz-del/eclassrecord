@@ -5,7 +5,7 @@
  * file I/O and native dialogs, and initialises auto-updates.
  */
 
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const fileIO = require('./file-io');
@@ -15,6 +15,8 @@ const crypto = require('crypto');
 let mainWindow = null;
 let isConfirmedExit = false;
 let selectBluetoothDeviceCallback = null;
+const isSmokeTest = process.argv.includes('--smoke-test') || process.argv.includes('--offline-smoke-test');
+const isOfflineSmokeTest = process.argv.includes('--offline-smoke-test');
 
 function attachmentRoot() {
   return path.join(app.getPath('appData'), 'EClassRecordPortable', 'attachments');
@@ -70,6 +72,51 @@ function createWindow() {
   mainWindow.setMenu(null);
   Menu.setApplicationMenu(null);
 
+  if (isSmokeTest) {
+    const rendererErrors = [];
+    const smokeTimeout = setTimeout(() => {
+      console.error('SMOKE_FAIL Renderer did not finish loading within 30 seconds.');
+      app.exit(1);
+    }, 30000);
+
+    mainWindow.webContents.on('console-message', (_event, level, message) => {
+      if (level >= 3) rendererErrors.push(message);
+    });
+
+    mainWindow.webContents.once('did-finish-load', async () => {
+      try {
+        const result = await mainWindow.webContents.executeJavaScript(`(() => {
+          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup'];
+          const missing = required.filter(name => !globalThis[name]);
+          if (missing.length) throw new Error('Missing renderer modules: ' + missing.join(', '));
+          const profile = { version: 3, schoolYear: '2099-2100', assignments: [] };
+          AdvisoryData.normalizeAdvisoryData(profile);
+          const advisoryClass = AdvisoryData.createClass(profile, {
+            id: 'smoke-advisory', schoolYear: profile.schoolYear, gradeLevel: '4',
+            section: 'Offline', adviserName: 'Smoke Test', isActive: true
+          });
+          const card = AdvisoryDashboard.renderCard(profile, profile.schoolYear, 'grid');
+          if (!card.includes('data-dashboard-fixed="true"') || !card.includes(advisoryClass.id)) {
+            throw new Error('Advisory dashboard card invariant failed.');
+          }
+          return { modules: required.length, classes: profile.advisory.classes.length, offline: ${isOfflineSmokeTest} };
+        })()`);
+        clearTimeout(smokeTimeout);
+        if (rendererErrors.length) {
+          console.error('SMOKE_FAIL Renderer console errors: ' + rendererErrors.join(' | '));
+          app.exit(1);
+          return;
+        }
+        console.log('SMOKE_OK ' + JSON.stringify(result));
+        app.exit(0);
+      } catch (error) {
+        clearTimeout(smokeTimeout);
+        console.error('SMOKE_FAIL ' + (error && error.stack ? error.stack : error));
+        app.exit(1);
+      }
+    });
+  }
+
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.key === 'Alt') {
       event.preventDefault();
@@ -96,6 +143,7 @@ function createWindow() {
   });
 
   mainWindow.once('ready-to-show', () => {
+    if (isSmokeTest) return;
     mainWindow.show();
     mainWindow.maximize();
     // Open DevTools automatically in development (not in packaged builds)
@@ -611,6 +659,12 @@ ipcMain.on('bluetooth:cancel-device', () => {
 // ── App Lifecycle ─────────────────────────────────────────
 
 app.whenReady().then(() => {
+  if (isOfflineSmokeTest) {
+    session.defaultSession.webRequest.onBeforeRequest(
+      { urls: ['http://*/*', 'https://*/*'] },
+      (_details, callback) => callback({ cancel: true })
+    );
+  }
   createWindow();
 });
 

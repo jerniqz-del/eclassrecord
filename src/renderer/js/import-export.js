@@ -113,11 +113,7 @@ async function importJsonBackupFile() {
             const decryptedText = await decryptPayload(incoming, pin);
             const decryptedDb = JSON.parse(decryptedText);
             
-            if (!decryptedDb.assignments) {
-              throw new Error('Decrypted backup content is missing assignments.');
-            }
-            
-            db = decryptedDb;
+            db = prepareRestoredDatabase(decryptedDb);
             normalizeDatabase();
             await saveDatabase();
             render();
@@ -129,10 +125,7 @@ async function importJsonBackupFile() {
           }
         });
       } else {
-        if (!incoming.assignments) {
-          throw new Error('Invalid backup file: assignments list is missing.');
-        }
-        db = incoming;
+        db = prepareRestoredDatabase(incoming);
         normalizeDatabase();
         await saveDatabase();
         render();
@@ -472,8 +465,7 @@ function runImport() {
   if (importMode === 'json') {
     try {
       const incoming = JSON.parse(text);
-      if (!incoming.assignments) throw new Error('Invalid format.');
-      db = incoming;
+      db = prepareRestoredDatabase(incoming);
       normalizeDatabase();
       saveDatabase();
       toggleImport('');

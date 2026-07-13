@@ -211,6 +211,26 @@ const HELP_TOPICS = [
     `
   },
   {
+    id: 'advisory_class_workflow',
+    category: 'grading_scoring',
+    title: 'Advisory Class and Offline Grade Files',
+    keywords: 'advisory adviser class roster grade transfer export import json offline conflict source history undo backup privacy',
+    content: `
+      <p>The fixed <strong>Advisory Class</strong> card is the adviser&apos;s central roster and grade-consolidation workspace. Grade Transfer Files move final grades by USB drive, local folder, or another offline method; they never contain raw scores or attendance.</p>
+      <h5>Set Up and Consolidate Grades:</h5>
+      <ol>
+        <li>Open the first Dashboard card, enter the grade level, section, adviser, school year, and school details.</li>
+        <li>Build the official roster by copying another class, uploading SF1, bulk-pasting, or adding learners manually. Review warnings before saving.</li>
+        <li>A subject teacher opens a teaching-load card, chooses <strong>Export Grades</strong>, selects one term, reviews the privacy notice, and saves the JSON Grade Transfer File.</li>
+        <li>The adviser opens the Advisory Class, selects <strong>Import Grade File</strong>, checks the class context and learner matches, resolves unmatched learners or existing-grade conflicts, then confirms.</li>
+        <li>Use Subjects, Grade Sources, and Import History to inspect provenance or safely undo the latest applicable import.</li>
+      </ol>
+      <div class="help-highlight-box">
+        <strong>Privacy and safety:</strong> Confirm the destination before sharing a file. Keep backups because transfer files contain learner names, LRNs, and final grades. Reimporting the same file is detected, and existing grades are never silently overwritten.
+      </div>
+    `
+  },
+  {
     id: 'quick_grade',
     category: 'grading_scoring',
     title: 'Using Quick Grade Entry Modal',

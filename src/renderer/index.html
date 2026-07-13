@@ -637,7 +637,7 @@
           <div class="settings-row">
             <div class="settings-row__left">
               <div class="settings-row__title">Scan for Database Anomalies</div>
-              <div class="settings-row__desc">Checks your active database profile for orphaned score keys, entries exceeding HPS, duplicate student LRNs, and calculates potential errors. Offers automatic repairs.</div>
+              <div class="settings-row__desc">Checks your active profile for orphaned score keys, entries exceeding HPS, duplicate LRNs, and invalid Advisory Class references. Existing score repairs remain available; advisory issues are reported without automatic deletion.</div>
             </div>
             <button class="btn btn-olive btn-sm" onclick="runDatabaseIntegrityCheck()">Run Integrity Check</button>
           </div>
@@ -1626,6 +1626,7 @@
   <script src="js/grading.js"></script>
   <script src="js/learners.js"></script>
   <script src="js/advisory-data.js"></script>
+  <script src="js/advisory-backup.js"></script>
   <script src="js/database.js"></script>
   <script src="js/import-export.js"></script>
   <script src="js/record-table.js"></script>
@@ -1638,6 +1639,7 @@
   <script src="js/support-tracker.js"></script>
   <script src="js/mobile-sync.js"></script>
   <script src="js/integrity.js"></script>
+  <script src="js/advisory-integrity.js"></script>
   <script src="js/calendar.js"></script>
   <script src="js/help.js"></script>
   <script src="js/community-helper.js"></script>

@@ -8,6 +8,7 @@ A premium, modern offline desktop application designed for Filipino teachers to 
 - **Roster Management**: Roster uploads from LIS school records via native SF1 spreadsheet importer (`.xlsx`, `.xls`, `.csv`, `.txt` parsed using `xlsx` library) and direct CSV rosters paste.
 - **Dense Score Grid**: Smooth score matrix with inline Arrow/Enter key navigation and HPS (Highest Possible Score) adjustment rows.
 - **Final Grades Summary**: Auto-computed averages across terms with remarked pass/fail color-coded badges.
+- **Advisory Class Consolidation**: A fixed adviser dashboard with official roster management, subject completion tracking, and audited offline Grade Transfer File import/export.
 - **Native File Dialogs**: Backup and recovery in JSON backups, and grades reports exporting in standard CSV files.
 - **Over-the-Air (OTA) Updates**: Automated startup updates check and download from GitHub Releases.
 - **Change History & Patch Notes**: In-app Help Center documentation plus [implementation history](docs/implementation-history.md) covering changes from the first build through the latest restored updates.
@@ -60,6 +61,12 @@ Teacher records are stored locally on the computer:
 - **Path**: `%APPDATA%\EClassRecordPortable\data.json`
 
 This ensures that upgrading from the older single-file HTA version automatically preserves all existing teaching loads, rosters, and scores without needing manual exports.
+
+## Advisory Class Documentation
+
+- [Advisory Class user guide](docs/advisory-class-guide.md)
+- [Grade Transfer File schema v1.0](docs/grade-transfer-schema-v1.0.md)
+- [Manual smoke-test checklist](docs/manual-smoke-test-advisory.md)
 
 ## Release & OTA Publishing
 
