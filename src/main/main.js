@@ -163,6 +163,11 @@ function createWindow() {
           if (document.querySelector('.advisory-page-view')?.style.display === 'none' || !advisoryPage?.querySelector('[data-advisory-grade-panel]')) throw new Error('Dedicated Advisory Class page did not open.');
           if (document.querySelector('[data-advisory-workspace]')) throw new Error('Advisory Class still opened as a workspace modal.');
           if (!advisoryPage.querySelector('.advisory-final-column') || !advisoryPage.querySelector('.advisory-general-average')) throw new Error('Final-grade columns were not rendered.');
+          advisoryPage.querySelector('[data-add-advisory-subject]').click();
+          const subjectModal = document.querySelector('.advisory-nested-modal');
+          if (!subjectModal || subjectModal.textContent.includes('Normalized Subject Key') || subjectModal.querySelector('[data-subject-field="normalizedSubjectKey"]')) throw new Error('Add Advisory Subject still exposes the internal normalized subject key.');
+          if (!subjectModal.textContent.includes('Used automatically to match this subject')) throw new Error('Add Advisory Subject does not explain automatic subject matching.');
+          subjectModal.remove();
           advisoryPage.querySelector('[data-advisory-page-roster]').click();
           const rosterModal = document.querySelector('[data-advisory-roster-manager]');
           if (!rosterModal || !rosterModal.querySelector('[data-remove-advisory-learner]')) throw new Error('Separate roster manager did not open.');
@@ -192,7 +197,7 @@ function createWindow() {
           updateProfile();
           if (runtimeProfile.district !== 'Smoke Test District') throw new Error('District profile field did not update the active profile.');
 
-          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, exportClick: true, rosterImportReview: true, rosterModal: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
+          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjectKey: true, exportClick: true, rosterImportReview: true, rosterModal: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }

@@ -74,5 +74,9 @@ assert(html.includes('js/advisory-page.js'));
 const page = fs.readFileSync(path.join(root, 'src/renderer/js/advisory-page.js'), 'utf8');
 assert(page.includes("globalScope.openAdvisoryClassDashboard = openPage"));
 assert(page.includes("nav.hidden = !configured"));
+const transferUi = fs.readFileSync(path.join(root, 'src/renderer/js/advisory-grade-transfer.js'), 'utf8');
+assert(!transferUi.includes('<label class="field-label">Normalized Subject Key</label>'));
+assert(transferUi.includes('existing?.normalizedSubjectKey || normalizeSubjectKey(values.subjectName)'));
+assert(transferUi.includes('Used automatically to match this subject with Grade Transfer Files.'));
 
 console.log('Advisory page, dynamic navigation, setup workflow, final-grade calculation, modal layering, subject logos, and ZIP reset backup tests passed.');
