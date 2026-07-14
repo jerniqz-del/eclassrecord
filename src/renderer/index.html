@@ -1516,6 +1516,12 @@
       <button class="btn-back" type="button" onclick="cancelPinRecovery()" title="Return to PIN entry">&larr; Back to PIN</button>
       <h2 class="profile-panel-title" id="recoveryProfileTitle">Recover Profile</h2>
       <p class="profile-panel-desc">Enter the recovery key saved when recovery was enabled, then choose a new 6-digit PIN.</p>
+      <div class="pin-recovery-upload">
+        <input id="recoveryQrFile" type="file" accept="image/png,image/jpeg,image/webp" hidden onchange="uploadRecoveryQr(this.files[0])" />
+        <button class="btn btn-ghost btn-sm btn-block" type="button" onclick="document.getElementById('recoveryQrFile').click()">Upload Recovery QR Image</button>
+        <div id="recoveryQrStatus" class="profile-panel-desc pin-recovery-upload__status">Upload a saved recovery QR image, or enter the recovery key manually.</div>
+      </div>
+      <div class="pin-recovery-divider"><span>or enter the key manually</span></div>
       <div class="field">
         <label class="field-label">Recovery Key</label>
         <input type="text" id="recoveryKeyField" class="field-input pin-recovery-input" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" />
@@ -1682,6 +1688,10 @@
         exportGradeTransfer: async () => ({ success: false }),
         importGradeTransfer: async () => ({ success: false }),
         exportAdvisoryResetBackup: async () => ({ success: false }),
+        generateRecoveryQr: async () => '',
+        decodeRecoveryQrPixels: async () => '',
+        exportRecoveryQr: async () => ({ success: false }),
+        printRecoveryQr: async () => ({ success: false }),
         onUpdateStatus: () => {}
       };
     }

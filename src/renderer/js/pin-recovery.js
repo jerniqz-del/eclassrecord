@@ -16,6 +16,22 @@
     if (!/^\d{6}$/.test(String(pin || ''))) throw new Error('The new PIN must contain exactly 6 digits.');
   }
 
+  function formatRecoveryKey(value) {
+    const normalized = globalScope.normalizeRecoveryKey(value);
+    return normalized.match(/.{1,4}/g)?.join('-') || normalized;
+  }
+
+  async function decodeRecoveryQrPayloadForProfile(payload, profile) {
+    const parsed = await globalScope.parseRecoveryQrPayload(payload);
+    if (!profile?.recovery?.recoveryId) {
+      throw new Error('This profile uses an older recovery key. Replace it in Settings before using QR recovery.');
+    }
+    if (parsed.recoveryId !== String(profile.recovery.recoveryId).toLowerCase()) {
+      throw new Error('This recovery QR belongs to a different profile or an older replaced recovery key.');
+    }
+    return parsed.recoveryKey;
+  }
+
   async function decryptProfileData(profile, pin) {
     if (!profile?.pinEnabled) throw new Error('This profile does not use PIN protection.');
     const encrypted = profile.data?.secureBackup || profile.data?.ciphertext;
@@ -39,7 +55,7 @@
     nextProfile.salt = nextSalt;
     nextProfile.pinHash = await globalScope.hashPin(newPin, nextSalt);
     nextProfile.data = await globalScope.encryptPayload(JSON.stringify(profileData), newPin, { purpose: 'profile-data' });
-    nextProfile.recovery = await globalScope.createPinRecoveryDescriptor(newPin, recoveryKey, profile.recovery);
+    nextProfile.recovery = await globalScope.createPinRecoveryDescriptor(newPin, recoveryKey, profile.recovery, { preserveRecoveryId: true });
     nextProfile.lastUpdatedAt = new Date().toISOString();
     delete nextProfile.currentPin;
     return { profile: nextProfile, profileData };
@@ -81,18 +97,34 @@
       : 'Recovery is not configured. Without the PIN or a recovery key, encrypted profile data cannot be decrypted.';
   }
 
-  function showGeneratedRecoveryKey(profile) {
+  async function showGeneratedRecoveryKey(profile) {
     const key = globalScope.generateRecoveryKey();
+    let recoveryDescriptor;
+    let qrDataUrl;
+    try {
+      recoveryDescriptor = await globalScope.createPinRecoveryDescriptor(globalScope.getCurrentProfilePin(), key, profile.recovery || {});
+      const qrPayload = await globalScope.createRecoveryQrPayload(recoveryDescriptor, key);
+      qrDataUrl = await globalScope.electronAPI.generateRecoveryQr(qrPayload);
+    } catch (error) {
+      globalScope.toast('Could not create recovery QR: ' + error.message, 'error');
+      return;
+    }
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.style.zIndex = '11000';
     overlay.innerHTML = `
-      <div class="modal">
+      <div class="modal modal--wide pin-recovery-enrollment">
         <div class="modal__title">Save Your Recovery Key</div>
         <div class="modal__body">
-          <p>This key is the only offline method for replacing a forgotten PIN. Store it separately from this computer. It cannot be shown again.</p>
+          <p>Save or print this QR recovery card, or copy the key below. Store it separately from this computer. Neither can be shown again.</p>
+          <div class="pin-recovery-qr-card"><img src="${qrDataUrl}" alt="Offline PIN recovery QR code" data-recovery-qr /></div>
+          <div class="pin-recovery-qr-actions">
+            <button class="btn btn-ghost btn-sm" type="button" data-save-qr>Save QR Image</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-print-qr>Print Recovery Card</button>
+          </div>
           <div class="pin-recovery-key" data-recovery-key>${globalScope.esc(key)}</div>
-          <label class="welcome-checkbox-label checkbox-row u-mt-3"><input type="checkbox" data-confirm-saved /> I saved this recovery key in a safe place.</label>
+          <p class="pin-recovery-warning">Anyone holding this QR image or key can replace this profile's PIN.</p>
+          <label class="welcome-checkbox-label checkbox-row u-mt-3"><input type="checkbox" data-confirm-saved /> I saved the QR or recovery key in a safe place.</label>
           <div class="unlock-error-msg" data-recovery-error></div>
         </div>
         <div class="modal__actions">
@@ -105,11 +137,35 @@
     const enable = overlay.querySelector('[data-enable]');
     checkbox.addEventListener('change', () => { enable.disabled = !checkbox.checked; });
     overlay.querySelector('[data-cancel]').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('[data-save-qr]').addEventListener('click', async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const result = await globalScope.electronAPI.exportRecoveryQr(qrDataUrl, `eclass-recovery-${profile.name || 'profile'}.png`);
+        if (result?.success) globalScope.toast('Recovery QR image saved.', 'success');
+      } catch (error) {
+        overlay.querySelector('[data-recovery-error]').textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+    overlay.querySelector('[data-print-qr]').addEventListener('click', async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const result = await globalScope.electronAPI.printRecoveryQr(qrDataUrl, profile.name || 'E-Class Record Profile');
+        if (!result?.success && result?.error) overlay.querySelector('[data-recovery-error]').textContent = result.error;
+      } catch (error) {
+        overlay.querySelector('[data-recovery-error]').textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
     enable.addEventListener('click', async () => {
       const previousRecovery = profile.recovery ? clone(profile.recovery) : null;
       try {
         enable.disabled = true;
-        profile.recovery = await globalScope.createPinRecoveryDescriptor(globalScope.getCurrentProfilePin(), key, profile.recovery || {});
+        profile.recovery = recoveryDescriptor;
         if (!await globalScope.saveRootDatabase()) throw new Error('The recovery settings could not be saved. No changes were kept.');
         overlay.remove();
         refreshRecoveryStatus();
@@ -150,7 +206,70 @@
     document.getElementById('recoveryNewPin').value = '';
     document.getElementById('recoveryConfirmPin').value = '';
     document.getElementById('recoveryErrorMsg').textContent = '';
+    document.getElementById('recoveryQrStatus').textContent = 'Upload a saved recovery QR image, or enter the recovery key manually.';
+    document.getElementById('recoveryQrFile').value = '';
     setTimeout(() => document.getElementById('recoveryKeyField').focus(), 80);
+  }
+
+  function readRecoveryQrImage(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\/(png|jpeg|webp)$/i.test(file.type || '') || file.size > 10 * 1024 * 1024) {
+        reject(new Error('Choose a PNG, JPEG, or WebP recovery QR image smaller than 10 MB.'));
+        return;
+      }
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        try {
+          if (!image.naturalWidth || !image.naturalHeight || image.naturalWidth * image.naturalHeight > 40000000) {
+            throw new Error('The selected QR image dimensions are unsupported.');
+          }
+          const maximum = 2048;
+          const scale = Math.min(1, maximum / Math.max(image.naturalWidth, image.naturalHeight));
+          const width = Math.max(21, Math.round(image.naturalWidth * scale));
+          const height = Math.max(21, Math.round(image.naturalHeight * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          context.imageSmoothingEnabled = false;
+          context.drawImage(image, 0, 0, width, height);
+          resolve({ data: context.getImageData(0, 0, width, height).data, width, height });
+        } catch (error) {
+          reject(error);
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('The selected image could not be opened.'));
+      };
+      image.src = objectUrl;
+    });
+  }
+
+  async function uploadRecoveryQr(file) {
+    const error = document.getElementById('recoveryErrorMsg');
+    const status = document.getElementById('recoveryQrStatus');
+    try {
+      const profile = profileById(recoveryTargetProfileId);
+      if (!profile) throw new Error('Profile was not found.');
+      status.textContent = 'Reading recovery QR locally…';
+      error.textContent = '';
+      const pixels = await readRecoveryQrImage(file);
+      const payload = await globalScope.electronAPI.decodeRecoveryQrPixels(pixels);
+      if (!payload) throw new Error('No readable QR code was found in the selected image.');
+      const recoveryKey = await decodeRecoveryQrPayloadForProfile(payload, profile);
+      document.getElementById('recoveryKeyField').value = formatRecoveryKey(recoveryKey);
+      status.textContent = 'Recovery QR verified. Choose and confirm your new PIN.';
+      document.getElementById('recoveryNewPin').focus();
+    } catch (uploadError) {
+      status.textContent = 'QR recovery image was not accepted.';
+      error.textContent = uploadError.message;
+    } finally {
+      document.getElementById('recoveryQrFile').value = '';
+    }
   }
 
   function cancelPinRecovery() {
@@ -213,7 +332,7 @@
     if (profileOverlay) new MutationObserver(refreshRecoveryStatus).observe(profileOverlay, { attributes: true, attributeFilter: ['style'] });
   }
 
-  const api = { buildRecoveredProfile, commitRecoveredRoot, refreshRecoveryStatus, configurePinRecovery, showPinRecoveryPanel, cancelPinRecovery, submitPinRecovery, initPinRecovery };
+  const api = { buildRecoveredProfile, commitRecoveredRoot, decodeRecoveryQrPayloadForProfile, refreshRecoveryStatus, configurePinRecovery, showPinRecoveryPanel, uploadRecoveryQr, cancelPinRecovery, submitPinRecovery, initPinRecovery };
   Object.assign(globalScope, api);
   globalScope.PinRecovery = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

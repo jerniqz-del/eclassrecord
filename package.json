@@ -34,7 +34,9 @@
   },
   "dependencies": {
     "electron-updater": "^6.3.0",
+    "jsqr": "^1.4.0",
     "pdf-parse": "^2.4.5",
+    "qrcode": "^1.5.4",
     "tesseract.js": "^7.0.0",
     "xlsx": "^0.18.5"
   },

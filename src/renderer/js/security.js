@@ -191,17 +191,45 @@ function generateRecoveryKey() {
   return raw.match(/.{1,4}/g).join('-');
 }
 
-async function createPinRecoveryDescriptor(pin, recoveryKey, previous = {}) {
+async function createPinRecoveryDescriptor(pin, recoveryKey, previous = {}, options = {}) {
   const normalizedKey = normalizeRecoveryKey(recoveryKey);
   if (normalizedKey.length < 20) throw new Error('Recovery key is incomplete.');
   return {
     version: 1,
     method: 'offline-recovery-key',
+    recoveryId: options.preserveRecoveryId ? previous.recoveryId || generateSalt() : generateSalt(),
     createdAt: previous.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     keyHint: normalizedKey.slice(-4),
     wrappedPin: await encryptPayload(String(pin), normalizedKey, { purpose: 'pin-recovery' })
   };
+}
+
+async function createRecoveryQrPayload(descriptor, recoveryKey) {
+  if (!descriptor?.recoveryId || !/^[0-9a-f]{32}$/i.test(descriptor.recoveryId)) {
+    throw new Error('Recovery must be reconfigured before a QR card can be created.');
+  }
+  const normalizedKey = normalizeRecoveryKey(recoveryKey);
+  if (normalizedKey.length < 20) throw new Error('Recovery key is incomplete.');
+  const core = `ECLASS-RECOVERY|1|${descriptor.recoveryId.toLowerCase()}|${normalizedKey}`;
+  const checksum = (await sha256(core)).slice(0, 16);
+  return `${core}|${checksum}`;
+}
+
+async function parseRecoveryQrPayload(payload) {
+  const parts = String(payload || '').trim().split('|');
+  if (parts.length !== 5 || parts[0] !== 'ECLASS-RECOVERY' || parts[1] !== '1') {
+    throw new Error('This image does not contain a supported E-Class Record recovery QR code.');
+  }
+  const recoveryId = parts[2].toLowerCase();
+  const recoveryKey = normalizeRecoveryKey(parts[3]);
+  if (!/^[0-9a-f]{32}$/.test(recoveryId) || recoveryKey.length < 20 || !/^[0-9a-f]{16}$/i.test(parts[4])) {
+    throw new Error('The recovery QR code is incomplete or malformed.');
+  }
+  const core = `ECLASS-RECOVERY|1|${recoveryId}|${recoveryKey}`;
+  const checksum = (await sha256(core)).slice(0, 16);
+  if (!timingSafeEqualText(checksum, parts[4].toLowerCase())) throw new Error('The recovery QR code failed its checksum.');
+  return { version: 1, recoveryId, recoveryKey };
 }
 
 async function recoverPinFromDescriptor(descriptor, recoveryKey) {

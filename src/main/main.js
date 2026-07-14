@@ -23,6 +23,7 @@ if (isSmokeTest) {
 const fileIO = require('./file-io');
 const updater = require('./updater');
 const zipArchive = require('./zip-archive');
+const recoveryQr = require('./recovery-qr');
 
 let mainWindow = null;
 let isConfirmedExit = false;
@@ -292,7 +293,7 @@ function createWindow() {
             throw new Error('Runtime Advisory backup/restore round trip failed: ' + JSON.stringify({ restoredIntegrity, advisoryCounts, restoredCounts }));
           }
 
-          if (!document.getElementById('pinRecoveryStatus') || !document.getElementById('profileRecoveryPanel') || !document.getElementById('btnForgotProfilePin')) throw new Error('PIN recovery settings or unlock controls were not rendered.');
+          if (!document.getElementById('pinRecoveryStatus') || !document.getElementById('profileRecoveryPanel') || !document.getElementById('btnForgotProfilePin') || !document.getElementById('recoveryQrFile')) throw new Error('PIN/QR recovery settings or unlock controls were not rendered.');
           const recoveryKey = generateRecoveryKey();
           const recoverySalt = generateSalt();
           const recoveryFixture = {
@@ -302,6 +303,21 @@ function createWindow() {
             data: await encryptPayload(JSON.stringify(runtimeProfile), '123456'),
             recovery: await createPinRecoveryDescriptor('123456', recoveryKey)
           };
+          const recoveryQrPayload = await createRecoveryQrPayload(recoveryFixture.recovery, recoveryKey);
+          const recoveryQrDataUrl = await electronAPI.generateRecoveryQr(recoveryQrPayload);
+          const recoveryQrImage = await new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('Generated recovery QR image did not load.'));
+            image.src = recoveryQrDataUrl;
+          });
+          const recoveryQrCanvas = document.createElement('canvas');
+          recoveryQrCanvas.width = recoveryQrImage.naturalWidth;
+          recoveryQrCanvas.height = recoveryQrImage.naturalHeight;
+          recoveryQrCanvas.getContext('2d').drawImage(recoveryQrImage, 0, 0);
+          const recoveryQrPixels = recoveryQrCanvas.getContext('2d').getImageData(0, 0, recoveryQrCanvas.width, recoveryQrCanvas.height).data;
+          const decodedRecoveryQr = await electronAPI.decodeRecoveryQrPixels({ data: recoveryQrPixels, width: recoveryQrCanvas.width, height: recoveryQrCanvas.height });
+          if (decodedRecoveryQr !== recoveryQrPayload || await PinRecovery.decodeRecoveryQrPayloadForProfile(decodedRecoveryQr, recoveryFixture) !== normalizeRecoveryKey(recoveryKey)) throw new Error('Recovery QR encode/decode/profile validation failed.');
           const recoveredFixture = await PinRecovery.buildRecoveredProfile(recoveryFixture, recoveryKey, '654321');
           if (!await verifyPin('654321', recoveredFixture.profile.salt, recoveredFixture.profile.pinHash)) throw new Error('Recovered PIN did not verify.');
           const recoveredPayload = JSON.parse(await decryptPayload(recoveredFixture.profile.data, '654321'));
@@ -334,7 +350,7 @@ function createWindow() {
           if (!storageIntegrityReport || !storageIntegrityReport.textContent.includes('integrity metadata is active')) throw new Error('Database Integrity Checker did not report file checksum status.');
           closeIntegrityResultsModal();
 
-          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
+          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, qrRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }
@@ -532,6 +548,34 @@ ipcMain.handle('dialog:import-json', async () => {
   if (result.canceled || result.filePaths.length === 0) return { success: false };
   const content = fileIO.readFile(result.filePaths[0]);
   return { success: true, content: content, name: path.basename(result.filePaths[0]) };
+});
+
+ipcMain.handle('dialog:export-recovery-qr', async (_event, dataUrl, defaultFileName) => {
+  const image = recoveryQr.decodeRecoveryQrPng(dataUrl);
+  const filename = `${safePathPart(String(defaultFileName || 'eclass-recovery-qr').replace(/\.png$/i, ''))}.png`;
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Save PIN Recovery QR',
+    defaultPath: path.join(app.getPath('desktop'), filename),
+    filters: [{ name: 'PNG Image', extensions: ['png'] }]
+  });
+  if (result.canceled || !result.filePath) return { success: false };
+  fs.writeFileSync(result.filePath, image);
+  return { success: true, path: result.filePath };
+});
+
+ipcMain.handle('dialog:print-recovery-qr', async (_event, dataUrl, label) => {
+  const html = recoveryQr.createRecoveryQrPrintHtml(dataUrl, label);
+  const printWindow = new BrowserWindow({
+    width: 720, height: 900, show: false, parent: mainWindow,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
+  });
+  await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  return new Promise(resolve => {
+    printWindow.webContents.print({ silent: false, printBackground: true }, (success, failureReason) => {
+      if (!printWindow.isDestroyed()) printWindow.destroy();
+      resolve({ success, error: success ? '' : failureReason || 'Printing was canceled.' });
+    });
+  });
 });
 
 ipcMain.handle('dialog:export-grade-transfer', async (_event, jsonString, defaultFileName) => {

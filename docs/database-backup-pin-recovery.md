@@ -30,15 +30,18 @@ PIN recovery is opt-in for PIN-protected profiles:
 1. Unlock the profile using its current PIN.
 2. Open **Settings → PIN Recovery**.
 3. Verify the current PIN and select **Set Up Recovery**.
-4. Store the generated recovery key separately and confirm it was saved.
+4. Save or print the generated recovery QR card, or store the displayed recovery key separately, and confirm it was saved.
 
-If the PIN is later forgotten, select the profile, choose **Forgot PIN? Use Recovery Key**, enter the recovery key, and assign a new 6-digit PIN. The app locally unwraps and verifies the old PIN, decrypts and validates the profile, then writes a newly encrypted copy under the new PIN. No learner data or recovery secret leaves the device.
+If the PIN is later forgotten, select the profile and choose **Forgot PIN? Use Recovery Key**. Upload the saved QR image or type the recovery key manually, then assign a new 6-digit PIN. The app locally decodes the image, unwraps and verifies the old PIN, decrypts and validates the profile, then writes a newly encrypted copy under the new PIN. No learner data or recovery secret leaves the device.
+
+The QR payload is versioned and contains only a random recovery identifier, the high-entropy recovery key, and a checksum. It does not contain the PIN, profile/teacher name, learner records, grades, or database contents. QR generation and uploaded-image decoding use libraries bundled with the desktop app and require no network connection. The checksum catches incomplete or altered QR payloads; the encrypted recovery wrapper remains the security boundary.
 
 Important limitations:
 
 - A profile from an earlier release must be successfully unlocked once to enroll recovery. Existing encrypted data cannot be recovered retroactively without either its original PIN or a previously created usable backup.
-- The recovery key is shown only during enrollment. The app stores only an encrypted PIN wrapper and a four-character hint, not the readable recovery key.
-- Replacing the recovery key invalidates the previous one.
+- The recovery key and QR are shown only during enrollment. The app stores only an encrypted PIN wrapper, a random recovery identifier, and a four-character hint—not the readable recovery key or QR image.
+- Replacing the recovery key generates a new recovery identifier and invalidates previous keys and QR cards. Changing the PIN through a valid recovery card keeps that card active.
+- Anyone holding the QR card or recovery key can replace the profile PIN. Treat either as a physical master key and store it away from the computer and backups.
 - Recovery changes the live profile PIN. Older separately exported encrypted backups still require the PIN that protected them when they were created.
 
 ## Verification
@@ -51,6 +54,6 @@ npm test
 npm run smoke:offline
 ```
 
-The dedicated suite covers old PIN hashes, old encrypted payloads, old raw backups, current encryption, wrong credentials, tampering, unsupported future versions, legacy-profile recovery, recovery rollback, and data preservation. The offline Electron test exercises recovery, versioned backup round trips, database checksum generation, renderer errors, and the existing Advisory workflows.
+The dedicated suite covers old PIN hashes, old encrypted payloads, old raw backups, current encryption, wrong credentials, tampering, unsupported future versions, legacy-profile recovery, recovery rollback, QR encoding/decoding, altered payloads, wrong-profile QR cards, unreadable images, and data preservation. The offline Electron test exercises real QR generation/decoding, recovery, versioned backup round trips, database checksum generation, renderer errors, and the existing Advisory workflows.
 
 Automated Electron runs override both `appData` and `userData` before the file-I/O module is loaded. Test saves therefore use a process-specific temporary directory and cannot open or replace the installed app's real database.

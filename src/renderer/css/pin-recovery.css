@@ -18,3 +18,65 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+
+.pin-recovery-qr-card {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-3) 0;
+}
+
+.pin-recovery-enrollment .modal__body {
+  max-height: min(70vh, 680px);
+  overflow-y: auto;
+}
+
+.pin-recovery-qr-card img {
+  width: 260px;
+  max-width: 100%;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.pin-recovery-qr-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.pin-recovery-warning {
+  margin: var(--space-3) 0 0;
+  color: var(--color-error-700);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+.pin-recovery-upload {
+  margin-bottom: var(--space-3);
+}
+
+.pin-recovery-upload__status {
+  margin: var(--space-2) 0 0;
+  text-align: center;
+}
+
+.pin-recovery-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pin-recovery-divider::before,
+.pin-recovery-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border-default);
+}
