@@ -47,7 +47,7 @@ Exact duplicate files and corrected re-exports are identified. Existing grades a
 
 - The grade matrix shows received and missing final grades by learner, subject, and term.
 - The **LRN / Official Name** column stays visible while the grade table scrolls horizontally.
-- Subject finals and the General Average are shown by default. Use the **+** beside an individual subject to reveal only that subject's Terms 1–3, then use **−** to collapse it again.
+- Subject finals and the General Average are shown by default. Choose **Show Terms 1–3** to expand every subject at once, or use the **+** beside an individual subject. The horizontal scrollbar above the table stays accessible near the top; hold **Shift** while using the mouse wheel to scroll left and right.
 - Select a subject heading to sort learners by that subject final. Select it again to reverse the order, and a third time to restore roster order. Learners with missing finals stay at the end.
 - The standard **Subjects** are supplied automatically from the Advisory Class grade level.
 - **Grade Record**, **Grade Sources**, **Manage Roster**, and **Advisory Settings** are separate page tabs. Grade Sources also contains Import History. Roster management and Advisory-only settings are edited directly in their tabs.

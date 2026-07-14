@@ -885,6 +885,44 @@
     else advisorySubjectSort = { subjectId: '', direction: '' };
   }
 
+  function bindAdvisoryMatrixScroller(panel) {
+    panel._advisoryMatrixResizeObserver?.disconnect?.();
+    const wrap = panel.querySelector('[data-advisory-matrix-scroll-target]');
+    const topScroller = panel.querySelector('[data-advisory-matrix-scrollbar]');
+    const spacer = topScroller?.querySelector('[data-advisory-matrix-scrollbar-spacer]');
+    const matrix = wrap?.querySelector('.advisory-grade-matrix');
+    if (!wrap || !topScroller || !spacer || !matrix) return;
+    let syncing = false;
+    const update = () => {
+      spacer.style.width = `${matrix.scrollWidth}px`;
+      topScroller.hidden = matrix.scrollWidth <= wrap.clientWidth + 2;
+      topScroller.scrollLeft = wrap.scrollLeft;
+    };
+    topScroller.addEventListener('scroll', () => {
+      if (syncing) return;
+      syncing = true;
+      wrap.scrollLeft = topScroller.scrollLeft;
+      syncing = false;
+    });
+    wrap.addEventListener('scroll', () => {
+      if (syncing) return;
+      syncing = true;
+      topScroller.scrollLeft = wrap.scrollLeft;
+      syncing = false;
+    });
+    wrap.addEventListener('wheel', event => {
+      if (!event.shiftKey || !event.deltaY) return;
+      wrap.scrollLeft += event.deltaY;
+      event.preventDefault();
+    }, { passive: false });
+    update();
+    if (typeof globalScope.ResizeObserver === 'function') {
+      panel._advisoryMatrixResizeObserver = new globalScope.ResizeObserver(update);
+      panel._advisoryMatrixResizeObserver.observe(wrap);
+      panel._advisoryMatrixResizeObserver.observe(matrix);
+    }
+  }
+
   function renderWorkspacePanel(workspace, advisoryClass) {
     const panel = workspace?.querySelector('[data-advisory-grade-panel]');
     if (!panel) return;
@@ -904,13 +942,18 @@
     ]);
     const sortedLearners = sortLearnersBySubject(learners, grades, advisorySubjectSort.subjectId, advisorySubjectSort.direction, subjects);
     const hasExpandedSubject = subjectGroups.some(subject => expandedAdvisorySubjects.has(subject.id));
+    const allTermsExpanded = subjectGroups.length > 0 && subjectGroups.every(subject => expandedAdvisorySubjects.has(subject.id));
     const totalSubjectColumns = subjectGroups.reduce((total, subject) => total + (expandedAdvisorySubjects.has(subject.id) ? 4 : 1), 0);
     const colgroup = `<colgroup><col class="advisory-learner-col">${subjectGroups.map(subject => expandedAdvisorySubjects.has(subject.id)
       ? '<col class="advisory-term-col"><col class="advisory-term-col"><col class="advisory-term-col"><col class="advisory-final-col">'
       : '<col class="advisory-final-col">').join('')}<col class="advisory-general-col"></colgroup>`;
 
     const matrix = subjects.length ? `
-      <div class="advisory-grade-matrix-wrap">
+      <div class="advisory-grade-scroll-tools">
+        <div class="advisory-grade-matrix-scrollbar" data-advisory-matrix-scrollbar aria-label="Horizontal grade table scrollbar" tabindex="0"><div data-advisory-matrix-scrollbar-spacer></div></div>
+        <button type="button" class="advisory-scroll-tip" aria-label="Horizontal scrolling help" data-tooltip="To scroll from left to right, press Shift and use the mouse wheel.">Scroll help</button>
+      </div>
+      <div class="advisory-grade-matrix-wrap" data-advisory-matrix-scroll-target>
         <table class="advisory-roster-table advisory-grade-matrix ${hasExpandedSubject ? '' : 'advisory-grade-matrix--finals-only'}">
           ${colgroup}
           <thead>
@@ -961,7 +1004,7 @@
 
     panel.innerHTML = `
       <section id="advisoryGradeRecordPanel" role="tabpanel" data-advisory-panel="grades">
-        <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Final grades are shown by default. Use the + beside any subject to reveal its Terms 1–3.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-add-advisory-subject>Add Other Subject</button><button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
+        <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Final grades are shown by default. Show every term at once or use the + beside an individual subject.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-terms aria-pressed="${allTermsExpanded}">${allTermsExpanded ? 'Hide Terms 1–3' : 'Show Terms 1–3'}</button><button class="btn btn-ghost btn-sm" type="button" data-add-advisory-subject>Add Other Subject</button><button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
         ${matrix}
       </section>
       <section id="advisoryGradeSourcesPanel" role="tabpanel" data-advisory-panel="sources" hidden>
@@ -986,6 +1029,11 @@
       </section>`;
     panel.querySelector('[data-import-subject-grades]')?.addEventListener('click', selectImportFile);
     panel.querySelector('[data-add-advisory-subject]')?.addEventListener('click', () => showSubjectModal());
+    panel.querySelector('[data-toggle-advisory-terms]')?.addEventListener('click', () => {
+      if (allTermsExpanded) subjectGroups.forEach(subject => expandedAdvisorySubjects.delete(subject.id));
+      else subjectGroups.forEach(subject => expandedAdvisorySubjects.add(subject.id));
+      renderWorkspacePanel(workspace, advisoryClass);
+    });
     panel.querySelectorAll('[data-expand-advisory-subject]').forEach(button => button.addEventListener('click', () => {
       const subjectId = button.dataset.expandAdvisorySubject;
       if (expandedAdvisorySubjects.has(subjectId)) expandedAdvisorySubjects.delete(subjectId);
@@ -1046,6 +1094,7 @@
       if (archived) globalScope.showView?.('dashboard');
       else globalScope.renderAdvisoryClassPage?.();
     });
+    bindAdvisoryMatrixScroller(panel);
     setPanelTab(advisoryPanelTab, workspace);
   }
 

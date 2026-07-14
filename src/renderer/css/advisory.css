@@ -246,7 +246,17 @@
 .advisory-grade-panel__header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
 .advisory-grade-panel__header h3 { margin: 0; }
 .advisory-grade-panel__header p { margin: var(--space-1) 0 0; color: var(--text-secondary); font-size: var(--font-size-sm); }
+.advisory-grade-scroll-tools { position: sticky; top: 0; z-index: 8; display: flex; align-items: center; gap: var(--space-2); min-width: 0; padding: var(--space-1) var(--space-2); border: 1px solid var(--border-subtle); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--bg-surface); box-shadow: var(--shadow-xs); }
+.advisory-grade-matrix-scrollbar { flex: 1 1 auto; height: 18px; overflow-x: auto; overflow-y: hidden; scrollbar-gutter: stable; }
+.advisory-grade-matrix-scrollbar[hidden] { display: block; visibility: hidden; }
+.advisory-grade-matrix-scrollbar > div { height: 1px; }
+.advisory-scroll-tip { position: relative; flex: 0 0 auto; padding: 3px var(--space-2); border: 1px solid var(--border-subtle); border-radius: var(--radius-full); background: var(--bg-muted); color: var(--text-secondary); font: inherit; font-size: var(--font-size-xs); cursor: help; }
+.advisory-scroll-tip::after { position: absolute; right: 0; top: calc(100% + 8px); width: max-content; max-width: min(320px, 80vw); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--text-primary); color: var(--bg-surface); box-shadow: var(--shadow-md); content: attr(data-tooltip); line-height: 1.4; opacity: 0; pointer-events: none; transform: translateY(-4px); transition: opacity 160ms ease, transform 160ms ease; white-space: normal; }
+.advisory-scroll-tip:hover::after,
+.advisory-scroll-tip:focus-visible::after { opacity: 1; transform: translateY(0); }
+.advisory-scroll-tip:focus-visible { outline: 2px solid var(--color-primary-500); outline-offset: 2px; }
 .advisory-grade-matrix-wrap { container-type: inline-size; overflow: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); }
+.advisory-grade-scroll-tools + .advisory-grade-matrix-wrap { border-top-left-radius: 0; border-top-right-radius: 0; }
 .advisory-grade-panel > [data-advisory-panel][hidden] { display: none !important; }
 .advisory-grade-panel > [data-advisory-panel="grades"] .advisory-grade-matrix-wrap { max-height: min(70vh, 720px); scrollbar-gutter: stable; }
 .advisory-grade-matrix { width: max-content; min-width: 100%; table-layout: fixed; }

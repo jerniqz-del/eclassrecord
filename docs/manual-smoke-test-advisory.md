@@ -52,8 +52,10 @@ Run this checklist on a disposable profile and retain screenshots or notes for f
 
 ## Advisory page layout and settings
 
-- [ ] Open **Grade Record** and confirm finals are shown by default with no shared Terms 1–3 toggle.
+- [ ] Open **Grade Record** and confirm finals are shown by default. Use **Show Terms 1–3** and **Hide Terms 1–3** to expand and collapse every subject.
 - [ ] Expand one subject and confirm only that subject reveals T1, T2, T3, and Final; collapse it again.
+- [ ] With term columns expanded, confirm the synchronized horizontal scrollbar is visible above the table while the page is near the top.
+- [ ] Hover or focus **Scroll help** and confirm its tooltip explains Shift + mouse-wheel horizontal scrolling; verify the shortcut moves the table left and right.
 - [ ] Test the app zoom controls through the supported range; confirm every subject final and General Average remain visible, compact subject labels appear when needed, and long learner names wrap.
 - [ ] Confirm the Filipino Final header is centered like the other final headers.
 - [ ] Open **Advisory Settings** and edit grade level or section directly in the tab. Confirm school, adviser, school year, and location fields remain managed by Global Settings.
