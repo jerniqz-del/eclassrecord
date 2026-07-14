@@ -8,17 +8,25 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+
+const isSmokeTest = process.argv.includes('--smoke-test') || process.argv.includes('--offline-smoke-test');
+const isOfflineSmokeTest = process.argv.includes('--offline-smoke-test');
+if (isSmokeTest) {
+  const smokeRoot = path.join(app.getPath('temp'), `eclass-record-smoke-${process.pid}`);
+  app.setPath('appData', smokeRoot);
+  app.setPath('userData', path.join(smokeRoot, 'user-data'));
+}
+
+// File I/O resolves its database path while loading, so smoke paths must be
+// isolated before this module (and any updater helpers) are required.
 const fileIO = require('./file-io');
 const updater = require('./updater');
-const crypto = require('crypto');
 const zipArchive = require('./zip-archive');
 
 let mainWindow = null;
 let isConfirmedExit = false;
 let selectBluetoothDeviceCallback = null;
-const isSmokeTest = process.argv.includes('--smoke-test') || process.argv.includes('--offline-smoke-test');
-const isOfflineSmokeTest = process.argv.includes('--offline-smoke-test');
-if (isSmokeTest) app.setPath('userData', path.join(app.getPath('temp'), `eclass-record-smoke-${process.pid}`));
 
 function attachmentRoot() {
   return path.join(app.getPath('appData'), 'EClassRecordPortable', 'attachments');
@@ -87,9 +95,9 @@ function createWindow() {
 
     mainWindow.webContents.once('did-finish-load', async () => {
       try {
-        const result = await mainWindow.webContents.executeJavaScript(`(() => {
+        const result = await mainWindow.webContents.executeJavaScript(`(async () => {
           try {
-          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage'];
+          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage', 'PinRecovery'];
           const missing = required.filter(name => !globalThis[name]);
           if (missing.length) throw new Error('Missing renderer modules: ' + missing.join(', '));
           if (typeof getActiveProfileDatabase !== 'function') throw new Error('Active profile database accessor is unavailable.');
@@ -284,7 +292,49 @@ function createWindow() {
             throw new Error('Runtime Advisory backup/restore round trip failed: ' + JSON.stringify({ restoredIntegrity, advisoryCounts, restoredCounts }));
           }
 
-          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, integrityCheck: true, backupRestore: true, offline: ${isOfflineSmokeTest} };
+          if (!document.getElementById('pinRecoveryStatus') || !document.getElementById('profileRecoveryPanel') || !document.getElementById('btnForgotProfilePin')) throw new Error('PIN recovery settings or unlock controls were not rendered.');
+          const recoveryKey = generateRecoveryKey();
+          const recoverySalt = generateSalt();
+          const recoveryFixture = {
+            id: 'smoke-recovery', name: 'Recovery Smoke', pinEnabled: true,
+            salt: recoverySalt,
+            pinHash: await hashPin('123456', recoverySalt),
+            data: await encryptPayload(JSON.stringify(runtimeProfile), '123456'),
+            recovery: await createPinRecoveryDescriptor('123456', recoveryKey)
+          };
+          const recoveredFixture = await PinRecovery.buildRecoveredProfile(recoveryFixture, recoveryKey, '654321');
+          if (!await verifyPin('654321', recoveredFixture.profile.salt, recoveredFixture.profile.pinHash)) throw new Error('Recovered PIN did not verify.');
+          const recoveredPayload = JSON.parse(await decryptPayload(recoveredFixture.profile.data, '654321'));
+          if (!AdvisoryData.checkAdvisoryIntegrity(recoveredPayload).isValid || recoveredPayload.assignments.length !== runtimeProfile.assignments.length) throw new Error('PIN recovery did not preserve valid profile data.');
+          let wrongRecoveryRejected = false;
+          try { await PinRecovery.buildRecoveredProfile(recoveryFixture, 'WRONG-WRONG-WRONG-WRONG-WRONG', '654321'); } catch (_) { wrongRecoveryRejected = true; }
+          if (!wrongRecoveryRejected) throw new Error('An incorrect recovery key was accepted.');
+          const recoveryRoot = getRootDatabase();
+          const previousActiveProfileId = recoveryRoot.activeProfileId;
+          recoveryRoot.profiles.push(recoveryFixture);
+          selectProfileCard(recoveryFixture.id);
+          const forgotPinButton = document.getElementById('btnForgotProfilePin');
+          if (forgotPinButton.hidden) throw new Error('Recovery action remained hidden for a protected profile.');
+          forgotPinButton.click();
+          if (document.getElementById('profileRecoveryPanel').style.display === 'none' || !document.getElementById('recoveryProfileTitle').textContent.includes('Recovery Smoke')) throw new Error('Forgot PIN did not open the selected profile recovery panel.');
+          cancelPinRecovery();
+          if (document.getElementById('profileUnlockPanel').style.display === 'none') throw new Error('Recovery cancellation did not return to PIN entry.');
+          recoveryRoot.profiles = recoveryRoot.profiles.filter(profile => profile.id !== recoveryFixture.id);
+          recoveryRoot.activeProfileId = previousActiveProfileId;
+          document.getElementById('profileOverlay').style.display = 'none';
+
+          const smokeEnvelope = await createBackupEnvelope(runtimeProfile, '123456', { appVersion: 'smoke' });
+          const openedEnvelope = await openBackupEnvelope(smokeEnvelope, '123456');
+          if (!AdvisoryData.checkAdvisoryIntegrity(openedEnvelope).isValid) throw new Error('Versioned backup envelope round trip failed.');
+          await saveRootDatabase();
+          if (!getRootDatabase().integrity?.digest || !getRootIntegrityStatus().valid) throw new Error('Root database integrity metadata was not generated.');
+          runDatabaseIntegrityCheck();
+          await new Promise(resolve => setTimeout(resolve, 0));
+          const storageIntegrityReport = document.querySelector('[data-storage-integrity-report]');
+          if (!storageIntegrityReport || !storageIntegrityReport.textContent.includes('integrity metadata is active')) throw new Error('Database Integrity Checker did not report file checksum status.');
+          closeIntegrityResultsModal();
+
+          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }

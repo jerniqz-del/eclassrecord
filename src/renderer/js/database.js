@@ -5,8 +5,8 @@
  * scores, and configuration through Electron IPC bridge.
  */
 
-const DB_VERSION = 3;
-const ROOT_DB_VERSION = 3;
+const DB_VERSION = 4;
+const ROOT_DB_VERSION = 4;
 
 function timestampNow() {
   return new Date().toISOString();
@@ -32,7 +32,25 @@ function normalizeProfileRecord(profile) {
   if (profile.secondaryBackupPath === undefined) profile.secondaryBackupPath = '';
   if (profile.createdAt === undefined) profile.createdAt = profile.lastUpdatedAt || '';
   if (profile.lastUpdatedAt === undefined) profile.lastUpdatedAt = profile.createdAt || '';
+  if (profile.recovery === undefined) profile.recovery = null;
   return profile;
+}
+
+function rootIntegrityPayload(root) {
+  const payload = JSON.parse(JSON.stringify(root || {}));
+  delete payload.integrity;
+  return payload;
+}
+
+async function verifyRootDatabaseIntegrity(root) {
+  if (!root || typeof root !== 'object' || !Array.isArray(root.profiles)) return { valid: true, legacy: true };
+  return verifyIntegrityDescriptor(rootIntegrityPayload(root), root.integrity);
+}
+
+async function updateRootDatabaseIntegrity(root) {
+  root.integrity = await createIntegrityDescriptor(rootIntegrityPayload(root));
+  lastRootIntegrityStatus = { valid: true, legacy: false, generated: true };
+  return root.integrity;
 }
 
 function normalizeRootDatabase(root) {
@@ -59,6 +77,7 @@ let dbRoot = createEmptyRootDatabase();
 let legacyDataToMigrate = null;
 let currentProfilePin = '';
 let sessionActive = false;
+let lastRootIntegrityStatus = { valid: true, legacy: true };
 
 // In-memory application state copy (active profile)
 let db = {
@@ -80,6 +99,23 @@ let db = {
 // onto window, which could become stale whenever profile loading replaces it.
 function getActiveProfileDatabase() {
   return db;
+}
+
+function getRootDatabase() {
+  return dbRoot;
+}
+
+function replaceRootDatabase(nextRoot) {
+  dbRoot = nextRoot;
+  return dbRoot;
+}
+
+function getCurrentProfilePin() {
+  return currentProfilePin;
+}
+
+function getRootIntegrityStatus() {
+  return { ...lastRootIntegrityStatus };
 }
 
 let currentView = 'dashboard';
@@ -165,6 +201,12 @@ async function loadDatabase() {
     if (localData) {
       if (localData.profiles && Array.isArray(localData.profiles)) {
         // This is a profile-based database
+        lastRootIntegrityStatus = await verifyRootDatabaseIntegrity(localData);
+        if (!lastRootIntegrityStatus.valid) {
+          throw new Error(lastRootIntegrityStatus.unsupported
+            ? 'The database uses an unsupported integrity format. No data was loaded or changed.'
+            : 'The database integrity check failed. No data was loaded or changed. Restore a known-good backup.');
+        }
         dbRoot = normalizeRootDatabase(localData);
       } else if (localData.assignments || localData.teacherName) {
         // This is a legacy database (version 2)
@@ -189,6 +231,9 @@ async function loadDatabase() {
  * Saves current application data to file via Electron IPC.
  */
 async function saveDatabase() {
+  if (Number(db.version) > DB_VERSION) {
+    throw new Error('This profile was created by a newer app version and cannot be safely saved by this version.');
+  }
   normalizeDatabase();
   updateProfile();
   db.activeView = currentView;
@@ -206,6 +251,10 @@ async function saveDatabase() {
           console.error("Cannot save secure profile: missing PIN in session.");
           return;
         }
+        if (typeof p.pinHash === 'string' && !p.pinHash.startsWith('pbkdf2-sha256$')) {
+          p.salt = generateSalt();
+          p.pinHash = await hashPin(currentProfilePin, p.salt);
+        }
         const encryptedObj = await encryptPayload(JSON.stringify(db), currentProfilePin);
         p.data = encryptedObj;
       } else {
@@ -216,7 +265,7 @@ async function saveDatabase() {
     }
   }
   
-  await saveRootDatabase();
+  return saveRootDatabase();
 }
 
 /**
@@ -225,15 +274,22 @@ async function saveDatabase() {
 async function saveRootDatabase() {
   try {
     dbRoot = normalizeRootDatabase(dbRoot);
+    if (Number(dbRoot.version) > ROOT_DB_VERSION) {
+      throw new Error('This database was created by a newer app version and cannot be safely overwritten by this version.');
+    }
     dbRoot.lastUpdatedAt = timestampNow();
+    await updateRootDatabaseIntegrity(dbRoot);
     const success = await window.electronAPI.saveDatabase(dbRoot);
     if (success) {
       setStatus('Saved locally at ' + new Date().toLocaleTimeString());
       showAutoSaveIndicator();
+      return true;
     }
+    throw new Error('The local database file could not be written.');
   } catch (error) {
     console.error('Failed to save database:', error);
     toast('Could not save data: ' + error.message, 'error');
+    return false;
   }
 }
 

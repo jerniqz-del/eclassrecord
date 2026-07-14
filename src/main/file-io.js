@@ -7,6 +7,7 @@
 const { app } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // Target directory and database file path
 const dbDir = path.join(app.getPath('appData'), 'EClassRecordPortable');
@@ -48,6 +49,57 @@ function sanitizeFilename(name) {
   return name ? name.toLowerCase().replace(/[^a-z0-9_-]/g, '_') : 'default';
 }
 
+function stableStringify(value) {
+  function normalize(item) {
+    if (!item || typeof item !== 'object') return item;
+    if (Array.isArray(item)) return item.map(normalize);
+    return Object.keys(item).sort().reduce((output, key) => {
+      if (item[key] !== undefined) output[key] = normalize(item[key]);
+      return output;
+    }, {});
+  }
+  return JSON.stringify(normalize(value));
+}
+
+function createSecondaryBackupEnvelope(activeProfile) {
+  const encrypted = Boolean(activeProfile.pinEnabled && (activeProfile.data?.secureBackup || activeProfile.data?.ciphertext));
+  const core = {
+    format: 'eclass-record-backup',
+    backupVersion: 2,
+    createdAt: new Date().toISOString(),
+    appVersion: app.getVersion(),
+    profileSchemaVersion: encrypted ? 0 : Number(activeProfile.data?.version) || 0,
+    protection: encrypted ? 'pin-aes-256-gcm' : 'none',
+    payload: activeProfile.data
+  };
+  return {
+    ...core,
+    integrity: {
+      version: 1,
+      algorithm: 'SHA-256',
+      digest: crypto.createHash('sha256').update(stableStringify(core)).digest('hex')
+    }
+  };
+}
+
+function writeJsonAtomically(targetFile, payload) {
+  JSON.parse(payload);
+  const temporaryFile = `${targetFile}.${process.pid}.${Date.now()}.tmp`;
+  let descriptor = null;
+  try {
+    descriptor = fs.openSync(temporaryFile, 'w');
+    fs.writeFileSync(descriptor, payload, 'utf8');
+    fs.fsyncSync(descriptor);
+    fs.closeSync(descriptor);
+    descriptor = null;
+    JSON.parse(fs.readFileSync(temporaryFile, 'utf8'));
+    fs.renameSync(temporaryFile, targetFile);
+  } finally {
+    if (descriptor !== null) fs.closeSync(descriptor);
+    if (fs.existsSync(temporaryFile)) fs.unlinkSync(temporaryFile);
+  }
+}
+
 /**
  * Creates a daily rolling backup in the specified base directory, keeping up to `limit` files.
  * @param {string} payload JSON string.
@@ -72,7 +124,7 @@ function createRollingBackup(payload, baseDir, limit = 30, prefix = 'backup') {
     const targetFile = path.join(backupFolder, filename);
 
     // Save today's backup file (overwrites if saved again today)
-    fs.writeFileSync(targetFile, payload, 'utf8');
+    writeJsonAtomically(targetFile, payload);
 
     // Prune backups exceeding the retention limit
     const files = fs.readdirSync(backupFolder);
@@ -120,7 +172,7 @@ function saveDatabase(data) {
       }
     }
 
-    fs.writeFileSync(dbPath, payload, 'utf8');
+    writeJsonAtomically(dbPath, payload);
 
     // Local daily rolling backup in AppData backups folder
     createRollingBackup(payload, dbDir, 30, 'backup');
@@ -133,9 +185,10 @@ function saveDatabase(data) {
         const userNameClean = sanitizeFilename(activeProfile.name);
         const secondaryFile = path.join(activeProfile.secondaryBackupPath, `eclass-record-backup-${userNameClean}.json`);
         
-        // Serialize only the active profile's data
-        const profilePayload = typeof activeProfile.data === 'string' ? activeProfile.data : JSON.stringify(activeProfile.data, null, 2);
-        fs.writeFileSync(secondaryFile, profilePayload, 'utf8');
+        // Use the same versioned/checksummed envelope as manual backups.
+        // Older raw secondary backups remain supported by the renderer importer.
+        const profilePayload = JSON.stringify(createSecondaryBackupEnvelope(activeProfile), null, 2);
+        writeJsonAtomically(secondaryFile, profilePayload);
 
         // Secondary daily rolling backup (rolling limit of 30 days)
         createRollingBackup(profilePayload, activeProfile.secondaryBackupPath, 30, `backup-${userNameClean}`);
@@ -177,5 +230,7 @@ module.exports = {
   loadDatabase,
   saveDatabase,
   readFile,
-  writeFile
+  writeFile,
+  createSecondaryBackupEnvelope,
+  writeJsonAtomically
 };

@@ -12,7 +12,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "test": "npm run test:advisory-data && npm run test:advisory-compatibility && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer && npm run test:grade-conflicts && npm run test:advisory-backup && npm run test:advisory-e2e && npm run test:advisory-redesign",
+    "test": "npm run test:database-future-proof && npm run test:advisory-data && npm run test:advisory-compatibility && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer && npm run test:grade-conflicts && npm run test:advisory-backup && npm run test:advisory-e2e && npm run test:advisory-redesign",
+    "test:database-future-proof": "node scripts/test-database-future-proof.js",
     "test:advisory-data": "node scripts/test-advisory-data.js",
     "test:advisory-compatibility": "node scripts/test-advisory-compatibility.js",
     "test:advisory-dashboard": "node scripts/test-advisory-dashboard.js",

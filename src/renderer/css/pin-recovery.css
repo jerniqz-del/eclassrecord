@@ -1,0 +1,20 @@
+.pin-recovery-key {
+  padding: var(--space-4);
+  border: 1px dashed var(--color-primary-500);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-50);
+  color: var(--color-primary-800);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+  text-align: center;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.pin-recovery-input {
+  font-family: var(--font-family-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}

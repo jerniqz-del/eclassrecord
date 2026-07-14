@@ -66,6 +66,7 @@ This ensures that upgrading from the older single-file HTA version automatically
 
 - [Advisory Class user guide](docs/advisory-class-guide.md)
 - [Advisory database compatibility contract](docs/advisory-database-compatibility.md)
+- [Database, backup, and PIN recovery compatibility](docs/database-backup-pin-recovery.md)
 - [Grade Transfer File schema v1.0](docs/grade-transfer-schema-v1.0.md)
 - [Manual smoke-test checklist](docs/manual-smoke-test-advisory.md)
 

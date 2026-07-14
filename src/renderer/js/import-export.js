@@ -14,21 +14,15 @@ async function exportJson() {
   db.lastUpdatedAt = timestampNow();
   
   const activeProfile = dbRoot.profiles.find(p => p.id === dbRoot.activeProfileId);
-  let textToExport = '';
-  
   try {
-    if (activeProfile && activeProfile.pinEnabled) {
-      const pin = currentProfilePin;
-      if (!pin) {
-        toast('Backup export failed: No active PIN session. Please re-authenticate.', 'error');
-        return;
-      }
-      const encryptedObj = await encryptPayload(JSON.stringify(db), pin);
-      textToExport = JSON.stringify(encryptedObj, null, 2);
-    } else {
-      textToExport = JSON.stringify(db, null, 2);
+    const pin = activeProfile?.pinEnabled ? currentProfilePin : '';
+    if (activeProfile?.pinEnabled && !pin) {
+      toast('Backup export failed: No active PIN session. Please re-authenticate.', 'error');
+      return;
     }
-    
+    const appVersion = typeof window.electronAPI.getVersion === 'function' ? await window.electronAPI.getVersion() : '';
+    const envelope = await createBackupEnvelope(db, pin, { appVersion });
+    const textToExport = JSON.stringify(envelope, null, 2);
     const result = await window.electronAPI.exportJson(textToExport);
     if (result.success) {
       toast('Backup downloaded successfully.', 'success');
@@ -36,6 +30,20 @@ async function exportJson() {
   } catch (error) {
     console.error(error);
     toast('Download failed: ' + error.message, 'error');
+  }
+}
+
+async function applyRestoredProfileDatabase(incoming) {
+  const candidate = prepareRestoredDatabase(incoming);
+  const previous = db;
+  db = candidate;
+  try {
+    normalizeDatabase();
+    if (!await saveDatabase()) throw new Error('The restored database could not be saved. No changes were kept.');
+    render();
+  } catch (error) {
+    db = previous;
+    throw error;
   }
 }
 
@@ -105,18 +113,17 @@ async function importJsonBackupFile() {
     const result = await window.electronAPI.importJson();
     if (result.success && result.content) {
       const incoming = JSON.parse(result.content);
-      
-      if (incoming.secureBackup) {
+
+      const isEnvelope = incoming.format === BACKUP_FORMAT;
+      const needsPin = isEnvelope ? incoming.protection === 'pin-aes-256-gcm' : incoming.secureBackup === true;
+      if (needsPin) {
         promptBackupPinModal(async (pin, errorEl, closeModal) => {
           try {
             errorEl.innerText = 'Decrypting backup...';
-            const decryptedText = await decryptPayload(incoming, pin);
-            const decryptedDb = JSON.parse(decryptedText);
-            
-            db = prepareRestoredDatabase(decryptedDb);
-            normalizeDatabase();
-            await saveDatabase();
-            render();
+            const decryptedDb = isEnvelope
+              ? await openBackupEnvelope(incoming, pin)
+              : JSON.parse(await decryptPayload(incoming, pin));
+            await applyRestoredProfileDatabase(decryptedDb);
             closeModal();
             toast('Secure backup uploaded and restored successfully.', 'success');
           } catch (e) {
@@ -125,10 +132,8 @@ async function importJsonBackupFile() {
           }
         });
       } else {
-        db = prepareRestoredDatabase(incoming);
-        normalizeDatabase();
-        await saveDatabase();
-        render();
+        const restoredDb = isEnvelope ? await openBackupEnvelope(incoming) : incoming;
+        await applyRestoredProfileDatabase(restoredDb);
         toast('Backup uploaded successfully.', 'success');
       }
     }

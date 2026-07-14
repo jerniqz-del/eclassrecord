@@ -54,9 +54,11 @@ function populatedProfile() {
 
   // Every renderer restore entry point validates before assigning db.
   const importSource = fs.readFileSync(path.join(__dirname, '../src/renderer/js/import-export.js'), 'utf8');
-  assert.strictEqual((importSource.match(/prepareRestoredDatabase\(/g) || []).length, 3);
+  assert(importSource.includes('applyRestoredProfileDatabase(decryptedDb)'));
+  assert(importSource.includes('applyRestoredProfileDatabase(restoredDb)'));
   const fileIoSource = fs.readFileSync(path.join(__dirname, '../src/main/file-io.js'), 'utf8');
-  assert(fileIoSource.includes('JSON.stringify(activeProfile.data'));
+  assert(fileIoSource.includes('createSecondaryBackupEnvelope(activeProfile)'));
+  assert(fileIoSource.includes("format: 'eclass-record-backup'"));
   assert(fileIoSource.includes('createRollingBackup(payload'));
 
   console.log('Advisory backup, encrypted restore, older-backup migration, and validation tests passed.');
