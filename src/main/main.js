@@ -187,6 +187,7 @@ function createWindow() {
           if (document.querySelector('.advisory-page-view')?.style.display === 'none' || !advisoryPage?.querySelector('[data-advisory-grade-panel]')) throw new Error('Dedicated Advisory Class page did not open.');
           if (document.querySelector('[data-advisory-workspace]')) throw new Error('Advisory Class still opened as a workspace modal.');
           if (!advisoryPage.querySelector('.advisory-final-column') || !advisoryPage.querySelector('.advisory-general-average')) throw new Error('Final-grade columns were not rendered.');
+          if (getComputedStyle(advisoryPage.querySelector('th.advisory-general-average')).whiteSpace !== 'normal') throw new Error('General Average header does not wrap within its column.');
           const runtimeSubjects = AdvisoryData.normalizeAdvisoryData(runtimeProfile).subjects.filter(item => item.advisoryClassId === runtimeClass.id);
           if (runtimeSubjects.length !== 9 || !runtimeSubjects.some(item => item.subjectName === 'Music & Arts') || !runtimeSubjects.some(item => item.subjectName === 'PE & Health')) throw new Error('Grade-level subjects and split MAPEH components were not populated automatically.');
           if (!advisoryPage.textContent.includes('MAPEH Average') || ![...advisoryPage.querySelectorAll('.advisory-mapeh-average')].some(cell => cell.textContent.trim() === '87')) throw new Error('Derived MAPEH term and final averages were not rendered.');

@@ -300,6 +300,7 @@
 .advisory-grade-matrix .advisory-final-column { border-left: 2px solid color-mix(in srgb, var(--color-primary-400) 40%, var(--border-subtle)); background: color-mix(in srgb, var(--color-primary-50) 45%, var(--bg-surface)); font-weight: var(--font-weight-bold); }
 .advisory-grade-matrix th.advisory-final-column { text-align: center; }
 .advisory-grade-matrix .advisory-general-average { min-width: 92px; border-left: 2px solid color-mix(in srgb, #0f4c5c 55%, var(--border-subtle)); background: color-mix(in srgb, #0f4c5c 9%, var(--bg-surface)); color: #0f4c5c; font-weight: 800; }
+.advisory-grade-matrix th.advisory-general-average { white-space: normal; overflow-wrap: anywhere; line-height: 1.2; text-align: center; }
 .advisory-grade-matrix--finals-only .advisory-general-average { min-width: 0; }
 .advisory-grade-matrix--finals-only :is(th, td) { padding-right: var(--space-1); padding-left: var(--space-1); }
 .advisory-grade-matrix .advisory-mapeh-average { background: color-mix(in srgb, #0f766e 12%, var(--bg-surface)); color: #115e59; font-weight: var(--font-weight-bold); }
