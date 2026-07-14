@@ -238,7 +238,7 @@ function validPayload(data = fixture()) {
 
   const journalism = data.profile.advisory.subjects.find(item => item.normalizedSubjectKey === 'CAMPUS JOURNALISM');
   const specialAssignment = { ...data.assignment, subject: 'Campus Journalism', isSpecialProgramSubject: true, specialProgramWeights: [10, 70, 20] };
-  const payload = Transfer.buildExportPayload({ assignment: specialAssignment, profileDb: data.profile, term: 1, appVersion: '1.4.6', getFinalGrade: () => 88 });
+  const payload = Transfer.buildExportPayload({ assignment: specialAssignment, profileDb: data.profile, term: 1, appVersion: '1.5.0', getFinalGrade: () => 88 });
   assert.strictEqual(payload.subject.isSpecialProgramSubject, true);
   assert.deepStrictEqual(payload.subject.specialProgramWeights, [10, 70, 20]);
   assert.strictEqual(Transfer.validatePayload(payload).isValid, true);

@@ -1,16 +1,14 @@
-// Bundled changelog for v1.4.6
+// Bundled changelog for v1.5.0
 const APP_CHANGELOG = {
-  version: '1.4.6',
-  releaseDate: '2026-07-11',
+  version: '1.5.0',
+  releaseDate: '2026-07-14',
   points: [
-    'Fixed SF2 Male and Female Total Per Day rows so they count present learners instead of absence totals.',
-    'Improved Excused and No Classes attendance handling across roll call, attendance tables, legends, statistics, and SF2 output.',
-    'Fixed Clear This Date and Mark All Present behavior so saved Excused and No Classes states are cleared correctly.',
-    'Preserved Assessment Details data safely when saving titles, dates, descriptions, attachments, HPS, and learner scores.',
-    'Kept Class Record assessment columns fixed by official abbreviations and group positions even after custom title edits.',
-    'Added arrow-key navigation for Grading Sheet score entry.',
-    'Improved Transfer Scores styling, preview flow, and correction workflow.',
-    'Tidied Attendance Tracker layout and made attendance statistics more compact and responsive.',
-    'Improved modal close handling and quick tour popup positioning so overlays stay inside the app window.'
+    'Added a dedicated Advisory Class page for managing the official learner roster, subject sources, and consolidated final grades.',
+    'Added fully offline Grade Transfer Files with validation, learner matching, conflict review, corrected re-imports, history, and undo support.',
+    'Added Special Class setup with one or two additional subjects and configurable special-program grading percentages.',
+    'Improved backup integrity, older-backup restoration, automatic recovery snapshots, and offline QR PIN recovery.',
+    'Added individual subject artwork to class cards and refined the Export Final Grades and Reports actions.',
+    'Improved the Advisory Grade Record table with hidden-by-default terms, easier horizontal scrolling, clearer headers, and wrapped General Average text.',
+    'Expanded automated coverage for migrations, backups, advisory workflows, special-program grading, UI regressions, and offline operation.'
   ]
 };
