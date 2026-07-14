@@ -137,12 +137,23 @@ function createWindow() {
           if (setupModal.querySelector('#advisoryGradeLevel')?.tagName !== 'SELECT') throw new Error('Advisory grade level is not a dropdown.');
           if (!setupModal.querySelector('#advisoryGradeLevel option[value="Kindergarten"]')?.disabled || !setupModal.querySelector('#advisoryGradeLevel option[value="11"]')?.disabled || !setupModal.querySelector('#advisoryGradeLevel option[value="12"]')?.disabled) throw new Error('Unsupported Advisory grade levels are not disabled.');
           if (setupModal.querySelector('#advisorySectionSelect')?.tagName !== 'SELECT' || !setupModal.querySelector('#advisorySectionSelect option[value="__custom__"]')) throw new Error('Advisory section choices are unavailable.');
+          if (!setupModal.querySelector('#advisoryIsSpecialClass') || !setupModal.querySelector('#advisorySpecialProgramName') || !setupModal.querySelector('#advisorySpecialSubject1') || !setupModal.querySelector('#advisorySpecialSubject2')) throw new Error('Special Class setup fields were not rendered.');
+          setupModal.querySelector('#advisoryIsSpecialClass').click();
+          if (setupModal.querySelector('#advisorySpecialClassFields')?.hidden) throw new Error('Special Class setup fields did not open when selected.');
+          setupModal.querySelector('#advisoryIsSpecialClass').click();
           if (!setupModal.querySelector('#advisorySetupSourceClass option[value="smoke-subject"]')) throw new Error('Setup-time roster source is unavailable.');
           const setupSource = setupModal.querySelector('#advisorySetupSourceClass');
           setupSource.value = 'smoke-subject';
           setupSource.dispatchEvent(new Event('change'));
           if (setupModal.querySelector('#advisoryGradeLevel').value !== '4' || setupModal.querySelector('#advisorySectionSelect').value !== 'Offline') throw new Error('Roster source did not populate grade and section.');
           setupModal.remove();
+
+          populateSubjects();
+          const teachingSubject = document.getElementById('newSubject');
+          if (!teachingSubject?.querySelector('option[value="Custom"]')) throw new Error('Custom teaching-load subjects are unavailable for Grades 1 to 10.');
+          teachingSubject.value = 'Custom';
+          handleSubjectChanged();
+          if (document.getElementById('specialProgramSubjectField')?.hidden) throw new Error('Special-program grading controls did not open for a custom teaching-load subject.');
 
           const runtimeClass = AdvisoryData.createClass(runtimeProfile, {
             id: 'runtime-advisory', schoolYear: runtimeProfile.schoolYear, gradeLevel: '4',
@@ -178,7 +189,9 @@ function createWindow() {
           });
           renderDashboardOverview();
           if (document.getElementById('navAdvisory')?.hidden) throw new Error('Advisory sidebar button was not shown after setup.');
-          if (!document.querySelector('.dashboard-card__subject-logo.subject-logo--mathematics')) throw new Error('Mathematics subject logo was not rendered.');
+          const mathWatermark = document.querySelector('.dashboard-card__subject-watermark.subject-watermark--mathematics');
+          const mathIcon = mathWatermark?.closest('.dashboard-card')?.querySelector('.dashboard-card__subject-icon');
+          if (!mathWatermark || !getComputedStyle(mathWatermark).backgroundImage.includes('subject-icons/mathematics.png') || Number.parseFloat(getComputedStyle(mathWatermark).opacity) > 0.2 || !mathIcon?.getAttribute('src')?.endsWith('subject-icons/mathematics.png')) throw new Error('Mathematics subject card did not render the supplied local background and title icon.');
 
           const exportButton = document.querySelector('.dashboard-card__export-btn');
           if (!exportButton) throw new Error('Export Final Grades button was not rendered.');
@@ -241,13 +254,13 @@ function createWindow() {
           if (advisoryPage.querySelector('[data-advisory-panel="roster"]').hidden || !advisoryPage.querySelector('[data-advisory-add-manual]') || !advisoryPage.querySelector('[data-advisory-import-class]') || !advisoryPage.querySelector('[data-remove-advisory-learner]') || !advisoryPage.querySelector('[data-advisory-panel="roster"]').textContent.includes('123456789012')) throw new Error('Manage Roster tools were not rendered inline.');
           if (advisoryPage.querySelector('[data-open-advisory-roster-tools]')) throw new Error('Manage Roster still depends on a separate manager modal.');
           advisoryPage.querySelector('[data-advisory-page-tab="settings"]').click();
-          if (advisoryPage.querySelector('[data-advisory-panel="settings"]').hidden || !advisoryPage.querySelector('[data-advisory-settings-form]') || !advisoryPage.querySelector('#advisoryInlineGrade') || !advisoryPage.querySelector('#advisoryInlineSection') || !advisoryPage.querySelector('[data-advisory-panel="settings"]').textContent.includes('Managed in Global Settings')) throw new Error('Editable Advisory-only settings were not rendered inline.');
+          if (advisoryPage.querySelector('[data-advisory-panel="settings"]').hidden || !advisoryPage.querySelector('[data-advisory-settings-form]') || !advisoryPage.querySelector('#advisoryInlineGrade') || !advisoryPage.querySelector('#advisoryInlineSection') || !advisoryPage.querySelector('#advisoryInlineSpecialClass') || !advisoryPage.querySelector('#advisoryInlineSpecialSubject1') || !advisoryPage.querySelector('[data-advisory-panel="settings"]').textContent.includes('Managed in Global Settings')) throw new Error('Editable Advisory-only settings were not rendered inline.');
           if (advisoryPage.querySelector('[data-open-advisory-settings]')) throw new Error('Advisory Settings still depends on an edit modal.');
           advisoryPage.querySelector('[data-advisory-page-tab="grades"]').click();
           showAdvisoryClassSetupModal();
           if (document.querySelector('[data-advisory-setup-modal]') || advisoryPage.querySelector('[data-advisory-panel="settings"]').hidden) throw new Error('Editing an existing Advisory Class did not redirect to the inline Settings tab.');
           advisoryPage.querySelector('[data-advisory-page-tab="grades"]').click();
-          advisoryPage.querySelector('[data-add-advisory-subject]').click();
+          AdvisoryGradeTransfer.showSubjectModal(runtimeSubject.id);
           const subjectModal = document.querySelector('.advisory-nested-modal');
           if (!subjectModal || subjectModal.textContent.includes('Expected Source Class') || subjectModal.textContent.includes('Normalized Subject Key')) throw new Error('Grade source assignment still exposes technical fields (modal=' + Boolean(subjectModal) + ', expectedClass=' + Boolean(subjectModal?.textContent.includes('Expected Source Class')) + ', normalizedKey=' + Boolean(subjectModal?.textContent.includes('Normalized Subject Key')) + ').');
           const advisoryCancelColor = getComputedStyle(subjectModal.querySelector('[data-cancel]')).color;
@@ -350,7 +363,7 @@ function createWindow() {
           if (!storageIntegrityReport || !storageIntegrityReport.textContent.includes('integrity metadata is active')) throw new Error('Database Integrity Checker did not report file checksum status.');
           closeIntegrityResultsModal();
 
-          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, qrRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
+          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectWatermark: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, qrRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }

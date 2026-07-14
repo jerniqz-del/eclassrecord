@@ -6,7 +6,7 @@ This document defines the data guarantees that Advisory Class updates must prese
 
 Advisory data is stored inside the active teacher profile under `profile.advisory`. Ordinary teaching loads remain in `profile.assignments`; Advisory operations must never move, rewrite, or delete them. Every mutation, backup, restore, import, reset, and integrity check must use the active-profile database accessor rather than a stale global database reference.
 
-The current Advisory schema version is `1` and contains these collections:
+The current Advisory schema version is `2` and contains these collections:
 
 | Collection | Parent and identity | Owned relationships |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ All records retain stable `id`, `createdAt`, and `updatedAt` values. Child recor
 
 ## Compatibility invariants
 
-1. **Non-destructive migration.** A profile without Advisory data receives empty version-1 collections. Existing teaching loads and unrelated profile fields remain unchanged. Running normalization repeatedly produces the same serialized result.
+1. **Non-destructive migration.** A profile without Advisory data receives empty version-2 collections. Schema-1 classes default to regular classes; standard subjects remain active and included in General Average, while former nonstandard subjects are identified as legacy records. Existing teaching loads and unrelated profile fields remain unchanged. Running normalization repeatedly produces the same serialized result.
 2. **Forward-field preservation.** Unknown top-level Advisory fields and unknown record fields survive normalization, JSON persistence, backup, and restore. A schema version newer than the app supports is retained and reported as a warning; it is never silently downgraded.
 3. **Malformed-shape rejection.** If the Advisory store is not an object, or a known collection is present but is not an array, the operation fails before replacing any data.
 4. **Required identity.** Classes require school year, grade level, section, and adviser. Learners require first and last names. Optional LRNs must be exactly 12 digits and unique within the class. Subjects require a display name and normalized key, unique within the class.
@@ -31,6 +31,8 @@ All records retain stable `id`, `createdAt`, and `updatedAt` values. Child recor
 8. **Explicit cascades.** Removing a learner removes only that learner's grades. Removing a subject removes only its grades and mappings. Removing an import batch removes only its imported grades. Removing a class removes all and only its owned Advisory records. Other Advisory classes and teaching loads remain intact.
 9. **Restore before replace.** Backup restore normalizes and validates a detached copy. Broken references, duplicates, or malformed collections reject the restore before the current profile is replaced. Missing historical import-batch links remain warnings so older usable grade data is not discarded.
 10. **Profile isolation.** Advisory actions affect only the currently selected teacher profile and survive root-database JSON save/reload without leaking into another profile.
+11. **Special-subject preservation.** A Special Class requires a program name and permits at most two active special subjects. Archiving a special subject preserves its grades, mappings, and import history and excludes it from active completion and General Average calculations. General Average inclusion is stored per active special subject.
+12. **Custom-weight authority.** Only a custom teaching-load subject may be marked special-program. Its three whole-number category weights must total 100. Assignment normalization preserves valid custom weights, and every grade view and export resolves weights through the same assignment-level rule.
 
 These guarantees prevent silent loss or reassignment of known data. They do not promise that an older app understands the meaning of a future field; future schema changes still require an explicit migration and tests.
 
@@ -43,6 +45,7 @@ The integrity checker detects duplicate IDs in every collection, orphan class/le
 | Area | Automated evidence |
 | --- | --- |
 | Migration, normalization, CRUD, cascades | `test:advisory-data`, `test:advisory-compatibility` |
+| Special Class limits, archival, General Average, custom weights | `test:advisory-data`, `test:special-program`, `test:grade-transfer` |
 | Future fields, malformed data, corruption, relationship ownership | `test:advisory-compatibility` |
 | Profile separation and JSON restart round trip | `test:advisory-compatibility`, `test:advisory-e2e` |
 | Dashboard setup, active class, dynamic sidebar | `test:advisory-dashboard`, offline smoke test |

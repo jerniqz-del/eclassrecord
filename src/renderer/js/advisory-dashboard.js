@@ -35,7 +35,7 @@
     }
 
     const learners = store.learners.filter(item => item.advisoryClassId === advisoryClass.id && item.enrollmentStatus !== 'inactive');
-    const subjects = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id);
+    const subjects = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id && !item.isArchived);
     const grades = store.grades.filter(item => item.advisoryClassId === advisoryClass.id);
     const importedSets = new Set(store.importBatches
       .filter(item => item.advisoryClassId === advisoryClass.id && item.status !== 'undone' && item.status !== 'rolled-back')
@@ -176,6 +176,17 @@
             <div class="field"><label class="field-label" for="advisoryDivision">Division <span aria-hidden="true">*</span></label><input class="field-input" id="advisoryDivision" value="${escHtml(existing?.division || profileDb.division || '')}" required /></div>
             <div class="field"><label class="field-label" for="advisoryRegion">Region <span aria-hidden="true">*</span></label><input class="field-input" id="advisoryRegion" value="${escHtml(existing?.region || profileDb.region || '')}" required /></div>
           </div>
+          <div class="special-program-weight-panel advisory-special-class-setup">
+            <label class="checkbox-row"><input type="checkbox" id="advisoryIsSpecialClass"> This is a Special Class</label>
+            <div id="advisorySpecialClassFields" hidden>
+              <div class="field"><label class="field-label" for="advisorySpecialProgramName">Special Program Name <span aria-hidden="true">*</span></label><input class="field-input" id="advisorySpecialProgramName" placeholder="e.g. Journalism or Science"></div>
+              <div class="split-row">
+                <div class="field"><label class="field-label" for="advisorySpecialSubject1">Special Subject 1 <span aria-hidden="true">*</span></label><input class="field-input" id="advisorySpecialSubject1" placeholder="Enter the subject name"><label class="checkbox-row"><input type="checkbox" id="advisorySpecialSubject1Ga" checked> Include in General Average</label></div>
+                <div class="field"><label class="field-label" for="advisorySpecialSubject2">Special Subject 2 (Optional)</label><input class="field-input" id="advisorySpecialSubject2" placeholder="Enter another subject"><label class="checkbox-row"><input type="checkbox" id="advisorySpecialSubject2Ga" checked> Include in General Average</label></div>
+              </div>
+              <p class="text-muted">A Special Class may have one or two additional subjects. These can be changed later in Advisory Settings.</p>
+            </div>
+          </div>
           <div class="advisory-setup-roster-source">
             <div><strong>${existing ? 'Import additional learners' : 'Start with an existing class roster'}</strong><p>Optional. Select a class already on the Dashboard. You will review learners before anything is added, and the source class will remain unchanged.</p></div>
             <div class="field"><label class="field-label" for="advisorySetupSourceClass">Import learners from Other Class</label><select class="field-select" id="advisorySetupSourceClass"><option value="">Do not import a roster now</option>${sourceClasses.map(item => `<option value="${escHtml(item.id)}">Grade ${escHtml(item.gradeLevel)} - ${escHtml(item.section)} (${escHtml(item.subject)}) · ${item.learners.length} learners</option>`).join('')}</select></div>
@@ -195,6 +206,15 @@
     const sectionSelect = overlay.querySelector('#advisorySectionSelect');
     const customSection = overlay.querySelector('#advisoryCustomSection');
     const sourceSelect = overlay.querySelector('#advisorySetupSourceClass');
+    const specialClassInput = overlay.querySelector('#advisoryIsSpecialClass');
+    const specialClassFields = overlay.querySelector('#advisorySpecialClassFields');
+    const syncSpecialClassFields = () => {
+      specialClassFields.hidden = !specialClassInput.checked;
+      overlay.querySelector('#advisorySpecialProgramName').required = specialClassInput.checked;
+      overlay.querySelector('#advisorySpecialSubject1').required = specialClassInput.checked;
+    };
+    specialClassInput.addEventListener('change', syncSpecialClassFields);
+    syncSpecialClassFields();
     const setSection = section => {
       const normalized = String(section || '').trim();
       const matched = Array.from(sectionSelect.options).find(option => option.value !== '__custom__' && option.value.toLocaleUpperCase() === normalized.toLocaleUpperCase());
@@ -234,10 +254,16 @@
         district: overlay.querySelector('#advisoryDistrict').value.trim(),
         division: overlay.querySelector('#advisoryDivision').value.trim(),
         region: overlay.querySelector('#advisoryRegion').value.trim(),
+        isSpecialClass: specialClassInput.checked,
+        specialProgramName: overlay.querySelector('#advisorySpecialProgramName').value.trim(),
         isActive: existing ? !overlay.querySelector('#advisoryArchived').checked : true,
         isArchived: existing ? overlay.querySelector('#advisoryArchived').checked : false
       };
       const sourceClassId = sourceSelect.value;
+      const specialSubjects = [
+        { subjectName: overlay.querySelector('#advisorySpecialSubject1').value.trim(), includeInGeneralAverage: overlay.querySelector('#advisorySpecialSubject1Ga').checked },
+        { subjectName: overlay.querySelector('#advisorySpecialSubject2').value.trim(), includeInGeneralAverage: overlay.querySelector('#advisorySpecialSubject2Ga').checked }
+      ].filter(item => item.subjectName);
       const requiredFields = [
         [gradeInput, values.gradeLevel, 'Grade level'],
         [sectionSelect.value === '__custom__' ? customSection : sectionSelect, values.section, 'Section'],
@@ -260,11 +286,18 @@
         gradeInput.focus();
         return;
       }
+      if (values.isSpecialClass && (!values.specialProgramName || specialSubjects.length < 1)) {
+        globalScope.toast('Enter the Special Program Name and at least one special subject.', 'warning');
+        (!values.specialProgramName ? overlay.querySelector('#advisorySpecialProgramName') : overlay.querySelector('#advisorySpecialSubject1')).focus();
+        return;
+      }
+      const advisorySnapshot = JSON.parse(JSON.stringify(profileDb.advisory));
       try {
         const savedClass = existing
           ? globalScope.AdvisoryData.updateClass(profileDb, existing.id, values)
           : globalScope.AdvisoryData.createClass(profileDb, values);
         globalScope.AdvisoryGradeTransfer?.ensureGradeLevelSubjects?.(profileDb, savedClass);
+        globalScope.AdvisoryGradeTransfer?.syncSpecialProgramSubjects?.(profileDb, savedClass, specialSubjects);
         await globalScope.saveDatabase();
         close();
         globalScope.renderDashboardOverview();
@@ -275,6 +308,7 @@
           globalScope.AdvisoryRoster.startClassImport(sourceClassId, savedClass);
         }
       } catch (error) {
+        profileDb.advisory = advisorySnapshot;
         console.error('Advisory Class setup failed:', error);
         globalScope.toast(error.message || 'Advisory Class could not be saved.', 'error');
       }

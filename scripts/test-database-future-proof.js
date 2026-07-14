@@ -136,7 +136,7 @@ function renderQrPixels(payload) {
 
   // Raw old backups remain accepted by the detached restore validator.
   const migratedLegacy = AdvisoryBackup.prepareRestoredDatabase(fixture(1));
-  assert.strictEqual(migratedLegacy.advisory.schemaVersion, 1);
+  assert.strictEqual(migratedLegacy.advisory.schemaVersion, 2);
   assert.strictEqual(migratedLegacy.assignments[0].id, 'legacy-class');
 
   // Recovery unwraps a legacy PIN, validates/decrypts the profile, and atomically builds a modern replacement.
@@ -193,7 +193,7 @@ function renderQrPixels(payload) {
   assert.strictEqual(await context.verifyPin('654321', recovered.profile.salt, recovered.profile.pinHash), true);
   const recoveredPayload = JSON.parse(await context.decryptPayload(recovered.profile.data, '654321'));
   assert.deepStrictEqual(recoveredPayload.assignments, legacyProfile.assignments);
-  assert.strictEqual(recoveredPayload.advisory.schemaVersion, 1);
+  assert.strictEqual(recoveredPayload.advisory.schemaVersion, 2);
   assert.strictEqual(await context.recoverPinFromDescriptor(recovered.profile.recovery, recoveryKey), '654321');
   assert.strictEqual(recovered.profile.recovery.recoveryId, protectedProfile.recovery.recoveryId, 'changing a PIN with the same recovery key must keep the QR valid');
   const rootBeforeCommit = { version: 3, activeProfileId: 'other', profiles: [protectedProfile, { id: 'other', data: fixture(2) }] };
@@ -219,8 +219,8 @@ function renderQrPixels(payload) {
   const htmlSource = fs.readFileSync(path.join(__dirname, '../src/renderer/index.html'), 'utf8');
   const mainSource = fs.readFileSync(path.join(__dirname, '../src/main/main.js'), 'utf8');
   const preloadSource = fs.readFileSync(path.join(__dirname, '../src/main/preload.js'), 'utf8');
-  assert(databaseSource.includes('const DB_VERSION = 4;'));
-  assert(databaseSource.includes('const ROOT_DB_VERSION = 4;'));
+  assert(databaseSource.includes('const DB_VERSION = 5;'));
+  assert(databaseSource.includes('const ROOT_DB_VERSION = 5;'));
   assert(databaseSource.indexOf('verifyRootDatabaseIntegrity(localData)') < databaseSource.indexOf('normalizeRootDatabase(localData)'));
   assert(databaseSource.includes('cannot be safely overwritten by this version'));
   assert(databaseSource.includes("!p.pinHash.startsWith('pbkdf2-sha256$')"), 'legacy PIN hashes must be upgraded after a verified unlock and save');

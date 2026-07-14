@@ -808,6 +808,19 @@
           <label class="field-label">Custom Subject Name</label>
           <input id="customSubjectInput" class="field-input" placeholder="e.g. Science Elective" />
         </div>
+
+        <div id="specialProgramSubjectField" class="special-program-weight-panel" hidden>
+          <label class="checkbox-row"><input type="checkbox" id="newSpecialProgramSubject" onchange="syncNewSpecialProgramWeights()"> Treat this as a Special-Program Subject</label>
+          <div id="newSpecialProgramWeights" hidden>
+            <p class="text-muted u-mt-0">Set whole-number percentages. Written Works, Performance Tasks, and Summative Tests &amp; Term Examination must total 100%.</p>
+            <div class="split-row">
+              <div class="field"><label class="field-label" for="newSpecialWwWeight">Written Works %</label><input class="field-input" id="newSpecialWwWeight" type="number" min="0" max="100" step="1" value="20"></div>
+              <div class="field"><label class="field-label" for="newSpecialPtWeight">Performance Tasks %</label><input class="field-input" id="newSpecialPtWeight" type="number" min="0" max="100" step="1" value="50"></div>
+              <div class="field"><label class="field-label" for="newSpecialExamWeight">Summative Tests &amp; Term Examination %</label><input class="field-input" id="newSpecialExamWeight" type="number" min="0" max="100" step="1" value="30"></div>
+            </div>
+            <div class="special-program-weight-total" id="newSpecialWeightTotal" aria-live="polite">Total: 100%</div>
+          </div>
+        </div>
         
 
       </div>
@@ -1730,6 +1743,7 @@
   <script src="js/ad-manager.js"></script>
   <script src="js/attendance-excused.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/special-program.js"></script>
   <script src="js/pin-recovery.js"></script>
   <script>initFontSize(); initSidebarResizer(); if (typeof initSidebarAd === 'function') initSidebarAd(); initPinRecovery();</script>
 </body>

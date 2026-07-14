@@ -831,19 +831,19 @@ function compileStudentExcelData(a, student, mapePart) {
         ww: wwScores,
         wwTotal: result.ww.hasData ? result.ww.raw : '',
         wwPS: result.ww.hasData ? result.ww.ps : '',
-        wwWS: result.ww.hasData ? (result.ww.ps * weightsFor(a.subjectGroup)[0] / 100) : '',
+        wwWS: result.ww.hasData ? (result.ww.ps * weightsForAssignment(a)[0] / 100) : '',
         
         pt: ptScores,
         ptTotal: result.pt.hasData ? result.pt.raw : '',
         ptPS: result.pt.hasData ? result.pt.ps : '',
-        ptWS: result.pt.hasData ? (result.pt.ps * weightsFor(a.subjectGroup)[1] / 100) : '',
+        ptWS: result.pt.hasData ? (result.pt.ps * weightsForAssignment(a)[1] / 100) : '',
         
         sa1: (sa1Score !== undefined && sa1Score !== '') ? parseFloat(sa1Score) : '',
         sa2: (sa2Score !== undefined && sa2Score !== '') ? parseFloat(sa2Score) : '',
         te: (teScore !== undefined && teScore !== '') ? parseFloat(teScore) : '',
         saTotal: result.hasData ? (result.st1.raw + result.st2.raw + result.te.raw) : '',
         saPS: result.hasData ? result.examPS : '',
-        saWS: result.hasData ? (result.examPS * weightsFor(a.subjectGroup)[2] / 100) : '',
+        saWS: result.hasData ? (result.examPS * weightsForAssignment(a)[2] / 100) : '',
         
         initialGrade: result.hasData ? result.initialGrade : '',
         termGrade: result.termGrade !== null ? formatGradeForDisplay(result.termGrade, a.policy) : '',

@@ -1157,8 +1157,16 @@
   margin-top: var(--space-3);
 }
 
-.dashboard-card__report-btn {
-  width: min(100%, 220px);
+.dashboard-card[data-assignment-id] .dashboard-card__actions {
+  gap: var(--space-2);
+}
+
+.dashboard-card[data-assignment-id] .dashboard-card__export-btn,
+.dashboard-card[data-assignment-id] .dashboard-card__report-btn {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  max-width: 220px;
   justify-content: center;
   min-height: 34px;
 }
@@ -1837,9 +1845,12 @@
   margin-top: 0;
 }
 
-.dashboard-card--list .dashboard-card__report-btn {
-  width: auto;
-  min-width: 112px;
+.dashboard-card--list[data-assignment-id] .dashboard-card__export-btn,
+.dashboard-card--list[data-assignment-id] .dashboard-card__report-btn {
+  flex: 0 0 148px;
+  width: 148px;
+  min-width: 148px;
+  max-width: 148px;
 }
 
 .dashboard-cards--list .dashboard-card--add {
@@ -1874,8 +1885,12 @@
     justify-content: flex-start;
   }
 
-  .dashboard-card--list .dashboard-card__report-btn {
-    width: min(100%, 220px);
+  .dashboard-card--list[data-assignment-id] .dashboard-card__export-btn,
+  .dashboard-card--list[data-assignment-id] .dashboard-card__report-btn {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    max-width: 220px;
   }
 
   .dashboard-view-toggle {
@@ -2131,6 +2146,10 @@
   border: 1px solid #111827;
   padding: 10px;
   font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#attendanceSf2ReportPrint {
+  display: none;
 }
 
 .sf2-title {
@@ -2536,8 +2555,26 @@
 .modal-z-assessment { z-index: 10003; }
 .modal-z-donate { z-index: 10040; }
 #donateQrModal.modal-z-higher { z-index: 10045; }
+#imageZoomModal.modal-z-top { z-index: 10060; }
 .modal-z-tour { z-index: 10020; }
 .modal-z-confirm { z-index: 10030; }
+
+.special-program-weight-panel {
+  margin-top: var(--space-3, 12px);
+  padding: var(--space-4, 16px);
+  border: 1px solid var(--border-color, #d7dee8);
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface-subtle, #f7fafc);
+}
+
+.special-program-weight-total {
+  font-weight: 700;
+  color: var(--success, #15803d);
+}
+
+.special-program-weight-total.is-invalid {
+  color: var(--danger, #dc2626);
+}
 
 .modal-body--scroll {
   min-height: 0;

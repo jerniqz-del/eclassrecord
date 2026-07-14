@@ -8,7 +8,7 @@
 (function initAdvisoryData(globalScope) {
   'use strict';
 
-  const ADVISORY_SCHEMA_VERSION = 1;
+  const ADVISORY_SCHEMA_VERSION = 2;
   const COLLECTIONS = Object.freeze({
     classes: 'advisory-class',
     learners: 'advisory-learner',
@@ -65,6 +65,8 @@
       district: cleanString(item.district),
       division: cleanString(item.division),
       region: cleanString(item.region),
+      isSpecialClass: item.isSpecialClass === true,
+      specialProgramName: cleanString(item.specialProgramName),
       isActive: item.isActive === true,
       isArchived: item.isArchived === true,
       createdAt,
@@ -111,6 +113,10 @@
       expectedTerm: cleanString(item.expectedTerm),
       sourceType: cleanString(item.sourceType) || 'grade-transfer-file',
       displayOrder: Number.isFinite(Number(item.displayOrder)) ? Number(item.displayOrder) : 0,
+      isSpecialProgramSubject: item.isSpecialProgramSubject === true,
+      includeInGeneralAverage: item.includeInGeneralAverage !== false,
+      isArchived: item.isArchived === true,
+      isLegacySubject: item.isLegacySubject === true,
       createdAt,
       updatedAt: normalizeTimestamp(item.updatedAt) || createdAt
     };
@@ -216,6 +222,18 @@
     sourceMappings: normalizeSourceMapping
   };
 
+  function migrationSubjectKeysForGrade(gradeLevel) {
+    const grade = Number.parseInt(gradeLevel, 10);
+    const common = ['FILIPINO', 'ENGLISH', 'MATHEMATICS', 'SCIENCE', 'ARALING PANLIPUNAN', 'MUSIC ARTS', 'PE HEALTH', 'MAPEH'];
+    if (grade === 1) return new Set(['LANGUAGE', 'READING AND LITERACY', 'MATHEMATICS', 'MAKABANSA', 'GOOD MANNERS AND RIGHT CONDUCT GMRC', 'ARTS AND PHYSICAL EDUCATION']);
+    if (grade === 2) return new Set([...common, 'MAKABANSA', 'GOOD MANNERS AND RIGHT CONDUCT GMRC']);
+    if (grade === 3) return new Set([...common, 'MAKABANSA', 'GOOD MANNERS AND RIGHT CONDUCT GMRC']);
+    if (grade >= 4 && grade <= 5) return new Set([...common, 'GOOD MANNERS AND RIGHT CONDUCT GMRC', 'EDUKASYONG PANTAHANAN AT PANGKABUHAYAN EPP']);
+    if (grade === 6) return new Set([...common, 'GOOD MANNERS AND RIGHT CONDUCT GMRC', 'TECHNOLOGY AND LIVELIHOOD EDUCATION TLE']);
+    if (grade >= 7 && grade <= 10) return new Set([...common, 'VALUES EDUCATION', 'TECHNOLOGY AND LIVELIHOOD EDUCATION TLE']);
+    return new Set();
+  }
+
   function normalizeAdvisoryData(profileDb) {
     if (!profileDb || typeof profileDb !== 'object') {
       throw new TypeError('A profile database object is required.');
@@ -240,6 +258,14 @@
       const rows = hasCollection ? source[collection] : [];
       normalized[collection] = rows.map(NORMALIZERS[collection]);
     });
+    if (Number.isFinite(sourceVersion) && sourceVersion < 2) {
+      const classesById = new Map(normalized.classes.map(item => [item.id, item]));
+      normalized.subjects.forEach(subject => {
+        const advisoryClass = classesById.get(subject.advisoryClassId);
+        const standardKeys = migrationSubjectKeysForGrade(advisoryClass?.gradeLevel);
+        if (!standardKeys.has(subject.normalizedSubjectKey)) subject.isLegacySubject = true;
+      });
+    }
     profileDb.advisory = normalized;
     return normalized;
   }
@@ -330,6 +356,9 @@
     if (candidate.isActive && candidate.isArchived) {
       throw new Error('An archived Advisory Class cannot also be active.');
     }
+    if (candidate.isSpecialClass && !candidate.specialProgramName) {
+      throw new Error('Special program name is required for a Special Class.');
+    }
   }
 
   function updateClass(profileDb, id, changes) {
@@ -378,6 +407,17 @@
       if (!candidate.subjectName || !candidate.normalizedSubjectKey) throw new Error('Subject name and normalized subject key are required.');
       if (store.subjects.some(item => item.id !== currentId && item.advisoryClassId === candidate.advisoryClassId && item.normalizedSubjectKey === candidate.normalizedSubjectKey)) {
         throw new Error('This subject already exists in the Advisory Class.');
+      }
+      const advisoryClass = store.classes.find(item => item.id === candidate.advisoryClassId);
+      if (candidate.isSpecialProgramSubject && !advisoryClass?.isSpecialClass) {
+        throw new Error('Special-program subjects require a Special Class.');
+      }
+      if (candidate.isSpecialProgramSubject && !candidate.isArchived) {
+        const activeSpecialCount = store.subjects.filter(item => item.id !== currentId
+          && item.advisoryClassId === candidate.advisoryClassId
+          && item.isSpecialProgramSubject
+          && !item.isArchived).length;
+        if (activeSpecialCount >= 2) throw new Error('A Special Class can have at most two active special-program subjects.');
       }
     }
     if (collection === 'sourceMappings') {

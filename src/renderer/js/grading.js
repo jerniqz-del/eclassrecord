@@ -330,6 +330,26 @@ function normalizeAssessmentComponents(a) {
   }
 }
 
+/**
+ * Validates the optional three-category grading weights used by a custom
+ * special-program subject. Values are whole percentages and must total 100.
+ */
+function normalizeSpecialProgramWeights(value) {
+  if (!Array.isArray(value) || value.length !== 3) return null;
+  const weights = value.map(Number);
+  if (weights.some(weight => !Number.isInteger(weight) || weight < 0 || weight > 100)) return null;
+  return weights.reduce((sum, weight) => sum + weight, 0) === 100 ? weights : null;
+}
+
+/** Returns the authoritative weights for a teaching-load assignment. */
+function weightsForAssignment(assignment) {
+  if (assignment?.isSpecialProgramSubject) {
+    const custom = normalizeSpecialProgramWeights(assignment.specialProgramWeights);
+    if (custom) return custom;
+  }
+  return weightsFor(assignment?.subjectGroup);
+}
+
 function canonicalAssessmentComponent(component) {
   if (component === 'SA1') return 'ST1';
   if (component === 'SA2') return 'ST2';
@@ -540,7 +560,7 @@ function computeTerm(a, learnerId, term, mapePart) {
     }
   }
 
-  const w = weightsFor(a.subjectGroup);
+  const w = weightsForAssignment(a);
   const ww = componentScore(a, learnerId, term, ['WW'], mapePart);
   const pt = componentScore(a, learnerId, term, ['PT'], mapePart);
   const st1 = componentScore(a, learnerId, term, ['SA1', 'ST1'], mapePart);

@@ -58,7 +58,7 @@
       <div>
         <span class="advisory-card__eyebrow">School Year ${escHtml(advisoryClass.schoolYear)}</span>
         <h1>Advisory Class</h1>
-        <p>Grade ${escHtml(advisoryClass.gradeLevel)} - ${escHtml(advisoryClass.section)} <span aria-hidden="true">&middot;</span> ${escHtml(advisoryClass.adviserName)}</p>
+        <p>Grade ${escHtml(advisoryClass.gradeLevel)} - ${escHtml(advisoryClass.section)} <span aria-hidden="true">&middot;</span> ${escHtml(advisoryClass.adviserName)}${advisoryClass.isSpecialClass ? ` <span aria-hidden="true">&middot;</span> ${escHtml(advisoryClass.specialProgramName)} Special Class` : ''}</p>
       </div>
       <button class="btn btn-danger btn-sm advisory-page__reset" type="button" data-advisory-page-reset>Reset Advisory Class</button>`;
     header.querySelector('[data-advisory-page-reset]')?.addEventListener('click', () => globalScope.showAdvisoryResetModal?.());

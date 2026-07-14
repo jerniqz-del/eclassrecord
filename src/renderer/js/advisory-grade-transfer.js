@@ -109,6 +109,14 @@
       existing = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb).subjects.filter(item => item.advisoryClassId === advisoryClass.id);
     }
     const existingKeys = new Set(existing.map(item => item.normalizedSubjectKey));
+    const standardKeys = new Set(standardSubjectsForGrade(advisoryClass.gradeLevel).map(normalizeSubjectKey));
+    existing.forEach(subject => {
+      if (!standardKeys.has(subject.normalizedSubjectKey)
+        && !subject.isSpecialProgramSubject
+        && !subject.isLegacySubject) {
+        globalScope.AdvisoryData.updateSubject(profileDb, subject.id, { isLegacySubject: true });
+      }
+    });
     const created = [];
     standardSubjectsForGrade(advisoryClass.gradeLevel).forEach(subjectName => {
       const normalizedSubjectKey = normalizeSubjectKey(subjectName);
@@ -127,6 +135,73 @@
       existingKeys.add(normalizedSubjectKey);
     });
     return created;
+  }
+
+  function syncSpecialProgramSubjects(profileDb, advisoryClass, requestedSubjects) {
+    const requested = (requestedSubjects || []).map(item => ({
+      subjectName: text(item.subjectName),
+      normalizedSubjectKey: normalizeSubjectKey(item.subjectName),
+      includeInGeneralAverage: item.includeInGeneralAverage !== false
+    })).filter(item => item.subjectName);
+    if (!advisoryClass.isSpecialClass && requested.length) throw new Error('Enable Special Class before adding special-program subjects.');
+    if (requested.length > 2) throw new Error('A Special Class can have at most two active special-program subjects.');
+    const requestedKeys = new Set();
+    const standardKeys = new Set(standardSubjectsForGrade(advisoryClass.gradeLevel).map(normalizeSubjectKey));
+    requested.forEach(item => {
+      if (requestedKeys.has(item.normalizedSubjectKey)) throw new Error('Special-program subject names must be different.');
+      if (standardKeys.has(item.normalizedSubjectKey)) throw new Error(`${item.subjectName} is already a predefined subject for this grade level.`);
+      requestedKeys.add(item.normalizedSubjectKey);
+    });
+
+    const store = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb);
+    const existing = store.subjects
+      .filter(item => item.advisoryClassId === advisoryClass.id && item.isSpecialProgramSubject)
+      .sort((left, right) => left.displayOrder - right.displayOrder);
+    const usedIds = new Set();
+    requested.forEach((item, index) => {
+      let subject = existing.find(candidate => candidate.normalizedSubjectKey === item.normalizedSubjectKey && !usedIds.has(candidate.id));
+      if (!subject) subject = existing.find(candidate => !usedIds.has(candidate.id));
+      if (subject) {
+        const oldKey = subject.normalizedSubjectKey;
+        globalScope.AdvisoryData.updateSubject(profileDb, subject.id, {
+          subjectName: item.subjectName,
+          normalizedSubjectKey: item.normalizedSubjectKey,
+          includeInGeneralAverage: item.includeInGeneralAverage,
+          isArchived: false,
+          isLegacySubject: false
+        });
+        profileDb.advisory.grades.filter(grade => grade.advisorySubjectId === subject.id).forEach(grade => {
+          grade.subjectName = item.subjectName;
+          grade.normalizedSubjectKey = item.normalizedSubjectKey;
+          grade.updatedAt = new Date().toISOString();
+        });
+        profileDb.advisory.sourceMappings.filter(mapping => mapping.advisorySubjectId === subject.id && mapping.importedNormalizedKey === oldKey).forEach(mapping => {
+          mapping.importedSubjectName = item.subjectName;
+          mapping.importedNormalizedKey = item.normalizedSubjectKey;
+          mapping.updatedAt = new Date().toISOString();
+        });
+      } else {
+        subject = globalScope.AdvisoryData.createSubject(profileDb, {
+          advisoryClassId: advisoryClass.id,
+          subjectName: item.subjectName,
+          normalizedSubjectKey: item.normalizedSubjectKey,
+          expectedGradeLevel: advisoryClass.gradeLevel,
+          expectedSection: advisoryClass.section,
+          expectedSchoolYear: advisoryClass.schoolYear,
+          sourceType: 'grade-transfer-file',
+          displayOrder: profileDb.advisory.subjects.filter(row => row.advisoryClassId === advisoryClass.id).length,
+          isSpecialProgramSubject: true,
+          includeInGeneralAverage: item.includeInGeneralAverage,
+          isArchived: false
+        });
+      }
+      usedIds.add(subject.id);
+    });
+    existing.filter(subject => !usedIds.has(subject.id)).forEach(subject => {
+      globalScope.AdvisoryData.updateSubject(profileDb, subject.id, { isArchived: true });
+    });
+    return globalScope.AdvisoryData.normalizeAdvisoryData(profileDb).subjects
+      .filter(item => item.advisoryClassId === advisoryClass.id && item.isSpecialProgramSubject);
   }
 
   function sanitizeFilenamePart(value) {
@@ -218,7 +293,9 @@
         id: text(assignment.subjectId) ? `${text(assignment.subjectId)}${options.mapePart ? `-${text(options.mapePart)}` : ''}` : normalizeSubjectKey(subjectName).toLowerCase().replace(/\s+/g, '-'),
         name: subjectName,
         normalizedKey: normalizeSubjectKey(subjectName),
-        strand: text(options.mapePart)
+        strand: text(options.mapePart),
+        isSpecialProgramSubject: assignment.isSpecialProgramSubject === true,
+        ...(assignment.isSpecialProgramSubject === true ? { specialProgramWeights: Array.isArray(assignment.specialProgramWeights) ? assignment.specialProgramWeights.map(Number) : [] } : {})
       },
       term: { number: termNumber, label: `Term ${termNumber}` },
       learners
@@ -235,6 +312,12 @@
     if (!text(payload.schoolYear)) errors.push('The Grade Transfer File is missing its school year.');
     if (!payload.class || !text(payload.class.gradeLevel) || !text(payload.class.section)) errors.push('The Grade Transfer File is missing class grade-level or section information.');
     if (!payload.subject || !text(payload.subject.name) || !normalizeSubjectKey(payload.subject.normalizedKey || payload.subject.name)) errors.push('The Grade Transfer File is missing subject information.');
+    if (payload.subject?.isSpecialProgramSubject === true) {
+      const weights = payload.subject.specialProgramWeights;
+      if (!Array.isArray(weights) || weights.length !== 3 || weights.some(weight => !Number.isInteger(Number(weight)) || Number(weight) < 0 || Number(weight) > 100) || weights.reduce((sum, weight) => sum + Number(weight), 0) !== 100) {
+        errors.push('The Grade Transfer File contains invalid special-program grading percentages.');
+      }
+    }
     const term = Number(payload.term?.number);
     if (![1, 2, 3].includes(term)) errors.push('The Grade Transfer File is missing a supported term.');
     if (!Array.isArray(payload.learners)) errors.push('The Grade Transfer File is missing learner grades.');
@@ -293,7 +376,15 @@
     if (exactDuplicate) errors.push('This Grade Transfer File has already been imported.');
     if (correctedReimport) warnings.push('This appears to be a corrected version of a previously imported Grade Transfer File. Existing grades require a decision.');
     const subjectKey = normalizeSubjectKey(payload?.subject?.normalizedKey || payload?.subject?.name);
-    const subject = store.subjects.find(item => item.advisoryClassId === advisoryClass.id && item.normalizedSubjectKey === subjectKey) || null;
+    const subject = store.subjects.find(item => item.advisoryClassId === advisoryClass.id && !item.isArchived && item.normalizedSubjectKey === subjectKey) || null;
+    const incomingIsSpecial = payload?.subject?.isSpecialProgramSubject === true;
+    if (!subject) errors.push('The subject in this Grade Transfer File is not an active subject in the Advisory Class. Configure or restore it before importing.');
+    if (incomingIsSpecial && (!advisoryClass.isSpecialClass || !subject?.isSpecialProgramSubject)) {
+      errors.push('This special-program Grade Transfer File must match an active special subject in a Special Class.');
+    }
+    if (!incomingIsSpecial && subject?.isSpecialProgramSubject) {
+      warnings.push('This older Grade Transfer File does not identify the subject as special-program, but its subject name matches an active special subject. Review the grading percentages before importing.');
+    }
     const term = text(payload?.term?.number);
     const rows = validation.errors.length ? [] : payload.learners.map((incoming, index) => {
       const match = matchLearner(store, advisoryClass.id, incoming);
@@ -326,7 +417,7 @@
       correctedReimport,
       advisoryClass,
       subject,
-      proposedSubject: subject ? null : { subjectName: text(payload?.subject?.name), normalizedSubjectKey: subjectKey },
+      proposedSubject: null,
       rows,
       errors,
       warnings,
@@ -427,6 +518,8 @@
         filename: plan.filename,
         fileFingerprint: plan.fileFingerprint,
         schemaVersion: text(plan.payload.schemaVersion),
+        isSpecialProgramSubject: plan.payload.subject?.isSpecialProgramSubject === true,
+        specialProgramWeights: Array.isArray(plan.payload.subject?.specialProgramWeights) ? plan.payload.subject.specialProgramWeights.map(Number) : [],
         schoolYear: text(plan.payload.schoolYear),
         subject: text(plan.payload.subject?.name),
         term: text(plan.payload.term?.number),
@@ -665,6 +758,13 @@
     const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
     const store = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb());
     const existing = subjectId ? store.subjects.find(item => item.id === subjectId && item.advisoryClassId === advisoryClass.id) : null;
+    if (!existing) {
+      if (advisoryClass.isSpecialClass) {
+        setPanelTab('settings', document.querySelector('.advisory-page'));
+        globalScope.toast('Add special subjects in Advisory Settings.', 'info');
+      } else globalScope.toast('Additional subjects are available only for a Special Class.', 'warning');
+      return;
+    }
     const localClasses = (activeDb().assignments || []).filter(item => text(item.schoolYear || activeDb().schoolYear) === text(advisoryClass.schoolYear)
       && text(item.gradeLevel) === text(advisoryClass.gradeLevel)
       && globalScope.AdvisoryRoster.normalizeMatchText(item.section) === globalScope.AdvisoryRoster.normalizeMatchText(advisoryClass.section)
@@ -674,7 +774,7 @@
     const value = (field, fallback = '') => globalScope.esc(existing?.[field] ?? fallback);
     overlay.innerHTML = `
       <div class="modal modal--wide">
-        <div class="modal__title">${existing ? 'Assign Grade Source' : 'Add Another Subject'}</div>
+        <div class="modal__title">Assign Grade Source</div>
         <div class="modal__body advisory-scroll-body">
           <div class="field"><label class="field-label">Subject</label><input class="field-input" data-subject-field="subjectName" value="${value('subjectName')}" ${existing ? 'readonly' : ''} required><p class="field-help">Subjects are filled in automatically from Grade ${globalScope.esc(advisoryClass.gradeLevel)}. Add another subject only when it is not on the standard list.</p></div>
           <fieldset class="advisory-source-choice"><legend>Where will the grades come from?</legend>
@@ -686,7 +786,7 @@
           <div class="field" data-source-help="local-subject-class" hidden><label class="field-label">Choose the class</label><select class="field-select" data-local-source-class><option value="">Select a class</option>${localClasses.map(item => `<option value="${globalScope.esc(item.id)}">${globalScope.esc(item.subject)} · Grade ${globalScope.esc(item.gradeLevel)} - ${globalScope.esc(item.section)}</option>`).join('')}</select><p class="field-help">Only classes matching this Advisory Class school year, grade level, and section are listed.</p></div>
           <div class="advisory-source-explanation" data-source-help="manual" hidden><strong>Manual source selected.</strong><span>The subject remains ready for grades entered by the adviser.</span></div>
         </div>
-        <div class="modal__actions">${existing ? '<button class="btn btn-danger btn-sm" data-delete-subject>Remove Subject</button>' : ''}<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-save>${existing ? 'Save Source' : 'Add Subject'}</button></div>
+        <div class="modal__actions">${existing.isSpecialProgramSubject ? '<button class="btn btn-danger btn-sm" data-delete-subject>Archive Subject</button>' : ''}<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-save>Save Source</button></div>
       </div>`;
     document.body.appendChild(overlay);
     const selectedSourceType = existing?.sourceType === 'local-subject-class' || existing?.sourceType === 'manual' ? existing.sourceType : 'grade-transfer-file';
@@ -726,8 +826,7 @@
       if (!values.subjectName || !values.normalizedSubjectKey) { globalScope.toast('Subject name is required.', 'warning'); return; }
       const duplicate = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb()).subjects.some(item => item.advisoryClassId === advisoryClass.id && item.id !== existing?.id && item.normalizedSubjectKey === values.normalizedSubjectKey);
       if (duplicate) { globalScope.toast('This Advisory subject already exists.', 'warning'); return; }
-      if (existing) globalScope.AdvisoryData.updateSubject(activeDb(), existing.id, values);
-      else globalScope.AdvisoryData.createSubject(activeDb(), { ...values, advisoryClassId: advisoryClass.id });
+      globalScope.AdvisoryData.updateSubject(activeDb(), existing.id, values);
       await globalScope.saveDatabase();
       overlay.remove();
       globalScope.AdvisoryRoster.renderWorkspace();
@@ -736,13 +835,13 @@
     });
     overlay.querySelector('[data-delete-subject]')?.addEventListener('click', () => {
       const gradeCount = store.grades.filter(item => item.advisorySubjectId === existing.id).length;
-      globalScope.confirmModal('Remove Advisory Subject', `Remove ${existing.subjectName}? ${gradeCount ? `This will also remove ${gradeCount} saved final grade record(s).` : 'No saved grades are attached.'}`, async () => {
-        globalScope.AdvisoryData.deleteSubject(activeDb(), existing.id);
+      globalScope.confirmModal('Archive Special Subject', `Archive ${existing.subjectName}? ${gradeCount ? `${gradeCount} saved final grade record(s) and their source history will be preserved.` : 'No saved grades are attached.'}`, async () => {
+        globalScope.AdvisoryData.updateSubject(activeDb(), existing.id, { isArchived: true });
         await globalScope.saveDatabase();
         overlay.remove();
         globalScope.AdvisoryRoster.renderWorkspace();
         globalScope.renderDashboardOverview();
-        globalScope.toast('Advisory subject removed.', 'success');
+        globalScope.toast('Special subject archived.', 'success');
       });
     });
   }
@@ -768,7 +867,10 @@
     const panel = workspace?.querySelector('[data-advisory-grade-panel]');
     if (!panel) return;
     const store = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb());
-    const subjects = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id).sort((a, b) => a.displayOrder - b.displayOrder);
+    const allSubjects = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id).sort((a, b) => a.displayOrder - b.displayOrder);
+    const subjects = allSubjects.filter(item => !item.isArchived);
+    const activeSpecialSubjects = subjects.filter(item => item.isSpecialProgramSubject);
+    const archivedSpecialSubjects = allSubjects.filter(item => item.isSpecialProgramSubject && item.isArchived);
     const learners = store.learners.filter(item => item.advisoryClassId === advisoryClass.id && item.enrollmentStatus !== 'inactive');
     const grades = store.grades.filter(item => item.advisoryClassId === advisoryClass.id);
     const batches = store.importBatches.filter(item => item.advisoryClassId === advisoryClass.id).sort((a, b) => text(b.importedAt).localeCompare(text(a.importedAt)));
@@ -815,13 +917,14 @@
   }
 
   function calculateGeneralAverage(grades, learnerId, subjects) {
-    if (!subjects.length) return null;
-    const components = mapehComponents(subjects);
+    const includedSubjects = (subjects || []).filter(subject => !subject.isArchived && subject.includeInGeneralAverage !== false);
+    if (!includedSubjects.length) return null;
+    const components = mapehComponents(includedSubjects);
     const regularSubjects = components
-      ? subjects.filter(subject => ![components.musicArts.id, components.peHealth.id].includes(subject.id))
-      : subjects;
+      ? includedSubjects.filter(subject => ![components.musicArts.id, components.peHealth.id].includes(subject.id))
+      : includedSubjects;
     const finals = regularSubjects.map(subject => calculateSubjectFinal(grades, learnerId, subject.id));
-    if (components) finals.push(calculateMapehFinal(grades, learnerId, subjects));
+    if (components) finals.push(calculateMapehFinal(grades, learnerId, includedSubjects));
     return finals.every(value => value !== null)
       ? Math.round(finals.reduce((sum, value) => sum + value, 0) / finals.length)
       : null;
@@ -928,7 +1031,10 @@
     if (!panel) return;
     const profileDb = activeDb();
     const store = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb);
-    const subjects = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id).sort((a, b) => a.displayOrder - b.displayOrder);
+    const allSubjects = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id).sort((a, b) => a.displayOrder - b.displayOrder);
+    const subjects = allSubjects.filter(item => !item.isArchived);
+    const activeSpecialSubjects = subjects.filter(item => item.isSpecialProgramSubject);
+    const archivedSpecialSubjects = allSubjects.filter(item => item.isSpecialProgramSubject && item.isArchived);
     const rosterLearners = store.learners.filter(item => item.advisoryClassId === advisoryClass.id);
     const learners = rosterLearners.filter(item => item.enrollmentStatus !== 'inactive');
     const grades = store.grades.filter(item => item.advisoryClassId === advisoryClass.id);
@@ -1004,7 +1110,7 @@
 
     panel.innerHTML = `
       <section id="advisoryGradeRecordPanel" role="tabpanel" data-advisory-panel="grades">
-        <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Final grades are shown by default. Show every term at once or use the + beside an individual subject.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-terms aria-pressed="${allTermsExpanded}">${allTermsExpanded ? 'Hide Terms 1–3' : 'Show Terms 1–3'}</button><button class="btn btn-ghost btn-sm" type="button" data-add-advisory-subject>Add Other Subject</button><button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
+        <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Final grades are shown by default. Show every term at once or use the + beside an individual subject.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-terms aria-pressed="${allTermsExpanded}">${allTermsExpanded ? 'Hide Terms 1–3' : 'Show Terms 1–3'}</button>${advisoryClass.isSpecialClass ? '<button class="btn btn-ghost btn-sm" type="button" data-manage-special-subjects>Manage Special Subjects</button>' : ''}<button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
         ${matrix}
       </section>
       <section id="advisoryGradeSourcesPanel" role="tabpanel" data-advisory-panel="sources" hidden>
@@ -1022,13 +1128,22 @@
             <div class="field"><label class="field-label" for="advisoryInlineGrade">Grade Level</label><select class="field-select" id="advisoryInlineGrade" required>${Array.from({ length: 10 }, (_, index) => index + 1).map(level => `<option value="${level}" ${String(level) === String(advisoryClass.gradeLevel) ? 'selected' : ''}>Grade ${level}</option>`).join('')}</select></div>
             <div class="field"><label class="field-label" for="advisoryInlineSection">Section</label><select class="field-select" id="advisoryInlineSection" required><option value="">Select a section</option>${sectionOptions}<option value="__custom__" ${hasListedSection ? '' : 'selected'}>Add a different section...</option></select><input class="field-input advisory-custom-section" id="advisoryInlineCustomSection" value="${globalScope.esc(hasListedSection ? '' : advisoryClass.section)}" placeholder="Enter the section name" ${hasListedSection ? 'hidden' : ''}></div>
           </div>
+          <div class="special-program-weight-panel">
+            <label class="checkbox-row"><input type="checkbox" id="advisoryInlineSpecialClass" ${advisoryClass.isSpecialClass ? 'checked' : ''}> This is a Special Class</label>
+            <div data-advisory-inline-special-fields ${advisoryClass.isSpecialClass ? '' : 'hidden'}>
+              <div class="field"><label class="field-label" for="advisoryInlineProgramName">Special Program Name</label><input class="field-input" id="advisoryInlineProgramName" value="${globalScope.esc(advisoryClass.specialProgramName || '')}" placeholder="e.g. Journalism or Science"></div>
+              ${[0, 1].map(index => { const subject = activeSpecialSubjects[index]; return `<div class="split-row advisory-special-subject-row"><div class="field"><label class="field-label" for="advisoryInlineSpecialSubject${index + 1}">Special Subject ${index + 1}${index ? ' (Optional)' : ''}</label><input class="field-input" id="advisoryInlineSpecialSubject${index + 1}" value="${globalScope.esc(subject?.subjectName || '')}" placeholder="Enter the subject name"></div><label class="checkbox-row"><input type="checkbox" id="advisoryInlineSpecialSubject${index + 1}Ga" ${subject?.includeInGeneralAverage === false ? '' : 'checked'}> Include in General Average</label></div>`; }).join('')}
+              <p class="text-muted">Removing a subject or turning off Special Class archives its records. Saved grades and import history are preserved.</p>
+              ${archivedSpecialSubjects.length ? `<div class="advisory-archived-special-subjects"><strong>Archived Special Subjects</strong>${archivedSpecialSubjects.map(subject => `<div><span>${globalScope.esc(subject.subjectName)}</span><button class="btn btn-ghost btn-sm" type="button" data-restore-special-subject="${globalScope.esc(subject.id)}">Restore</button></div>`).join('')}</div>` : ''}
+            </div>
+          </div>
           <label class="checkbox-row"><input type="checkbox" id="advisoryInlineArchived" ${advisoryClass.isArchived ? 'checked' : ''}> Archive this Advisory Class</label>
           <div class="advisory-settings-managed"><strong>Managed in Global Settings</strong><span>School Year: ${globalScope.esc(profileDb.schoolYear || advisoryClass.schoolYear)} · Adviser: ${globalScope.esc(profileDb.teacherName || advisoryClass.adviserName || 'Not provided')} · School: ${globalScope.esc(profileDb.schoolName || advisoryClass.schoolName || 'Not provided')}</span><span>School ID, district, division, and region also come from your global teacher profile.</span></div>
           <div class="advisory-settings-form__actions"><button class="btn btn-primary btn-sm" type="submit">Save Advisory Settings</button></div>
         </form>
       </section>`;
     panel.querySelector('[data-import-subject-grades]')?.addEventListener('click', selectImportFile);
-    panel.querySelector('[data-add-advisory-subject]')?.addEventListener('click', () => showSubjectModal());
+    panel.querySelector('[data-manage-special-subjects]')?.addEventListener('click', () => setPanelTab('settings', workspace));
     panel.querySelector('[data-toggle-advisory-terms]')?.addEventListener('click', () => {
       if (allTermsExpanded) subjectGroups.forEach(subject => expandedAdvisorySubjects.delete(subject.id));
       else subjectGroups.forEach(subject => expandedAdvisorySubjects.add(subject.id));
@@ -1063,6 +1178,31 @@
     };
     sectionSelect?.addEventListener('change', syncCustomSection);
     syncCustomSection();
+    const specialClassInput = settingsForm?.querySelector('#advisoryInlineSpecialClass');
+    const specialFields = settingsForm?.querySelector('[data-advisory-inline-special-fields]');
+    const syncInlineSpecialFields = () => {
+      if (specialFields) specialFields.hidden = !specialClassInput?.checked;
+    };
+    specialClassInput?.addEventListener('change', syncInlineSpecialFields);
+    syncInlineSpecialFields();
+    panel.querySelectorAll('[data-restore-special-subject]').forEach(button => button.addEventListener('click', async () => {
+      const subject = archivedSpecialSubjects.find(item => item.id === button.dataset.restoreSpecialSubject);
+      if (!subject) return;
+      if (!advisoryClass.isSpecialClass) { globalScope.toast('Enable Special Class before restoring a special subject.', 'warning'); return; }
+      if (activeSpecialSubjects.length >= 2) { globalScope.toast('Archive or remove an active special subject before restoring another.', 'warning'); return; }
+      try {
+        syncSpecialProgramSubjects(profileDb, advisoryClass, [...activeSpecialSubjects, subject].map(item => ({
+          subjectName: item.subjectName,
+          includeInGeneralAverage: item.includeInGeneralAverage
+        })));
+        await globalScope.saveDatabase();
+        globalScope.renderAdvisoryClassPage?.();
+        globalScope.AdvisoryGradeTransfer?.setPanelTab?.('settings', document.querySelector('.advisory-page'));
+        globalScope.toast(`${subject.subjectName} restored.`, 'success');
+      } catch (error) {
+        globalScope.toast(error.message || 'The subject could not be restored.', 'error');
+      }
+    }));
     settingsForm?.addEventListener('submit', async event => {
       event.preventDefault();
       const gradeLevel = settingsForm.querySelector('#advisoryInlineGrade').value.trim();
@@ -1073,26 +1213,52 @@
         return;
       }
       const archived = settingsForm.querySelector('#advisoryInlineArchived').checked;
-      const savedClass = globalScope.AdvisoryData.updateClass(profileDb, advisoryClass.id, {
-        schoolYear: profileDb.schoolYear || advisoryClass.schoolYear,
-        gradeLevel,
-        section,
-        adviserName: profileDb.teacherName || advisoryClass.adviserName,
-        schoolName: profileDb.schoolName || advisoryClass.schoolName,
-        schoolId: profileDb.schoolId || advisoryClass.schoolId,
-        district: profileDb.district || advisoryClass.district,
-        division: profileDb.division || advisoryClass.division,
-        region: profileDb.region || advisoryClass.region,
-        isActive: !archived,
-        isArchived: archived
-      });
-      ensureGradeLevelSubjects(profileDb, savedClass);
-      await globalScope.saveDatabase();
-      globalScope.renderDashboardOverview();
-      globalScope.syncAdvisorySidebarButton?.();
-      globalScope.toast('Advisory settings saved.', 'success');
-      if (archived) globalScope.showView?.('dashboard');
-      else globalScope.renderAdvisoryClassPage?.();
+      const isSpecialClass = specialClassInput.checked;
+      const specialProgramName = settingsForm.querySelector('#advisoryInlineProgramName').value.trim();
+      const requestedSpecialSubjects = [1, 2].map(index => ({
+        subjectName: settingsForm.querySelector(`#advisoryInlineSpecialSubject${index}`).value.trim(),
+        includeInGeneralAverage: settingsForm.querySelector(`#advisoryInlineSpecialSubject${index}Ga`).checked
+      })).filter(item => item.subjectName);
+      if (isSpecialClass && (!specialProgramName || !requestedSpecialSubjects.length)) {
+        globalScope.toast('Enter the Special Program Name and at least one special subject.', 'warning');
+        (!specialProgramName ? settingsForm.querySelector('#advisoryInlineProgramName') : settingsForm.querySelector('#advisoryInlineSpecialSubject1')).focus();
+        return;
+      }
+      const willArchiveSpecialSubjects = activeSpecialSubjects.length > (isSpecialClass ? requestedSpecialSubjects.length : 0);
+      const archivedSubjectsHaveGrades = willArchiveSpecialSubjects && activeSpecialSubjects.some(subject => grades.some(grade => grade.advisorySubjectId === subject.id));
+      const commit = async () => {
+        const snapshot = JSON.parse(JSON.stringify(profileDb.advisory));
+        try {
+          const savedClass = globalScope.AdvisoryData.updateClass(profileDb, advisoryClass.id, {
+            schoolYear: profileDb.schoolYear || advisoryClass.schoolYear,
+            gradeLevel,
+            section,
+            adviserName: profileDb.teacherName || advisoryClass.adviserName,
+            schoolName: profileDb.schoolName || advisoryClass.schoolName,
+            schoolId: profileDb.schoolId || advisoryClass.schoolId,
+            district: profileDb.district || advisoryClass.district,
+            division: profileDb.division || advisoryClass.division,
+            region: profileDb.region || advisoryClass.region,
+            isSpecialClass,
+            specialProgramName: isSpecialClass ? specialProgramName : '',
+            isActive: !archived,
+            isArchived: archived
+          });
+          ensureGradeLevelSubjects(profileDb, savedClass);
+          syncSpecialProgramSubjects(profileDb, savedClass, isSpecialClass ? requestedSpecialSubjects : []);
+          await globalScope.saveDatabase();
+          globalScope.renderDashboardOverview();
+          globalScope.syncAdvisorySidebarButton?.();
+          globalScope.toast('Advisory settings saved.', 'success');
+          if (archived) globalScope.showView?.('dashboard');
+          else globalScope.renderAdvisoryClassPage?.();
+        } catch (error) {
+          profileDb.advisory = snapshot;
+          globalScope.toast(error.message || 'Advisory settings could not be saved.', 'error');
+        }
+      };
+      if (archivedSubjectsHaveGrades) globalScope.confirmModal('Archive Special Subject Grades?', 'This change archives one or more special subjects. Their grades, source mappings, and import history will be preserved but excluded from the active record and General Average.', commit);
+      else await commit();
     });
     bindAdvisoryMatrixScroller(panel);
     setPanelTab(advisoryPanelTab, workspace);
@@ -1104,6 +1270,7 @@
     normalizeSubjectKey,
     standardSubjectsForGrade,
     ensureGradeLevelSubjects,
+    syncSpecialProgramSubjects,
     sanitizeFilenamePart,
     gradeTransferFilename,
     fileFingerprint,

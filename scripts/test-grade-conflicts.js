@@ -10,6 +10,7 @@ function setup() {
   const advisoryClass = AdvisoryData.createClass(profile, { id: 'advisory-1', schoolYear: profile.schoolYear, gradeLevel: '4', section: 'Molave', adviserName: 'Adviser', isActive: true });
   AdvisoryData.createLearner(profile, { id: 'learner-1', advisoryClassId: advisoryClass.id, lrn: '123456789012', lastName: 'Cruz', firstName: 'Juan' });
   AdvisoryData.createLearner(profile, { id: 'learner-2', advisoryClassId: advisoryClass.id, lrn: '123456789013', lastName: 'Reyes', firstName: 'Maria' });
+  Transfer.ensureGradeLevelSubjects(profile, advisoryClass);
   return { profile, advisoryClass };
 }
 

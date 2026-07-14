@@ -99,10 +99,35 @@ function createProfile() {
   context.window = context;
   vm.createContext(context);
   vm.runInContext(source, context);
+  [
+    ['Language', 'language'],
+    ['Reading and Literacy', 'reading-literacy'],
+    ['Makabansa', 'makabansa'],
+    ['Mathematics', 'mathematics'],
+    ['GMRC / Values Education', 'gmrc'],
+    ['Araling Panlipunan', 'araling-panlipunan'],
+    ['English', 'english'],
+    ['Filipino', 'filipino'],
+    ['Science', 'science'],
+    ['Music & Arts', 'mapeh'],
+    ['Physical Education and Health', 'mapeh'],
+    ['EPP / TLE', 'epp-tle']
+  ].forEach(([subject, key]) => {
+    assert(context.subjectWatermarkMarkup(subject).includes(`subject-watermark--${key}`), `${subject} should use the ${key} watermark`);
+    assert(context.subjectCardIconMarkup(subject).includes(`assets/subject-icons/${key}.png`), `${subject} should use the ${key} title icon`);
+  });
+  assert.strictEqual(context.subjectWatermarkMarkup('Campus Journalism'), '', 'a special subject without its own image should not receive a background');
+  assert.strictEqual(context.subjectCardIconMarkup('Campus Journalism'), '', 'a special subject without its own image should not receive a title icon');
+  assert.strictEqual(context.subjectWatermarkMarkup('Unlisted Custom Subject'), '', 'an unlisted subject should remain text-only');
   context.renderDashboardOverview();
   assert(target.innerHTML.indexOf('data-dashboard-fixed="true"') < target.innerHTML.indexOf('data-assignment-id="class-b"'));
   assert(target.innerHTML.indexOf('data-assignment-id="class-b"') < target.innerHTML.indexOf('data-assignment-id="class-a"'));
   assert((target.innerHTML.match(/data-dashboard-draggable="true"/g) || []).length === 2);
+  assert(target.innerHTML.includes('dashboard-card__subject-watermark subject-watermark--mathematics'));
+  assert(target.innerHTML.includes('dashboard-card__subject-watermark subject-watermark--science'));
+  assert(target.innerHTML.includes('dashboard-card__subject-icon" src="assets/subject-icons/mathematics.png'));
+  assert(target.innerHTML.includes('dashboard-card__subject-icon" src="assets/subject-icons/science.png'));
+  assert(!target.innerHTML.includes('<svg viewBox="0 0 100 100"'), 'subject cards must use the supplied image watermarks instead of generated foreground SVGs');
 
   let prevented = false;
   context.handleDashboardCardDragStart({
@@ -120,8 +145,23 @@ function createProfile() {
 // Eyeglasses art is bundled CSS and has no network URL.
 {
   const advisoryCss = fs.readFileSync(path.join(__dirname, '../src/renderer/css/advisory.css'), 'utf8');
+  const componentCss = fs.readFileSync(path.join(__dirname, '../src/renderer/css/components.css'), 'utf8');
   assert(advisoryCss.includes('data:image/svg+xml'));
   assert(!/url\(["']?https?:\/\//i.test(advisoryCss), 'eyeglasses artwork must not use a remote URL');
+  assert(!advisoryCss.includes('matatag-subject-area-logo-set.png'), 'the former combined logo sheet should no longer be used');
+  assert(advisoryCss.includes('mix-blend-mode: multiply'));
+  assert(advisoryCss.includes('.dashboard-card--list .dashboard-card__subject-watermark'));
+  assert(advisoryCss.includes('.dashboard-card__subject-icon'));
+  ['language', 'reading-literacy', 'makabansa', 'mathematics', 'gmrc', 'araling-panlipunan', 'english', 'filipino', 'science', 'mapeh', 'epp-tle'].forEach(key => {
+    const iconFile = path.join(__dirname, `../src/renderer/assets/subject-icons/${key}.png`);
+    assert(fs.existsSync(iconFile), `${key} image must be packaged locally`);
+    assert(fs.statSync(iconFile).size > 200000, `${key} image appears incomplete`);
+    assert(advisoryCss.includes(`url('../assets/subject-icons/${key}.png')`), `${key} must be configured as a card background`);
+  });
+  assert(componentCss.includes('.dashboard-card[data-assignment-id] .dashboard-card__actions'), 'ordinary class-card actions should have scoped spacing');
+  assert(componentCss.includes('gap: var(--space-2)'), 'class-card action buttons should have a visible gap');
+  assert(componentCss.includes('.dashboard-card[data-assignment-id] .dashboard-card__export-btn,\n.dashboard-card[data-assignment-id] .dashboard-card__report-btn'), 'Export Final Grades and Reports should share one equal-width rule');
+  assert(componentCss.includes('flex: 1 1 0'), 'the two card actions should divide available width equally');
 }
 
 console.log('Advisory dashboard ordering and rendering tests passed.');

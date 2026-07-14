@@ -85,6 +85,29 @@ function createPopulatedProfile() {
   assert.strictEqual(JSON.stringify(profile), once, 'migration must be idempotent');
 }
 
+// Schema 1 Advisory stores migrate standard subjects as active and preserve
+// former extra subjects as clearly identified legacy records.
+{
+  const profile = legacyProfile();
+  profile.advisory = {
+    schemaVersion: 1,
+    classes: [{ id: 'legacy-advisory', schoolYear: '2026-2027', gradeLevel: '4', section: 'Molave', adviserName: 'Teacher One', isActive: true }],
+    learners: [],
+    subjects: [
+      { id: 'standard', advisoryClassId: 'legacy-advisory', subjectName: 'Mathematics', normalizedSubjectKey: 'MATHEMATICS' },
+      { id: 'extra', advisoryClassId: 'legacy-advisory', subjectName: 'Campus Journalism', normalizedSubjectKey: 'CAMPUS JOURNALISM' }
+    ],
+    grades: [], importBatches: [], sourceMappings: []
+  };
+  const store = AdvisoryData.normalizeAdvisoryData(profile);
+  assert.strictEqual(store.schemaVersion, 2);
+  assert.strictEqual(store.classes[0].isSpecialClass, false);
+  assert.strictEqual(store.subjects.find(item => item.id === 'standard').isLegacySubject, false);
+  assert.strictEqual(store.subjects.find(item => item.id === 'standard').includeInGeneralAverage, true);
+  assert.strictEqual(store.subjects.find(item => item.id === 'extra').isLegacySubject, true);
+  assert.strictEqual(store.subjects.find(item => item.id === 'extra').isArchived, false);
+}
+
 // All Phase 1 entities support create/read/update and integrity validation.
 {
   const data = createPopulatedProfile();
@@ -125,6 +148,43 @@ function createPopulatedProfile() {
   }), /already exists/);
 }
 
+// Special Class migration defaults and one-to-two-subject limits are enforced.
+{
+  const profile = legacyProfile();
+  AdvisoryData.normalizeAdvisoryData(profile);
+  assert.throws(() => AdvisoryData.createClass(profile, {
+    schoolYear: '2026-2027', gradeLevel: '4', section: 'Narra', adviserName: 'Teacher One', isActive: true, isSpecialClass: true
+  }), /Special program name/);
+  const advisoryClass = AdvisoryData.createClass(profile, {
+    schoolYear: '2026-2027', gradeLevel: '4', section: 'Narra', adviserName: 'Teacher One', isActive: true,
+    isSpecialClass: true, specialProgramName: 'Journalism'
+  });
+  const first = AdvisoryData.createSubject(profile, {
+    advisoryClassId: advisoryClass.id, subjectName: 'Campus Journalism', normalizedSubjectKey: 'CAMPUS JOURNALISM',
+    isSpecialProgramSubject: true, includeInGeneralAverage: false
+  });
+  AdvisoryData.createSubject(profile, {
+    advisoryClassId: advisoryClass.id, subjectName: 'Broadcasting', normalizedSubjectKey: 'BROADCASTING', isSpecialProgramSubject: true
+  });
+  assert.strictEqual(first.includeInGeneralAverage, false);
+  assert.throws(() => AdvisoryData.createSubject(profile, {
+    advisoryClassId: advisoryClass.id, subjectName: 'Photojournalism', normalizedSubjectKey: 'PHOTOJOURNALISM', isSpecialProgramSubject: true
+  }), /at most two/);
+  AdvisoryData.updateSubject(profile, first.id, { isArchived: true });
+  assert.doesNotThrow(() => AdvisoryData.createSubject(profile, {
+    advisoryClassId: advisoryClass.id, subjectName: 'Photojournalism', normalizedSubjectKey: 'PHOTOJOURNALISM', isSpecialProgramSubject: true
+  }));
+
+  const ordinary = legacyProfile();
+  AdvisoryData.normalizeAdvisoryData(ordinary);
+  const ordinaryClass = AdvisoryData.createClass(ordinary, {
+    schoolYear: '2026-2027', gradeLevel: '4', section: 'Molave', adviserName: 'Teacher One', isActive: true
+  });
+  assert.throws(() => AdvisoryData.createSubject(ordinary, {
+    advisoryClassId: ordinaryClass.id, subjectName: 'Special Science', normalizedSubjectKey: 'SPECIAL SCIENCE', isSpecialProgramSubject: true
+  }), /require a Special Class/);
+}
+
 // Deletes cascade safely and never modify ordinary class data.
 {
   const data = createPopulatedProfile();
@@ -156,7 +216,7 @@ function createPopulatedProfile() {
   const databaseSource = fs.readFileSync(path.join(root, 'src/renderer/js/database.js'), 'utf8');
   const importSource = fs.readFileSync(path.join(root, 'src/renderer/js/import-export.js'), 'utf8');
   const htmlSource = fs.readFileSync(path.join(root, 'src/renderer/index.html'), 'utf8');
-  assert(databaseSource.includes('const DB_VERSION = 4;'), 'profile database version must be migrated');
+  assert(databaseSource.includes('const DB_VERSION = 5;'), 'profile database version must be migrated');
   assert(databaseSource.includes('normalizeAdvisoryData(db);'), 'database normalization must migrate advisory data');
   assert(databaseSource.indexOf('normalizeDatabase();') < databaseSource.indexOf('updateProfile();'), 'save must normalize before persistence');
   assert(htmlSource.indexOf('js/advisory-data.js') < htmlSource.indexOf('js/database.js'), 'data model must load before database startup');

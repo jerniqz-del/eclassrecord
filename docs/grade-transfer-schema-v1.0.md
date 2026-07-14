@@ -20,7 +20,12 @@ Grade Transfer Files are UTF-8 JSON documents for offline exchange of one subjec
     "gradeLevel": "4",
     "section": "Molave"
   },
-  "subject": { "name": "Mathematics", "normalizedKey": "MATHEMATICS" },
+  "subject": {
+    "name": "Campus Journalism",
+    "normalizedKey": "CAMPUS JOURNALISM",
+    "isSpecialProgramSubject": true,
+    "specialProgramWeights": [10, 70, 20]
+  },
   "term": { "number": 1, "label": "Term 1" },
   "learners": [
     {
@@ -48,6 +53,8 @@ Grade Transfer Files are UTF-8 JSON documents for offline exchange of one subjec
 - LRNs, when present, are 12 digits and must not be duplicated in the file.
 - Raw scores, assessment columns, HPS, attendance, and grades from other terms are outside this schema and must not be exported.
 - Unknown properties may be retained for forward compatibility, but importers must not treat them as authoritative grade data.
+- `subject.isSpecialProgramSubject` and `subject.specialProgramWeights` are optional v1.0 fields. When marked special, weights must contain three whole percentages from 0 to 100 totaling 100. The file must match an active special subject in an active Special Class. Older unmarked files may match an active special subject by normalized name with a review warning.
+- The adviser&apos;s `includeInGeneralAverage` choice is local Advisory configuration and is never overwritten by a teacher&apos;s Grade Transfer File.
 
 ## Matching and identity
 

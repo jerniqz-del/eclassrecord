@@ -12,6 +12,7 @@ const Transfer = require('../src/renderer/js/advisory-grade-transfer.js');
 const adviserDb = { version: 3, teacherName: 'Adviser B', schoolName: 'Monbon ES', schoolYear: '2026-2027', assignments: [] };
 AdvisoryData.normalizeAdvisoryData(adviserDb);
 const advisoryClass = AdvisoryData.createClass(adviserDb, { id: 'advisory-1', schoolYear: adviserDb.schoolYear, gradeLevel: '4', section: 'Molave', adviserName: 'Adviser B', schoolName: adviserDb.schoolName, isActive: true });
+Transfer.ensureGradeLevelSubjects(adviserDb, advisoryClass);
 const teacherClass = {
   id: 'class-math', schoolYear: '2026-2027', gradeLevel: '4', section: 'Molave', subject: 'Mathematics', dashboardOrder: 7,
   learners: [
@@ -52,9 +53,9 @@ assert.strictEqual(adviserDb.advisory.sourceMappings.length, 1);
 // Completion is calculated from actual learner-grade records, not file presence.
 let summary = AdvisoryDashboard.summarize(adviserDb, advisoryClass);
 assert.strictEqual(summary.completedSets, 1);
-assert.strictEqual(summary.expectedSets, 3);
-assert.strictEqual(summary.missingGrades, 4);
-assert.strictEqual(summary.completionPercent, 33);
+assert.strictEqual(summary.expectedSets, 27);
+assert.strictEqual(summary.missingGrades, 52);
+assert.strictEqual(summary.completionPercent, 4);
 
 // Backup, restore, and restart preserve grades, history, sources, and dashboard invariants.
 const backupText = JSON.stringify(adviserDb);

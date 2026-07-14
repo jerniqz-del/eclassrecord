@@ -5,8 +5,8 @@
  * scores, and configuration through Electron IPC bridge.
  */
 
-const DB_VERSION = 4;
-const ROOT_DB_VERSION = 4;
+const DB_VERSION = 5;
+const ROOT_DB_VERSION = 5;
 
 function timestampNow() {
   return new Date().toISOString();
@@ -176,6 +176,14 @@ function normalizeDatabase() {
     // Automatically set policy and subjectGroup based on grade, subject, and school year
     a.policy = determinePolicy(a.gradeLevel, a.subject, a.schoolYear);
     a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy);
+    const isCustomSubject = !getSubjectsForGrade(a.gradeLevel).includes(a.subject);
+    a.isSpecialProgramSubject = isCustomSubject && a.isSpecialProgramSubject === true;
+    if (a.isSpecialProgramSubject) {
+      const custom = normalizeSpecialProgramWeights(a.specialProgramWeights);
+      a.specialProgramWeights = custom || weightsFor(a.subjectGroup);
+    } else {
+      delete a.specialProgramWeights;
+    }
 
     if (!a.assessments) a.assessments = [];
     if (!a.scores) a.scores = {};
@@ -351,7 +359,8 @@ function addAssignment() {
   let subject = trim(document.getElementById('newSubject').value);
   const classSchoolYear = (document.getElementById('newClassSchoolYear') && document.getElementById('newClassSchoolYear').value) || db.schoolYear || '2026-2027';
 
-  if (subject === 'Custom') {
+  const isCustomSubject = subject === 'Custom';
+  if (isCustomSubject) {
     subject = trim(document.getElementById('customSubjectInput').value);
   }
 
@@ -362,6 +371,16 @@ function addAssignment() {
 
   const policy = determinePolicy(gradeLevel, subject, classSchoolYear);
   const subjectGroup = determineSubjectGroup(gradeLevel, subject, policy);
+  const isSpecialProgramSubject = isCustomSubject && document.getElementById('newSpecialProgramSubject')?.checked === true;
+  const specialProgramWeights = isSpecialProgramSubject ? [
+    Number(document.getElementById('newSpecialWwWeight')?.value),
+    Number(document.getElementById('newSpecialPtWeight')?.value),
+    Number(document.getElementById('newSpecialExamWeight')?.value)
+  ] : null;
+  if (isSpecialProgramSubject && !normalizeSpecialProgramWeights(specialProgramWeights)) {
+    toast('Special-program weights must be whole numbers from 0 to 100 and total exactly 100%.', 'warning');
+    return;
+  }
 
   const assignment = {
     id: uid('class'),
@@ -369,6 +388,8 @@ function addAssignment() {
     section,
     subject,
     subjectGroup,
+    isSpecialProgramSubject,
+    ...(isSpecialProgramSubject ? { specialProgramWeights } : {}),
     policy,
     schoolYear: classSchoolYear,
     dashboardOrder: nextDashboardOrderForYear(classSchoolYear),
@@ -392,6 +413,9 @@ function addAssignment() {
   document.getElementById('newSection').value = '';
   const customSubInput = document.getElementById('customSubjectInput');
   if (customSubInput) customSubInput.value = '';
+  const specialCheckbox = document.getElementById('newSpecialProgramSubject');
+  if (specialCheckbox) specialCheckbox.checked = false;
+  if (typeof syncNewSpecialProgramWeights === 'function') syncNewSpecialProgramWeights();
 
   saveDatabase();
   render();
@@ -653,6 +677,18 @@ function editAssignmentModal(id) {
           <label class="field-label">Custom Subject Name</label>
           <input id="editCustomSubjectInput" class="field-input" placeholder="e.g. Science Elective" />
         </div>
+        <div id="editSpecialProgramSubjectField" class="special-program-weight-panel" hidden>
+          <label class="checkbox-row"><input type="checkbox" id="editSpecialProgramSubject"> Treat this as a Special-Program Subject</label>
+          <div id="editSpecialProgramWeights" hidden>
+            <p class="text-muted u-mt-0">Set whole-number percentages totaling 100%. The Summative Tests and Term Examination category keeps its internal 30% / 30% / 40% split.</p>
+            <div class="split-row">
+              <div class="field"><label class="field-label">Written Works %</label><input class="field-input" id="editSpecialWwWeight" type="number" min="0" max="100" step="1"></div>
+              <div class="field"><label class="field-label">Performance Tasks %</label><input class="field-input" id="editSpecialPtWeight" type="number" min="0" max="100" step="1"></div>
+              <div class="field"><label class="field-label">Summative Tests &amp; Term Examination %</label><input class="field-input" id="editSpecialExamWeight" type="number" min="0" max="100" step="1"></div>
+            </div>
+            <div class="special-program-weight-total" id="editSpecialWeightTotal" aria-live="polite"></div>
+          </div>
+        </div>
       </div>
       <div class="modal__actions">
         <button class="btn btn-cancel btn-sm" id="editModalCancel">Cancel</button>
@@ -668,6 +704,21 @@ function editAssignmentModal(id) {
   const editSubjectSelect = overlay.querySelector('#editSubject');
   const editCustomField = overlay.querySelector('#editCustomSubjectField');
   const editCustomInput = overlay.querySelector('#editCustomSubjectInput');
+  const editSpecialField = overlay.querySelector('#editSpecialProgramSubjectField');
+  const editSpecialCheckbox = overlay.querySelector('#editSpecialProgramSubject');
+  const editSpecialWeights = overlay.querySelector('#editSpecialProgramWeights');
+  const editWeightInputs = ['Ww', 'Pt', 'Exam'].map(part => overlay.querySelector(`#editSpecial${part}Weight`));
+  const startingWeights = weightsForAssignment(a);
+  editWeightInputs.forEach((input, index) => { input.value = String(startingWeights[index]); });
+  editSpecialCheckbox.checked = a.isSpecialProgramSubject === true;
+
+  const updateEditWeightTotal = () => {
+    const values = editWeightInputs.map(input => Number(input.value));
+    const total = values.every(Number.isFinite) ? values.reduce((sum, value) => sum + value, 0) : 0;
+    const output = overlay.querySelector('#editSpecialWeightTotal');
+    output.textContent = `Total: ${total}%${total === 100 ? '' : ' — must equal 100%'}`;
+    output.classList.toggle('is-invalid', total !== 100);
+  };
 
   const populateEditSubjects = () => {
     const grade = parseInt(editGradeSelect.value);
@@ -681,23 +732,24 @@ function editAssignmentModal(id) {
       editSubjectSelect.appendChild(opt);
     });
     
-    if (isNaN(grade) || grade < 1 || grade > 10) {
-      const otherOpt = document.createElement('option');
-      otherOpt.value = 'Custom';
-      otherOpt.innerText = 'Other / Custom Subject…';
-      editSubjectSelect.appendChild(otherOpt);
-    }
+    const otherOpt = document.createElement('option');
+    otherOpt.value = 'Custom';
+    otherOpt.innerText = 'Other / Custom Subject…';
+    editSubjectSelect.appendChild(otherOpt);
   };
 
   const handleEditSubjectChange = () => {
-    if (editSubjectSelect.value === 'Custom') {
-      editCustomField.style.display = 'block';
-    } else {
-      editCustomField.style.display = 'none';
-    }
+    const isCustom = editSubjectSelect.value === 'Custom';
+    editCustomField.style.display = isCustom ? 'block' : 'none';
+    editSpecialField.hidden = !isCustom;
+    if (!isCustom) editSpecialCheckbox.checked = false;
+    editSpecialWeights.hidden = !isCustom || !editSpecialCheckbox.checked;
+    updateEditWeightTotal();
   };
 
   editSubjectSelect.addEventListener('change', handleEditSubjectChange);
+  editSpecialCheckbox.addEventListener('change', handleEditSubjectChange);
+  editWeightInputs.forEach(input => input.addEventListener('input', updateEditWeightTotal));
 
   // Populate initial state
   populateEditSubjects();
@@ -711,6 +763,7 @@ function editAssignmentModal(id) {
     editCustomField.style.display = 'block';
     editCustomInput.value = a.subject;
   }
+  handleEditSubjectChange();
 
   editGradeSelect.addEventListener('change', () => {
     populateEditSubjects();
@@ -731,27 +784,42 @@ function editAssignmentModal(id) {
     }
     const newGrade = editGradeSelect.value;
     const newPolicy = determinePolicy(newGrade, newSubject, newSchoolYear);
-
-    a.gradeLevel   = newGrade;
-    a.section      = newSection;
-    a.subject      = newSubject;
-    a.schoolYear   = newSchoolYear;
-    a.policy       = newPolicy;
-    a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy);
-
-    db.schoolYear = newSchoolYear;
-    const headerYearEl = document.getElementById('schoolYear');
-    if (headerYearEl) {
-      headerYearEl.value = newSchoolYear;
+    const isCustom = editSubjectSelect.value === 'Custom';
+    const isSpecialProgramSubject = isCustom && editSpecialCheckbox.checked;
+    const specialProgramWeights = editWeightInputs.map(input => Number(input.value));
+    if (isSpecialProgramSubject && !normalizeSpecialProgramWeights(specialProgramWeights)) {
+      toast('Special-program weights must be whole numbers from 0 to 100 and total exactly 100%.', 'warning');
+      editWeightInputs[0].focus();
+      return;
     }
+    const nextGroup = determineSubjectGroup(newGrade, newSubject, newPolicy);
+    const nextWeights = isSpecialProgramSubject ? specialProgramWeights : weightsFor(nextGroup);
+    const weightsChanged = JSON.stringify(weightsForAssignment(a)) !== JSON.stringify(nextWeights)
+      || a.isSpecialProgramSubject !== isSpecialProgramSubject;
+    const hasScores = a.scores && Object.values(a.scores).some(value => value !== '' && value !== null && value !== undefined);
+    const commit = () => {
+      a.gradeLevel = newGrade;
+      a.section = newSection;
+      a.subject = newSubject;
+      a.schoolYear = newSchoolYear;
+      a.policy = newPolicy;
+      a.subjectGroup = nextGroup;
+      a.isSpecialProgramSubject = isSpecialProgramSubject;
+      if (isSpecialProgramSubject) a.specialProgramWeights = specialProgramWeights;
+      else delete a.specialProgramWeights;
 
-    // Apply template assessments for new grade level
-    ensureTemplateAssessments(a);
-
-    close();
-    saveDatabase();
-    render();
-    toast('Teaching load updated.', 'success');
+      db.schoolYear = newSchoolYear;
+      const headerYearEl = document.getElementById('schoolYear');
+      if (headerYearEl) headerYearEl.value = newSchoolYear;
+      ensureTemplateAssessments(a);
+      close();
+      saveDatabase();
+      render();
+      toast(weightsChanged ? 'Teaching load updated. Grades were recalculated from unchanged raw scores.' : 'Teaching load updated.', 'success');
+    };
+    if (hasScores && weightsChanged) {
+      confirmModal('Recalculate Saved Grades?', 'Changing the grading percentages will recalculate term grades for every learner. Existing raw scores will not be changed.', commit);
+    } else commit();
   });
 
   // Close on backdrop click

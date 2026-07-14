@@ -288,7 +288,7 @@ function updateLearnerGradesDisplay() {
 function renderTermStandardDetails(a, learnerId, term) {
   const items = termAssessments(a, term);
   const result = computeTerm(a, learnerId, term);
-  const w = weightsFor(a.subjectGroup);
+  const w = weightsForAssignment(a);
   
   let html = `
     <table class="report-grades-table">

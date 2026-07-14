@@ -322,6 +322,39 @@ function updateRecordActionButtons(hasUsableSheet) {
   showEl('viewLearnerGradesBtn', shouldShow, 'inline-flex');
 }
 
+function hasUsableRecordSheetForActions() {
+  const assignment = currentAssignment();
+  if (!assignment || !Array.isArray(assignment.learners) || assignment.learners.length === 0) return false;
+  return !(isMapehSubject(assignment.subject) && currentMapehSubTab === 'consolidated');
+}
+
+function syncRecordActionButtonsForView() {
+  updateRecordActionButtons(hasUsableRecordSheetForActions());
+}
+
+function installRecordActionButtonViewSync() {
+  if (window.__recordActionButtonViewSyncInstalled) return;
+  window.__recordActionButtonViewSyncInstalled = true;
+
+  const originalSetView = window.setView;
+  if (typeof originalSetView === 'function') {
+    window.setView = function setViewWithRecordActions(...args) {
+      const result = originalSetView.apply(this, args);
+      syncRecordActionButtonsForView();
+      requestAnimationFrame(syncRecordActionButtonsForView);
+      return result;
+    };
+  }
+
+  syncRecordActionButtonsForView();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', installRecordActionButtonViewSync, { once: true });
+} else {
+  installRecordActionButtonViewSync();
+}
+
 /**
  * Renders the active term class record grid.
  */
@@ -371,7 +404,7 @@ function renderRecordTable() {
   const learnerRows = getRecordLearnerRows(a, db.currentTerm, items, mapePart);
   recordRowCount = learnerRows.length;
   recordColCount = items.length;
-  const w = weightsFor(a.subjectGroup);
+  const w = weightsForAssignment(a);
   const cols = recordColGroup(a, items, mapePart);
   
   const isKS2 = isKeyStage2(a);
@@ -675,7 +708,7 @@ function renderFinalOnly() {
   }
   
   const mapePart = isMapeh ? currentMapehSubTab : undefined;
-  const weights = weightsFor(a.subjectGroup);
+  const weights = weightsForAssignment(a);
   
   let html = `<table class="summary-table summary-table--terms">
     <colgroup>

@@ -111,36 +111,33 @@ function getOrderedDashboardAssignments(activeYear) {
     .map(item => item.assignment);
 }
 
-function subjectLogoMarkup(subject) {
+function subjectIconKey(subject) {
   const value = String(subject || '').trim().toLowerCase();
-  let key = 'learning';
-  if (/reading|literacy/.test(value)) key = 'reading';
-  else if (/makabansa/.test(value)) key = 'makabansa';
-  else if (/math/.test(value)) key = 'mathematics';
-  else if (/gmrc|values|character/.test(value)) key = 'values';
-  else if (/araling|panlipunan|social/.test(value)) key = 'araling-panlipunan';
-  else if (/english/.test(value)) key = 'english';
-  else if (/filipino/.test(value)) key = 'filipino';
-  else if (/science/.test(value)) key = 'science';
-  else if (/mapeh|music|arts|physical|health/.test(value)) key = 'mapeh';
-  else if (/epp|tle|technology|livelihood/.test(value)) key = 'epp-tle';
-  else if (/language/.test(value)) key = 'language';
+  if (/reading|literacy/.test(value)) return 'reading-literacy';
+  if (/makabansa/.test(value)) return 'makabansa';
+  if (/math/.test(value)) return 'mathematics';
+  if (/gmrc|values education|good manners/.test(value)) return 'gmrc';
+  if (/araling panlipunan|\baraling\b|\bpanlipunan\b/.test(value)) return 'araling-panlipunan';
+  if (/^english(?:\s|$)/.test(value)) return 'english';
+  if (/^filipino(?:\s|$)/.test(value)) return 'filipino';
+  if (/^science(?:\s|$)/.test(value)) return 'science';
+  if (/mapeh|music\s*(?:&|and)\s*arts|physical education(?:\s*(?:&|and)\s*health)?|pe\s*(?:&|and)\s*health/.test(value)) return 'mapeh';
+  if (/\bepp\b|\btle\b|technology and livelihood education/.test(value)) return 'epp-tle';
+  if (/^language(?:\s|$)/.test(value)) return 'language';
+  return '';
+}
 
-  const icons = {
-    language: '<path d="M14 25h34a9 9 0 0 1 9 9v13a9 9 0 0 1-9 9H30L18 66l3-10h-7a9 9 0 0 1-9-9V34a9 9 0 0 1 9-9Z"/><path d="M48 43h23a8 8 0 0 1 8 8v11a8 8 0 0 1-8 8h-8l2 8-10-8h-7"/><text x="23" y="48">E</text><text x="57" y="63">F</text>',
-    reading: '<path d="M12 35c15-5 25-1 38 8v34c-13-9-23-13-38-8Z"/><path d="M88 35c-15-5-25-1-38 8v34c13-9 23-13 38-8Z"/><path d="M50 25v10M35 29l-5-8M65 29l5-8"/>',
-    makabansa: '<circle cx="50" cy="31" r="10"/><path d="M18 67c8-18 20-24 32-10 12-14 24-8 32 10M50 43v31M25 76h50"/><path d="M15 29h12M73 29h12M50 8v10"/>',
-    mathematics: '<path d="M18 71h62L50 24Z"/><path d="M41 56h18L50 43Z"/><path d="M73 18v24M67 24h12"/><text x="18" y="34">123</text>',
-    values: '<path d="M50 72S20 56 20 35c0-16 21-19 30-5 9-14 30-11 30 5 0 21-30 37-30 37Z"/><path d="M12 76c10-8 18-9 30-3M88 76c-10-8-18-9-30-3"/>',
-    'araling-panlipunan': '<path d="M14 70c14-7 25-5 36 3 11-8 22-10 36-3V39c-14-7-25-5-36 3-11-8-22-10-36-3Z"/><path d="M50 42v31M27 31v-9h9v9M69 31V17h10v14M21 31h64"/>',
-    english: '<path d="M15 23h70v45H48L31 80l5-12H15Z"/><path d="M32 40h12v13H29c0-11 1-18 8-23M61 40h12v13H58c0-11 1-18 8-23"/>',
-    filipino: '<path d="M22 68c34 5 52-11 61-42-27 0-51 12-61 42Z"/><path d="M20 77c15-19 31-28 55-42M68 58c-2-10 1-18 8-25"/><circle cx="29" cy="27" r="9"/>',
-    science: '<ellipse cx="50" cy="50" rx="34" ry="13"/><ellipse cx="50" cy="50" rx="34" ry="13" transform="rotate(60 50 50)"/><ellipse cx="50" cy="50" rx="34" ry="13" transform="rotate(120 50 50)"/><circle cx="50" cy="50" r="5"/><path d="M68 64v13H44l8-18"/>',
-    mapeh: '<path d="M28 25v40a10 10 0 1 1-7-9V31l30-7v32a10 10 0 1 1-7-9V18Z"/><path d="M59 68h26M62 62l5 6-5 6M73 62l5 6-5 6"/>',
-    'epp-tle': '<path d="M50 12l7 9 11-2 2 11 10 5-5 10 5 10-10 5-2 11-11-2-7 9-7-9-11 2-2-11-10-5 5-10-5-10 10-5 2-11 11 2Z"/><path d="M35 61l24-24M55 33l12 12M31 65l8 4"/>',
-    learning: '<path d="M12 34c15-5 26-1 38 8 12-9 23-13 38-8v39c-15-5-26-1-38 8-12-9-23-13-38-8Z"/><path d="M50 42v39"/>'
-  };
-  return `<div class="dashboard-card__subject-logo subject-logo--${key}" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${icons[key]}</svg></div>`;
+function subjectWatermarkMarkup(subject) {
+  const key = subjectIconKey(subject);
+  if (!key) return '';
+
+  return `<div class="dashboard-card__subject-watermark subject-watermark--${key}" aria-hidden="true"></div>`;
+}
+
+function subjectCardIconMarkup(subject) {
+  const key = subjectIconKey(subject);
+  if (!key) return '';
+  return `<img class="dashboard-card__subject-icon" src="assets/subject-icons/${key}.png" alt="" aria-hidden="true">`;
 }
 
 /**
@@ -183,10 +180,10 @@ function renderDashboardOverview() {
         ondrop="handleDashboardCardDrop(event)"
         ondragend="handleDashboardCardDragEnd(event)"
         data-active-term="1" ${isMapeh ? 'data-active-part="music_arts"' : ''}>
-        ${subjectLogoMarkup(a.subject)}
+        ${subjectWatermarkMarkup(a.subject)}
         
         <div class="dashboard-card__identity">
-          <h3 class="dashboard-card__title">Grade ${esc(a.gradeLevel)} - ${esc(a.section)}</h3>
+          <h3 class="dashboard-card__title">${subjectCardIconMarkup(a.subject)}<span>Grade ${esc(a.gradeLevel)} - ${esc(a.section)}</span></h3>
           <div class="dashboard-card__subject">${esc(a.subject)}</div>
         </div>
         

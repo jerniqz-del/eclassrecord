@@ -10,7 +10,13 @@ The fixed **Advisory Class** card is the adviser’s central workspace for one g
 4. Save. Only one Advisory Class can be active for the same school year.
 5. To preserve a past class, edit it and select **Archive**. Archived data remains in backups.
 
-After saving, the app automatically adds the standard subjects for the selected grade level. Open **Grade Sources** and choose **Assign Source** only when you want to change how a subject&apos;s grades will arrive. Use **Add Other Subject** only for a subject that is not on the standard list.
+After saving, the app automatically adds the standard subjects for the selected grade level. Open **Grade Sources** and choose **Assign Source** only when you want to change how a subject&apos;s grades will arrive.
+
+### Special Classes
+
+Select **This is a Special Class** during setup for programs such as Journalism or Science. Enter the program name, one required special subject, and an optional second special subject. For each one, choose whether it participates in the General Average. A Special Class can have at most two active special subjects.
+
+Use **Advisory Settings** to rename special subjects, change their General Average choice, add the optional second subject, or turn off Special Class. Removing or disabling a special subject archives it: grades, source mappings, and import history remain stored and restorable. Regular classes cannot add extra subjects.
 
 ## 2. Build and maintain the official roster
 
@@ -32,6 +38,8 @@ The app matches learners by 12-digit LRN first. A normalized name is used only w
 4. Save the `.json` Grade Transfer File to a local folder or removable drive.
 
 The file contains only the selected term’s numeric final grades plus the minimum context needed to validate and match them. It does **not** contain raw assessment scores, HPS values, attendance, or unrelated terms.
+
+For a custom teaching load, select **Treat this as a Special-Program Subject** to set the Written Works, Performance Tasks, and combined Summative Tests & Term Examination percentages. Each value must be a whole number from 0 to 100 and all three must total 100. The internal ST1/ST2/Term Examination split remains 30%/30%/40%. Changing percentages after scores exist requires confirmation and recalculates grades without altering raw scores.
 
 ## 4. Import grades as the adviser
 

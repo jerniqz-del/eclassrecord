@@ -840,6 +840,16 @@
     return template.innerHTML;
   }
 
+  function ensureSf2PrintTarget() {
+    let target = document.getElementById('attendanceSf2ReportPrint');
+    if (target) return target;
+    target = document.createElement('div');
+    target.id = 'attendanceSf2ReportPrint';
+    target.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(target);
+    return target;
+  }
+
   function patchStatusHelpers() {
     const originalTypeFromStatus = window.attendanceTypeFromStatus;
     window.attendanceTypeFromStatus = function patchedAttendanceTypeFromStatus(status) {
@@ -1048,6 +1058,15 @@
         ? originalSf2Preview.call(this, payload, ...rest)
         : '';
       return patchSf2PreviewPresentTotals(html, payload);
+    };
+
+    const originalSf2Export = window.exportAttendanceSf2PreviewPdf;
+    window.exportAttendanceSf2PreviewPdf = function patchedExportAttendanceSf2PreviewPdf(payload, ...rest) {
+      const target = ensureSf2PrintTarget();
+      target.innerHTML = window.renderAttendanceSf2Preview(payload);
+      return typeof originalSf2Export === 'function'
+        ? originalSf2Export.call(this, payload, ...rest)
+        : undefined;
     };
 
     const originalSf2Options = window.showAttendanceSf2OptionsModal;

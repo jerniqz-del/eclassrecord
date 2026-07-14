@@ -438,6 +438,62 @@
   }
 }
 
+/* SF2 export prepares an exact preview clone in #attendanceSf2ReportPrint.
+   Override the general grading-sheet print rules only for this export mode. */
+@media print {
+  body.support-print-mode.support-print-attendance {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body.support-print-mode.support-print-attendance > *:not(#attendanceSf2ReportPrint) {
+    display: none !important;
+  }
+
+  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint,
+  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint * {
+    visibility: visible !important;
+  }
+
+  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint .sf2-preview-sheet {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint .sf2-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint .sf2-table thead {
+    display: table-header-group;
+  }
+
+  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint .sf2-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
 /* Custom printing styles for the individual learner grades report */
 @media print {
 

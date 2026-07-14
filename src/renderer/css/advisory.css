@@ -109,20 +109,73 @@
 .advisory-setup-roster-source > div:first-child p { margin: 4px 0 var(--space-3); color: var(--text-secondary); font-size: var(--font-size-xs); line-height: 1.45; }
 
 .dashboard-card[data-assignment-id] { isolation: isolate; overflow: hidden; }
-.dashboard-card[data-assignment-id] > *:not(.dashboard-card__subject-logo) { position: relative; z-index: 1; }
-.dashboard-card__subject-logo { position: absolute; z-index: 0; top: 12px; right: -12px; width: 132px; height: 132px; opacity: 0.13; color: #0f4c81; pointer-events: none; transform: rotate(-3deg); }
-.dashboard-card__subject-logo svg { width: 100%; height: 100%; padding: 9px; border: 4px solid currentColor; border-radius: 50%; }
-.dashboard-card__subject-logo text { fill: currentColor; stroke: none; font-size: 17px; font-weight: 800; font-family: var(--font-family-sans); }
-.subject-logo--reading { color: #2f7d32; }
-.subject-logo--makabansa { color: #133b86; }
-.subject-logo--mathematics { color: #1556a3; }
-.subject-logo--values { color: #542079; }
-.subject-logo--araling-panlipunan { color: #6b3c11; }
-.subject-logo--english { color: #0b5f77; }
-.subject-logo--filipino { color: #c83a12; }
-.subject-logo--science { color: #0c7a3e; }
-.subject-logo--mapeh { color: #9b1761; }
-.subject-logo--epp-tle { color: #173b70; }
+.dashboard-card[data-assignment-id] > *:not(.dashboard-card__subject-watermark) { position: relative; z-index: 1; }
+.dashboard-card__subject-watermark {
+  position: absolute;
+  z-index: 0;
+  top: 10px;
+  right: -4px;
+  width: 150px;
+  height: 132px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.14;
+  filter: saturate(0.9) contrast(1.04);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  transition: opacity var(--transition-base), transform var(--transition-base);
+}
+.dashboard-card[data-assignment-id]:hover .dashboard-card__subject-watermark,
+.dashboard-card[data-assignment-id].dashboard-card--active .dashboard-card__subject-watermark { opacity: 0.18; transform: scale(1.025); }
+.subject-watermark--language { background-image: url('../assets/subject-icons/language.png'); }
+.subject-watermark--reading-literacy { background-image: url('../assets/subject-icons/reading-literacy.png'); }
+.subject-watermark--makabansa { background-image: url('../assets/subject-icons/makabansa.png'); }
+.subject-watermark--mathematics { background-image: url('../assets/subject-icons/mathematics.png'); }
+.subject-watermark--gmrc { background-image: url('../assets/subject-icons/gmrc.png'); }
+.subject-watermark--araling-panlipunan { background-image: url('../assets/subject-icons/araling-panlipunan.png'); }
+.subject-watermark--english { background-image: url('../assets/subject-icons/english.png'); }
+.subject-watermark--filipino { background-image: url('../assets/subject-icons/filipino.png'); }
+.subject-watermark--science { background-image: url('../assets/subject-icons/science.png'); }
+.subject-watermark--mapeh { background-image: url('../assets/subject-icons/mapeh.png'); }
+.subject-watermark--epp-tle { background-image: url('../assets/subject-icons/epp-tle.png'); }
+
+.dashboard-card[data-assignment-id] .dashboard-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dashboard-card__subject-icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.dashboard-card[data-assignment-id] .dashboard-card__title > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-card--list .dashboard-card__subject-watermark {
+  top: 50%;
+  right: 8px;
+  opacity: 0.1;
+  transform: translateY(-50%);
+}
+.dashboard-card--list:hover .dashboard-card__subject-watermark,
+.dashboard-card--list.dashboard-card--active .dashboard-card__subject-watermark { opacity: 0.14; transform: translateY(-50%) scale(1.025); }
+
+.dashboard-card--list .dashboard-card__subject-icon {
+  width: 24px;
+  height: 24px;
+  flex-basis: 24px;
+}
 
 .dashboard-card--advisory.dashboard-card--list {
   grid-template-columns: minmax(220px, 1fr) minmax(220px, auto) minmax(260px, 1fr) minmax(170px, auto) minmax(180px, auto);

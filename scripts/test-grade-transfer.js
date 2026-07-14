@@ -14,6 +14,7 @@ function fixture() {
     AdvisoryData.createLearner(profile, { id: 'advisory-learner-1', advisoryClassId: advisoryClass.id, lrn: '123456789012', lastName: 'Dela Cruz', firstName: 'Juan', middleName: 'Santos' }),
     AdvisoryData.createLearner(profile, { id: 'advisory-learner-2', advisoryClassId: advisoryClass.id, lrn: '123456789013', lastName: 'Reyes', firstName: 'Maria' })
   ];
+  Transfer.ensureGradeLevelSubjects(profile, advisoryClass);
   const assignment = {
     id: 'class-math-4', schoolYear: profile.schoolYear, gradeLevel: '4', section: 'Molave', subject: 'Mathematics',
     learners: [
@@ -83,6 +84,7 @@ function validPayload(data = fixture()) {
 // School year, grade level, and section validation happen before a write plan is accepted.
 {
   const data = fixture();
+  Transfer.ensureGradeLevelSubjects(data.profile, data.advisoryClass);
   const payload = validPayload(data);
   payload.schoolYear = '2025-2026';
   payload.class.gradeLevel = '5';
@@ -95,6 +97,7 @@ function validPayload(data = fixture()) {
 // Standard Advisory subjects are created from the grade level and the operation is idempotent.
 {
   const data = fixture();
+  data.profile.advisory.subjects = [];
   const created = Transfer.ensureGradeLevelSubjects(data.profile, data.advisoryClass);
   assert.deepStrictEqual(Transfer.standardSubjectsForGrade('4'), [
     'Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan',
@@ -205,7 +208,7 @@ function validPayload(data = fixture()) {
   const result = Transfer.applyImportPlan(data.profile, plan);
   assert.strictEqual(result.importedCount, 2);
   const store = data.profile.advisory;
-  assert.strictEqual(store.subjects.length, 1);
+  assert.strictEqual(store.subjects.length, 9);
   assert.strictEqual(store.grades.length, 2);
   assert.strictEqual(store.importBatches.length, 1);
   assert.strictEqual(store.sourceMappings.length, 1);
@@ -216,6 +219,63 @@ function validPayload(data = fixture()) {
   assert(secondPlan.rows.every(row => row.status === 'conflict'));
   assert(secondPlan.errors.some(message => /already been imported/.test(message)));
   assert.strictEqual(secondPlan.canImport, false, 'duplicate files and existing grades must never be silently overwritten');
+}
+
+// UI wiring uses local file bridges and has no network dependency.
+// Special Class subjects are limited, archive safely, control General Average
+// inclusion, and require an active matching subject for marked transfer files.
+{
+  const data = fixture();
+  AdvisoryData.updateClass(data.profile, data.advisoryClass.id, { isSpecialClass: true, specialProgramName: 'Journalism' });
+  data.advisoryClass = data.profile.advisory.classes.find(item => item.id === data.advisoryClass.id);
+  const synced = Transfer.syncSpecialProgramSubjects(data.profile, data.advisoryClass, [
+    { subjectName: 'Campus Journalism', includeInGeneralAverage: false },
+    { subjectName: 'Broadcasting', includeInGeneralAverage: true }
+  ]);
+  assert.strictEqual(synced.filter(item => !item.isArchived).length, 2);
+  assert(synced.every(item => item.isSpecialProgramSubject));
+  assert.throws(() => Transfer.syncSpecialProgramSubjects(data.profile, data.advisoryClass, [{ subjectName: 'Science' }]), /predefined subject/);
+
+  const journalism = data.profile.advisory.subjects.find(item => item.normalizedSubjectKey === 'CAMPUS JOURNALISM');
+  const specialAssignment = { ...data.assignment, subject: 'Campus Journalism', isSpecialProgramSubject: true, specialProgramWeights: [10, 70, 20] };
+  const payload = Transfer.buildExportPayload({ assignment: specialAssignment, profileDb: data.profile, term: 1, appVersion: '1.4.6', getFinalGrade: () => 88 });
+  assert.strictEqual(payload.subject.isSpecialProgramSubject, true);
+  assert.deepStrictEqual(payload.subject.specialProgramWeights, [10, 70, 20]);
+  assert.strictEqual(Transfer.validatePayload(payload).isValid, true);
+  const matchingPlan = Transfer.planImport(data.profile, data.advisoryClass, payload, 'journalism.json');
+  assert.strictEqual(matchingPlan.canImport, true);
+  const importResult = Transfer.applyImportPlan(data.profile, matchingPlan);
+  assert.strictEqual(importResult.batch.isSpecialProgramSubject, true);
+  assert.deepStrictEqual(importResult.batch.specialProgramWeights, [10, 70, 20]);
+  assert.strictEqual(data.profile.advisory.subjects.find(item => item.id === journalism.id).includeInGeneralAverage, false, 'teacher files must not overwrite the adviser GA choice');
+
+  const mismatched = JSON.parse(JSON.stringify(payload));
+  mismatched.exportId = 'different-export';
+  mismatched.subject.name = 'Photojournalism';
+  mismatched.subject.normalizedKey = 'PHOTOJOURNALISM';
+  const mismatchPlan = Transfer.planImport(data.profile, data.advisoryClass, mismatched, 'photojournalism.json');
+  assert(mismatchPlan.errors.some(message => /not an active subject|must match an active special subject/.test(message)));
+
+  const legacy = JSON.parse(JSON.stringify(payload));
+  legacy.exportId = 'legacy-export';
+  delete legacy.subject.isSpecialProgramSubject;
+  delete legacy.subject.specialProgramWeights;
+  const legacyPlan = Transfer.planImport(data.profile, data.advisoryClass, legacy, 'legacy-journalism.json');
+  assert(legacyPlan.warnings.some(message => /older Grade Transfer File/.test(message)));
+
+  const mathematics = data.profile.advisory.subjects.find(item => item.normalizedSubjectKey === 'MATHEMATICS');
+  const learnerId = data.learners[0].id;
+  ['1', '2', '3'].forEach(term => {
+    AdvisoryData.createGrade(data.profile, { advisoryClassId: data.advisoryClass.id, advisoryLearnerId: learnerId, advisorySubjectId: mathematics.id, term, finalGrade: 90 });
+    if (term !== '1') AdvisoryData.createGrade(data.profile, { advisoryClassId: data.advisoryClass.id, advisoryLearnerId: learnerId, advisorySubjectId: journalism.id, term, finalGrade: 70 });
+  });
+  assert.strictEqual(Transfer.calculateGeneralAverage(data.profile.advisory.grades, learnerId, [mathematics, journalism]), 90);
+  AdvisoryData.updateSubject(data.profile, journalism.id, { includeInGeneralAverage: true });
+  assert.strictEqual(Transfer.calculateGeneralAverage(data.profile.advisory.grades, learnerId, [mathematics, data.profile.advisory.subjects.find(item => item.id === journalism.id)]), 83);
+
+  Transfer.syncSpecialProgramSubjects(data.profile, data.advisoryClass, [{ subjectName: 'Broadcasting' }]);
+  assert.strictEqual(data.profile.advisory.subjects.find(item => item.id === journalism.id).isArchived, true);
+  assert(data.profile.advisory.grades.some(item => item.advisorySubjectId === journalism.id), 'archiving must preserve grades');
 }
 
 // UI wiring uses local file bridges and has no network dependency.

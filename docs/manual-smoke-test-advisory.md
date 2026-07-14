@@ -10,6 +10,9 @@ Run this checklist on a disposable profile and retain screenshots or notes for f
 - [ ] Create an Advisory Class with required and optional school fields; restart and confirm persistence.
 - [ ] Attempt a second active Advisory Class for the same school year; confirm it is prevented.
 - [ ] Archive the class and confirm its records are preserved.
+- [ ] Create a Special Class with a program name, one required special subject, and an optional second subject. Confirm blank program/first-subject values and a third active subject are rejected.
+- [ ] In Advisory Settings, rename a special subject and change **Include in General Average**. Verify the subject ID/source relationship remains intact and the General Average updates.
+- [ ] Remove a special subject that has grades, confirm the warning, and verify it appears under Archived Special Subjects with grades/history preserved. Restore it and verify the active record returns.
 
 ## Roster
 
@@ -27,6 +30,9 @@ Run this checklist on a disposable profile and retain screenshots or notes for f
 - [ ] Inspect the JSON: it contains only Term 1 numeric final grades and required metadata.
 - [ ] Confirm raw scores, assessment/HPS data, attendance, and Terms 2–3 are absent.
 - [ ] Repeat export and confirm unique export IDs and safe filenames.
+- [ ] Add a custom teaching-load subject, mark it as a Special-Program Subject, and test valid weights including zero. Confirm decimals, negatives, values over 100, and totals other than 100 are rejected.
+- [ ] Change custom weights after entering raw scores. Confirm the recalculation warning appears, final grades change, and raw scores do not.
+- [ ] Export the special-program subject and verify the optional special flag and three weights are present. Confirm a marked file is rejected by a regular Advisory Class or a nonmatching special subject.
 
 ## Import, mapping, and conflicts
 

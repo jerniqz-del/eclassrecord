@@ -31,7 +31,7 @@ function populatedProfile() {
   // Older backups without advisory data remain valid and receive safe defaults.
   const oldBackup = { version: 2, schoolYear: '2025-2026', assignments: [{ id: 'legacy-class', learners: [], assessments: [], scores: {} }] };
   const migrated = AdvisoryBackup.prepareRestoredDatabase(oldBackup);
-  assert.strictEqual(migrated.advisory.schemaVersion, 1);
+  assert.strictEqual(migrated.advisory.schemaVersion, 2);
   assert.deepStrictEqual(migrated.advisory.classes, []);
   assert.strictEqual(oldBackup.advisory, undefined, 'restore validation must not mutate the selected backup object');
 
