@@ -54,6 +54,8 @@ assert(css.includes('.advisory-reset-modal-overlay { z-index: 12300; }'));
 assert(css.includes('.advisory-page__body'));
 assert(css.includes('.advisory-page__reset'));
 assert(css.includes('.advisory-grade-matrix .advisory-learner-heading'));
+assert(css.includes('.advisory-grade-matrix thead tr:nth-child(2) th { text-align: center; }'));
+assert(css.includes('font-size: var(--font-size-sm); text-align: center;'));
 assert(css.includes('.advisory-grade-matrix tbody td:first-child'));
 assert(!css.includes('.advisory-grade-matrix th:first-child,'));
 assert(css.includes('position: sticky; left: 0;'));

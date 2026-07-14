@@ -208,6 +208,9 @@ function createWindow() {
           const topScrollbar = advisoryPage.querySelector('[data-advisory-matrix-scrollbar]');
           const expandedWrap = advisoryPage.querySelector('[data-advisory-matrix-scroll-target]');
           if (!allTermOneHeaders.length || expandedToggle.getAttribute('aria-pressed') !== 'true' || topScrollbar.hidden) throw new Error('Show Terms 1–3 did not expand all subjects or reveal the top scrollbar.');
+          if (getComputedStyle(allTermOneHeaders[0]).textAlign !== 'center') throw new Error('Filipino T1 header is not centered.');
+          const learnerHeadingStyle = getComputedStyle(advisoryPage.querySelector('.advisory-learner-heading'));
+          if (learnerHeadingStyle.textAlign !== 'center' || Number.parseFloat(learnerHeadingStyle.fontSize) < 12) throw new Error('LRN / Official Name header is not enlarged and centered.');
           topScrollbar.scrollLeft = 60;
           topScrollbar.dispatchEvent(new Event('scroll'));
           if (expandedWrap.scrollLeft !== 60) throw new Error('The visible top scrollbar is not synchronized with the grade table.');
