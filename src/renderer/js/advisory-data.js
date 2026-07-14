@@ -220,12 +220,24 @@
     if (!profileDb || typeof profileDb !== 'object') {
       throw new TypeError('A profile database object is required.');
     }
-    const source = profileDb.advisory && typeof profileDb.advisory === 'object'
-      ? profileDb.advisory
-      : createAdvisoryStore();
-    const normalized = { schemaVersion: ADVISORY_SCHEMA_VERSION };
+    const hasAdvisoryStore = Object.prototype.hasOwnProperty.call(profileDb, 'advisory');
+    if (hasAdvisoryStore && (!profileDb.advisory || typeof profileDb.advisory !== 'object' || Array.isArray(profileDb.advisory))) {
+      throw new TypeError('The Advisory Class database must be an object. No data was changed.');
+    }
+    const source = hasAdvisoryStore ? profileDb.advisory : createAdvisoryStore();
+    const sourceVersion = Number(source.schemaVersion);
+    const normalized = {
+      ...source,
+      schemaVersion: Number.isFinite(sourceVersion) && sourceVersion > ADVISORY_SCHEMA_VERSION
+        ? sourceVersion
+        : ADVISORY_SCHEMA_VERSION
+    };
     Object.keys(NORMALIZERS).forEach(collection => {
-      const rows = Array.isArray(source[collection]) ? source[collection] : [];
+      const hasCollection = Object.prototype.hasOwnProperty.call(source, collection);
+      if (hasCollection && !Array.isArray(source[collection])) {
+        throw new TypeError(`The Advisory Class ${collection} collection must be an array. No data was changed.`);
+      }
+      const rows = hasCollection ? source[collection] : [];
       normalized[collection] = rows.map(NORMALIZERS[collection]);
     });
     profileDb.advisory = normalized;
@@ -304,18 +316,27 @@
   function createClass(profileDb, values) {
     const store = requireStore(profileDb);
     const candidate = normalizeClass(values || {});
-    if (!candidate.schoolYear || !candidate.gradeLevel || !candidate.section || !candidate.adviserName) {
-      throw new Error('School year, grade level, section, and adviser name are required.');
-    }
+    validateClassIdentity(candidate);
     if (candidate.isActive && store.classes.some(item => item.schoolYear === candidate.schoolYear && item.isActive)) {
       throw new Error('Only one active Advisory Class is allowed for a school year.');
     }
     return createRecord(profileDb, 'classes', candidate);
   }
 
+  function validateClassIdentity(candidate) {
+    if (!candidate.schoolYear || !candidate.gradeLevel || !candidate.section || !candidate.adviserName) {
+      throw new Error('School year, grade level, section, and adviser name are required.');
+    }
+    if (candidate.isActive && candidate.isArchived) {
+      throw new Error('An archived Advisory Class cannot also be active.');
+    }
+  }
+
   function updateClass(profileDb, id, changes) {
     const store = requireStore(profileDb);
     const current = requireClass(store, id);
+    const candidate = normalizeClass({ ...current, ...(changes || {}), id: current.id, createdAt: current.createdAt });
+    validateClassIdentity(candidate);
     const nextYear = cleanString(changes?.schoolYear ?? current.schoolYear);
     const nextActive = changes?.isActive === undefined ? current.isActive : changes.isActive === true;
     if (nextActive && store.classes.some(item => item.id !== id && item.schoolYear === nextYear && item.isActive)) {
@@ -339,18 +360,78 @@
 
   function createChild(profileDb, collection, values) {
     const store = requireStore(profileDb);
-    requireClass(store, cleanString(values?.advisoryClassId));
-    return createRecord(profileDb, collection, values || {});
+    const candidate = NORMALIZERS[collection](values || {});
+    validateChildRecord(store, collection, candidate);
+    return createRecord(profileDb, collection, candidate);
+  }
+
+  function validateChildRecord(store, collection, candidate, currentId = '') {
+    requireClass(store, candidate.advisoryClassId);
+    if (collection === 'learners') {
+      if (!candidate.lastName || !candidate.firstName) throw new Error('Learner first name and last name are required.');
+      if (candidate.lrn && !/^\d{12}$/.test(candidate.lrn)) throw new Error('LRN must contain exactly 12 digits.');
+      if (candidate.lrn && store.learners.some(item => item.id !== currentId && item.advisoryClassId === candidate.advisoryClassId && item.lrn === candidate.lrn)) {
+        throw new Error('This LRN already belongs to another Advisory learner.');
+      }
+    }
+    if (collection === 'subjects') {
+      if (!candidate.subjectName || !candidate.normalizedSubjectKey) throw new Error('Subject name and normalized subject key are required.');
+      if (store.subjects.some(item => item.id !== currentId && item.advisoryClassId === candidate.advisoryClassId && item.normalizedSubjectKey === candidate.normalizedSubjectKey)) {
+        throw new Error('This subject already exists in the Advisory Class.');
+      }
+    }
+    if (collection === 'sourceMappings') {
+      const subject = store.subjects.find(item => item.id === candidate.advisorySubjectId);
+      if (!subject || subject.advisoryClassId !== candidate.advisoryClassId) {
+        throw new Error('The source mapping subject must belong to the selected Advisory Class.');
+      }
+    }
+  }
+
+  function updateChild(profileDb, collection, id, changes) {
+    const store = requireStore(profileDb);
+    const current = store[collection].find(item => item.id === id);
+    if (!current) throw new Error(`${collection} record was not found.`);
+    const candidate = NORMALIZERS[collection]({ ...current, ...(changes || {}), id: current.id, createdAt: current.createdAt });
+    if (candidate.advisoryClassId !== current.advisoryClassId) throw new Error('An Advisory child record cannot be moved to another class.');
+    validateChildRecord(store, collection, candidate, id);
+    return updateRecord(profileDb, collection, id, changes || {});
+  }
+
+  function validateGradeRecord(store, candidate, currentId = '') {
+    requireClass(store, candidate.advisoryClassId);
+    const learner = store.learners.find(item => item.id === candidate.advisoryLearnerId);
+    const subject = store.subjects.find(item => item.id === candidate.advisorySubjectId);
+    if (!learner || learner.advisoryClassId !== candidate.advisoryClassId) throw new Error('The grade learner must belong to the selected Advisory Class.');
+    if (!subject || subject.advisoryClassId !== candidate.advisoryClassId) throw new Error('The grade subject must belong to the selected Advisory Class.');
+    if (candidate.importBatchId) {
+      const batch = store.importBatches.find(item => item.id === candidate.importBatchId);
+      if (!batch || batch.advisoryClassId !== candidate.advisoryClassId) throw new Error('The grade import batch must belong to the selected Advisory Class.');
+    }
+    if (!candidate.term) throw new Error('A grading term is required.');
+    if (candidate.finalGrade === null || !Number.isFinite(candidate.finalGrade)) throw new Error('A finite final grade is required.');
+    const key = [candidate.advisoryClassId, candidate.advisoryLearnerId, candidate.advisorySubjectId, candidate.term].join('|');
+    if (store.grades.some(item => item.id !== currentId && [item.advisoryClassId, item.advisoryLearnerId, item.advisorySubjectId, item.term].join('|') === key)) {
+      throw new Error('A final grade already exists for this learner, subject, and term.');
+    }
   }
 
   function createGrade(profileDb, values) {
     const store = requireStore(profileDb);
-    requireClass(store, cleanString(values?.advisoryClassId));
-    const key = [values?.advisoryClassId, values?.advisoryLearnerId, values?.advisorySubjectId, cleanString(values?.term)].join('|');
-    if (store.grades.some(item => [item.advisoryClassId, item.advisoryLearnerId, item.advisorySubjectId, item.term].join('|') === key)) {
-      throw new Error('A final grade already exists for this learner, subject, and term.');
-    }
-    return createRecord(profileDb, 'grades', values || {});
+    const candidate = normalizeGrade(values || {});
+    validateGradeRecord(store, candidate);
+    return createRecord(profileDb, 'grades', candidate);
+  }
+
+  function updateGrade(profileDb, id, changes) {
+    const store = requireStore(profileDb);
+    const current = store.grades.find(item => item.id === id);
+    if (!current) throw new Error('grades record was not found.');
+    const candidate = normalizeGrade({ ...current, ...(changes || {}), id: current.id, createdAt: current.createdAt });
+    const identityFields = ['advisoryClassId', 'advisoryLearnerId', 'advisorySubjectId', 'term'];
+    if (identityFields.some(field => candidate[field] !== current[field])) throw new Error('A grade identity cannot be changed after creation.');
+    validateGradeRecord(store, candidate, id);
+    return updateRecord(profileDb, 'grades', id, changes || {});
   }
 
   function checkAdvisoryIntegrity(profileDb) {
@@ -370,6 +451,12 @@
     const learnerIds = ids.learners;
     const subjectIds = ids.subjects;
     const batchIds = ids.importBatches;
+    const learnersById = new Map(store.learners.map(item => [item.id, item]));
+    const subjectsById = new Map(store.subjects.map(item => [item.id, item]));
+    const batchesById = new Map(store.importBatches.map(item => [item.id, item]));
+    if (store.schemaVersion > ADVISORY_SCHEMA_VERSION) {
+      warnings.push({ code: 'newer-schema-version', schemaVersion: store.schemaVersion, supportedVersion: ADVISORY_SCHEMA_VERSION });
+    }
     ['learners', 'subjects', 'grades', 'importBatches', 'sourceMappings'].forEach(collection => {
       store[collection].forEach(item => {
         if (!classIds.has(item.advisoryClassId)) errors.push({ code: 'orphan-class-reference', collection, id: item.id });
@@ -379,9 +466,31 @@
       if (!learnerIds.has(item.advisoryLearnerId)) errors.push({ code: 'orphan-learner-reference', collection: 'grades', id: item.id });
       if (!subjectIds.has(item.advisorySubjectId)) errors.push({ code: 'orphan-subject-reference', collection: 'grades', id: item.id });
       if (item.importBatchId && !batchIds.has(item.importBatchId)) warnings.push({ code: 'missing-import-batch', collection: 'grades', id: item.id });
+      const learner = learnersById.get(item.advisoryLearnerId);
+      const subject = subjectsById.get(item.advisorySubjectId);
+      const batch = batchesById.get(item.importBatchId);
+      if (learner && learner.advisoryClassId !== item.advisoryClassId) errors.push({ code: 'cross-class-learner-reference', collection: 'grades', id: item.id });
+      if (subject && subject.advisoryClassId !== item.advisoryClassId) errors.push({ code: 'cross-class-subject-reference', collection: 'grades', id: item.id });
+      if (batch && batch.advisoryClassId !== item.advisoryClassId) errors.push({ code: 'cross-class-import-batch-reference', collection: 'grades', id: item.id });
+      if (!item.term) errors.push({ code: 'missing-grade-term', collection: 'grades', id: item.id });
+      if (item.finalGrade !== null && !Number.isFinite(item.finalGrade)) errors.push({ code: 'invalid-final-grade', collection: 'grades', id: item.id });
     });
     store.sourceMappings.forEach(item => {
       if (!subjectIds.has(item.advisorySubjectId)) errors.push({ code: 'orphan-subject-reference', collection: 'sourceMappings', id: item.id });
+      const subject = subjectsById.get(item.advisorySubjectId);
+      if (subject && subject.advisoryClassId !== item.advisoryClassId) errors.push({ code: 'cross-class-subject-reference', collection: 'sourceMappings', id: item.id });
+    });
+
+    store.classes.forEach(item => {
+      if (!item.schoolYear || !item.gradeLevel || !item.section || !item.adviserName) errors.push({ code: 'incomplete-class-identity', collection: 'classes', id: item.id });
+      if (item.isActive && item.isArchived) errors.push({ code: 'active-archived-class', collection: 'classes', id: item.id });
+    });
+    store.learners.forEach(item => {
+      if (!item.lastName || !item.firstName) errors.push({ code: 'incomplete-learner-name', collection: 'learners', id: item.id });
+      if (item.lrn && !/^\d{12}$/.test(item.lrn)) errors.push({ code: 'invalid-lrn', collection: 'learners', id: item.id });
+    });
+    store.subjects.forEach(item => {
+      if (!item.subjectName || !item.normalizedSubjectKey) errors.push({ code: 'incomplete-subject-identity', collection: 'subjects', id: item.id });
     });
 
     const activeYears = new Set();
@@ -403,6 +512,12 @@
       if (gradeKeys.has(key)) errors.push({ code: 'duplicate-grade', id: item.id });
       gradeKeys.add(key);
     });
+    const subjectKeys = new Set();
+    store.subjects.forEach(item => {
+      const key = `${item.advisoryClassId}|${item.normalizedSubjectKey}`;
+      if (subjectKeys.has(key)) errors.push({ code: 'duplicate-subject', advisoryClassId: item.advisoryClassId, normalizedSubjectKey: item.normalizedSubjectKey });
+      subjectKeys.add(key);
+    });
     return { schemaVersion: store.schemaVersion, errors, warnings, isValid: errors.length === 0 };
   }
 
@@ -415,19 +530,19 @@
     updateClass,
     deleteClass,
     createLearner: (db, values) => createChild(db, 'learners', values),
-    updateLearner: (db, id, changes) => updateRecord(db, 'learners', id, changes),
+    updateLearner: (db, id, changes) => updateChild(db, 'learners', id, changes),
     deleteLearner,
     createSubject: (db, values) => createChild(db, 'subjects', values),
-    updateSubject: (db, id, changes) => updateRecord(db, 'subjects', id, changes),
+    updateSubject: (db, id, changes) => updateChild(db, 'subjects', id, changes),
     deleteSubject,
     createGrade,
-    updateGrade: (db, id, changes) => updateRecord(db, 'grades', id, changes),
+    updateGrade,
     deleteGrade: (db, id) => deleteRecord(db, 'grades', id),
     createImportBatch: (db, values) => createChild(db, 'importBatches', values),
-    updateImportBatch: (db, id, changes) => updateRecord(db, 'importBatches', id, changes),
+    updateImportBatch: (db, id, changes) => updateChild(db, 'importBatches', id, changes),
     deleteImportBatch,
     createSourceMapping: (db, values) => createChild(db, 'sourceMappings', values),
-    updateSourceMapping: (db, id, changes) => updateRecord(db, 'sourceMappings', id, changes),
+    updateSourceMapping: (db, id, changes) => updateChild(db, 'sourceMappings', id, changes),
     deleteSourceMapping: (db, id) => deleteRecord(db, 'sourceMappings', id)
   };
 

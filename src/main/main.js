@@ -274,7 +274,17 @@ function createWindow() {
           updateProfile();
           if (runtimeProfile.district !== 'Smoke Test District') throw new Error('District profile field did not update the active profile.');
 
-          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, offline: ${isOfflineSmokeTest} };
+          const integrityReport = AdvisoryData.checkAdvisoryIntegrity(runtimeProfile);
+          if (!integrityReport.isValid || integrityReport.errors.length) throw new Error('Healthy runtime Advisory data failed integrity checking: ' + JSON.stringify(integrityReport.errors));
+          const advisoryCounts = Object.fromEntries(['classes', 'learners', 'subjects', 'grades', 'importBatches', 'sourceMappings'].map(collection => [collection, runtimeProfile.advisory[collection].length]));
+          const restoredProfile = AdvisoryBackup.prepareRestoredDatabase(JSON.parse(JSON.stringify(runtimeProfile)));
+          const restoredIntegrity = AdvisoryData.checkAdvisoryIntegrity(restoredProfile);
+          const restoredCounts = Object.fromEntries(Object.keys(advisoryCounts).map(collection => [collection, restoredProfile.advisory[collection].length]));
+          if (!restoredIntegrity.isValid || JSON.stringify(restoredCounts) !== JSON.stringify(advisoryCounts) || restoredProfile.assignments.length !== runtimeProfile.assignments.length) {
+            throw new Error('Runtime Advisory backup/restore round trip failed: ' + JSON.stringify({ restoredIntegrity, advisoryCounts, restoredCounts }));
+          }
+
+          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectLogo: true, districtPersistence: true, integrityCheck: true, backupRestore: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }
