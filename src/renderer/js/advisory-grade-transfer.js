@@ -926,8 +926,24 @@
     const finals = regularSubjects.map(subject => calculateSubjectFinal(grades, learnerId, subject.id));
     if (components) finals.push(calculateMapehFinal(grades, learnerId, includedSubjects));
     return finals.every(value => value !== null)
-      ? Math.round(finals.reduce((sum, value) => sum + value, 0) / finals.length)
+      ? Number((finals.reduce((sum, value) => sum + value, 0) / finals.length).toFixed(2))
       : null;
+  }
+
+  function formatGeneralAverage(value) {
+    return Number.isFinite(Number(value)) ? Number(value).toFixed(2) : '—';
+  }
+
+  function moveSubject(profileDb, advisoryClassId, subjectId, direction) {
+    const activeSubjects = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb).subjects
+      .filter(subject => subject.advisoryClassId === advisoryClassId && !subject.isArchived)
+      .sort((left, right) => left.displayOrder - right.displayOrder);
+    const currentIndex = activeSubjects.findIndex(subject => subject.id === subjectId);
+    const targetIndex = currentIndex + (direction === 'up' ? -1 : direction === 'down' ? 1 : 0);
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= activeSubjects.length || targetIndex === currentIndex) return false;
+    [activeSubjects[currentIndex], activeSubjects[targetIndex]] = [activeSubjects[targetIndex], activeSubjects[currentIndex]];
+    activeSubjects.forEach((subject, index) => globalScope.AdvisoryData.updateSubject(profileDb, subject.id, { displayOrder: index }));
+    return true;
   }
 
   function gradeCell(record, extraClass = '') {
@@ -1088,17 +1104,17 @@
               return `${termCells}${calculatedGradeCell(finalGrade, 'Average of Terms 1–3', 'advisory-final-column advisory-subject-end')}`;
             }).join('');
             const generalAverage = calculateGeneralAverage(grades, learner.id, subjects);
-            return `<tr><td><small>${globalScope.esc(learner.lrn || 'No LRN')}</small><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</strong></td>${subjectCells}<td class="advisory-general-average ${generalAverage === null ? 'is-missing' : 'has-grade'}" title="Available when every subject has all three term grades">${generalAverage === null ? '&mdash;' : generalAverage}</td></tr>`;
+            return `<tr><td><small>${globalScope.esc(learner.lrn || 'No LRN')}</small><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</strong></td>${subjectCells}<td class="advisory-general-average ${generalAverage === null ? 'is-missing' : 'has-grade'}" title="Available when every subject has all three term grades">${generalAverage === null ? '&mdash;' : formatGeneralAverage(generalAverage)}</td></tr>`;
           }).join('') : `<tr><td colspan="${totalSubjectColumns + 2}"><div class="advisory-roster__empty">No learners are in the official roster. Use Manage Roster to import or add learners.</div></td></tr>`}</tbody>
         </table>
       </div>` : '<div class="advisory-roster__empty">No subjects have been configured. Import the first Grade Transfer File or add a subject manually.</div>';
 
-    const sourceRows = subjects.length ? subjects.map(subject => {
+    const sourceRows = subjects.length ? subjects.map((subject, index) => {
       const subjectGrades = grades.filter(item => item.advisorySubjectId === subject.id);
       const lastBatch = batches.find(batch => normalizeSubjectKey(batch.subject) === subject.normalizedSubjectKey && batch.status !== 'undone');
       const expected = learners.length * 3;
       const conflicts = subjectGrades.filter(grade => grade.conflictStatus && !['none', 'resolved'].includes(grade.conflictStatus)).length;
-      return `<tr><td><strong>${globalScope.esc(subject.subjectName)}</strong></td><td>${sourceSummary(subject)}</td><td>${lastBatch ? `${globalScope.esc(lastBatch.filename)}<small>${globalScope.esc(lastBatch.importedAt)}</small>` : 'Not imported'}</td><td>${subjectGrades.length}</td><td>${Math.max(0, expected - subjectGrades.length)}</td><td>${conflicts}</td><td><button class="btn btn-ghost btn-sm" data-edit-advisory-subject="${globalScope.esc(subject.id)}">Assign Source</button></td></tr>`;
+      return `<tr><td><strong>${globalScope.esc(subject.subjectName)}</strong></td><td>${sourceSummary(subject)}</td><td>${lastBatch ? `${globalScope.esc(lastBatch.filename)}<small>${globalScope.esc(lastBatch.importedAt)}</small>` : 'Not imported'}</td><td>${subjectGrades.length}</td><td>${Math.max(0, expected - subjectGrades.length)}</td><td>${conflicts}</td><td class="advisory-subject-order"><button class="btn btn-ghost btn-sm" type="button" data-move-advisory-subject="${globalScope.esc(subject.id)}" data-move-direction="up" aria-label="Move ${globalScope.esc(subject.subjectName)} up" title="Move up" ${index === 0 ? 'disabled' : ''}>&uarr;</button><button class="btn btn-ghost btn-sm" type="button" data-move-advisory-subject="${globalScope.esc(subject.id)}" data-move-direction="down" aria-label="Move ${globalScope.esc(subject.subjectName)} down" title="Move down" ${index === subjects.length - 1 ? 'disabled' : ''}>&darr;</button></td><td><button class="btn btn-ghost btn-sm" data-edit-advisory-subject="${globalScope.esc(subject.id)}">Assign Source</button></td></tr>`;
     }).join('') : '<tr><td colspan="7">No subjects configured.</td></tr>';
 
     const historyRows = batches.length ? batches.map(batch => `<tr><td>${globalScope.esc(batch.importedAt || '—')}</td><td>${globalScope.esc(batch.filename || 'Unknown file')}<small>${globalScope.esc(batch.sourceTeacher || '')} · ${globalScope.esc(batch.sourceClass || '')}</small></td><td>${globalScope.esc(batch.subject)} · Term ${globalScope.esc(batch.term)}</td><td>${batch.importedCount} imported · ${batch.updatedCount} updated · ${batch.skippedCount} skipped · ${batch.conflictCount} conflicts</td><td>${globalScope.esc(batch.status)}</td></tr>`).join('') : '<tr><td colspan="5">No grade imports recorded.</td></tr>';
@@ -1114,7 +1130,7 @@
         ${matrix}
       </section>
       <section id="advisoryGradeSourcesPanel" role="tabpanel" data-advisory-panel="sources" hidden>
-        <div class="advisory-source-management"><div class="advisory-source-heading"><h3>Grade Sources</h3><p>Subjects are based on Grade ${globalScope.esc(advisoryClass.gradeLevel)}. Choose how each subject's grades will arrive. Grade Transfer Files identify their own school year, subject, and term.</p></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Subject</th><th>Grade Source</th><th>Last Import</th><th>Received</th><th>Missing</th><th>Conflicts</th><th></th></tr></thead><tbody>${sourceRows}</tbody></table></div></div>
+        <div class="advisory-source-management"><div class="advisory-source-heading"><h3>Grade Sources</h3><p>Subjects are based on Grade ${globalScope.esc(advisoryClass.gradeLevel)}. Choose how each subject's grades will arrive, or use the arrows to set their display order. Grade Transfer Files identify their own school year, subject, and term.</p></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Subject</th><th>Grade Source</th><th>Last Import</th><th>Received</th><th>Missing</th><th>Conflicts</th><th>Order</th><th></th></tr></thead><tbody>${sourceRows}</tbody></table></div></div>
         <div class="advisory-import-history"><div class="advisory-grade-panel__header"><div><h3>Import History</h3><p>Audit trail for every confirmed Grade Transfer File.</p></div><button class="btn btn-ghost btn-sm" data-undo-latest-import ${latestUndoableBatch(profileDb, advisoryClass.id) ? '' : 'disabled'}>Undo Latest Import</button></div><div class="advisory-grade-matrix-wrap"><table class="advisory-roster-table"><thead><tr><th>Imported</th><th>File / Source</th><th>Subject / Term</th><th>Results</th><th>Status</th></tr></thead><tbody>${historyRows}</tbody></table></div></div>
       </section>
       <section id="advisoryRosterPanel" role="tabpanel" data-advisory-panel="roster" hidden>
@@ -1160,6 +1176,11 @@
       renderWorkspacePanel(workspace, advisoryClass);
     }));
     panel.querySelectorAll('[data-edit-advisory-subject]').forEach(button => button.addEventListener('click', () => showSubjectModal(button.dataset.editAdvisorySubject)));
+    panel.querySelectorAll('[data-move-advisory-subject]').forEach(button => button.addEventListener('click', async () => {
+      if (!moveSubject(profileDb, advisoryClass.id, button.dataset.moveAdvisorySubject, button.dataset.moveDirection)) return;
+      await globalScope.saveDatabase();
+      globalScope.renderAdvisoryClassPage?.();
+    }));
     panel.querySelector('[data-undo-latest-import]')?.addEventListener('click', () => requestUndoLatest(advisoryClass.id));
     panel.querySelector('[data-advisory-import-class]')?.addEventListener('click', () => globalScope.AdvisoryRoster?.showClassImportChooser?.());
     panel.querySelector('[data-advisory-import-sf1]')?.addEventListener('click', () => globalScope.AdvisoryRoster?.importSf1Roster?.());
@@ -1290,6 +1311,8 @@
     calculateMapehTermAverage,
     calculateMapehFinal,
     calculateGeneralAverage,
+    formatGeneralAverage,
+    moveSubject,
     subjectDisplayName,
     subjectCompactName,
     sortLearnersBySubject,

@@ -441,6 +441,37 @@
 /* SF2 export prepares an exact preview clone in #attendanceSf2ReportPrint.
    Override the general grading-sheet print rules only for this export mode. */
 @media print {
+  @page { size: A4 landscape; margin: 10mm; }
+
+  body.advisory-report-print-mode > *:not(#advisoryGradeReportPrint) {
+    display: none !important;
+  }
+
+  body.advisory-report-print-mode #advisoryGradeReportPrint,
+  body.advisory-report-print-mode #advisoryGradeReportPrint * {
+    visibility: visible !important;
+  }
+
+  body.advisory-report-print-mode #advisoryGradeReportPrint {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
+
+  body.advisory-report-print-mode .advisory-report { display: block !important; }
+  body.advisory-report-print-mode .advisory-report__sheet { min-width: 0 !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; break-after: page; page-break-after: always; }
+  body.advisory-report-print-mode .advisory-report__sheet:last-child { break-after: auto; page-break-after: auto; }
+  body.advisory-report-print-mode .advisory-report__table { font-size: 8px !important; }
+  body.advisory-report-print-mode .advisory-report__table th,
+  body.advisory-report-print-mode .advisory-report__table td { padding: 3px !important; border-color: #000 !important; color: #000 !important; }
+  body.advisory-report-print-mode .advisory-report__table thead { display: table-header-group; }
+  body.advisory-report-print-mode .advisory-report__table tr { break-inside: avoid; page-break-inside: avoid; }
+
   body.support-print-mode.support-print-attendance {
     margin: 0 !important;
     padding: 0 !important;

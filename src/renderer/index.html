@@ -268,8 +268,16 @@
             <button class="btn btn-ghost btn-sm advisory-page-tab" type="button" role="tab" data-advisory-page-tab="sources" aria-selected="false" aria-controls="advisoryGradeSourcesPanel" tabindex="-1">Grade Sources</button>
             <button class="btn btn-ghost btn-sm advisory-page-tab" type="button" role="tab" data-advisory-page-tab="roster" aria-selected="false" aria-controls="advisoryRosterPanel" tabindex="-1">Manage Roster</button>
             <button class="btn btn-ghost btn-sm advisory-page-tab" type="button" role="tab" data-advisory-page-tab="settings" aria-selected="false" aria-controls="advisorySettingsPanel" tabindex="-1">Advisory Settings</button>
-            <span class="advisory-page__toolbar-divider" aria-hidden="true"></span>
-            <span class="advisory-workspace__count" data-advisory-page-roster-count></span>
+            <div class="advisory-page__report-actions" aria-label="Learner Grade Record report actions">
+              <button class="btn btn-primary btn-sm" type="button" data-advisory-page-report="print" title="Preview and print the Learner Grade Record">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Print
+              </button>
+              <button class="btn btn-olive btn-sm" type="button" data-advisory-page-report="pdf" title="Preview and download the Learner Grade Record as PDF">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download PDF
+              </button>
+            </div>
           </div>
           <main class="advisory-page__body">
             <section class="advisory-grade-panel" data-advisory-grade-panel></section>
@@ -1142,7 +1150,7 @@
         <p id="whatsNewModalFallback" class="whats-new-modal__fallback" style="display:none">No release notes are available for this version.</p>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-primary btn-sm" onclick="closeWhatsNewModal()">Close</button>
+        <button class="btn btn-cancel btn-sm" onclick="closeWhatsNewModal()">Close</button>
       </div>
     </div>
   </div>
@@ -1207,7 +1215,7 @@
         </section>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-primary btn-sm" onclick="closeTermsModal()">Close</button>
+        <button class="btn btn-cancel btn-sm" onclick="closeTermsModal()">Close</button>
       </div>
     </div>
   </div>
@@ -1725,6 +1733,7 @@
   <script src="js/dashboard.js"></script>
   <script src="js/advisory-roster.js"></script>
   <script src="js/advisory-grade-transfer.js"></script>
+  <script src="js/advisory-grade-report.js"></script>
   <script src="js/advisory-reset.js"></script>
   <script src="js/advisory-page.js"></script>
   <script src="js/quick-grade.js"></script>

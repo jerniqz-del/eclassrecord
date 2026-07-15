@@ -58,11 +58,10 @@
       <div>
         <span class="advisory-card__eyebrow">School Year ${escHtml(advisoryClass.schoolYear)}</span>
         <h1>Advisory Class</h1>
-        <p>Grade ${escHtml(advisoryClass.gradeLevel)} - ${escHtml(advisoryClass.section)} <span aria-hidden="true">&middot;</span> ${escHtml(advisoryClass.adviserName)}${advisoryClass.isSpecialClass ? ` <span aria-hidden="true">&middot;</span> ${escHtml(advisoryClass.specialProgramName)} Special Class` : ''}</p>
+        <p>Grade ${escHtml(advisoryClass.gradeLevel)} - ${escHtml(advisoryClass.section)} <span aria-hidden="true">&middot;</span> ${escHtml(advisoryClass.adviserName)} <span class="advisory-page__roster-count" data-advisory-page-roster-count>${count} learner${count === 1 ? '' : 's'}</span>${advisoryClass.isSpecialClass ? ` <span aria-hidden="true">&middot;</span> ${escHtml(advisoryClass.specialProgramName)} Special Class` : ''}</p>
       </div>
       <button class="btn btn-danger btn-sm advisory-page__reset" type="button" data-advisory-page-reset>Reset Advisory Class</button>`;
     header.querySelector('[data-advisory-page-reset]')?.addEventListener('click', () => globalScope.showAdvisoryResetModal?.());
-    page.querySelector('[data-advisory-page-roster-count]').textContent = `${count} learner${count === 1 ? '' : 's'}`;
     globalScope.AdvisoryGradeTransfer?.renderWorkspacePanel?.(page, advisoryClass);
     syncSidebarButton();
     syncActiveNavigation();
@@ -84,6 +83,10 @@
     page.dataset.bound = 'true';
     const tabs = Array.from(page.querySelectorAll('[data-advisory-page-tab]'));
     tabs.forEach(button => button.addEventListener('click', () => globalScope.AdvisoryGradeTransfer?.setPanelTab?.(button.dataset.advisoryPageTab, page)));
+    page.querySelectorAll('[data-advisory-page-report]').forEach(button => button.addEventListener('click', () => {
+      const advisoryClass = currentClass();
+      if (advisoryClass) globalScope.AdvisoryGradeReport?.showOptions?.(advisoryClass, button.dataset.advisoryPageReport);
+    }));
     page.querySelector('.advisory-page__toolbar')?.addEventListener('keydown', event => {
       const currentIndex = tabs.indexOf(event.target.closest?.('[data-advisory-page-tab]'));
       if (currentIndex < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;

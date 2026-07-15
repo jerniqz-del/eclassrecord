@@ -185,7 +185,18 @@ function validPayload(data = fixture()) {
   assert.strictEqual(Transfer.calculateMapehTermAverage(grades, 'learner', subjects, '3'), 89);
   assert.strictEqual(Transfer.calculateMapehFinal(grades, 'learner', subjects), 87);
   assert.strictEqual(Transfer.calculateGeneralAverage(grades, 'learner', subjects), 90, 'MAPEH must count once instead of counting its two components separately');
+  assert.strictEqual(Transfer.formatGeneralAverage(Transfer.calculateGeneralAverage(grades, 'learner', subjects)), '90.00', 'General Average must always display two decimal places');
   assert.strictEqual(Transfer.calculateMapehFinal(grades.slice(0, -1), 'learner', subjects), null, 'incomplete components must not produce a MAPEH final');
+}
+
+// Subject display order can be rearranged without changing the subject records themselves.
+{
+  const data = fixture();
+  const subjects = data.profile.advisory.subjects.filter(subject => subject.advisoryClassId === data.advisoryClass.id && !subject.isArchived).sort((left, right) => left.displayOrder - right.displayOrder);
+  assert.strictEqual(Transfer.moveSubject(data.profile, data.advisoryClass.id, subjects[1].id, 'up'), true);
+  const reordered = data.profile.advisory.subjects.filter(subject => subject.advisoryClassId === data.advisoryClass.id && !subject.isArchived).sort((left, right) => left.displayOrder - right.displayOrder);
+  assert.strictEqual(reordered[0].id, subjects[1].id);
+  assert.strictEqual(Transfer.moveSubject(data.profile, data.advisoryClass.id, reordered[0].id, 'up'), false, 'the first subject cannot move above the list');
 }
 
 // Planning is read-only; exact LRN and safe name fallback match correctly.

@@ -2006,7 +2006,7 @@ function renderAssessmentAttachments() {
       </div>
       <div style="display:flex;gap:var(--space-2);">
         <button class="btn btn-ghost btn-sm" type="button" onclick="openAssessmentAttachment('${esc(file.id)}')">Open</button>
-        <button class="btn btn-ghost btn-sm" type="button" onclick="removeAssessmentAttachment('${esc(file.id)}')">Remove</button>
+        <button class="btn btn-danger btn-sm" type="button" onclick="removeAssessmentAttachment('${esc(file.id)}')">Remove</button>
       </div>
     </div>
   `).join('');

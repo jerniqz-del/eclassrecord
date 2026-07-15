@@ -148,24 +148,27 @@
   box-shadow: none;
 }
 
-/* Cancel / Close */
-.btn-cancel {
-  border-color: var(--color-neutral-300);
-  background: linear-gradient(135deg, var(--bg-surface), var(--color-neutral-50));
-  color: var(--text-secondary);
-  box-shadow: none;
+/* Cancel, Back, Close, and Delete use one clear destructive red treatment. */
+.btn-cancel,
+.btn-danger {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--color-error-500), var(--color-error-700));
+  color: var(--text-inverse);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-error-600) 35%, transparent), var(--shadow-sm);
 }
 
-.btn-cancel:hover {
-  border-color: var(--color-neutral-400);
-  background: var(--color-neutral-100);
-  color: var(--text-primary);
-  box-shadow: none;
+.btn-cancel:hover,
+.btn-danger:hover {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--color-error-600), var(--color-error-700));
+  color: var(--text-inverse);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-error-600) 40%, transparent), var(--shadow-md);
 }
 
-.btn-cancel:active {
-  background: var(--color-neutral-200);
-  transform: scale(0.97);
+.btn-cancel:active,
+.btn-danger:active {
+  background: var(--color-error-700);
+  box-shadow: none;
 }
 
 /* Score transfer */
@@ -2553,8 +2556,10 @@
 .modal-z-top { z-index: 10010; }
 .modal-z-analysis { z-index: 10002; }
 .modal-z-assessment { z-index: 10003; }
-.modal-z-donate { z-index: 10040; }
-#donateQrModal.modal-z-higher { z-index: 10045; }
+/* The exit/support prompt must sit above feature dialogs, including Advisory
+   print-preview and report-preparation overlays. */
+.modal-z-donate { z-index: 13000; }
+#donateQrModal.modal-z-higher { z-index: 13010; }
 #imageZoomModal.modal-z-top { z-index: 10060; }
 .modal-z-tour { z-index: 10020; }
 .modal-z-confirm { z-index: 10030; }

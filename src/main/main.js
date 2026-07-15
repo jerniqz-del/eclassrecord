@@ -218,6 +218,16 @@ function createWindow() {
           const firstLearnerCell = advisoryPage.querySelector('.advisory-grade-matrix tbody td:first-child');
           if (getComputedStyle(firstLearnerCell).position !== 'sticky') throw new Error('LRN / Official Name column is not frozen during horizontal scrolling.');
           const termToggle = advisoryPage.querySelector('[data-toggle-advisory-terms]');
+          const reportAction = advisoryPage.querySelector('[data-advisory-page-report]');
+          if (!reportAction || reportAction.previousElementSibling?.dataset.advisoryPageRosterCount === undefined) throw new Error('Advisory Grade Record report action was not positioned after the learner count.');
+          reportAction.click();
+          const reportOptions = document.getElementById('advisoryGradeReportOptionsModal');
+          if (!reportOptions?.textContent.includes('Final Grades Only') || !reportOptions.textContent.includes('Include Terms 1–3')) throw new Error('Advisory report detail choices were not rendered.');
+          reportOptions.querySelector('input[value="terms"]').checked = true;
+          reportOptions.querySelector('[data-advisory-report-preview]').click();
+          const reportPreview = document.getElementById('advisoryGradeReportPreviewModal');
+          if (!reportPreview?.textContent.includes('Print Preview') || !reportPreview.textContent.includes('T1') || !reportPreview.querySelector('[data-advisory-report-print]') || !reportPreview.querySelector('[data-advisory-report-pdf]')) throw new Error('Advisory report preview did not render the selected term-grade report.');
+          reportPreview.remove();
           if (!termToggle || termToggle.getAttribute('aria-pressed') !== 'false') throw new Error('The all-terms toggle is missing or terms are not hidden by default.');
           if ([...advisoryPage.querySelectorAll('.advisory-grade-matrix thead th')].some(cell => cell.textContent.trim() === 'T1')) throw new Error('Final-only view is not the default.');
           const finalHeaderWidths = [...advisoryPage.querySelectorAll('.advisory-grade-matrix thead tr:nth-child(2) th')].map(cell => Math.round(cell.getBoundingClientRect().width));
@@ -741,7 +751,7 @@ ipcMain.handle('dialog:export-excel-template', async (_event, payload) => {
 });
 
 ipcMain.handle('dialog:export-pdf', async (_event, options) => {
-  const { size, landscape, filename, metadata } = options || {};
+  const { size, landscape, filename, metadata, includeHeader = true } = options || {};
   
   const headerHtml = `
     <div style="font-size: 11px; font-family: 'Segoe UI', Arial, sans-serif; color: #000; width: 100%; margin: 0 0.4in; box-sizing: border-box; border-bottom: 2px solid #000; padding-bottom: 8px;">
@@ -800,17 +810,19 @@ ipcMain.handle('dialog:export-pdf', async (_event, options) => {
   const printOptions = {
     margins: {
       marginType: 'custom',
-      top: 1.45, // in inches
-      bottom: 0.6,
+      // Advisory reports supply their own report header in the document. Reserving
+      // space for the shared PDF header makes the two headers collide.
+      top: includeHeader ? 1.45 : 0.4, // in inches
+      bottom: includeHeader ? 0.6 : 0.4,
       left: 0.4, // in inches
       right: 0.4
     },
     pageSize: size || 'A4',
     landscape: !!landscape,
     printBackground: true,
-    displayHeaderFooter: true,
-    headerTemplate: headerHtml,
-    footerTemplate: footerHtml
+    displayHeaderFooter: includeHeader,
+    headerTemplate: includeHeader ? headerHtml : '',
+    footerTemplate: includeHeader ? footerHtml : ''
   };
   
   try {

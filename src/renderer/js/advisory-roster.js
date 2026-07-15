@@ -262,7 +262,7 @@
         <div class="modal advisory-roster-modal" role="dialog" aria-modal="true" aria-labelledby="advisoryRosterTitle">
           <div class="advisory-workspace__header">
             <div><span class="advisory-card__eyebrow">Roster and learner settings</span><h2 id="advisoryRosterTitle">Official Advisory Class Roster</h2><p>Grade ${globalScope.esc(advisoryClass.gradeLevel)} - ${globalScope.esc(advisoryClass.section)} · School Year ${globalScope.esc(advisoryClass.schoolYear)}</p></div>
-            <button class="btn btn-ghost btn-sm" type="button" data-close-advisory-roster>Close</button>
+            <button class="btn btn-cancel btn-sm" type="button" data-close-advisory-roster>Close</button>
           </div>
           <div class="advisory-workspace__toolbar advisory-action-toolbar">
             <button class="btn btn-sm advisory-action-btn" type="button" data-advisory-import-class>Import from Other Class</button>
@@ -331,7 +331,7 @@
         <div class="modal advisory-workspace" role="dialog" aria-modal="true" aria-labelledby="advisoryWorkspaceTitle">
           <div class="advisory-workspace__header">
             <div><span class="advisory-card__eyebrow">School Year ${globalScope.esc(advisoryClass.schoolYear)}</span><h2 id="advisoryWorkspaceTitle">Advisory Class · Grade ${globalScope.esc(advisoryClass.gradeLevel)} - ${globalScope.esc(advisoryClass.section)}</h2><p>${globalScope.esc(advisoryClass.adviserName)}</p></div>
-            <button class="btn btn-ghost btn-sm" type="button" data-close-advisory-workspace aria-label="Close Advisory Class">Close</button>
+            <button class="btn btn-cancel btn-sm" type="button" data-close-advisory-workspace aria-label="Close Advisory Class">Close</button>
           </div>
           <div class="advisory-workspace__toolbar">
             <button class="btn btn-primary btn-sm" type="button" data-advisory-manage-roster>Manage Roster</button>
