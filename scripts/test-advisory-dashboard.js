@@ -160,7 +160,7 @@ function createProfile() {
   });
   assert(componentCss.includes('.dashboard-card[data-assignment-id] .dashboard-card__actions'), 'ordinary class-card actions should have scoped spacing');
   assert(componentCss.includes('gap: var(--space-2)'), 'class-card action buttons should have a visible gap');
-  assert(componentCss.includes('.dashboard-card[data-assignment-id] .dashboard-card__export-btn,\n.dashboard-card[data-assignment-id] .dashboard-card__report-btn'), 'Export Final Grades and Reports should share one equal-width rule');
+  assert(/\.dashboard-card\[data-assignment-id\] \.dashboard-card__export-btn,\r?\n\.dashboard-card\[data-assignment-id\] \.dashboard-card__report-btn/.test(componentCss), 'Export Final Grades and Reports should share one equal-width rule');
   assert(componentCss.includes('flex: 1 1 0'), 'the two card actions should divide available width equally');
 }
 

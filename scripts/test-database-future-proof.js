@@ -207,7 +207,9 @@ function renderQrPixels(payload) {
   await assert.rejects(() => context.PinRecovery.buildRecoveredProfile(protectedProfile, 'WRONG-WRONG-WRONG-WRONG-WRONG', '654321'), /Incorrect PIN\/recovery key/);
   assert.strictEqual(JSON.stringify(protectedProfile), originalSnapshot);
   const corruptProfile = JSON.parse(originalSnapshot);
-  corruptProfile.data.ciphertext = `${corruptProfile.data.ciphertext.slice(0, -2)}00`;
+  const finalCiphertextByte = corruptProfile.data.ciphertext.slice(-2).toLowerCase();
+  const replacementByte = finalCiphertextByte === '00' ? '01' : '00';
+  corruptProfile.data.ciphertext = `${corruptProfile.data.ciphertext.slice(0, -2)}${replacementByte}`;
   const corruptSnapshot = JSON.stringify(corruptProfile);
   await assert.rejects(() => context.PinRecovery.buildRecoveredProfile(corruptProfile, recoveryKey, '654321'), /corrupted encrypted data/);
   assert.strictEqual(JSON.stringify(corruptProfile), corruptSnapshot);

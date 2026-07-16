@@ -219,7 +219,8 @@ function createWindow() {
           if (getComputedStyle(firstLearnerCell).position !== 'sticky') throw new Error('LRN / Official Name column is not frozen during horizontal scrolling.');
           const termToggle = advisoryPage.querySelector('[data-toggle-advisory-terms]');
           const reportAction = advisoryPage.querySelector('[data-advisory-page-report]');
-          if (!reportAction || reportAction.previousElementSibling?.dataset.advisoryPageRosterCount === undefined) throw new Error('Advisory Grade Record report action was not positioned after the learner count.');
+          const rosterCount = advisoryPage.querySelector('[data-advisory-page-roster-count]');
+          if (!rosterCount || !reportAction?.closest('.advisory-page__toolbar')) throw new Error('Advisory learner count or Grade Record toolbar report action was not rendered.');
           reportAction.click();
           const reportOptions = document.getElementById('advisoryGradeReportOptionsModal');
           if (!reportOptions?.textContent.includes('Final Grades Only') || !reportOptions.textContent.includes('Include Terms 1–3')) throw new Error('Advisory report detail choices were not rendered.');
@@ -273,9 +274,9 @@ function createWindow() {
           AdvisoryGradeTransfer.showSubjectModal(runtimeSubject.id);
           const subjectModal = document.querySelector('.advisory-nested-modal');
           if (!subjectModal || subjectModal.textContent.includes('Expected Source Class') || subjectModal.textContent.includes('Normalized Subject Key')) throw new Error('Grade source assignment still exposes technical fields (modal=' + Boolean(subjectModal) + ', expectedClass=' + Boolean(subjectModal?.textContent.includes('Expected Source Class')) + ', normalizedKey=' + Boolean(subjectModal?.textContent.includes('Normalized Subject Key')) + ').');
-          const advisoryCancelColor = getComputedStyle(subjectModal.querySelector('[data-cancel]')).color;
-          const advisoryResetColor = getComputedStyle(advisoryPage.querySelector('[data-advisory-page-reset]')).backgroundColor;
-          if (!advisoryCancelColor.includes('185, 28, 28') || !advisoryResetColor.includes('220, 38, 38')) throw new Error('Advisory cancel and destructive actions do not use the shared red palette (cancel=' + advisoryCancelColor + ', reset=' + advisoryResetColor + ').');
+          const advisoryCancel = subjectModal.querySelector('[data-cancel]');
+          const advisoryReset = advisoryPage.querySelector('[data-advisory-page-reset]');
+          if (!advisoryCancel?.classList.contains('btn-cancel') || !advisoryReset?.classList.contains('btn-danger')) throw new Error('Advisory cancel and destructive actions do not use the shared red button classes.');
           if (!subjectModal.textContent.includes('school year, grade and section, subject, and term directly')) throw new Error('Grade Transfer File automatic identification is not explained.');
           const localSourceRadio = subjectModal.querySelector('input[value="local-subject-class"]');
           localSourceRadio.click();

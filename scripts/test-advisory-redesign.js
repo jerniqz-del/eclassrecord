@@ -96,7 +96,7 @@ assert(css.includes('.advisory-settings-form'));
 assert(css.includes('.advisory-grade-matrix--finals-only { width: calc(100% - 22px); min-width: 0; }'));
 assert(css.includes('@media (max-width: 1100px)'));
 assert(css.includes('font-family: var(--font-family-sans)'));
-assert(componentCss.includes('.btn-cancel,\n.btn-danger'), 'Cancel and Delete buttons must share the global red theme');
+assert(/\.btn-cancel,\r?\n\.btn-danger/.test(componentCss), 'Cancel and Delete buttons must share the global red theme');
 assert(css.includes('.advisory-setup-modal__body { flex: 1 1 auto; min-height: 0; overflow: auto;'));
 const setup = fs.readFileSync(path.join(root, 'src/renderer/js/advisory-dashboard.js'), 'utf8');
 assert(setup.includes('<select class="field-select" id="advisoryGradeLevel"'));
