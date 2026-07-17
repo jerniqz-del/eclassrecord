@@ -32,6 +32,25 @@
     return text(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, ' ').trim().toUpperCase();
   }
 
+  function normalizeGradeLevel(value) {
+    const normalized = text(value).toUpperCase().replace(/^GRADE\s*/, '').replace(/\s+/g, ' ');
+    if (/^\d+$/.test(normalized)) return String(Number.parseInt(normalized, 10));
+    if (['K', 'KINDER', 'KINDERGARTEN'].includes(normalized)) return 'KINDERGARTEN';
+    return normalized;
+  }
+
+  function matchingLocalClasses(profileDb, advisoryClass) {
+    if (!profileDb || !advisoryClass) return [];
+    const schoolYear = text(advisoryClass.schoolYear || profileDb.schoolYear);
+    const gradeLevel = normalizeGradeLevel(advisoryClass.gradeLevel);
+    const section = globalScope.AdvisoryRoster.normalizeMatchText(advisoryClass.section);
+    return (profileDb.assignments || [])
+      .filter(item => text(item.schoolYear || profileDb.schoolYear) === schoolYear
+        && normalizeGradeLevel(item.gradeLevel) === gradeLevel
+        && globalScope.AdvisoryRoster.normalizeMatchText(item.section) === section)
+      .sort((left, right) => text(left.subject || left.name).localeCompare(text(right.subject || right.name), 'fil'));
+  }
+
   function splitMapehSubjects(subjects) {
     return (subjects || []).flatMap(subjectName => /mapeh|music, arts, physical education, and health/i.test(subjectName)
       ? ['Music & Arts', 'PE & Health']
@@ -765,10 +784,7 @@
       } else globalScope.toast('Additional subjects are available only for a Special Class.', 'warning');
       return;
     }
-    const localClasses = (activeDb().assignments || []).filter(item => text(item.schoolYear || activeDb().schoolYear) === text(advisoryClass.schoolYear)
-      && text(item.gradeLevel) === text(advisoryClass.gradeLevel)
-      && globalScope.AdvisoryRoster.normalizeMatchText(item.section) === globalScope.AdvisoryRoster.normalizeMatchText(advisoryClass.section)
-      && (!existing || normalizeSubjectKey(item.subject) === existing.normalizedSubjectKey));
+    const localClasses = matchingLocalClasses(activeDb(), advisoryClass);
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay advisory-nested-modal';
     const value = (field, fallback = '') => globalScope.esc(existing?.[field] ?? fallback);
@@ -1289,6 +1305,7 @@
     FORMAT,
     SCHEMA_VERSION,
     normalizeSubjectKey,
+    matchingLocalClasses,
     standardSubjectsForGrade,
     ensureGradeLevelSubjects,
     syncSpecialProgramSubjects,

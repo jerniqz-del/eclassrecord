@@ -5,6 +5,7 @@ A premium, modern offline desktop application designed for Filipino teachers to 
 ## Core Features
 
 - **Standard DepEd Grading Rules**: Verification engine supporting DO 015 s.2026 (Transition & Zero-Based modes), DO 8 s.2015 (Legacy mode), and Key Stage 2 Trimester sheets.
+- **Senior High Teaching Loads**: Grades 11–12 class setup with strengthened-SHS Core, Academic Elective, Sports/Arts, Field Experience, Research/Design, TechPro, and Work Immersion grading presets.
 - **Roster Management**: Roster uploads from LIS school records via native SF1 spreadsheet importer (`.xlsx`, `.xls`, `.csv`, `.txt` parsed using `xlsx` library) and direct CSV rosters paste.
 - **Dense Score Grid**: Smooth score matrix with inline Arrow/Enter key navigation and HPS (Highest Possible Score) adjustment rows.
 - **Final Grades Summary**: Auto-computed averages across terms with remarked pass/fail color-coded badges.

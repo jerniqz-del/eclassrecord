@@ -71,6 +71,22 @@ function createPopulatedProfile() {
   return { profile, advisoryClass, learner, subject, batch, grade, mapping };
 }
 
+// Teaching-load roster imports include active learners from non-archived Advisory Classes.
+{
+  const profile = createPopulatedProfile().profile;
+  profile.assignments.push({ id: 'class-target', gradeLevel: '4', section: 'Narra', subject: 'Science', learners: [] });
+  AdvisoryData.createLearner(profile, {
+    id: 'advisory-learner-inactive', advisoryClassId: 'advisory-1', lrn: '123456789099',
+    lastName: 'Inactive', firstName: 'Learner', enrollmentStatus: 'inactive'
+  });
+  const sources = AdvisoryData.rosterImportSources(profile, 'class-target');
+  const advisorySource = sources.find(item => item.id === 'advisory:advisory-1');
+  assert(sources.some(item => item.id === 'class-existing'), 'other teaching loads should remain available');
+  assert(!sources.some(item => item.id === 'class-target'), 'the target teaching load must not list itself');
+  assert(advisorySource, 'the Advisory Class should be available as a roster source');
+  assert.deepStrictEqual(advisorySource.learners.map(item => item.id), ['advisory-learner-1'], 'inactive Advisory learners should not be imported');
+}
+
 // Migration adds only the advisory store and preserves every legacy record.
 {
   const profile = legacyProfile();

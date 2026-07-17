@@ -175,7 +175,9 @@ function normalizeDatabase() {
 
     // Automatically set policy and subjectGroup based on grade, subject, and school year
     a.policy = determinePolicy(a.gradeLevel, a.subject, a.schoolYear);
-    a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy);
+    a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy, a.shsSubjectGroup || a.subjectGroup);
+    if (parseInt(a.gradeLevel) >= 11) a.shsSubjectGroup = a.subjectGroup;
+    else delete a.shsSubjectGroup;
     const isCustomSubject = !getSubjectsForGrade(a.gradeLevel).includes(a.subject);
     a.isSpecialProgramSubject = isCustomSubject && a.isSpecialProgramSubject === true;
     if (a.isSpecialProgramSubject) {
@@ -370,8 +372,11 @@ function addAssignment() {
   }
 
   const policy = determinePolicy(gradeLevel, subject, classSchoolYear);
-  const subjectGroup = determineSubjectGroup(gradeLevel, subject, policy);
-  const isSpecialProgramSubject = isCustomSubject && document.getElementById('newSpecialProgramSubject')?.checked === true;
+  const shsSubjectGroup = parseInt(gradeLevel) >= 11
+    ? normalizeSeniorHighSubjectGroup(document.getElementById('newSeniorHighSubjectGroup')?.value)
+    : '';
+  const subjectGroup = determineSubjectGroup(gradeLevel, subject, policy, shsSubjectGroup);
+  const isSpecialProgramSubject = parseInt(gradeLevel) < 11 && isCustomSubject && document.getElementById('newSpecialProgramSubject')?.checked === true;
   const specialProgramWeights = isSpecialProgramSubject ? [
     Number(document.getElementById('newSpecialWwWeight')?.value),
     Number(document.getElementById('newSpecialPtWeight')?.value),
@@ -388,6 +393,7 @@ function addAssignment() {
     section,
     subject,
     subjectGroup,
+    ...(shsSubjectGroup ? { shsSubjectGroup } : {}),
     isSpecialProgramSubject,
     ...(isSpecialProgramSubject ? { specialProgramWeights } : {}),
     policy,
@@ -647,7 +653,7 @@ function editAssignmentModal(id) {
           <div class="field">
             <label class="field-label">Grade Level</label>
             <select id="editGrade" class="field-input">
-              ${[1,2,3,4,5,6,7,8,9,10].map(g =>
+              ${[1,2,3,4,5,6,7,8,9,10,11,12].map(g =>
                 `<option value="${g}" ${String(g) === String(a.gradeLevel) ? 'selected' : ''}>${g}</option>`
               ).join('')}
             </select>
@@ -672,6 +678,13 @@ function editAssignmentModal(id) {
         <div class="field">
           <label class="field-label">Subject</label>
           <select id="editSubject" class="field-input"></select>
+        </div>
+        <div id="editSeniorHighSubjectGroupField" class="field" hidden>
+          <label class="field-label" for="editSeniorHighSubjectGroup">Senior High Subject Type</label>
+          <select id="editSeniorHighSubjectGroup" class="field-input">
+            ${seniorHighSubjectGroupOptions().map(group => `<option value="${group.value}">${esc(group.label)} — ${group.weights[0]}% Written, ${group.weights[1]}% Performance, ${group.weights[2]}% Assessment</option>`).join('')}
+          </select>
+          <p class="text-muted u-mb-0">This category determines the official grading percentages.</p>
         </div>
         <div id="editCustomSubjectField" class="field" style="display:none">
           <label class="field-label">Custom Subject Name</label>
@@ -704,6 +717,8 @@ function editAssignmentModal(id) {
   const editSubjectSelect = overlay.querySelector('#editSubject');
   const editCustomField = overlay.querySelector('#editCustomSubjectField');
   const editCustomInput = overlay.querySelector('#editCustomSubjectInput');
+  const editSeniorHighGroupField = overlay.querySelector('#editSeniorHighSubjectGroupField');
+  const editSeniorHighGroupSelect = overlay.querySelector('#editSeniorHighSubjectGroup');
   const editSpecialField = overlay.querySelector('#editSpecialProgramSubjectField');
   const editSpecialCheckbox = overlay.querySelector('#editSpecialProgramSubject');
   const editSpecialWeights = overlay.querySelector('#editSpecialProgramWeights');
@@ -740,10 +755,13 @@ function editAssignmentModal(id) {
 
   const handleEditSubjectChange = () => {
     const isCustom = editSubjectSelect.value === 'Custom';
+    const isSeniorHigh = parseInt(editGradeSelect.value) >= 11;
     editCustomField.style.display = isCustom ? 'block' : 'none';
-    editSpecialField.hidden = !isCustom;
-    if (!isCustom) editSpecialCheckbox.checked = false;
-    editSpecialWeights.hidden = !isCustom || !editSpecialCheckbox.checked;
+    editSeniorHighGroupField.hidden = !isSeniorHigh;
+    editSpecialField.hidden = !isCustom || isSeniorHigh;
+    if (!isCustom || isSeniorHigh) editSpecialCheckbox.checked = false;
+    editSpecialWeights.hidden = !isCustom || isSeniorHigh || !editSpecialCheckbox.checked;
+    if (isSeniorHigh && !isCustom) editSeniorHighGroupSelect.value = determineSubjectGroup(editGradeSelect.value, editSubjectSelect.value);
     updateEditWeightTotal();
   };
 
@@ -764,6 +782,9 @@ function editAssignmentModal(id) {
     editCustomInput.value = a.subject;
   }
   handleEditSubjectChange();
+  if (parseInt(a.gradeLevel) >= 11) {
+    editSeniorHighGroupSelect.value = normalizeSeniorHighSubjectGroup(a.shsSubjectGroup || a.subjectGroup) || determineSubjectGroup(a.gradeLevel, a.subject);
+  }
 
   editGradeSelect.addEventListener('change', () => {
     populateEditSubjects();
@@ -785,14 +806,15 @@ function editAssignmentModal(id) {
     const newGrade = editGradeSelect.value;
     const newPolicy = determinePolicy(newGrade, newSubject, newSchoolYear);
     const isCustom = editSubjectSelect.value === 'Custom';
-    const isSpecialProgramSubject = isCustom && editSpecialCheckbox.checked;
+    const shsSubjectGroup = parseInt(newGrade) >= 11 ? normalizeSeniorHighSubjectGroup(editSeniorHighGroupSelect.value) : '';
+    const isSpecialProgramSubject = parseInt(newGrade) < 11 && isCustom && editSpecialCheckbox.checked;
     const specialProgramWeights = editWeightInputs.map(input => Number(input.value));
     if (isSpecialProgramSubject && !normalizeSpecialProgramWeights(specialProgramWeights)) {
       toast('Special-program weights must be whole numbers from 0 to 100 and total exactly 100%.', 'warning');
       editWeightInputs[0].focus();
       return;
     }
-    const nextGroup = determineSubjectGroup(newGrade, newSubject, newPolicy);
+    const nextGroup = determineSubjectGroup(newGrade, newSubject, newPolicy, shsSubjectGroup);
     const nextWeights = isSpecialProgramSubject ? specialProgramWeights : weightsFor(nextGroup);
     const weightsChanged = JSON.stringify(weightsForAssignment(a)) !== JSON.stringify(nextWeights)
       || a.isSpecialProgramSubject !== isSpecialProgramSubject;
@@ -804,6 +826,8 @@ function editAssignmentModal(id) {
       a.schoolYear = newSchoolYear;
       a.policy = newPolicy;
       a.subjectGroup = nextGroup;
+      if (shsSubjectGroup) a.shsSubjectGroup = shsSubjectGroup;
+      else delete a.shsSubjectGroup;
       a.isSpecialProgramSubject = isSpecialProgramSubject;
       if (isSpecialProgramSubject) a.specialProgramWeights = specialProgramWeights;
       else delete a.specialProgramWeights;

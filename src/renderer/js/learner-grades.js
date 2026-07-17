@@ -349,12 +349,7 @@ function renderTermStandardDetails(a, learnerId, term) {
   html += renderBlock('WW', 'Written Works', result.ww, w[0]);
   html += renderBlock('PT', 'Performance Task', result.pt, w[1]);
   
-  const examResult = {
-    hasData: result.st1.hasData || result.st2.hasData || result.te.hasData,
-    raw: (result.st1.raw || 0) + (result.st2.raw || 0) + (result.te.raw || 0),
-    max: (result.st1.max || 0) + (result.st2.max || 0) + (result.te.max || 0),
-    ps: result.examPS
-  };
+  const examResult = examinationResultForAssignment(a, result);
   html += renderBlock('EX', 'Exams', examResult, w[2]);
 
   const remarksBadge = result.termGrade === null

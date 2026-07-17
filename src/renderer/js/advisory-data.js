@@ -270,6 +270,31 @@
     return normalized;
   }
 
+  function rosterImportSources(profileDb, currentAssignmentId = '') {
+    if (!profileDb || typeof profileDb !== 'object') return [];
+    const assignmentSources = (profileDb.assignments || [])
+      .filter(item => item.id !== currentAssignmentId)
+      .map(item => ({
+        ...item,
+        sourceType: 'class-load',
+        learners: Array.isArray(item.learners) ? item.learners : []
+      }));
+    const store = normalizeAdvisoryData(profileDb);
+    const advisorySources = store.classes
+      .filter(item => !item.isArchived)
+      .map(item => ({
+        id: `advisory:${item.id}`,
+        sourceRecordId: item.id,
+        sourceType: 'advisory-class',
+        schoolYear: item.schoolYear,
+        gradeLevel: item.gradeLevel,
+        section: item.section,
+        subject: 'Advisory Class',
+        learners: store.learners.filter(learner => learner.advisoryClassId === item.id && learner.enrollmentStatus !== 'inactive')
+      }));
+    return [...assignmentSources, ...advisorySources];
+  }
+
   function requireStore(profileDb) {
     return normalizeAdvisoryData(profileDb);
   }
@@ -565,6 +590,7 @@
     ADVISORY_SCHEMA_VERSION,
     createAdvisoryStore,
     normalizeAdvisoryData,
+    rosterImportSources,
     checkAdvisoryIntegrity,
     createClass,
     updateClass,

@@ -407,11 +407,12 @@ function renderRecordTable() {
   const w = weightsForAssignment(a);
   const cols = recordColGroup(a, items, mapePart);
   
-  const isKS2 = isKeyStage2(a);
-  let html = `<div class="record-scroll"><table class="record-grid${isMapeh ? ' is-mapeh' : ''}${isKS2 ? ' is-ks2' : ''}">${cols}<thead>`;
+  const isExpanded = usesExpandedRecordLayout(a);
+  const assessmentGroups = expandedAssessmentGroups(items);
+  let html = `<div class="record-scroll"><table class="record-grid${isMapeh ? ' is-mapeh' : ''}${isExpanded ? ' is-expanded' : ''}">${cols}<thead>`;
   
-  if (isKeyStage2(a)) {
-    // Key Stage 2 Columns Headers (Trimesters split)
+  if (isExpanded) {
+    // DO 15 expanded component layout for Grades 4-12.
     html += `<tr>
       <th class="c-no">No.</th>
       <th class="c-learner">Learner</th>
@@ -423,9 +424,10 @@ function renderRecordTable() {
         <span class="assessment-header-label">${esc(headerLabel)}</span>
         ${recordSortButton('assessment:' + items[gi].id, headerLabel)}
       </th>`;
-      if (gi === 4) html += `<th class="c-calc c-comp-ww" title="Written Works Total">T</th><th class="c-calc c-comp-ww" title="Written Works Percentage">%</th><th class="c-calc c-comp-ww" title="Written Works Weighted Score">WS</th>`;
-      if (gi === 7) html += `<th class="c-calc c-comp-pt" title="Performance Task Total">T</th><th class="c-calc c-comp-pt" title="Performance Task Percentage">%</th><th class="c-calc c-comp-pt" title="Performance Task Weighted Score">WS</th>`;
-      if (gi === 10) html += `<th class="c-calc c-comp-te" title="Term Examination Total">T</th><th class="c-calc c-comp-te" title="Term Examination Percentage">%</th><th class="c-calc c-comp-te" title="Term Examination Weighted Score">WS</th>`;
+      const group = expandedAssessmentGroupEndingAt(assessmentGroups, gi);
+      if (group) {
+        html += `<th class="c-calc ${group.cssClass}" title="${group.title} Total">T</th><th class="c-calc ${group.cssClass}" title="${group.title} Percentage">%</th><th class="c-calc ${group.cssClass}" title="${group.title} Weighted Score">WS</th>`;
+      }
     }
     html += `<th class="c-grade" title="Initial Grade">IG</th>
              <th class="c-grade" title="Transmuted Grade">TG ${recordSortButton('tg', 'Transmuted Grade')}</th>
@@ -467,16 +469,23 @@ function renderRecordTable() {
         onkeydown="return maxNav(event, ${h}, '${esc(items[h].id)}')" 
         onchange="updateAssessmentMax('${esc(items[h].id)}', this.value)" />
     </td>`;
-    if (isKeyStage2(a) && (h === 4 || h === 7 || h === 10)) {
-      const groupMax = groupScoreMax(items, h);
-      const wsVal = h === 4 ? w[0] : h === 7 ? w[1] : w[2];
+    if (isExpanded) {
+      const group = expandedAssessmentGroupEndingAt(assessmentGroups, h);
+      if (group) {
+        const groupMax = groupScoreMax(items, group);
+        const wsVal = w[group.weightIndex];
       html += `<td class="c-calc">${blankZero(groupMax)}</td>
                <td class="c-calc">100</td>
                <td class="c-calc">${wsVal}%</td>`;
+      }
     }
   }
   
-  if (!isKeyStage2(a)) {
+  if (isExpanded) {
+    html += `<td class="c-grade"></td>
+             <td class="c-grade"></td>
+             <td class="c-desc"></td>`;
+  } else {
     html += `<td class="c-spacer"></td>
              <td class="c-calc"></td>
              <td class="c-calc"></td>
@@ -519,29 +528,26 @@ function renderRecordTable() {
           onchange="updateScore('${esc(learner.id)}', '${esc(items[j].id)}', this.value)" />
       </td>`;
       
-      if (isKeyStage2(a) && (j === 4 || j === 7 || j === 10)) {
+      if (isExpanded) {
+        const group = expandedAssessmentGroupEndingAt(assessmentGroups, j);
+        if (group) {
         let block;
-        if (j === 4) {
+        if (group.key === 'WW') {
           block = result.ww;
-        } else if (j === 7) {
+        } else if (group.key === 'PT') {
           block = result.pt;
         } else {
-          const examRawResult = componentScore(a, learner.id, db.currentTerm, ['SA1', 'SA2', 'ST1', 'ST2', 'TE'], mapePart);
-          block = {
-            raw: examRawResult.raw,
-            max: examRawResult.max,
-            ps: result.examPS,
-            hasData: examRawResult.hasData
-          };
+          block = examinationResultForAssignment(a, result);
         }
-        const weight = j === 4 ? w[0] : j === 7 ? w[1] : w[2];
+        const weight = w[group.weightIndex];
         html += `<td class="c-calc">${isDisabled ? '' : blankZero(block.raw)}</td>
                  <td class="c-calc">${(!isDisabled && block.hasData) ? fmt(block.ps) : ''}</td>
                  <td class="c-calc">${(!isDisabled && block.hasData) ? fmt(block.ps * weight / 100) : ''}</td>`;
+        }
       }
     }
     
-    if (!isKeyStage2(a)) {
+    if (!isExpanded) {
       html += `<td class="c-spacer"></td>
                <td class="c-calc">${isDisabled ? '' : fmt(result.ww.ps)}</td>
                <td class="c-calc">${isDisabled ? '' : fmt(result.pt.ps)}</td>
@@ -593,12 +599,15 @@ function adjustHpsStickyTop() {
  */
 function recordColGroup(a, items, mapePart) {
   let html = '<colgroup>';
-  if (isKeyStage2(a)) {
+  if (usesExpandedRecordLayout(a)) {
+    const groups = expandedAssessmentGroups(items);
+    const detailColumnCount = Math.max(1, items.length + (groups.length * 3));
+    const detailWidth = 60 / detailColumnCount;
     html += "<col style='width:3%' /><col style='width:18%' /><col style='width:3%' />";
-    for (let i = 0; i < 11; i++) {
-      html += "<col style='width:3%' />";
-      if (i === 4 || i === 7 || i === 10) {
-        html += "<col style='width:3%' /><col style='width:3%' /><col style='width:3%' />";
+    for (let i = 0; i < items.length; i++) {
+      html += `<col style='width:${detailWidth}%' />`;
+      if (expandedAssessmentGroupEndingAt(groups, i)) {
+        html += `<col style='width:${detailWidth}%' /><col style='width:${detailWidth}%' /><col style='width:${detailWidth}%' />`;
       }
     }
     html += "<col style='width:4%' /><col style='width:4%' /><col style='width:8%' />";
@@ -630,18 +639,44 @@ function maxTermAssessmentCount(a, mapePart) {
   return m;
 }
 
-function groupScoreMax(items, endIndex) {
-  const start = endIndex === 4 ? 0 : endIndex === 7 ? 5 : 8;
-  let total = 0;
-  for (let i = start; i <= endIndex; i++) {
-    if (items[i]) {
-      total += number(items[i].maxScore);
-    }
-  }
-  return total;
+function usesExpandedRecordLayout(a) {
+  if (!a) return false;
+  const grade = parseInt(a.gradeLevel);
+  return isKeyStage2(a) || (grade >= 4 && grade <= 12);
 }
 
-function summaryWeightedScore(result, componentKey, weight) {
+function expandedAssessmentGroupKey(component) {
+  if (component === 'WW') return 'WW';
+  if (component === 'PT') return 'PT';
+  if (component === 'SA1' || component === 'SA2' || component === 'ST1' || component === 'ST2' || component === 'TE') return 'EX';
+  return '';
+}
+
+function expandedAssessmentGroups(items) {
+  const definitions = {
+    WW: { key: 'WW', title: 'Written Works', cssClass: 'c-comp-ww', weightIndex: 0, indexes: [] },
+    PT: { key: 'PT', title: 'Performance Tasks', cssClass: 'c-comp-pt', weightIndex: 1, indexes: [] },
+    EX: { key: 'EX', title: 'Examinations', cssClass: 'c-comp-te', weightIndex: 2, indexes: [] }
+  };
+  (items || []).forEach((item, index) => {
+    const key = expandedAssessmentGroupKey(item.component);
+    if (key) definitions[key].indexes.push(index);
+  });
+  return ['WW', 'PT', 'EX']
+    .map(key => definitions[key])
+    .filter(group => group.indexes.length > 0)
+    .map(group => ({ ...group, endIndex: group.indexes[group.indexes.length - 1] }));
+}
+
+function expandedAssessmentGroupEndingAt(groups, index) {
+  return (groups || []).find(group => group.endIndex === index) || null;
+}
+
+function groupScoreMax(items, group) {
+  return (group?.indexes || []).reduce((total, index) => total + number(items[index]?.maxScore), 0);
+}
+
+function summaryWeightedScore(result, componentKey, weight, assignment) {
   if (!result) return '';
   if (result.termGrade === 'T/O') return '<span style="color:#ffb703; font-weight:600;">T/O</span>';
   if (componentKey === 'WW') {
@@ -650,7 +685,7 @@ function summaryWeightedScore(result, componentKey, weight) {
   if (componentKey === 'PT') {
     return result.pt && result.pt.hasData ? fmt(result.pt.ps * weight / 100) : '';
   }
-  const examHasData = (result.st1 && result.st1.hasData) || (result.st2 && result.st2.hasData) || (result.te && result.te.hasData);
+  const examHasData = examinationResultForAssignment(assignment, result).hasData;
   return examHasData ? fmt(result.examPS * weight / 100) : '';
 }
 
@@ -666,12 +701,12 @@ function summaryInitialGradeDisplay(result) {
   return result.hasData ? fmt(result.initialGrade) : '';
 }
 
-function summaryTermCells(result, weights, policy, termNumber) {
+function summaryTermCells(result, weights, policy, termNumber, assignment) {
   const termClass = `summary-term-cell summary-term-${termNumber}`;
   return `
     <td class="${termClass}">${summaryWeightedScore(result, 'WW', weights[0])}</td>
     <td class="${termClass}">${summaryWeightedScore(result, 'PT', weights[1])}</td>
-    <td class="${termClass}">${summaryWeightedScore(result, 'STE', weights[2])}</td>
+    <td class="${termClass}">${summaryWeightedScore(result, 'STE', weights[2], assignment)}</td>
     <td class="${termClass} summary-term-initial">${summaryInitialGradeDisplay(result)}</td>
     <td class="${termClass} summary-term-grade"><strong>${summaryGradeDisplay(result ? result.termGrade : null, policy)}</strong></td>
   `;
@@ -806,9 +841,9 @@ function renderFinalOnly() {
     html += `<tr>
       <td>${r + 1}</td>
       <td class="summary-learner-cell">${esc(learnerDisplayName(learner))}</td>
-      ${summaryTermCells(termResults[0], weights, a.policy, 1)}
-      ${summaryTermCells(termResults[1], weights, a.policy, 2)}
-      ${summaryTermCells(termResults[2], weights, a.policy, 3)}
+      ${summaryTermCells(termResults[0], weights, a.policy, 1, a)}
+      ${summaryTermCells(termResults[1], weights, a.policy, 2, a)}
+      ${summaryTermCells(termResults[2], weights, a.policy, 3, a)}
       <td class="summary-final-cell summary-final-grade"><strong>${fgDisplay}</strong></td>
       <td class="summary-final-cell">${remarks}</td>
     </tr>`;
@@ -1231,6 +1266,7 @@ function termAssessments(a, term, mapePart) {
     const ast = a.assessments[i];
     if (String(ast.term) === String(term)) {
       if (mapePart === undefined || ast.mapePart === mapePart) {
+        if (!isAssessmentIncludedForAssignment(a, ast)) continue;
         out.push(ast);
       }
     }

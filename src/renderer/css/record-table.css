@@ -322,9 +322,9 @@ body[data-active-view="record"] .main {
   letter-spacing: 0;
 }
 
-#recordTable .record-grid.is-ks2 .sheet-row-label td {
+#recordTable .record-grid.is-expanded .sheet-row-label td {
   top: 23px;
-  /* Fallback for Key Stage 2 one-line header th elements */
+  /* Fallback for the Grades 4-12 one-line expanded header cells. */
 }
 
 /* ── Spacer / Group Headers ─────────────────────────────── */

@@ -1385,9 +1385,11 @@ function showImportRosterModal() {
     return;
   }
 
-  const otherAssignments = (db.assignments || []).filter(x => x.id !== a.id);
-  if (otherAssignments.length === 0) {
-    toast('No other class loads found in this profile to import from.', 'info');
+  const rosterSources = globalThis.AdvisoryData?.rosterImportSources
+    ? globalThis.AdvisoryData.rosterImportSources(db, a.id)
+    : (db.assignments || []).filter(x => x.id !== a.id);
+  if (rosterSources.length === 0) {
+    toast('No other class loads or Advisory Classes were found in this profile to import from.', 'info');
     return;
   }
 
@@ -1398,14 +1400,14 @@ function showImportRosterModal() {
     <div class="modal" style="max-width: 500px; width: 90%;">
       <div class="modal__title">Import Roster from Other Class</div>
       <div class="modal__body">
-        <p style="margin-top:0">Import learners from another class load in this profile into the active class roster.</p>
+        <p style="margin-top:0">Import learners from another class load or Advisory Class in this profile into the active class roster.</p>
         
         <div class="field" style="margin-top: var(--space-3);">
-          <label class="field-label">Select Source Class Load</label>
+          <label class="field-label">Select Source Class</label>
           <select id="importRosterClassSelect" class="field-select">
-            <option value="">-- Choose Class Load --</option>
-            ${otherAssignments.map(asg => `
-              <option value="${esc(asg.id)}">${esc(asg.gradeLevel)} - ${esc(asg.section)} (${esc(asg.subject)})</option>
+            <option value="">-- Choose Class --</option>
+            ${rosterSources.map(source => `
+              <option value="${esc(source.id)}">${esc(source.gradeLevel)} - ${esc(source.section)} (${source.sourceType === 'advisory-class' ? `Advisory Class · SY ${esc(source.schoolYear)}` : esc(source.subject)})</option>
             `).join('')}
           </select>
         </div>
@@ -1463,10 +1465,10 @@ function showImportRosterModal() {
       return;
     }
 
-    const sourceAsg = otherAssignments.find(x => x.id === selectedId);
+    const sourceAsg = rosterSources.find(x => x.id === selectedId);
     if (!sourceAsg || !sourceAsg.learners || sourceAsg.learners.length === 0) {
       sizeText.innerText = 'Roster is empty';
-      breakdownText.innerText = 'No learners registered in the selected class load.';
+      breakdownText.innerText = 'No learners registered in the selected class.';
       detailsDiv.style.display = 'block';
       modeField.style.display = 'none';
       confirmBtn.disabled = true;
@@ -1490,7 +1492,7 @@ function showImportRosterModal() {
   confirmBtn.addEventListener('click', () => {
     const sourceId = classSelect.value;
     const mode = overlay.querySelector('input[name="importRosterMode"]:checked').value;
-    const sourceAsg = otherAssignments.find(x => x.id === sourceId);
+    const sourceAsg = rosterSources.find(x => x.id === sourceId);
     if (!sourceAsg) return;
 
     if (mode === 'overwrite') {

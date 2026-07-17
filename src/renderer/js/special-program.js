@@ -27,10 +27,60 @@
     updateWeightTotal('new');
   }
 
+  function populateSeniorHighSubjects(select, grade) {
+    if (!select || typeof seniorHighSubjectCatalog !== 'function') return false;
+    const catalog = seniorHighSubjectCatalog(grade);
+    if (!catalog.length) return false;
+    select.innerHTML = '';
+    catalog.forEach(category => {
+      const group = document.createElement('optgroup');
+      group.label = category.label;
+      category.subjects.forEach(subject => {
+        const option = document.createElement('option');
+        option.value = subject;
+        option.textContent = subject;
+        option.dataset.shsGroup = category.group;
+        group.appendChild(option);
+      });
+      select.appendChild(group);
+    });
+    return true;
+  }
+
+  function ensureSeniorHighGroupOptions() {
+    const select = document.getElementById('newSeniorHighSubjectGroup');
+    if (!select || select.options.length || typeof seniorHighSubjectGroupOptions !== 'function') return;
+    seniorHighSubjectGroupOptions().forEach(group => {
+      const option = document.createElement('option');
+      option.value = group.value;
+      option.textContent = `${group.label} — ${group.weights[0]}% Written, ${group.weights[1]}% Performance, ${group.weights[2]}% Assessment`;
+      select.appendChild(option);
+    });
+  }
+
+  function syncSeniorHighSubjectGroup() {
+    const grade = Number(document.getElementById('newGrade')?.value);
+    const subject = document.getElementById('newSubject')?.value || '';
+    const isSeniorHigh = grade >= 11 && grade <= 12;
+    const field = document.getElementById('seniorHighSubjectGroupField');
+    const select = document.getElementById('newSeniorHighSubjectGroup');
+    if (field) field.hidden = !isSeniorHigh;
+    if (!isSeniorHigh || !select) return;
+    ensureSeniorHighGroupOptions();
+    if (subject !== 'Custom') {
+      const subjectOption = document.getElementById('newSubject')?.selectedOptions?.[0];
+      select.value = subjectOption?.dataset?.shsGroup || determineSubjectGroup(grade, subject);
+    }
+    if (!select.value) select.value = 'SHS_ACADEMIC';
+  }
+
   const originalPopulateSubjects = globalScope.populateSubjects;
   globalScope.populateSubjects = function populateSubjectsWithCustomOption(...args) {
     const result = typeof originalPopulateSubjects === 'function' ? originalPopulateSubjects.apply(this, args) : undefined;
-    addCustomOption(document.getElementById('newSubject'));
+    const subjectSelect = document.getElementById('newSubject');
+    const grade = Number(document.getElementById('newGrade')?.value);
+    if (grade >= 11 && grade <= 12) populateSeniorHighSubjects(subjectSelect, grade);
+    addCustomOption(subjectSelect);
     globalScope.handleSubjectChanged?.();
     return result;
   };
@@ -39,19 +89,23 @@
   globalScope.handleSubjectChanged = function handleSubjectChangedWithSpecialProgram(...args) {
     const result = typeof originalHandleSubjectChanged === 'function' ? originalHandleSubjectChanged.apply(this, args) : undefined;
     const isCustom = document.getElementById('newSubject')?.value === 'Custom';
+    const grade = Number(document.getElementById('newGrade')?.value);
+    const isSeniorHigh = grade >= 11 && grade <= 12;
     const customField = document.getElementById('customSubjectField');
     const specialField = document.getElementById('specialProgramSubjectField');
     if (customField) customField.style.display = isCustom ? 'block' : 'none';
-    if (specialField) specialField.hidden = !isCustom;
-    if (!isCustom) {
+    if (specialField) specialField.hidden = !isCustom || isSeniorHigh;
+    if (!isCustom || isSeniorHigh) {
       const checkbox = document.getElementById('newSpecialProgramSubject');
       if (checkbox) checkbox.checked = false;
     }
+    syncSeniorHighSubjectGroup();
     syncNewSpecialProgramWeights();
     return result;
   };
 
   globalScope.syncNewSpecialProgramWeights = syncNewSpecialProgramWeights;
+  globalScope.syncSeniorHighSubjectGroup = syncSeniorHighSubjectGroup;
   document.addEventListener('input', event => {
     if (event.target?.id && /^newSpecial(?:Ww|Pt|Exam)Weight$/.test(event.target.id)) updateWeightTotal('new');
   });

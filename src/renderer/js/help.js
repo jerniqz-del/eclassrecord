@@ -310,12 +310,14 @@ const HELP_TOPICS = [
     id: 'deped_order_15',
     category: 'deped_policies',
     title: 'DepEd Order No. 15 s. 2026 Guidelines',
-    keywords: 'deped order 15 s 2026 transitional rules zero-based weighting descriptors scale annex c letter grade',
+    keywords: 'deped order 15 s 2026 assessment count written works performance tasks 3-5 2-3 transitional rules weighting examinations descriptors scale annex c letter grade',
     content: `
       <p>This application is designed specifically to comply with the transitional guidelines set in <strong>DepEd Order No. 15 s. 2026</strong>.</p>
       <h5>Key Policy Rules Applied:</h5>
       <ul>
-        <li><strong>Transitional Grading:</strong> Standard subjects follow specific weighting partitions between Written Works (WW) and Performance Tasks (PT), removing traditional quarterly exams.</li>
+        <li><strong>Recommended assessment pacing:</strong> For Grades 4&ndash;12, Table 3 recommends <strong>3&ndash;5 Written Works</strong>, <strong>2&ndash;3 Performance Tasks</strong>, and <strong>2 Summative Tests plus 1 Term Examination</strong> per learning area, per term. DepEd describes these ranges as flexible guidance rather than fixed compliance requirements.</li>
+        <li><strong>Grades 1&ndash;3:</strong> Teachers determine a sufficient and manageable quantity of assessment evidence; DO 15 does not prescribe a numeric WW/PT range for these grades.</li>
+        <li><strong>Component weighting:</strong> Grades 4&ndash;10 and Grades 11&ndash;12 use the prescribed WW, PT, and examination weights for their applicable learning area or SHS subject classification.</li>
         <li><strong>Zero-based calculations:</strong> Computations are adjusted so that zero scores are not inflated, representing actual student performance.</li>
         <li><strong>Descriptive Grading Scale:</strong> Grades are translated to letters:
           <ul>

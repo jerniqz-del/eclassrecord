@@ -5,6 +5,15 @@
    ============================================================ */
 
 @media print {
+  /* Electron's repeating PDF header needs more room than the general 10 mm
+     print margin. A named page keeps this reservation scoped to PDF exports. */
+  @page eclass-pdf-with-header {
+    margin: 1.55in 0.4in 0.6in 0.4in;
+  }
+
+  body.pdf-export-mode {
+    page: eclass-pdf-with-header;
+  }
 
   html,
   body {

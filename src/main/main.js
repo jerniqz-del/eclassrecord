@@ -149,6 +149,16 @@ function createWindow() {
           setupModal.remove();
 
           populateSubjects();
+          const classLoadGradeSelect = document.getElementById('newGrade');
+          const classLoadGrades = [...(classLoadGradeSelect?.options || [])].map(option => option.value);
+          if (!classLoadGrades.includes('11') || !classLoadGrades.includes('12')) throw new Error('Add Class Load is missing Grade 11 or Grade 12.');
+          for (const seniorHighGrade of ['11', '12']) {
+            classLoadGradeSelect.value = seniorHighGrade;
+            populateSubjects();
+            if (!document.getElementById('newSubject')?.querySelector('optgroup')) throw new Error('Grade ' + seniorHighGrade + ' subjects were not populated in Add Class Load.');
+          }
+          classLoadGradeSelect.value = '4';
+          populateSubjects();
           const teachingSubject = document.getElementById('newSubject');
           if (!teachingSubject?.querySelector('option[value="Custom"]')) throw new Error('Custom teaching-load subjects are unavailable for Grades 1 to 10.');
           teachingSubject.value = 'Custom';
@@ -168,6 +178,11 @@ function createWindow() {
             id: 'runtime-learner-two', advisoryClassId: runtimeClass.id, lrn: '123456789013',
             lastName: 'Reyes', firstName: 'Maria', sex: 'F'
           });
+          runtimeProfile.currentAssignmentId = 'smoke-subject';
+          showImportRosterModal();
+          const teachingRosterImport = document.getElementById('importRosterClassSelect');
+          if (!teachingRosterImport?.querySelector('option[value="advisory:runtime-advisory"]')) throw new Error('Import Roster from Other Class did not include the Advisory Class.');
+          teachingRosterImport.closest('.modal-overlay').remove();
           const runtimeSubject = AdvisoryData.normalizeAdvisoryData(runtimeProfile).subjects.find(item => item.advisoryClassId === runtimeClass.id && item.normalizedSubjectKey === 'MATHEMATICS');
           const runtimeMusicArts = AdvisoryData.normalizeAdvisoryData(runtimeProfile).subjects.find(item => item.advisoryClassId === runtimeClass.id && item.normalizedSubjectKey === 'MUSIC ARTS');
           const runtimePeHealth = AdvisoryData.normalizeAdvisoryData(runtimeProfile).subjects.find(item => item.advisoryClassId === runtimeClass.id && item.normalizedSubjectKey === 'PE HEALTH');

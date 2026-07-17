@@ -6,6 +6,25 @@ global.AdvisoryData = require('../src/renderer/js/advisory-data.js');
 global.AdvisoryRoster = require('../src/renderer/js/advisory-roster.js');
 const Transfer = require('../src/renderer/js/advisory-grade-transfer.js');
 
+{
+const profile = {
+schoolYear: '2026-2027',
+assignments: [
+{ id: 'math', schoolYear: '2026-2027', gradeLevel: '11', section: 'Integrity', subject: 'General Mathematics' },
+{ id: 'science', schoolYear: '2026-2027', gradeLevel: 'Grade 11', section: ' integrity ', subject: 'Earth and Life Science' },
+{ id: 'other-grade', schoolYear: '2026-2027', gradeLevel: '12', section: 'Integrity', subject: 'General Mathematics' },
+{ id: 'other-section', schoolYear: '2026-2027', gradeLevel: '11', section: 'Excellence', subject: 'General Mathematics' },
+{ id: 'other-year', schoolYear: '2025-2026', gradeLevel: '11', section: 'Integrity', subject: 'General Mathematics' }
+]
+};
+const advisoryClass = { schoolYear: '2026-2027', gradeLevel: '11', section: 'INTEGRITY' };
+assert.deepStrictEqual(
+Transfer.matchingLocalClasses(profile, advisoryClass).map(item => item.id),
+['science', 'math'],
+'local grade sources should include every class in the same school year, grade, and section'
+);
+}
+
 function fixture() {
   const profile = { teacherName: 'Teacher A', schoolName: 'Monbon ES', schoolId: '123456', division: 'Sorsogon', region: 'V', schoolYear: '2026-2027', assignments: [] };
   AdvisoryData.normalizeAdvisoryData(profile);

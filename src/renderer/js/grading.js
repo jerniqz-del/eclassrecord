@@ -68,6 +68,9 @@ const keyStage2Template = [
   { component: 'TE', title: 'TE' }
 ];
 
+// DO 015, s. 2026 Table 3 recommends 3-5 WWs and 2-3 PTs per
+// learning area, per term, for Grades 4-12. Presets use the upper end
+// of those flexible ranges so teachers have the full recommended capacity.
 // Junior High Template (Grades 7-10)
 const juniorHighTemplate = [
   { component: 'WW', title: 'WW 1' },
@@ -78,8 +81,6 @@ const juniorHighTemplate = [
   { component: 'PT', title: 'PT 1' },
   { component: 'PT', title: 'PT 2' },
   { component: 'PT', title: 'PT 3' },
-  { component: 'PT', title: 'PT 4' },
-  { component: 'PT', title: 'PT 5' },
   { component: 'ST1', title: 'ST1' },
   { component: 'ST2', title: 'ST2' },
   { component: 'TE', title: 'TE' }
@@ -91,11 +92,10 @@ const seniorHighTemplate = [
   { component: 'WW', title: 'WW 2' },
   { component: 'WW', title: 'WW 3' },
   { component: 'WW', title: 'WW 4' },
+  { component: 'WW', title: 'WW 5' },
   { component: 'PT', title: 'PT 1' },
   { component: 'PT', title: 'PT 2' },
   { component: 'PT', title: 'PT 3' },
-  { component: 'PT', title: 'PT 4' },
-  { component: 'PT', title: 'PT 5' },
   { component: 'ST1', title: 'ST1' },
   { component: 'ST2', title: 'ST2' },
   { component: 'TE', title: 'TE' }
@@ -121,6 +121,236 @@ function templateForGrade(gradeLevel) {
  * @param {string|number} gradeLevel
  * @returns {string[]}
  */
+const SENIOR_HIGH_SUBJECT_CATALOG = Object.freeze([
+  {
+    label: 'Core Subjects',
+    grades: [11, 12],
+    group: 'SHS_CORE',
+    subjects: [
+      'Effective Communication',
+      'Mabisang Komunikasyon',
+      'General Mathematics',
+      'General Science',
+      'Life and Career Skills',
+      'Pag-aaral ng Kasaysayan at Lipunang Pilipino'
+    ]
+  },
+  {
+    label: 'Academic Electives — Arts and Creative Fields',
+    grades: [11, 12],
+    group: 'SHS_ARTS',
+    subjects: [
+      'Art Criticism and Creative Markets',
+      'Contemporary Literature 1',
+      'Contemporary Literature 2',
+      'Creative Composition 1',
+      'Creative Composition 2',
+      'Creative Industries — Applied and Traditional Arts',
+      'Creative Industries — Dance',
+      'Creative Industries — Literary Arts',
+      'Creative Industries — Media Arts',
+      'Creative Industries — Music',
+      'Creative Industries — Theater Arts',
+      'Creative Industries — Visual Arts',
+      'Filipino 2 — Filipino sa Isports',
+      'Filipino 2 — Filipino sa Sining at Disenyo',
+      'Filipino Identity Through the Arts',
+      'Leadership and Management in the Arts',
+      'Malikhaing Pagsulat',
+      'Performance Criticism and Creative Markets'
+    ]
+  },
+  {
+    label: 'Academic Electives — Social Sciences and Humanities',
+    grades: [11, 12],
+    group: 'SHS_ACADEMIC',
+    subjects: [
+      'Citizenship and Civic Engagement',
+      'Filipino 1 — Wika at Komunikasyon sa Akademikong Filipino',
+      'Filipino 2 — Filipino para sa Larang Teknikal Propesyonal',
+      'Introduction to Philosophy',
+      'Philippine Governance / Philippine Politics and Governance',
+      'Social Sciences Theory and Practice'
+    ]
+  },
+  {
+    label: 'Academic Electives — Business and Entrepreneurship',
+    grades: [11, 12],
+    group: 'SHS_ACADEMIC',
+    subjects: [
+      'Business 1 — Basic Accounting',
+      'Business 2 — Business Finance and Income Taxation',
+      'Business 3 — Business Economics',
+      'Contemporary Marketing',
+      'Entrepreneurship',
+      'Introduction to Organization and Management'
+    ]
+  },
+  {
+    label: 'Academic Electives — STEM',
+    grades: [11, 12],
+    group: 'SHS_ACADEMIC',
+    subjects: [
+      'Biology 1', 'Biology 2',
+      'Chemistry 1', 'Chemistry 2',
+      'Earth and Space Science 1', 'Earth and Space Science 2',
+      'Finite Mathematics 1', 'Finite Mathematics 2',
+      'Physics 1', 'Physics 2'
+    ]
+  },
+  {
+    label: 'Academic Electives — Sports, Health, and Wellness',
+    grades: [11, 12],
+    group: 'SHS_ARTS',
+    subjects: [
+      'Human Movement 1 — Basic Anatomy in Sports and Exercise',
+      'Human Movement 2 — Motor Skills Development',
+      'Physical Education 1 — Fitness and Recreation',
+      'Physical Education 2 — Sports and Dance',
+      'Sports Activity Management',
+      'Sports Coaching',
+      'Sports Officiating'
+    ]
+  },
+  {
+    label: 'Grade 12 — New Arts and STEM Subjects',
+    grades: [12],
+    group: 'SHS_ACADEMIC',
+    subjects: [
+      'Advanced Mathematics',
+      'Basic Calculus',
+      'Biology 3', 'Biology 4',
+      'Chemistry 3', 'Chemistry 4',
+      'Conceptual Biology and Earth and Space Science',
+      'Conceptual Physics and Chemistry in Daily Life',
+      'Database Management',
+      'Earth and Space Science 3', 'Earth and Space Science 4',
+      'Empowerment Technologies',
+      'Fundamentals of Data Analytics',
+      'Physics 3', 'Physics 4',
+      'Pre-Calculus'
+    ]
+  },
+  {
+    label: 'Grade 12 — Creative Production',
+    grades: [12],
+    group: 'SHS_FIELD',
+    subjects: ['Creative Production and Presentation']
+  },
+  {
+    label: 'Grade 12 — Field Experience and Arts Apprenticeship',
+    grades: [12],
+    group: 'SHS_FIELD',
+    subjects: [
+      'Arts Apprenticeship — Dance',
+      'Arts Apprenticeship — Literary Arts',
+      'Arts Apprenticeship — Media Arts',
+      'Arts Apprenticeship — Music',
+      'Arts Apprenticeship — Theater Arts',
+      'Arts Apprenticeship — Traditional Cultural Expressions',
+      'Arts Apprenticeship — Visual Arts',
+      'In-Campus Field Exposure for Sports'
+    ]
+  },
+  {
+    label: 'Grade 12 — Research, Design, and Innovation',
+    grades: [12],
+    group: 'SHS_RESEARCH',
+    subjects: ['Design and Innovation', 'Research 1', 'Research 2']
+  },
+  {
+    label: 'Grade 12 — Sports, Health, and Wellness',
+    grades: [12],
+    group: 'SHS_ARTS',
+    subjects: ['Exercise and Sports Programming', 'First Aid', 'Fundamentals of Basic Life Support']
+  },
+  {
+    label: 'TechPro — Aesthetic, Wellness, and Human Care',
+    grades: [11, 12],
+    group: 'SHS_TECHPRO',
+    subjects: ['Aesthetic Services (Beauty Care)', 'Caregiving (Adult Care)', 'Caregiving (Child Care)', 'Hairdressing Services']
+  },
+  {
+    label: 'TechPro — Agri-Fishery Business and Food Innovation',
+    grades: [11, 12],
+    group: 'SHS_TECHPRO',
+    subjects: ['Agricultural Crops Production', 'Agro-Entrepreneurship', 'Aquaculture', 'Fish Capture', 'Food Processing', 'Organic Agriculture Production', 'Poultry Production (Chicken)', 'Ruminants Production', 'Swine Production']
+  },
+  {
+    label: 'TechPro — Artisanry and Creative Enterprise',
+    grades: [11, 12],
+    group: 'SHS_TECHPRO',
+    subjects: ['Garments Artisanry', 'Handicrafts (Weaving)']
+  },
+  {
+    label: 'TechPro — Automotive and Small Engine Technologies',
+    grades: [11, 12],
+    group: 'SHS_TECHPRO',
+    subjects: ['Automotive Servicing (Electrical Repair)', 'Automotive Servicing (Engine and Chassis Repairs)', 'Driving and Automotive Servicing', 'Motorcycle and Small Engine Servicing']
+  },
+  {
+    label: 'TechPro — Construction and Building Technology',
+    grades: [11, 12],
+    group: 'SHS_TECHPRO',
+    subjects: ['Carpentry', 'Construction Operation', 'Manual Metal Arc Welding', 'Technical Drafting']
+  },
+  {
+    label: 'TechPro — Creative Arts and Design Technology',
+    grades: [11, 12],
+    group: 'SHS_TECHPRO',
+    subjects: ['Animation', 'Illustration', 'Visual Graphic Design']
+  },
+  {
+    label: 'TechPro — Hospitality and Tourism',
+    grades: [11, 12],
+    group: 'SHS_TECHPRO',
+    subjects: ['Bakery Operations', 'Events Management Services', 'Food and Beverage Operation', 'Hotel Operation (Front Office Services)', 'Hotel Operation (Housekeeping Services)', 'Kitchen Operations', 'Tourism Services']
+  },
+  {
+    label: 'TechPro — ICT Support and Computer Programming',
+    grades: [11, 12],
+    group: 'SHS_TECHPRO',
+    subjects: ['Broadband Installation', 'Computer Programming (.NET Technology)', 'Computer Programming (Java)', 'Computer Programming (Oracle Database)', 'Computer Systems Servicing', 'Contact Center Services']
+  },
+  {
+    label: 'TechPro — Industrial Technologies',
+    grades: [11, 12],
+    group: 'SHS_TECHPRO',
+    subjects: ['Commercial Air Conditioning Installation and Servicing', 'Domestic Refrigeration and Air Conditioning Servicing', 'Electrical Installation Maintenance', 'Electronics Product Assembly and Servicing', 'Mechatronics', 'Photovoltaic Systems Installation']
+  },
+  {
+    label: 'TechPro — Maritime',
+    grades: [11, 12],
+    group: 'SHS_TECHPRO',
+    subjects: ['Marine Engineering at the Support Level', 'Marine Transportation at the Support Level', 'Ships Catering Services']
+  },
+  {
+    label: 'Transition / Legacy Subject',
+    grades: [11, 12],
+    group: 'SHS_WORK',
+    subjects: ['Work Immersion']
+  }
+]);
+
+function seniorHighSubjectCatalog(gradeLevel) {
+  const grade = parseInt(gradeLevel);
+  return SENIOR_HIGH_SUBJECT_CATALOG
+    .filter(category => category.grades.includes(grade))
+    .map(category => ({
+      label: category.label,
+      group: category.group,
+      subjects: category.subjects.slice()
+    }));
+}
+
+function seniorHighSubjectGroupForSubject(subject) {
+  const normalized = String(subject || '').trim().toLocaleLowerCase();
+  for (const category of SENIOR_HIGH_SUBJECT_CATALOG) {
+    if (category.subjects.some(item => item.toLocaleLowerCase() === normalized)) return category.group;
+  }
+  return '';
+}
+
 function getSubjectsForGrade(gradeLevel) {
   const grade = parseInt(gradeLevel);
   if (grade === 1) {
@@ -184,9 +414,37 @@ function getSubjectsForGrade(gradeLevel) {
       'Technology and Livelihood Education (TLE)',
       'MAPEH'
     ];
+  } else if (grade >= 11 && grade <= 12) {
+    return seniorHighSubjectCatalog(grade).flatMap(category => category.subjects);
   } else {
     return [];
   }
+}
+
+const SENIOR_HIGH_SUBJECT_GROUPS = Object.freeze({
+  SHS_CORE: { label: 'Core Subject', weights: [20, 50, 30] },
+  SHS_ACADEMIC: { label: 'Academic - All Other Electives', weights: [20, 50, 30] },
+  SHS_ARTS: { label: 'Sports and Arts Elective', weights: [20, 60, 20] },
+  SHS_FIELD: { label: 'Field Experience / Exposure', weights: [15, 70, 15] },
+  SHS_RESEARCH: { label: 'Research, Design and Innovation', weights: [40, 60, 0] },
+  SHS_TECHPRO: { label: 'TechPro - All Other Electives', weights: [15, 65, 20] },
+  SHS_WORK: { label: 'Work Immersion', weights: [20, 80, 0] }
+});
+
+function seniorHighSubjectGroupOptions() {
+  return Object.entries(SENIOR_HIGH_SUBJECT_GROUPS).map(([value, config]) => ({
+    value,
+    label: config.label,
+    weights: config.weights.slice()
+  }));
+}
+
+function normalizeSeniorHighSubjectGroup(value) {
+  const aliases = {
+    SHS_ARTS_SPORTS: 'SHS_ARTS'
+  };
+  const normalized = aliases[value] || value;
+  return SENIOR_HIGH_SUBJECT_GROUPS[normalized] ? normalized : '';
 }
 
 /**
@@ -199,12 +457,8 @@ function weightsFor(group) {
     KS2_TRIMESTER: [20, 50, 30],
     CORE_20_50_30: [20, 50, 30],
     SKILLS_20_60_20: [20, 60, 20],
-    SHS_CORE: [20, 50, 30],
-    SHS_ARTS: [20, 60, 20],
-    SHS_FIELD: [15, 70, 15],
-    SHS_RESEARCH: [40, 60, 0],
-    SHS_TECHPRO: [15, 65, 20],
-    SHS_WORK: [20, 80, 0]
+    ...Object.fromEntries(Object.entries(SENIOR_HIGH_SUBJECT_GROUPS).map(([key, config]) => [key, config.weights])),
+    SHS_ARTS_SPORTS: SENIOR_HIGH_SUBJECT_GROUPS.SHS_ARTS.weights
   };
   return map[group] || [20, 50, 30];
 }
@@ -213,27 +467,38 @@ function weightsFor(group) {
  * Automatically calculates and assigns the weight set (subjectGroup)
  * based on the grade level, subject keywords, and selected policy mode.
  */
-function determineSubjectGroup(gradeLevel, subject, policy) {
+function determineSubjectGroup(gradeLevel, subject, policy, seniorHighOverride) {
   const grade = parseInt(gradeLevel);
   const s = (subject || '').toLowerCase();
   
   if (grade >= 11) {
-    if (/immersion|work/i.test(s)) {
+    const explicitGroup = normalizeSeniorHighSubjectGroup(seniorHighOverride);
+    if (explicitGroup) return explicitGroup;
+    const catalogGroup = seniorHighSubjectGroupForSubject(subject);
+    if (catalogGroup) return catalogGroup;
+    if (/work\s*immersion/i.test(s)) {
       return 'SHS_WORK';
     }
-    if (/field|exposure/i.test(s)) {
+    if (/field\s*experience|field\s*exposure|exposure|arts?\s*apprenticeship|creative\s*production/i.test(s)) {
       return 'SHS_FIELD';
     }
-    if (/research|inquiries|investigation|practical/i.test(s)) {
+    if (/research|design\s*(and|&)\s*innovation/i.test(s)) {
       return 'SHS_RESEARCH';
     }
-    if (/techpro|elective/i.test(s)) {
+    if (/techpro|nc\s*i{1,3}\b/i.test(s)) {
       return 'SHS_TECHPRO';
     }
-    if (/arts|sports/i.test(s)) {
+    if (/\barts?\b|\bsports?\b|health and wellness|human movement|physical education/i.test(s)) {
       return 'SHS_ARTS';
     }
-    return 'SHS_CORE';
+    const coreSubjects = new Set([
+      'effective communication',
+      'mabisang komunikasyon',
+      'general mathematics',
+      'general science',
+      'life and career skills'
+    ]);
+    return coreSubjects.has(s.trim()) ? 'SHS_CORE' : 'SHS_ACADEMIC';
   } else {
     if (/mapeh|music|arts|physical|health|tle|epp|livelihood|pantahanan|pangkabuhayan|technology/i.test(s)) {
       return 'SKILLS_20_60_20';
@@ -356,6 +621,50 @@ function canonicalAssessmentComponent(component) {
   return component;
 }
 
+/**
+ * Returns the examination columns mandated for an assignment.
+ * Hidden columns remain stored so changing a subject category never destroys scores.
+ */
+function examinationComponentsForAssignment(assignment) {
+  const grade = parseInt(assignment?.gradeLevel);
+  if (grade < 11 || grade > 12) return ['ST1', 'ST2', 'TE'];
+
+  const explicitGroup = normalizeSeniorHighSubjectGroup(
+    assignment?.shsSubjectGroup || assignment?.subjectGroup
+  );
+  const group = explicitGroup || determineSubjectGroup(
+    assignment?.gradeLevel,
+    assignment?.subject,
+    assignment?.policy
+  );
+
+  if (group === 'SHS_RESEARCH' || group === 'SHS_WORK') return [];
+  if (group === 'SHS_FIELD') return ['TE'];
+  return ['ST1', 'ST2', 'TE'];
+}
+
+function isAssessmentIncludedForAssignment(assignment, assessment) {
+  const component = canonicalAssessmentComponent(assessment?.component);
+  if (!['ST1', 'ST2', 'TE'].includes(component)) return true;
+  return examinationComponentsForAssignment(assignment).includes(component);
+}
+
+function examinationResultForAssignment(assignment, result) {
+  const components = examinationComponentsForAssignment(assignment);
+  const componentResults = components.map(component => {
+    if (component === 'ST1') return result.st1;
+    if (component === 'ST2') return result.st2;
+    return result.te;
+  });
+  return {
+    components,
+    raw: componentResults.reduce((sum, item) => sum + (item?.raw || 0), 0),
+    max: componentResults.reduce((sum, item) => sum + (item?.max || 0), 0),
+    ps: result.examPS,
+    hasData: componentResults.some(item => item?.hasData)
+  };
+}
+
 function assessmentTemplateSlotId(term, mapePart, slotIndex) {
   return `term:${String(term)}|part:${mapePart || 'regular'}|slot:${slotIndex}`;
 }
@@ -444,13 +753,64 @@ function seedTemplateAssessments(a, template) {
   }
 }
 
+function assessmentHasRecordedData(a, assessment) {
+  if (!assessment) return false;
+  if (assessment.maxScore !== '' && assessment.maxScore !== null && assessment.maxScore !== undefined) return true;
+  if (assessment.date || assessment.description || assessment.descriptionHtml) return true;
+  if (Array.isArray(assessment.attachments) && assessment.attachments.length > 0) return true;
+  const scoreSuffix = `|${assessment.id}`;
+  return Object.entries(a.scores || {}).some(([key, value]) =>
+    key.endsWith(scoreSuffix) && value !== '' && value !== null && value !== undefined
+  );
+}
+
+/**
+ * Keeps previously used PT4/PT5 columns visible during the DO 015 migration.
+ * New Grades 7-12 records receive the recommended five-WW/three-PT preset,
+ * while populated legacy columns are retained so no recorded evidence is hidden.
+ */
+function templateWithPopulatedLegacyPerformanceTasks(a, template) {
+  const grade = parseInt(a?.gradeLevel);
+  if (!Array.isArray(a?.assessments) || grade < 7 || grade > 12) return template;
+
+  let performanceTaskCount = template.filter(item => item.component === 'PT').length;
+  const groups = new Map();
+  a.assessments.forEach(assessment => {
+    if (canonicalAssessmentComponent(assessment.component) !== 'PT') return;
+    const key = `${assessment.term}|${assessment.mapePart || 'regular'}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(assessment);
+  });
+
+  groups.forEach(items => {
+    items.forEach((assessment, index) => {
+      if (index >= performanceTaskCount && assessmentHasRecordedData(a, assessment)) {
+        performanceTaskCount = Math.max(performanceTaskCount, index + 1);
+      }
+    });
+  });
+
+  performanceTaskCount = Math.min(performanceTaskCount, 5);
+  const standardCount = template.filter(item => item.component === 'PT').length;
+  if (performanceTaskCount <= standardCount) return template;
+
+  const expanded = template.map(item => ({ ...item }));
+  const insertAt = expanded.reduce((last, item, index) => item.component === 'PT' ? index + 1 : last, 0);
+  const legacySlots = [];
+  for (let index = standardCount + 1; index <= performanceTaskCount; index++) {
+    legacySlots.push({ component: 'PT', title: `PT ${index}` });
+  }
+  expanded.splice(insertAt, 0, ...legacySlots);
+  return expanded;
+}
+
 /**
  * Ensures appropriate template assessments exist, removing legacy custom ones
  * and preserving scores on matching template columns.
  */
 function ensureTemplateAssessments(a) {
   if (!a) return;
-  const template = templateForGrade(a.gradeLevel);
+  const template = templateWithPopulatedLegacyPerformanceTasks(a, templateForGrade(a.gradeLevel));
   const isMapeh = isMapehSubject(a.subject);
   
   const newAssessments = [];
@@ -567,10 +927,21 @@ function computeTerm(a, learnerId, term, mapePart) {
   const st2 = componentScore(a, learnerId, term, ['SA2', 'ST2'], mapePart);
   const te = componentScore(a, learnerId, term, ['TE'], mapePart);
 
-  const examPS = (st1.ps * 0.30) + (st2.ps * 0.30) + (te.ps * 0.40);
+  const examinationComponents = examinationComponentsForAssignment(a);
+  let examPS = 0;
+  if (examinationComponents.length === 1 && examinationComponents[0] === 'TE') {
+    examPS = te.ps;
+  } else if (examinationComponents.length > 0) {
+    examPS = (st1.ps * 0.30) + (st2.ps * 0.30) + (te.ps * 0.40);
+  }
 
   const ig = (ww.ps * w[0] / 100) + (pt.ps * w[1] / 100) + (examPS * w[2] / 100);
-  const hasData = ww.hasData || pt.hasData || st1.hasData || st2.hasData || te.hasData;
+  const examinationHasData = examinationComponents.some(component => {
+    if (component === 'ST1') return st1.hasData;
+    if (component === 'ST2') return st2.hasData;
+    return te.hasData;
+  });
+  const hasData = ww.hasData || pt.hasData || examinationHasData;
   const tg = hasData ? transmute(a, ig) : null;
 
   return {
