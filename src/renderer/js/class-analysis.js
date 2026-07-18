@@ -513,9 +513,13 @@ async function downloadClassReportPdf() {
   if (!a || !window.electronAPI || !window.electronAPI.exportPdf) return;
   setReportPrintMode(true);
   await new Promise(resolve => setTimeout(resolve, 80));
-  const filename = reportFilename(a);
+  const requestedFilename = reportFilename(a);
+  const filename = window.AdminTestMode?.isActive?.()
+    ? window.AdminTestMode.markExportFilename(requestedFilename)
+    : requestedFilename;
   try {
     const result = await window.electronAPI.exportPdf({
+      isMockTestData: window.AdminTestMode?.isActive?.() === true,
       size: 'A4',
       landscape: false,
       filename,

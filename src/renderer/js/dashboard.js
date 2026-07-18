@@ -111,7 +111,33 @@ function getOrderedDashboardAssignments(activeYear) {
     .map(item => item.assignment);
 }
 
-function subjectIconKey(subject) {
+function seniorHighSubjectIconKey(subject) {
+  const value = String(subject || '').trim().toLowerCase();
+  const gradingGroup = typeof seniorHighSubjectGroupForSubject === 'function'
+    ? seniorHighSubjectGroupForSubject(subject)
+    : '';
+
+  if (gradingGroup === 'SHS_TECHPRO') return 'shs-technical-vocational';
+  if (/aesthetic services|caregiving|hairdressing|agricultural|aquaculture|fish capture|food processing|organic agriculture|poultry|ruminants|swine|garments|handicrafts|automotive|driving|motorcycle|carpentry|construction|welding|drafting|animation|illustration|graphic design|bakery|events management|food and beverage|hotel operation|kitchen operations|tourism|broadband|computer programming|computer systems|contact center|air conditioning|refrigeration|electrical installation|electronics product|mechatronics|photovoltaic|marine engineering|marine transportation|ships catering/.test(value)) return 'shs-technical-vocational';
+  if (/research|work immersion|apprenticeship|field exposure|design and innovation/.test(value)) return 'shs-research-immersion';
+  if (/sports|physical education|human movement|exercise|fitness|first aid|life support/.test(value)) return 'shs-physical-education-sports';
+  if (/business|accounting|finance|taxation|economics|marketing|entrepreneurship|organization and management/.test(value)) return 'shs-business-entrepreneurship';
+  if (/mathematics|calculus/.test(value)) return 'shs-mathematics';
+  if (/science|biology|chemistry|physics|database|data analytics|empowerment technologies/.test(value)) return 'shs-science-technology';
+  if (/citizenship|civic engagement|history|kasaysayan|lipunang pilipino|philosophy|governance|politics|social sciences/.test(value)) return 'shs-social-sciences-humanities';
+  if (/life and career skills|personal development|values|good manners|religion/.test(value)) return 'shs-values-personal-development';
+  if (/art|creative|composition|dance|literary|literature|malikhaing|media|music|theater|visual/.test(value)) return 'shs-arts-media-design';
+  if (/communication|komunikasyon|filipino|language|reading|writing/.test(value)) return 'shs-language-communication';
+
+  if (gradingGroup === 'SHS_RESEARCH' || gradingGroup === 'SHS_WORK' || gradingGroup === 'SHS_FIELD') return 'shs-research-immersion';
+  if (gradingGroup === 'SHS_ARTS') return 'shs-arts-media-design';
+  return '';
+}
+
+function subjectIconKey(subject, gradeLevel) {
+  const grade = parseInt(gradeLevel);
+  if (grade === 11 || grade === 12) return seniorHighSubjectIconKey(subject);
+
   const value = String(subject || '').trim().toLowerCase();
   if (/reading|literacy/.test(value)) return 'reading-literacy';
   if (/makabansa/.test(value)) return 'makabansa';
@@ -127,15 +153,15 @@ function subjectIconKey(subject) {
   return '';
 }
 
-function subjectWatermarkMarkup(subject) {
-  const key = subjectIconKey(subject);
+function subjectWatermarkMarkup(subject, gradeLevel) {
+  const key = subjectIconKey(subject, gradeLevel);
   if (!key) return '';
 
   return `<div class="dashboard-card__subject-watermark subject-watermark--${key}" aria-hidden="true"></div>`;
 }
 
-function subjectCardIconMarkup(subject) {
-  const key = subjectIconKey(subject);
+function subjectCardIconMarkup(subject, gradeLevel) {
+  const key = subjectIconKey(subject, gradeLevel);
   if (!key) return '';
   return `<img class="dashboard-card__subject-icon" src="assets/subject-icons/${key}.png" alt="" aria-hidden="true">`;
 }
@@ -180,10 +206,10 @@ function renderDashboardOverview() {
         ondrop="handleDashboardCardDrop(event)"
         ondragend="handleDashboardCardDragEnd(event)"
         data-active-term="1" ${isMapeh ? 'data-active-part="music_arts"' : ''}>
-        ${subjectWatermarkMarkup(a.subject)}
+        ${subjectWatermarkMarkup(a.subject, a.gradeLevel)}
         
         <div class="dashboard-card__identity">
-          <h3 class="dashboard-card__title">${subjectCardIconMarkup(a.subject)}<span>Grade ${esc(a.gradeLevel)} - ${esc(a.section)}</span></h3>
+          <h3 class="dashboard-card__title">${subjectCardIconMarkup(a.subject, a.gradeLevel)}<span>Grade ${esc(a.gradeLevel)} - ${esc(a.section)}</span></h3>
           <div class="dashboard-card__subject">${esc(a.subject)}</div>
         </div>
         

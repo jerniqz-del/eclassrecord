@@ -468,6 +468,91 @@
   font-weight: 500;
 }
 
+/* Admin-only temporary mock workspace */
+.admin-testing-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 36px;
+  color: var(--adm-text);
+  text-align: center;
+}
+
+.admin-testing-pane__icon { font-size: 48px; }
+.admin-testing-pane h2 { margin: 0; font-size: 20px; }
+.admin-testing-pane > p { max-width: 760px; margin: 0; color: var(--adm-text-muted); line-height: 1.6; }
+.admin-testing-safety-list {
+  width: min(760px, 100%);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 8px 0;
+}
+.admin-testing-safety-list > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid var(--adm-border);
+  border-radius: var(--radius-card);
+  background: var(--adm-surface-muted);
+  text-align: left;
+}
+.admin-testing-safety-list strong { color: var(--color-primary-300); font-size: 13px; }
+.admin-testing-safety-list span { color: var(--adm-text-faint); font-size: 12px; line-height: 1.45; }
+.admin-testing-start { flex: none; min-width: 250px; margin-top: 4px; }
+
+.admin-test-confirm-overlay { z-index: 100000; }
+
+.admin-test-mode-banner {
+  position: fixed;
+  z-index: 90000;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 18px;
+  color: #fff;
+  background: linear-gradient(90deg, #9a3412, #c2410c, #9a3412);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 4px 14px rgba(124, 45, 18, 0.3);
+  font-size: 12px;
+}
+.admin-test-mode-banner strong { letter-spacing: 0.55px; }
+.admin-test-mode-banner span { color: rgba(255, 255, 255, 0.82); }
+.admin-test-mode-banner .adm-btn { color: #fff; border-color: rgba(255, 255, 255, 0.32); }
+body.admin-test-mode .layout { height: calc(100% - 42px); transform: translateY(42px); }
+
+@media (max-width: 760px) {
+  .admin-testing-safety-list { grid-template-columns: 1fr; }
+  .admin-test-mode-banner span { display: none; }
+}
+
+@media print {
+  body.admin-test-mode .layout { height: auto; transform: none; }
+  body.admin-test-mode::after {
+    content: 'TEST DATA — NOT FOR OFFICIAL USE';
+    position: fixed;
+    z-index: 2147483647;
+    left: 50%;
+    top: 50%;
+    width: 1100px;
+    transform: translate(-50%, -50%) rotate(-32deg);
+    color: rgba(185, 28, 28, 0.16);
+    font: 800 58px/1.1 'Segoe UI', Arial, sans-serif;
+    letter-spacing: 4px;
+    text-align: center;
+    pointer-events: none;
+  }
+}
+
 /* ── Misc ──────────────────────────────────────────────────── */
 .adm-loading, .adm-empty {
   font-size: 13px;

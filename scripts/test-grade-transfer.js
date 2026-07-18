@@ -51,7 +51,7 @@ function validPayload(data = fixture()) {
     assignment: data.assignment,
     profileDb: data.profile,
     term: 1,
-    appVersion: '1.6.0',
+    appVersion: '1.6.3',
     exportId: 'export-fixed',
     exportedAt: '2026-07-13T00:00:00.000Z',
     getFinalGrade: (_assignment, learnerId, term) => term === '1' ? grades[learnerId] : 75
@@ -143,7 +143,7 @@ function validPayload(data = fixture()) {
     assignment: data.assignment,
     profileDb: data.profile,
     term: 1,
-    appVersion: '1.6.0',
+    appVersion: '1.6.3',
     adviserMayModifySubmittedGrades: true,
     adviserModificationNote: 'Please correct encoding errors if needed.\nThank you.',
     getFinalGrade: () => 88
@@ -189,7 +189,7 @@ function validPayload(data = fixture()) {
     assignment: data.assignment,
     profileDb: data.profile,
     term: 2,
-    appVersion: '1.6.0',
+    appVersion: '1.6.3',
     subjectName: 'Music & Arts',
     mapePart: 'music_arts',
     getFinalGrade: (_assignment, _learnerId, _term, part) => { seenParts.push(part); return 89; }
@@ -397,7 +397,7 @@ function validPayload(data = fixture()) {
 
   const journalism = data.profile.advisory.subjects.find(item => item.normalizedSubjectKey === 'CAMPUS JOURNALISM');
   const specialAssignment = { ...data.assignment, subject: 'Campus Journalism', isSpecialProgramSubject: true, specialProgramWeights: [10, 70, 20] };
-  const payload = Transfer.buildExportPayload({ assignment: specialAssignment, profileDb: data.profile, term: 1, appVersion: '1.6.0', getFinalGrade: () => 88 });
+  const payload = Transfer.buildExportPayload({ assignment: specialAssignment, profileDb: data.profile, term: 1, appVersion: '1.6.3', getFinalGrade: () => 88 });
   assert.strictEqual(payload.subject.isSpecialProgramSubject, true);
   assert.deepStrictEqual(payload.subject.specialProgramWeights, [10, 70, 20]);
   assert.strictEqual(Transfer.validatePayload(payload).isValid, true);

@@ -133,6 +133,7 @@
       try {
         const result = await globalScope.electronAPI.exportAdvisoryResetBackup({
           defaultFileName: resetBackupFilename(advisoryClass),
+          isMockTestData: globalScope.AdminTestMode?.isActive?.() === true,
           files: buildResetBackupFiles(activeDb(), advisoryClass)
         });
         if (!result?.success) {

@@ -31,7 +31,7 @@ const transferFile = Transfer.buildExportPayload({
   assignment: teacherClass,
   profileDb: sourceDb,
   term: 1,
-  appVersion: '1.6.0-test',
+  appVersion: '1.6.3-test',
   exportId: 'e2e-export-1',
   exportedAt: '2026-07-13T01:00:00.000Z',
   getFinalGrade: (_assignment, learnerId, term) => term === '1' ? sourceGrades[learnerId] : null

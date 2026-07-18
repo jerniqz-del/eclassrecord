@@ -2,7 +2,7 @@
 
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
-Current app version: 1.6.0
+Current app version: 1.6.3
 Last reviewed: 2026-07-18
 
 ## 1. Project Foundation
@@ -200,6 +200,7 @@ Implemented changes:
 - Added v1.4.6 patch update work: SF2 present-count totals, Excused/No Classes attendance fixes, Assessment Details data-loss protection, fixed assessment group ordering, grading arrow-key navigation, Transfer Scores preview polish, compact attendance statistics, and tour/modal boundary fixes.
 - Prepared v1.5.0 with a dedicated Advisory Class page, offline Grade Transfer Files, Special Class subjects and grading weights, resilient backup and PIN recovery, subject-card artwork, and expanded regression coverage.
 - Prepared v1.6.0 with Senior High advisory subject selection, grade-source assignment and color coding, manual and quick advisory grade entry, teacher-authorized adviser corrections, teacher notes, keyboard navigation, and dedicated cross-profile mock coverage.
+- Prepared v1.6.3 with Senior High subject-group artwork, an Admin-only non-persistent mock test workspace, hardened Admin authentication and shortcut handling, clearly marked mock exports, exact real-workspace restoration, physical import/export round-trip coverage, and the Individual Learner Grades PDF header fix.
 
 Worked patches:
 
@@ -238,6 +239,7 @@ Adjusted patches:
 | v1.4.6 | Fixed SF2 present totals, Excused/No Classes roll-call clearing, attendance table/legend/stat consistency, Assessment Details data preservation, permanent assessment column grouping, grading arrow-key navigation, Transfer Scores preview polish, and tour/modal boundary behavior. | Patch update for v1.4.5 users focused on attendance correctness, score-entry safety, modal stability, and reliable update delivery. |
 | v1.5.0 | Added the Advisory Class workspace, offline final-grade transfer and conflict handling, Special Class subjects with custom grading weights, stronger backup/recovery safeguards, offline QR PIN recovery, and redesigned subject-card visuals and actions. | Prepared minor-version checkpoint for nationwide-ready offline advisory workflows; no public release or version tag has been created. |
 | v1.6.0 | Added Grades 11–12 advisory subject selection, grade-source assignment and screen-only source colors, Manual and Quick Grade Entry, compact subject acronyms, keyboard navigation, and teacher-authorized adviser corrections with optional notes and preserved original grades. | Minor-version restore point covering the completed Senior High advisory grading workflow and its dedicated mock teacher/adviser regression suite. |
+| v1.6.3 | Added Senior High subject-group icons, an authenticated Admin temporary mock workspace with non-persistent data and marked exports, exact workspace restoration, expanded mock import/export tests, and corrected the overlapping Individual Learner Grades PDF header. | Patch restore point for the tested Admin QA workspace and Senior High presentation/reporting refinements; no installer was built. |
 
 ## Current Follow-Up Checks
 

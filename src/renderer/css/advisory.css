@@ -149,6 +149,16 @@
 .subject-watermark--science { background-image: url('../assets/subject-icons/science.png'); }
 .subject-watermark--mapeh { background-image: url('../assets/subject-icons/mapeh.png'); }
 .subject-watermark--epp-tle { background-image: url('../assets/subject-icons/epp-tle.png'); }
+.subject-watermark--shs-language-communication { background-image: url('../assets/subject-icons/shs-language-communication.png'); }
+.subject-watermark--shs-mathematics { background-image: url('../assets/subject-icons/shs-mathematics.png'); }
+.subject-watermark--shs-science-technology { background-image: url('../assets/subject-icons/shs-science-technology.png'); }
+.subject-watermark--shs-social-sciences-humanities { background-image: url('../assets/subject-icons/shs-social-sciences-humanities.png'); }
+.subject-watermark--shs-business-entrepreneurship { background-image: url('../assets/subject-icons/shs-business-entrepreneurship.png'); }
+.subject-watermark--shs-arts-media-design { background-image: url('../assets/subject-icons/shs-arts-media-design.png'); }
+.subject-watermark--shs-physical-education-sports { background-image: url('../assets/subject-icons/shs-physical-education-sports.png'); }
+.subject-watermark--shs-technical-vocational { background-image: url('../assets/subject-icons/shs-technical-vocational.png'); }
+.subject-watermark--shs-research-immersion { background-image: url('../assets/subject-icons/shs-research-immersion.png'); }
+.subject-watermark--shs-values-personal-development { background-image: url('../assets/subject-icons/shs-values-personal-development.png'); }
 
 .dashboard-card[data-assignment-id] .dashboard-card__title {
   display: flex;

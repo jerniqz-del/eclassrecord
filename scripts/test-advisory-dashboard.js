@@ -98,6 +98,7 @@ function createProfile() {
   };
   context.window = context;
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/renderer/js/grading.js'), 'utf8'), context);
   vm.runInContext(source, context);
   [
     ['Language', 'language'],
@@ -115,6 +116,27 @@ function createProfile() {
   ].forEach(([subject, key]) => {
     assert(context.subjectWatermarkMarkup(subject).includes(`subject-watermark--${key}`), `${subject} should use the ${key} watermark`);
     assert(context.subjectCardIconMarkup(subject).includes(`assets/subject-icons/${key}.png`), `${subject} should use the ${key} title icon`);
+  });
+  const seniorHighIconCases = [
+    ['Effective Communication', 'shs-language-communication'],
+    ['General Mathematics', 'shs-mathematics'],
+    ['Biology 1', 'shs-science-technology'],
+    ['Citizenship and Civic Engagement', 'shs-social-sciences-humanities'],
+    ['Business 1 — Basic Accounting', 'shs-business-entrepreneurship'],
+    ['Creative Industries — Media Arts', 'shs-arts-media-design'],
+    ['Sports Coaching', 'shs-physical-education-sports'],
+    ['Computer Systems Servicing', 'shs-technical-vocational'],
+    ['Research 1', 'shs-research-immersion'],
+    ['Life and Career Skills', 'shs-values-personal-development']
+  ];
+  seniorHighIconCases.forEach(([subject, key]) => {
+    assert(context.subjectWatermarkMarkup(subject, '11').includes(`subject-watermark--${key}`), `${subject} should use the ${key} Senior High watermark`);
+    assert(context.subjectCardIconMarkup(subject, '12').includes(`assets/subject-icons/${key}.png`), `${subject} should use the ${key} Senior High title icon`);
+  });
+  assert(context.subjectCardIconMarkup('Mathematics', '10').includes('assets/subject-icons/mathematics.png'), 'Grade 10 Mathematics must retain its original icon');
+  assert(context.subjectCardIconMarkup('Mathematics', '11').includes('assets/subject-icons/shs-mathematics.png'), 'Grade 11 Mathematics must use the Senior High group icon');
+  context.getSubjectsForGrade('12').forEach(subject => {
+    assert(context.subjectIconKey(subject, '12').startsWith('shs-'), `${subject} must resolve to a Senior High subject-group icon`);
   });
   assert.strictEqual(context.subjectWatermarkMarkup('Campus Journalism'), '', 'a special subject without its own image should not receive a background');
   assert.strictEqual(context.subjectCardIconMarkup('Campus Journalism'), '', 'a special subject without its own image should not receive a title icon');
@@ -156,6 +178,23 @@ function createProfile() {
     const iconFile = path.join(__dirname, `../src/renderer/assets/subject-icons/${key}.png`);
     assert(fs.existsSync(iconFile), `${key} image must be packaged locally`);
     assert(fs.statSync(iconFile).size > 200000, `${key} image appears incomplete`);
+    assert(advisoryCss.includes(`url('../assets/subject-icons/${key}.png')`), `${key} must be configured as a card background`);
+  });
+  [
+    'shs-language-communication',
+    'shs-mathematics',
+    'shs-science-technology',
+    'shs-social-sciences-humanities',
+    'shs-business-entrepreneurship',
+    'shs-arts-media-design',
+    'shs-physical-education-sports',
+    'shs-technical-vocational',
+    'shs-research-immersion',
+    'shs-values-personal-development'
+  ].forEach(key => {
+    const iconFile = path.join(__dirname, `../src/renderer/assets/subject-icons/${key}.png`);
+    assert(fs.existsSync(iconFile), `${key} image must be packaged locally`);
+    assert(fs.statSync(iconFile).size > 10000, `${key} image appears incomplete`);
     assert(advisoryCss.includes(`url('../assets/subject-icons/${key}.png')`), `${key} must be configured as a card background`);
   });
   assert(componentCss.includes('.dashboard-card[data-assignment-id] .dashboard-card__actions'), 'ordinary class-card actions should have scoped spacing');

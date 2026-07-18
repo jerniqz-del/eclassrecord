@@ -4,6 +4,7 @@ const path = require('path');
 const vm = require('vm');
 
 const source = fs.readFileSync(path.join(__dirname, '../src/renderer/js/record-table.js'), 'utf8');
+const learnerGradesSource = fs.readFileSync(path.join(__dirname, '../src/renderer/js/learner-grades.js'), 'utf8');
 let domReady = null;
 const assignment = { gradeLevel: '7', subject: 'Mathematics', learners: [] };
 const context = {
@@ -81,5 +82,11 @@ assert.deepStrictEqual(
 
 const colGroup = context.recordColGroup({ gradeLevel: '11' }, standardItems);
 assert.strictEqual((colGroup.match(/<col\b/g) || []).length, 26, 'expanded Grade 11 layout must include assessment, T/%/WS, identity, and grade columns');
+
+assert.match(
+  learnerGradesSource,
+  /const options = \{[\s\S]*?includeHeader:\s*false,[\s\S]*?landscape:\s*false,/,
+  'the individual learner PDF must disable the shared header because the report renders its own complete header'
+);
 
 console.log('Grades 4-12 expanded grading-sheet layout tests passed.');

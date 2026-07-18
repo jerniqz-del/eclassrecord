@@ -23,7 +23,10 @@ async function exportJson() {
     const appVersion = typeof window.electronAPI.getVersion === 'function' ? await window.electronAPI.getVersion() : '';
     const envelope = await createBackupEnvelope(db, pin, { appVersion });
     const textToExport = JSON.stringify(envelope, null, 2);
-    const result = await window.electronAPI.exportJson(textToExport);
+    const backupName = window.AdminTestMode?.isActive?.()
+      ? window.AdminTestMode.markExportFilename('eclass-record-backup.json')
+      : 'eclass-record-backup.json';
+    const result = await window.electronAPI.exportJson(textToExport, backupName);
     if (result.success) {
       toast('Backup downloaded successfully.', 'success');
     }
@@ -419,7 +422,11 @@ async function exportCsv() {
   }
   
   try {
-    const result = await window.electronAPI.exportCsv(csvContent);
+    const exportContent = window.AdminTestMode?.markCsvContent?.(csvContent) || csvContent;
+    const exportName = window.AdminTestMode?.isActive?.()
+      ? window.AdminTestMode.markExportFilename('eclass-record-grades.csv')
+      : 'eclass-record-grades.csv';
+    const result = await window.electronAPI.exportCsv(exportContent, exportName);
     if (result.success) {
       toast('CSV grades data exported successfully.', 'success');
     }
@@ -707,6 +714,7 @@ async function exportToExcelTemplate() {
   
   toast('Compiling data for Excel template...', 'info');
   const payload = buildExcelExportPayload(a);
+  if (window.AdminTestMode?.isActive?.()) payload.isMockTestData = true;
   
   try {
     const result = await window.electronAPI.exportExcelTemplate(payload);
@@ -1114,6 +1122,7 @@ async function exportLearnerTransferFile(learnerId) {
   const payload = {
     type: 'eclass-learner-transfer',
     version: 1,
+    ...(window.AdminTestMode?.isActive?.() ? { isMockTestData: true, mockTestLabel: window.AdminTestMode.TEST_MARKER } : {}),
     learner: {
       lrn: learner.lrn || '',
       lastName: learner.lastName,
@@ -1124,7 +1133,8 @@ async function exportLearnerTransferFile(learnerId) {
   };
   
   const payloadString = JSON.stringify(payload, null, 2);
-  const defaultFileName = `transfer-${learner.lastName.toLowerCase()}-${learner.firstName.toLowerCase()}.json`.replace(/\s+/g, '-');
+  let defaultFileName = `transfer-${learner.lastName.toLowerCase()}-${learner.firstName.toLowerCase()}.json`.replace(/\s+/g, '-');
+  if (window.AdminTestMode?.isActive?.()) defaultFileName = window.AdminTestMode.markExportFilename(defaultFileName);
   
   try {
     const result = await window.electronAPI.exportJson(payloadString, defaultFileName);

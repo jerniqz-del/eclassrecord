@@ -2049,6 +2049,7 @@ function renderAssessmentAttachments() {
 }
 
 async function uploadAssessmentAttachment() {
+  if (window.AdminTestMode?.blockExternalAction?.('Assessment file uploads')) return;
   const found = findAssessmentById(assessmentDetailsAssessmentId);
   if (!found || !window.electronAPI || !window.electronAPI.importAssessmentAttachment) return;
   const result = await window.electronAPI.importAssessmentAttachment(found.assignment.id, found.assessment.id);
@@ -2075,6 +2076,7 @@ async function openAssessmentAttachment(attachmentId) {
 }
 
 async function removeAssessmentAttachment(attachmentId) {
+  if (window.AdminTestMode?.blockExternalAction?.('Assessment file removal')) return;
   const found = findAssessmentById(assessmentDetailsAssessmentId);
   if (!found || !window.electronAPI || !window.electronAPI.removeAssessmentAttachment) return;
   const attachments = found.assessment.attachments || [];

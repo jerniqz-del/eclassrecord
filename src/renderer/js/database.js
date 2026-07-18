@@ -101,6 +101,14 @@ function getActiveProfileDatabase() {
   return db;
 }
 
+function replaceActiveProfileDatabase(nextDatabase) {
+  if (!nextDatabase || typeof nextDatabase !== 'object' || Array.isArray(nextDatabase)) {
+    throw new TypeError('An active profile database object is required.');
+  }
+  db = nextDatabase;
+  return db;
+}
+
 function getRootDatabase() {
   return dbRoot;
 }
@@ -121,6 +129,16 @@ function getRootIntegrityStatus() {
 let currentView = 'dashboard';
 let recordTab = '1';
 let importMode = '';
+
+function getRuntimeNavigationState() {
+  return { currentView, recordTab };
+}
+
+function replaceRuntimeNavigationState(nextState = {}) {
+  currentView = typeof nextState.currentView === 'string' ? nextState.currentView : 'dashboard';
+  recordTab = typeof nextState.recordTab === 'string' ? nextState.recordTab : '1';
+  return getRuntimeNavigationState();
+}
 
 /**
  * Ensures structure compatibility across version updates.
@@ -241,6 +259,9 @@ async function loadDatabase() {
  * Saves current application data to file via Electron IPC.
  */
 async function saveDatabase() {
+  if (typeof window !== 'undefined' && window.AdminTestMode?.shouldSuppressPersistence?.()) {
+    return window.AdminTestMode.noteSuppressedSave();
+  }
   if (Number(db.version) > DB_VERSION) {
     throw new Error('This profile was created by a newer app version and cannot be safely saved by this version.');
   }
@@ -282,6 +303,9 @@ async function saveDatabase() {
  * Saves the entire multi-profile root database to file via Electron IPC.
  */
 async function saveRootDatabase() {
+  if (typeof window !== 'undefined' && window.AdminTestMode?.shouldSuppressPersistence?.()) {
+    return window.AdminTestMode.noteSuppressedSave();
+  }
   try {
     dbRoot = normalizeRootDatabase(dbRoot);
     if (Number(dbRoot.version) > ROOT_DB_VERSION) {

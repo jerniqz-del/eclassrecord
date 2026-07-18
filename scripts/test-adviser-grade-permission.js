@@ -59,7 +59,7 @@ function exportMock(data, { term, exportId, grades, allowed = false, note = '' }
     assignment: data.assignment,
     profileDb: data.subjectProfile,
     term,
-    appVersion: '1.6.0',
+    appVersion: '1.6.3',
     exportId,
     exportedAt: `2026-07-${String(10 + Number(term)).padStart(2, '0')}T08:00:00.000Z`,
     adviserMayModifySubmittedGrades: allowed,

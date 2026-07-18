@@ -15,6 +15,11 @@ function requireRecoveryPayload(payload) {
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Authenticated Admin panel
+  adminAuth: (passphrase) => ipcRenderer.invoke('admin:authenticate', passphrase),
+  adminHasGhToken: (token) => ipcRenderer.invoke('admin:has-gh-token', token),
+  adminLogout: () => ipcRenderer.invoke('admin:logout'),
+
   // Database Operations
   loadDatabase: () => ipcRenderer.invoke('db:load'),
   saveDatabase: (data) => ipcRenderer.invoke('db:save', data),
@@ -27,7 +32,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportAdvisoryResetBackup: (request) => ipcRenderer.invoke('dialog:export-advisory-reset-backup', request),
   selectFolder: () => ipcRenderer.invoke('dialog:select-folder'),
   importSf1: () => ipcRenderer.invoke('dialog:import-sf1'),
-  exportCsv: (csvString) => ipcRenderer.invoke('dialog:export-csv', csvString),
+  exportCsv: (csvString, defaultFileName) => ipcRenderer.invoke('dialog:export-csv', csvString, defaultFileName),
   showPrintChoose: () => ipcRenderer.invoke('dialog:print-choose'),
   exportExcelTemplate: (payload) => ipcRenderer.invoke('dialog:export-excel-template', payload),
   exportPdf: (options) => ipcRenderer.invoke('dialog:export-pdf', options),

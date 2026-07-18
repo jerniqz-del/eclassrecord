@@ -18,7 +18,7 @@ function payload(exportId = 'export-1', grades = [88, 90]) {
   return {
     format: Transfer.FORMAT,
     schemaVersion: Transfer.SCHEMA_VERSION,
-    appVersion: '1.6.0',
+    appVersion: '1.6.3',
     exportId,
     exportedAt: '2026-07-13T00:00:00.000Z',
     schoolYear: '2026-2027',

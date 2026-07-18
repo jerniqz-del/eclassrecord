@@ -24,6 +24,8 @@ const fileIO = require('./file-io');
 const updater = require('./updater');
 const zipArchive = require('./zip-archive');
 const recoveryQr = require('./recovery-qr');
+const adminSession = require('./admin-session');
+const { verifyAdminPassphrase } = require('./admin-auth');
 
 let mainWindow = null;
 let isConfirmedExit = false;
@@ -98,10 +100,14 @@ function createWindow() {
       try {
         const result = await mainWindow.webContents.executeJavaScript(`(async () => {
           try {
-          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage', 'PinRecovery'];
+          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage', 'PinRecovery', 'AdminTestMode'];
           const missing = required.filter(name => !globalThis[name]);
           if (missing.length) throw new Error('Missing renderer modules: ' + missing.join(', '));
           if (typeof getActiveProfileDatabase !== 'function') throw new Error('Active profile database accessor is unavailable.');
+          const mockTestProfile = AdminTestMode.buildCompleteMockProfile();
+          if (!mockTestProfile.isMockTestData || mockTestProfile.assignments?.length !== 4 || mockTestProfile.advisory?.learners?.length !== 24) {
+            throw new Error('Admin mock test workspace factory is unavailable or incomplete.');
+          }
           const profile = { version: 3, schoolYear: '2099-2100', assignments: [] };
           AdvisoryData.normalizeAdvisoryData(profile);
           const advisoryClass = AdvisoryData.createClass(profile, {
@@ -398,7 +404,50 @@ function createWindow() {
           if (!storageIntegrityReport || !storageIntegrityReport.textContent.includes('integrity metadata is active')) throw new Error('Database Integrity Checker did not report file checksum status.');
           closeIntegrityResultsModal();
 
-          return { modules: required.length, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectWatermark: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, qrRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
+          document.dispatchEvent(new KeyboardEvent('keydown', {
+            key: ' ', code: 'Space', ctrlKey: true, altKey: true, shiftKey: true, bubbles: true
+          }));
+          await new Promise(resolve => setTimeout(resolve, 0));
+          const adminShortcutSurface = document.querySelector('.adm-overlay, .adm-auth-box, .adm-panel');
+          if (!adminShortcutSurface) throw new Error('Ctrl + Alt + Shift + Space did not open the Admin authentication surface.');
+          const adminPassphraseInput = adminShortcutSurface.querySelector('input[type="password"]');
+          const adminVerifyButton = adminShortcutSurface.querySelector('.adm-btn--primary');
+          if (!adminPassphraseInput || !adminVerifyButton) throw new Error('Admin authentication controls were not rendered.');
+          adminPassphraseInput.value = ['114', '@Juan', '@239'].join('');
+          adminVerifyButton.click();
+          await new Promise(resolve => setTimeout(resolve, 120));
+          const authenticatedAdminPanel = document.querySelector('.adm-panel');
+          if (!authenticatedAdminPanel) throw new Error('The reset Admin passphrase did not authenticate.');
+          const testingTab = authenticatedAdminPanel.querySelector('[data-admin-testing-tab]');
+          if (!testingTab) throw new Error('The Testing tab was not added after Admin authentication.');
+          const realProfileReference = getActiveProfileDatabase();
+          const realProfileBytes = JSON.stringify(realProfileReference);
+          const realNavigation = getRuntimeNavigationState();
+          testingTab.click();
+          const startMockButton = authenticatedAdminPanel.querySelector('.admin-testing-start');
+          if (!startMockButton) throw new Error('The complete mock workspace action was not rendered.');
+          startMockButton.click();
+          const startConfirmation = document.querySelector('#adminTestModeConfirm [data-confirm]');
+          if (!startConfirmation) throw new Error('Starting the mock workspace did not request confirmation.');
+          startConfirmation.click();
+          await new Promise(resolve => setTimeout(resolve, 160));
+          if (!AdminTestMode.isActive()) throw new Error('Admin Test Mode did not become active.');
+          if (!document.getElementById('adminTestModeBanner')) throw new Error('The persistent Admin Test Mode banner was not rendered.');
+          const mockProfile = getActiveProfileDatabase();
+          if (mockProfile === realProfileReference || mockProfile.assignments?.length !== 4) throw new Error('The runtime workspace was not replaced with the complete mock profile.');
+          if (!AdminTestMode.shouldSuppressPersistence()) throw new Error('Persistence was not suppressed while Admin Test Mode was active.');
+          mockProfile.teacherName = 'MUTATED TEST TEACHER';
+          const suppressedSave = await saveDatabase();
+          if (!suppressedSave) throw new Error('A suppressed test-mode save did not report safe in-memory success.');
+          await AdminTestMode.exitTestMode();
+          if (AdminTestMode.isActive()) throw new Error('Admin Test Mode remained active after exit.');
+          if (getActiveProfileDatabase() !== realProfileReference) throw new Error('Exiting test mode did not restore the exact original profile reference.');
+          if (JSON.stringify(getActiveProfileDatabase()) !== realProfileBytes) throw new Error('Mock changes leaked into the restored real workspace.');
+          const restoredNavigation = getRuntimeNavigationState();
+          if (restoredNavigation.currentView !== realNavigation.currentView || restoredNavigation.recordTab !== realNavigation.recordTab) throw new Error('Exiting test mode did not restore the previous view and term.');
+          if (document.getElementById('adminTestModeBanner')) throw new Error('The Admin Test Mode banner remained after exit.');
+
+          return { modules: required.length, adminTestWorkspace: true, adminTestLifecycle: true, adminSaveSuppression: true, adminShortcut: true, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectWatermark: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, qrRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }
@@ -567,6 +616,52 @@ function createWindow() {
 
 // ── IPC Handlers ──────────────────────────────────────────
 
+function isMockTestArtifact(...values) {
+  return values.some(value => {
+    if (value === undefined || value === null) return false;
+    let text = '';
+    try {
+      text = typeof value === 'string' ? value : JSON.stringify(value);
+    } catch (_error) {
+      text = String(value);
+    }
+    return /TEST DATA(?:\s|—|-)*NOT FOR OFFICIAL USE/i.test(text)
+      || /"isMockTestData"\s*:\s*true/i.test(text)
+      || /"mockTestLabel"\s*:/i.test(text);
+  });
+}
+
+function mockSafeFilename(filename, ...payloads) {
+  const value = String(filename || 'eclass-record-export').trim() || 'eclass-record-export';
+  if (!isMockTestArtifact(...payloads) || /^TEST-MOCK-/i.test(value)) return value;
+  return `TEST-MOCK-${value}`;
+}
+
+ipcMain.handle('admin:authenticate', async (_event, passphrase) => {
+  const cooldown = adminSession.checkCooldown();
+  if (cooldown.locked) {
+    return { success: false, locked: true, remainingMs: cooldown.remainingMs };
+  }
+  if (verifyAdminPassphrase(passphrase)) {
+    return { success: true, token: adminSession.createSession() };
+  }
+  return { success: false, ...adminSession.recordFailedAttempt() };
+});
+
+ipcMain.handle('admin:has-gh-token', async (_event, token) => {
+  try {
+    adminSession.validateSession(token);
+    return { success: true, hasToken: false };
+  } catch (_error) {
+    return { success: false, hasToken: false, error: 'Admin session expired.' };
+  }
+});
+
+ipcMain.handle('admin:logout', async () => {
+  adminSession.invalidateSession();
+  return { success: true };
+});
+
 ipcMain.handle('db:load', async () => {
   return fileIO.loadDatabase();
 });
@@ -576,7 +671,7 @@ ipcMain.handle('db:save', async (_event, data) => {
 });
 
 ipcMain.handle('dialog:export-json', async (_event, jsonString, defaultFileName) => {
-  const filename = defaultFileName || 'eclass-record-backup.json';
+  const filename = mockSafeFilename(defaultFileName || 'eclass-record-backup.json', jsonString);
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Export JSON',
     defaultPath: path.join(app.getPath('desktop'), filename),
@@ -627,9 +722,10 @@ ipcMain.handle('dialog:print-recovery-qr', async (_event, dataUrl, label) => {
 });
 
 ipcMain.handle('dialog:export-grade-transfer', async (_event, jsonString, defaultFileName) => {
+  const filename = mockSafeFilename(defaultFileName || 'ECR_Grades.json', jsonString);
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Save Grade Transfer File',
-    defaultPath: path.join(app.getPath('desktop'), defaultFileName || 'ECR_Grades.json'),
+    defaultPath: path.join(app.getPath('desktop'), filename),
     filters: [{ name: 'Grade Transfer Files', extensions: ['json'] }]
   });
   if (result.canceled || !result.filePath) return { success: false };
@@ -650,7 +746,8 @@ ipcMain.handle('dialog:import-grade-transfer', async () => {
 
 ipcMain.handle('dialog:export-advisory-reset-backup', async (_event, request) => {
   const files = Array.isArray(request?.files) ? request.files : [];
-  const defaultFileName = String(request?.defaultFileName || 'ECR_Advisory_Backup.zip').replace(/[^a-zA-Z0-9._-]+/g, '_');
+  const requestedName = String(request?.defaultFileName || 'ECR_Advisory_Backup.zip').replace(/[^a-zA-Z0-9._-]+/g, '_');
+  const defaultFileName = mockSafeFilename(requestedName, request);
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Save Advisory Class Backup',
     defaultPath: path.join(app.getPath('desktop'), defaultFileName.endsWith('.zip') ? defaultFileName : `${defaultFileName}.zip`),
@@ -746,10 +843,11 @@ ipcMain.handle('attachment:remove', async (_event, relativePath) => {
   return { success: true };
 });
 
-ipcMain.handle('dialog:export-csv', async (_event, csvString) => {
+ipcMain.handle('dialog:export-csv', async (_event, csvString, defaultFileName) => {
+  const filename = mockSafeFilename(defaultFileName || 'eclass-record-grades.csv', csvString);
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Export CSV',
-    defaultPath: path.join(app.getPath('desktop'), 'eclass-record-grades.csv'),
+    defaultPath: path.join(app.getPath('desktop'), filename),
     filters: [{ name: 'CSV Files', extensions: ['csv'] }]
   });
   if (result.canceled || !result.filePath) return { success: false };
@@ -758,9 +856,10 @@ ipcMain.handle('dialog:export-csv', async (_event, csvString) => {
 });
 
 ipcMain.handle('dialog:export-excel-template', async (_event, payload) => {
+  const filename = mockSafeFilename(`Class-Record-${payload.gradeLevel}-${payload.section}-${payload.subject}.xlsx`, payload);
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Export to DepEd Excel Template',
-    defaultPath: path.join(app.getPath('desktop'), `Class-Record-${payload.gradeLevel}-${payload.section}-${payload.subject}.xlsx`),
+    defaultPath: path.join(app.getPath('desktop'), filename),
     filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
   });
   if (result.canceled || !result.filePath) return { success: false };
@@ -777,9 +876,15 @@ ipcMain.handle('dialog:export-excel-template', async (_event, payload) => {
 
 ipcMain.handle('dialog:export-pdf', async (_event, options) => {
   const { size, landscape, filename, metadata, includeHeader = true } = options || {};
+  const isTestArtifact = isMockTestArtifact(options, metadata);
+  const exportFilename = mockSafeFilename(filename || 'Class-Record.pdf', options, metadata);
+  const testNoticeHtml = isTestArtifact
+    ? '<div style="color:#b91c1c;font-size:12px;font-weight:800;letter-spacing:1px;margin-bottom:5px;">TEST DATA — NOT FOR OFFICIAL USE</div>'
+    : '';
   
   const headerHtml = `
     <div style="font-size: 11px; font-family: 'Segoe UI', Arial, sans-serif; color: #000; width: 100%; margin: 0 0.4in; box-sizing: border-box; border-bottom: 2px solid #000; padding-bottom: 8px;">
+      ${testNoticeHtml}
       <div style="font-size: 16px; font-weight: bold; font-family: 'Segoe UI', Arial, sans-serif; color: #000; border-bottom: 1px solid #000; padding-bottom: 6px; margin-bottom: 6px; text-transform: uppercase;">
         ${metadata ? (metadata.title || '') : ''}
       </div>
@@ -823,7 +928,7 @@ ipcMain.handle('dialog:export-pdf', async (_event, options) => {
   const footerHtml = `
     <div style="font-size: 8px; font-family: 'Segoe UI', Arial, sans-serif; color: #555; width: 100%; margin: 0 0.4in; border-top: 1px solid #ddd; padding-top: 5px; display: flex; justify-content: space-between; box-sizing: border-box;">
       <div>
-        <strong>File Stamp:</strong> ${filename || 'Class-Record.pdf'} &middot; 
+        <strong>File Stamp:</strong> ${exportFilename} &middot; 
         <strong>Generated:</strong> ${metadata ? (metadata.timestamp || '') : ''}
       </div>
       <div>
@@ -854,7 +959,7 @@ ipcMain.handle('dialog:export-pdf', async (_event, options) => {
     const data = await mainWindow.webContents.printToPDF(printOptions);
     const result = await dialog.showSaveDialog(mainWindow, {
       title: 'Export PDF',
-      defaultPath: path.join(app.getPath('desktop'), filename || 'Class-Record.pdf'),
+      defaultPath: path.join(app.getPath('desktop'), exportFilename),
       filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
     });
     if (result.canceled || !result.filePath) return { success: false };

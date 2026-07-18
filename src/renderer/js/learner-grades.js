@@ -653,7 +653,10 @@ async function downloadLearnerGradesPdf() {
   styleEl.innerHTML = '@media print { @page { size: portrait; } }';
 
   const displayName = learnerDisplayName(learner);
-  const filename = `${displayName} Grades Report.pdf`;
+  const requestedFilename = `${displayName} Grades Report.pdf`;
+  const filename = window.AdminTestMode?.isActive?.()
+    ? window.AdminTestMode.markExportFilename(requestedFilename)
+    : requestedFilename;
   
   const metadata = {
     title: `${displayName} Grades Report`,
@@ -670,6 +673,10 @@ async function downloadLearnerGradesPdf() {
   };
 
   const options = {
+    isMockTestData: window.AdminTestMode?.isActive?.() === true,
+    // This report already renders its own title and complete learner/class
+    // metadata. The shared PDF header would duplicate and overlap it.
+    includeHeader: false,
     landscape: false,
     size: 'A4',
     filename: filename,

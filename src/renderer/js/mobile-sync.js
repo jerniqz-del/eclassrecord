@@ -61,6 +61,7 @@ function updateSyncStatusUI(status, label, details) {
  * In Electron, this will emit 'select-bluetooth-device' in main process.
  */
 async function startScanBleDevices() {
+  if (window.AdminTestMode?.blockExternalAction?.('Bluetooth scanning')) return;
   try {
     isSyncConnecting = true;
     addSyncLog('Starting Bluetooth scan for companion app...');
@@ -132,6 +133,7 @@ async function startScanBleDevices() {
  * Submits the application-level PIN code handshake to authorize the link.
  */
 async function submitHandshakePin() {
+  if (window.AdminTestMode?.blockExternalAction?.('Bluetooth authorization')) return;
   const pinInput = document.getElementById('syncPinInput');
   if (!pinInput || !handshakeChar) return;
   
@@ -205,6 +207,7 @@ function handleMobileScoresNotification(event) {
  * Safely merges synced scores back into the desktop DB assignments.
  */
 function mergeUploadedScores(payload) {
+  if (window.AdminTestMode?.blockExternalAction?.('Mobile score imports')) return;
   // Payload format: { "assignmentId": { "learnerId|assessmentId": "scoreValue" } }
   let updateCount = 0;
   
@@ -242,6 +245,7 @@ function mergeUploadedScores(payload) {
  * Packs active class loads and sends them in chunks to the mobile app.
  */
 async function syncDataToMobile() {
+  if (window.AdminTestMode?.blockExternalAction?.('Mobile synchronization')) return;
   if (!rxChar) {
     toast('No active companion connection found.', 'warning');
     return;

@@ -834,7 +834,11 @@
         : globalScope.getLearnerTermGradeForExport(source, learnerId, selectedTerm)
     });
     if (!payload.learners.length) throw new Error('No saved final grades were found for the selected term.');
-    const result = await globalScope.electronAPI.exportGradeTransfer(JSON.stringify(payload, null, 2), gradeTransferFilename(payload));
+    const requestedFilename = gradeTransferFilename(payload);
+    const exportFilename = globalScope.AdminTestMode?.isActive?.()
+      ? globalScope.AdminTestMode.markExportFilename(requestedFilename)
+      : requestedFilename;
+    const result = await globalScope.electronAPI.exportGradeTransfer(JSON.stringify(payload, null, 2), exportFilename);
     return { payload, result };
   }
 

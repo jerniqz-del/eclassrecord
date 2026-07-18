@@ -147,7 +147,11 @@
     try {
       await new Promise(resolve => setTimeout(resolve, 60));
       const profile = report.profile;
-      const result = await globalScope.electronAPI.exportPdf({ size: 'A4', landscape: true, includeHeader: false, filename: filename(report), metadata: { title: report.title, region: profile.region || profile.schoolRegion || '', division: profile.division || profile.schoolDivision || '', schoolName: profile.schoolName || '', schoolId: profile.schoolId || '', schoolYear: report.advisoryClass.schoolYear || profile.schoolYear || '', gradeLevel: report.advisoryClass.gradeLevel || '', section: report.advisoryClass.section || '', teacherName: report.advisoryClass.adviserName || profile.teacherName || '', timestamp: report.generatedAt } });
+      const requestedFilename = filename(report);
+      const exportFilename = globalScope.AdminTestMode?.isActive()
+        ? globalScope.AdminTestMode.markExportFilename(requestedFilename)
+        : requestedFilename;
+      const result = await globalScope.electronAPI.exportPdf({ size: 'A4', landscape: true, includeHeader: false, filename: exportFilename, isMockTestData: globalScope.AdminTestMode?.isActive() === true, metadata: { title: report.title, region: profile.region || profile.schoolRegion || '', division: profile.division || profile.schoolDivision || '', schoolName: profile.schoolName || '', schoolId: profile.schoolId || '', schoolYear: report.advisoryClass.schoolYear || profile.schoolYear || '', gradeLevel: report.advisoryClass.gradeLevel || '', section: report.advisoryClass.section || '', teacherName: report.advisoryClass.adviserName || profile.teacherName || '', timestamp: report.generatedAt } });
       if (result?.success) globalScope.toast?.('Advisory Grade Record PDF saved.', 'success');
       else if (result?.error) globalScope.toast?.(`PDF export failed: ${result.error}`, 'error');
     } catch (error) { globalScope.toast?.(`PDF export failed: ${error.message || error}`, 'error'); }
