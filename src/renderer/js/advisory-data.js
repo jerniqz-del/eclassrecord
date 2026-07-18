@@ -153,6 +153,12 @@
       validationStatus: cleanString(item.validationStatus) || 'valid',
       conflictStatus: cleanString(item.conflictStatus) || 'none',
       remarks: cleanString(item.remarks),
+      adviserEditAllowed: item.adviserEditAllowed === true,
+      submittedFinalGrade: item.submittedFinalGrade === '' || item.submittedFinalGrade === null || item.submittedFinalGrade === undefined
+        ? (item.finalGrade === '' || item.finalGrade === null || item.finalGrade === undefined ? null : Number(item.finalGrade))
+        : Number(item.submittedFinalGrade),
+      adviserModifiedAt: normalizeTimestamp(item.adviserModifiedAt),
+      adviserModifiedBy: cleanString(item.adviserModifiedBy),
       createdAt,
       updatedAt: normalizeTimestamp(item.updatedAt) || createdAt
     };
@@ -190,6 +196,8 @@
       undoMetadata: item.undoMetadata && typeof item.undoMetadata === 'object'
         ? item.undoMetadata
         : {},
+      adviserEditAllowed: item.adviserEditAllowed === true,
+      adviserModificationNote: cleanString(item.adviserModificationNote).slice(0, 500),
       createdAt,
       updatedAt: normalizeTimestamp(item.updatedAt) || createdAt
     };

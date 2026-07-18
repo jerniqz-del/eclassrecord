@@ -1,6 +1,6 @@
 {
   "name": "eclass-record",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Local, teacher-owned class record for DepEd three-term and legacy grading workflows",
   "author": "E-Class Record App",
   "license": "MIT",
@@ -15,7 +15,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "test": "npm run test:database-future-proof && npm run test:advisory-data && npm run test:special-program && npm run test:senior-high && npm run test:record-layout && npm run test:advisory-compatibility && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer && npm run test:grade-conflicts && npm run test:advisory-backup && npm run test:advisory-e2e && npm run test:advisory-redesign",
+    "test": "npm run test:database-future-proof && npm run test:advisory-data && npm run test:special-program && npm run test:senior-high && npm run test:record-layout && npm run test:advisory-compatibility && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer && npm run test:adviser-grade-permission && npm run test:grade-conflicts && npm run test:advisory-backup && npm run test:advisory-e2e && npm run test:advisory-redesign",
     "test:database-future-proof": "node scripts/test-database-future-proof.js",
     "test:advisory-data": "node scripts/test-advisory-data.js",
     "test:special-program": "node scripts/test-special-program.js",
@@ -25,6 +25,7 @@
     "test:advisory-dashboard": "node scripts/test-advisory-dashboard.js",
     "test:advisory-roster": "node scripts/test-advisory-roster.js",
     "test:grade-transfer": "node scripts/test-grade-transfer.js",
+    "test:adviser-grade-permission": "node scripts/test-adviser-grade-permission.js",
     "test:grade-conflicts": "node scripts/test-grade-conflicts.js",
     "test:advisory-backup": "node scripts/test-advisory-backup.js",
     "test:advisory-e2e": "node scripts/test-advisory-e2e.js",

@@ -31,6 +31,7 @@ const STAGE_ALLOWLIST = [
   'src',
   'community-relay',
   'docs/implementation-history.md',
+  'docs/grade-transfer-schema-v1.0.md',
   'docs/release-notes-v1.4.0.md',
   'docs/facebook-post-v1.4.0.md',
   'docs/release-notes-v1.4.5.md',

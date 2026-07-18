@@ -1,14 +1,14 @@
-// Bundled changelog for v1.5.0
+// Bundled changelog for v1.6.0
 const APP_CHANGELOG = {
-  version: '1.5.0',
-  releaseDate: '2026-07-14',
+  version: '1.6.0',
+  releaseDate: '2026-07-18',
   points: [
-    'Added a dedicated Advisory Class page for managing the official learner roster, subject sources, and consolidated final grades.',
-    'Added fully offline Grade Transfer Files with validation, learner matching, conflict review, corrected re-imports, history, and undo support.',
-    'Added Special Class setup with one or two additional subjects and configurable special-program grading percentages.',
-    'Improved backup integrity, older-backup restoration, automatic recovery snapshots, and offline QR PIN recovery.',
-    'Added individual subject artwork to class cards and refined the Export Final Grades and Reports actions.',
-    'Improved the Advisory Grade Record table with hidden-by-default terms, easier horizontal scrolling, clearer headers, and wrapped General Average text.',
-    'Expanded automated coverage for migrations, backups, advisory workflows, special-program grading, UI regressions, and offline operation.'
+    'Expanded Advisory Class support for Grades 11 and 12 with adviser-selected Senior High subjects and custom subject names.',
+    'Added Grade Transfer File, in-app class, and Manual Entry grade sources with clear on-screen color coding.',
+    'Added Manual Entry and Quick Grade Entry with keyboard navigation across terms and learners.',
+    'Added subject-teacher permission for advisers to correct submitted grades while preserving the original grade and audit details.',
+    'Added optional teacher notes to permitted Grade Transfer Files, import review, Grade Sources, and Import History.',
+    'Improved Advisory Grade Record subject labels, horizontal scrolling, term expansion, grade-source visibility, and modal layouts.',
+    'Expanded automated coverage with separate mock subject-teacher and adviser profiles, corrected re-imports, legacy files, and backup round-tripping.'
   ]
 };

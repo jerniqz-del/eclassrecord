@@ -51,7 +51,7 @@ function validPayload(data = fixture()) {
     assignment: data.assignment,
     profileDb: data.profile,
     term: 1,
-    appVersion: '1.5.0',
+    appVersion: '1.6.0',
     exportId: 'export-fixed',
     exportedAt: '2026-07-13T00:00:00.000Z',
     getFinalGrade: (_assignment, learnerId, term) => term === '1' ? grades[learnerId] : 75
@@ -67,6 +67,7 @@ function validPayload(data = fixture()) {
   assert.strictEqual(payload.class.id, 'class-math-4');
   assert.strictEqual(payload.subject.normalizedKey, 'MATHEMATICS');
   assert.strictEqual(payload.term.number, 1);
+  assert.deepStrictEqual(payload.permissions, { adviserMayModifySubmittedGrades: false, adviserModificationNote: '' });
   assert.deepStrictEqual(payload.learners.map(item => item.finalGrade), [88, 91]);
   assert(!JSON.stringify(payload).includes('assessments'));
   assert(!JSON.stringify(payload).includes('attendance'));
@@ -135,6 +136,50 @@ function validPayload(data = fixture()) {
   assert.deepStrictEqual(Transfer.standardSubjectsForGrade('11'), []);
 }
 
+// A teacher may grant term-specific adviser editing permission and attach an optional plain-text note.
+{
+  const data = fixture();
+  const payload = Transfer.buildExportPayload({
+    assignment: data.assignment,
+    profileDb: data.profile,
+    term: 1,
+    appVersion: '1.6.0',
+    adviserMayModifySubmittedGrades: true,
+    adviserModificationNote: 'Please correct encoding errors if needed.\nThank you.',
+    getFinalGrade: () => 88
+  });
+  assert.strictEqual(payload.permissions.adviserMayModifySubmittedGrades, true);
+  assert.strictEqual(payload.permissions.adviserModificationNote, 'Please correct encoding errors if needed.\nThank you.');
+  assert.strictEqual(Transfer.validatePayload(payload).isValid, true);
+  const invalidType = JSON.parse(JSON.stringify(payload));
+  invalidType.permissions.adviserMayModifySubmittedGrades = 'yes';
+  assert(Transfer.validatePayload(invalidType).errors.some(message => /true or false/.test(message)));
+  const noteWithoutPermission = JSON.parse(JSON.stringify(payload));
+  noteWithoutPermission.permissions.adviserMayModifySubmittedGrades = false;
+  assert(Transfer.validatePayload(noteWithoutPermission).errors.some(message => /only when grade-modification permission/.test(message)));
+  assert.throws(() => Transfer.buildExportPayload({ assignment: data.assignment, profileDb: data.profile, term: 1, adviserMayModifySubmittedGrades: true, adviserModificationNote: 'x'.repeat(501), getFinalGrade: () => 88 }), /500 characters or fewer/);
+  const legacy = JSON.parse(JSON.stringify(payload));
+  delete legacy.permissions;
+  assert.strictEqual(Transfer.validatePayload(legacy).isValid, true, 'older files without permission metadata must remain compatible');
+}
+
+// Senior High subjects are selected manually, and deselection archives records without deleting grades.
+{
+  const profile = { schoolYear: '2026-2027', assignments: [] };
+  AdvisoryData.normalizeAdvisoryData(profile);
+  const advisoryClass = AdvisoryData.createClass(profile, { id: 'shs-advisory', schoolYear: profile.schoolYear, gradeLevel: '11', section: 'Integrity', adviserName: 'Adviser', isActive: true });
+  const learner = AdvisoryData.createLearner(profile, { id: 'shs-learner', advisoryClassId: advisoryClass.id, lrn: '123456789099', lastName: 'Santos', firstName: 'Ana' });
+  assert.strictEqual(Transfer.ensureGradeLevelSubjects(profile, advisoryClass).length, 0, 'Senior High must not create the full catalog automatically');
+  const selected = Transfer.syncSeniorHighSubjects(profile, advisoryClass, ['General Mathematics', 'Earth and Life Science']);
+  assert.deepStrictEqual(selected.map(item => item.subjectName), ['General Mathematics', 'Earth and Life Science']);
+  const generalMathematics = selected.find(item => item.subjectName === 'General Mathematics');
+  AdvisoryData.createGrade(profile, { advisoryClassId: advisoryClass.id, advisoryLearnerId: learner.id, advisorySubjectId: generalMathematics.id, schoolYear: profile.schoolYear, term: '1', finalGrade: 91 });
+  const updated = Transfer.syncSeniorHighSubjects(profile, advisoryClass, ['Earth and Life Science', 'Work Immersion']);
+  assert.deepStrictEqual(updated.map(item => item.subjectName), ['Earth and Life Science', 'Work Immersion']);
+  assert.strictEqual(profile.advisory.subjects.find(item => item.id === generalMathematics.id).isArchived, true, 'deselected SHS subjects should be archived');
+  assert(profile.advisory.grades.some(item => item.advisorySubjectId === generalMathematics.id && item.finalGrade === 91), 'archiving an SHS subject must preserve its grades');
+}
+
 // MAPEH exports identify and calculate Music & Arts and PE & Health separately.
 {
   const data = fixture();
@@ -144,7 +189,7 @@ function validPayload(data = fixture()) {
     assignment: data.assignment,
     profileDb: data.profile,
     term: 2,
-    appVersion: '1.5.0',
+    appVersion: '1.6.0',
     subjectName: 'Music & Arts',
     mapePart: 'music_arts',
     getFinalGrade: (_assignment, _learnerId, _term, part) => { seenParts.push(part); return 89; }
@@ -154,6 +199,38 @@ function validPayload(data = fixture()) {
   assert.strictEqual(payload.subject.strand, 'music_arts');
   assert(seenParts.every(part => part === 'music_arts'));
   assert(Transfer.gradeTransferFilename(payload).includes('Music-&-Arts'));
+}
+
+// Manual Entry creates, updates, validates, and clears adviser-entered term grades.
+{
+  const data = fixture();
+  const mathematics = data.profile.advisory.subjects.find(item => item.normalizedSubjectKey === 'MATHEMATICS');
+  const manualSubject = AdvisoryData.updateSubject(data.profile, mathematics.id, { sourceType: 'manual' });
+  const learner = data.learners[0];
+  const created = Transfer.saveManualGrade(data.profile, data.advisoryClass, learner, manualSubject, '1', '88');
+  assert.strictEqual(created.action, 'created');
+  assert.strictEqual(created.grade.finalGrade, 88);
+  assert.strictEqual(created.grade.sourceType, 'manual');
+  assert.strictEqual(created.grade.sourceClassName, 'Manual entry by adviser');
+  const updated = Transfer.saveManualGrade(data.profile, data.advisoryClass, learner, manualSubject, '1', '91');
+  assert.strictEqual(updated.action, 'updated');
+  assert.strictEqual(updated.grade.id, created.grade.id, 'manual edits must update the existing learner/subject/term record');
+  assert.strictEqual(updated.grade.finalGrade, 91);
+  Transfer.saveManualGrade(data.profile, data.advisoryClass, learner, manualSubject, '2', '92');
+  Transfer.saveManualGrade(data.profile, data.advisoryClass, learner, manualSubject, '3', '93');
+  assert.strictEqual(Transfer.calculateSubjectFinal(data.profile.advisory.grades, learner.id, manualSubject.id), 92, 'quick manual entry must feed the calculated subject final');
+  assert.throws(() => Transfer.saveManualGrade(data.profile, data.advisoryClass, learner, manualSubject, '2', '59'), /60 to 100/);
+  assert.throws(() => Transfer.saveManualGrade(data.profile, data.advisoryClass, learner, manualSubject, '2', '101'), /60 to 100/);
+  assert.throws(() => Transfer.saveManualGrade(data.profile, data.advisoryClass, learner, { ...manualSubject, sourceType: 'grade-transfer-file' }, '2', '90'), /Manual Entry/);
+  const cleared = Transfer.saveManualGrade(data.profile, data.advisoryClass, learner, manualSubject, '1', '');
+  assert.strictEqual(cleared.action, 'deleted');
+  assert(!data.profile.advisory.grades.some(item => item.id === created.grade.id), 'clearing a manual grade must remove that term record');
+  assert.strictEqual(Transfer.calculateSubjectFinal(data.profile.advisory.grades, learner.id, manualSubject.id), null, 'clearing a term must make the calculated subject final incomplete');
+  assert.deepStrictEqual(Transfer.manualGradeNavigationTarget(data.learners, data.learners[0].id, '2', 'next-learner'), { learnerId: data.learners[1].id, term: '2' });
+  assert.deepStrictEqual(Transfer.manualGradeNavigationTarget(data.learners, data.learners[0].id, '1', 'next-cell'), { learnerId: data.learners[0].id, term: '2' });
+  assert.deepStrictEqual(Transfer.manualGradeNavigationTarget(data.learners, data.learners[0].id, '3', 'next-cell'), { learnerId: data.learners[1].id, term: '1' });
+  assert.deepStrictEqual(Transfer.manualGradeNavigationTarget(data.learners, data.learners[1].id, '1', 'previous-cell'), { learnerId: data.learners[0].id, term: '3' });
+  assert.strictEqual(Transfer.manualGradeNavigationTarget(data.learners, data.learners[1].id, '3', 'next-cell'), null);
 }
 
 // Long subject names have compact display labels, while sorting uses computed finals and keeps missing grades last.
@@ -170,9 +247,18 @@ function validPayload(data = fixture()) {
   assert.strictEqual(Transfer.subjectCompactName('Araling Panlipunan'), 'AP');
   assert.strictEqual(Transfer.subjectCompactName('Music & Arts'), 'M&A');
   assert.strictEqual(Transfer.subjectCompactName('PE & Health'), 'PE&H');
+  assert.strictEqual(Transfer.subjectCompactName('Music and Arts'), 'M&A');
+  assert.strictEqual(Transfer.subjectCompactName('PE and Health'), 'PE&H');
   assert.strictEqual(Transfer.subjectCompactName('Language'), 'LANG');
   assert.strictEqual(Transfer.subjectCompactName('Reading and Literacy'), 'R&L');
   assert.strictEqual(Transfer.subjectCompactName('Makabansa'), 'MKB');
+  assert.strictEqual(Transfer.subjectCompactName('Effective Communication'), 'EC');
+  assert.strictEqual(Transfer.subjectCompactName('Art Criticism and Creative Markets'), 'ACCM');
+  assert.strictEqual(Transfer.subjectCompactName('Citizenship and Civic Engagement'), 'CCE');
+  assert.strictEqual(Transfer.subjectCompactName('Business 1 – Basic Accounting'), 'B1BA');
+  assert.strictEqual(Transfer.subjectCompactName('Human Movement 2 – Motor Skills Development'), 'HM2MSD');
+  assert.strictEqual(Transfer.subjectCompactName('Caregiving (Adult Care)'), 'CAC');
+  assert.strictEqual(Transfer.subjectCompactName('Biology 2'), 'Biology 2');
   const learners = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
   const grades = [
     ...['1', '2', '3'].map(term => ({ advisoryLearnerId: 'a', advisorySubjectId: 'subject', term, finalGrade: 80 })),
@@ -244,11 +330,54 @@ function validPayload(data = fixture()) {
   assert.strictEqual(store.sourceMappings.length, 1);
   assert(store.grades.every(grade => grade.schoolYear === '2026-2027' && grade.term === '1'));
   assert(store.grades.every(grade => grade.importBatchId === result.batch.id));
+  assert(store.grades.every(grade => grade.adviserEditAllowed === false), 'legacy and default exports must import as read-only');
+  assert.strictEqual(result.batch.adviserEditAllowed, false);
+  assert.strictEqual(result.batch.adviserModificationNote, '');
 
   const secondPlan = Transfer.planImport(data.profile, data.advisoryClass, payload, 'math-t1-again.json');
   assert(secondPlan.rows.every(row => row.status === 'conflict'));
   assert(secondPlan.errors.some(message => /already been imported/.test(message)));
   assert.strictEqual(secondPlan.canImport, false, 'duplicate files and existing grades must never be silently overwritten');
+}
+
+// Permitted imports preserve the teacher baseline and allow audited adviser changes without allowing deletion.
+{
+  const data = fixture();
+  const payload = validPayload(data);
+  payload.permissions.adviserMayModifySubmittedGrades = true;
+  payload.permissions.adviserModificationNote = 'Adjust only after checking the learner record.';
+  const plan = Transfer.planImport(data.profile, data.advisoryClass, payload, 'editable-math-t1.json');
+  const result = Transfer.applyImportPlan(data.profile, plan);
+  const grade = data.profile.advisory.grades[0];
+  const learner = data.learners.find(item => item.id === grade.advisoryLearnerId);
+  assert.strictEqual(result.batch.adviserEditAllowed, true);
+  assert.strictEqual(result.batch.adviserModificationNote, payload.permissions.adviserModificationNote);
+  assert.strictEqual(grade.adviserEditAllowed, true);
+  assert.strictEqual(grade.submittedFinalGrade, grade.finalGrade);
+  const original = grade.submittedFinalGrade;
+  const adjusted = Transfer.saveAdviserGradeAdjustment(data.profile, data.advisoryClass, learner, result.subject, '1', '94');
+  assert.strictEqual(adjusted.grade.finalGrade, 94);
+  assert.strictEqual(adjusted.grade.submittedFinalGrade, original);
+  assert.strictEqual(adjusted.grade.sourceType, 'grade-transfer-file');
+  assert(adjusted.grade.adviserModifiedAt);
+  Transfer.saveAdviserGradeAdjustment(data.profile, data.advisoryClass, learner, result.subject, '1', '95');
+  assert.strictEqual(data.profile.advisory.grades.find(item => item.id === grade.id).submittedFinalGrade, original, 'repeated edits must retain the teacher baseline');
+  assert.throws(() => Transfer.saveAdviserGradeAdjustment(data.profile, data.advisoryClass, learner, result.subject, '1', ''), /cannot be cleared/);
+  assert.throws(() => Transfer.saveAdviserGradeAdjustment(data.profile, data.advisoryClass, learner, result.subject, '1', '101'), /60 to 100/);
+
+  const corrected = validPayload(data);
+  corrected.learners[0].finalGrade = 90;
+  corrected.permissions.adviserMayModifySubmittedGrades = false;
+  corrected.permissions.adviserModificationNote = '';
+  const correctedPlan = Transfer.planImport(data.profile, data.advisoryClass, corrected, 'corrected-readonly.json');
+  Transfer.applyConflictDecisionToAll(correctedPlan, 'replace');
+  Transfer.applyImportPlan(data.profile, correctedPlan);
+  const replaced = data.profile.advisory.grades.find(item => item.id === grade.id);
+  assert.strictEqual(replaced.finalGrade, 90);
+  assert.strictEqual(replaced.submittedFinalGrade, 90);
+  assert.strictEqual(replaced.adviserEditAllowed, false);
+  assert.strictEqual(replaced.adviserModifiedAt, '');
+  assert.throws(() => Transfer.saveAdviserGradeAdjustment(data.profile, data.advisoryClass, learner, result.subject, '1', '91'), /did not allow/);
 }
 
 // UI wiring uses local file bridges and has no network dependency.
@@ -268,7 +397,7 @@ function validPayload(data = fixture()) {
 
   const journalism = data.profile.advisory.subjects.find(item => item.normalizedSubjectKey === 'CAMPUS JOURNALISM');
   const specialAssignment = { ...data.assignment, subject: 'Campus Journalism', isSpecialProgramSubject: true, specialProgramWeights: [10, 70, 20] };
-  const payload = Transfer.buildExportPayload({ assignment: specialAssignment, profileDb: data.profile, term: 1, appVersion: '1.5.0', getFinalGrade: () => 88 });
+  const payload = Transfer.buildExportPayload({ assignment: specialAssignment, profileDb: data.profile, term: 1, appVersion: '1.6.0', getFinalGrade: () => 88 });
   assert.strictEqual(payload.subject.isSpecialProgramSubject, true);
   assert.deepStrictEqual(payload.subject.specialProgramWeights, [10, 70, 20]);
   assert.strictEqual(Transfer.validatePayload(payload).isValid, true);

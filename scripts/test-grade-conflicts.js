@@ -18,7 +18,7 @@ function payload(exportId = 'export-1', grades = [88, 90]) {
   return {
     format: Transfer.FORMAT,
     schemaVersion: Transfer.SCHEMA_VERSION,
-    appVersion: '1.5.0',
+    appVersion: '1.6.0',
     exportId,
     exportedAt: '2026-07-13T00:00:00.000Z',
     schoolYear: '2026-2027',
@@ -84,6 +84,29 @@ function importInitial(data) {
   Transfer.applyConflictDecisionToAll(replacePlan, 'replace');
   Transfer.applyImportPlan(replaceData.profile, replacePlan);
   assert.deepStrictEqual(replaceData.profile.advisory.grades.map(item => item.finalGrade), [91, 93]);
+}
+
+// Keeping a corrected re-import preserves an adviser-adjusted grade, its teacher baseline, and its original permission.
+{
+  const data = setup();
+  const permitted = payload('permission-export', [88, 90]);
+  permitted.permissions = { adviserMayModifySubmittedGrades: true, adviserModificationNote: 'Check the supporting record before changing a grade.' };
+  const initialPlan = Transfer.planImport(data.profile, data.advisoryClass, permitted, 'permitted.json');
+  const initial = Transfer.applyImportPlan(data.profile, initialPlan);
+  const learner = data.profile.advisory.learners.find(item => item.id === 'learner-1');
+  const grade = data.profile.advisory.grades.find(item => item.advisoryLearnerId === learner.id);
+  Transfer.saveAdviserGradeAdjustment(data.profile, data.advisoryClass, learner, initial.subject, '1', '94');
+
+  const correctedPayload = payload('permission-export', [91, 92]);
+  correctedPayload.permissions = { adviserMayModifySubmittedGrades: false, adviserModificationNote: '' };
+  const keepPlan = Transfer.planImport(data.profile, data.advisoryClass, correctedPayload, 'corrected-readonly.json');
+  Transfer.applyConflictDecisionToAll(keepPlan, 'keep');
+  Transfer.applyImportPlan(data.profile, keepPlan);
+  const kept = data.profile.advisory.grades.find(item => item.id === grade.id);
+  assert.strictEqual(kept.finalGrade, 94);
+  assert.strictEqual(kept.submittedFinalGrade, 88);
+  assert.strictEqual(kept.adviserEditAllowed, true);
+  assert(kept.adviserModifiedAt);
 }
 
 // Unmatched records can be explicitly mapped; they are never auto-assigned.

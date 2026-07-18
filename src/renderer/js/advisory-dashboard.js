@@ -137,7 +137,7 @@
     }
     const escHtml = globalScope.esc || (value => String(value ?? ''));
     const gradeLevels = ['Kindergarten', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-    const supportedGrades = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
+    const supportedGrades = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']);
     const selectedGrade = existing?.gradeLevel || '';
     const sourceClasses = (profileDb.assignments || []).filter(item => item.schoolYear === schoolYear && Array.isArray(item.learners));
     const sections = [];
@@ -166,6 +166,10 @@
             <div class="field"><label class="field-label" for="advisoryGradeLevel">Grade Level <span aria-hidden="true">*</span></label><select class="field-select" id="advisoryGradeLevel" required><option value="">Select grade level</option>${gradeLevels.map(level => `<option value="${escHtml(level)}" ${selectedGrade === level ? 'selected' : ''} ${supportedGrades.has(level) ? '' : 'disabled'}>${level === 'Kindergarten' ? level : `Grade ${level}`}${supportedGrades.has(level) ? '' : ' (Not yet available)'}</option>`).join('')}</select></div>
             <div class="field"><label class="field-label" for="advisorySectionSelect">Section <span aria-hidden="true">*</span></label><select class="field-select" id="advisorySectionSelect" required><option value="">Select a section</option>${sections.map(item => `<option value="${escHtml(item.value)}" ${selectedSection === item.value ? 'selected' : ''}>${escHtml(item.value)}${item.gradeLevel ? ` (Grade ${escHtml(item.gradeLevel)})` : ''}</option>`).join('')}<option value="__custom__" ${useCustomSection ? 'selected' : ''}>Add a different section...</option></select><input class="field-input advisory-custom-section" id="advisoryCustomSection" value="${escHtml(useCustomSection ? existing.section : '')}" placeholder="Enter the section name" ${useCustomSection ? '' : 'hidden'} /></div>
           </div>
+          <section class="advisory-shs-subject-picker" id="advisorySeniorHighSubjects" hidden>
+            <div><strong>Select the subjects handled by this adviser</strong><p>Only selected subjects will appear in the Senior High grading sheet. You can change this list later in Advisory Settings.</p></div>
+            <div data-advisory-shs-picker></div>
+          </section>
           <div class="field"><label class="field-label" for="advisoryAdviserName">Adviser Name <span aria-hidden="true">*</span></label><input class="field-input" id="advisoryAdviserName" value="${escHtml(existing?.adviserName || profileDb.teacherName || '')}" required /></div>
           <div class="field"><label class="field-label" for="advisorySchoolName">School Name <span aria-hidden="true">*</span></label><input class="field-input" id="advisorySchoolName" value="${escHtml(existing?.schoolName || profileDb.schoolName || '')}" required /></div>
           <div class="split-row">
@@ -206,6 +210,8 @@
     const sectionSelect = overlay.querySelector('#advisorySectionSelect');
     const customSection = overlay.querySelector('#advisoryCustomSection');
     const sourceSelect = overlay.querySelector('#advisorySetupSourceClass');
+    const seniorHighSection = overlay.querySelector('#advisorySeniorHighSubjects');
+    const seniorHighPicker = overlay.querySelector('[data-advisory-shs-picker]');
     const specialClassInput = overlay.querySelector('#advisoryIsSpecialClass');
     const specialClassFields = overlay.querySelector('#advisorySpecialClassFields');
     const syncSpecialClassFields = () => {
@@ -215,6 +221,20 @@
     };
     specialClassInput.addEventListener('change', syncSpecialClassFields);
     syncSpecialClassFields();
+    let selectedSeniorHighSubjects = [];
+    const syncSeniorHighPicker = () => {
+      if (!seniorHighSection || !seniorHighPicker) return;
+      if (!seniorHighSection.hidden) {
+        selectedSeniorHighSubjects = globalScope.AdvisoryGradeTransfer?.collectSeniorHighSubjects?.(seniorHighPicker) || selectedSeniorHighSubjects;
+      }
+      const isSeniorHigh = globalScope.AdvisoryGradeTransfer?.isSeniorHighGrade?.(gradeInput.value);
+      seniorHighSection.hidden = !isSeniorHigh;
+      seniorHighPicker.innerHTML = isSeniorHigh
+        ? (globalScope.AdvisoryGradeTransfer?.seniorHighSubjectPickerMarkup?.(gradeInput.value, selectedSeniorHighSubjects) || '')
+        : '';
+    };
+    gradeInput.addEventListener('change', syncSeniorHighPicker);
+    syncSeniorHighPicker();
     const setSection = section => {
       const normalized = String(section || '').trim();
       const matched = Array.from(sectionSelect.options).find(option => option.value !== '__custom__' && option.value.toLocaleUpperCase() === normalized.toLocaleUpperCase());
@@ -240,6 +260,10 @@
         globalScope.toast(`Grade ${sourceGrade || 'level'} is not yet available for Advisory Class.`, 'warning');
       }
       setSection(sourceClass.section);
+      if (globalScope.AdvisoryGradeTransfer?.isSeniorHighGrade?.(sourceGrade) && sourceClass.subject) {
+        selectedSeniorHighSubjects = [sourceClass.subject];
+      }
+      syncSeniorHighPicker();
     });
     syncCustomSection();
     overlay.querySelector('[data-advisory-save]').addEventListener('click', async () => {
@@ -260,6 +284,10 @@
         isArchived: existing ? overlay.querySelector('#advisoryArchived').checked : false
       };
       const sourceClassId = sourceSelect.value;
+      const isSeniorHigh = globalScope.AdvisoryGradeTransfer?.isSeniorHighGrade?.(values.gradeLevel);
+      const seniorHighSubjects = isSeniorHigh
+        ? (globalScope.AdvisoryGradeTransfer?.collectSeniorHighSubjects?.(seniorHighPicker) || [])
+        : [];
       const specialSubjects = [
         { subjectName: overlay.querySelector('#advisorySpecialSubject1').value.trim(), includeInGeneralAverage: overlay.querySelector('#advisorySpecialSubject1Ga').checked },
         { subjectName: overlay.querySelector('#advisorySpecialSubject2').value.trim(), includeInGeneralAverage: overlay.querySelector('#advisorySpecialSubject2Ga').checked }
@@ -282,8 +310,13 @@
         return;
       }
       if (!supportedGrades.has(values.gradeLevel)) {
-        globalScope.toast('Advisory Class is currently available only for Grades 1 to 10.', 'warning');
+        globalScope.toast('Advisory Class is currently available only for Grades 1 to 12.', 'warning');
         gradeInput.focus();
+        return;
+      }
+      if (isSeniorHigh && !seniorHighSubjects.length) {
+        globalScope.toast('Select at least one Senior High subject.', 'warning');
+        seniorHighPicker.querySelector('input, textarea')?.focus();
         return;
       }
       if (values.isSpecialClass && (!values.specialProgramName || specialSubjects.length < 1)) {
@@ -296,7 +329,8 @@
         const savedClass = existing
           ? globalScope.AdvisoryData.updateClass(profileDb, existing.id, values)
           : globalScope.AdvisoryData.createClass(profileDb, values);
-        globalScope.AdvisoryGradeTransfer?.ensureGradeLevelSubjects?.(profileDb, savedClass);
+        if (isSeniorHigh) globalScope.AdvisoryGradeTransfer?.syncSeniorHighSubjects?.(profileDb, savedClass, seniorHighSubjects);
+        else globalScope.AdvisoryGradeTransfer?.ensureGradeLevelSubjects?.(profileDb, savedClass);
         globalScope.AdvisoryGradeTransfer?.syncSpecialProgramSubjects?.(profileDb, savedClass, specialSubjects);
         await globalScope.saveDatabase();
         close();

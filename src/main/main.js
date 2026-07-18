@@ -135,7 +135,11 @@ function createWindow() {
           const setupModal = document.querySelector('[data-advisory-setup-modal]');
           if (!setupModal) throw new Error('Set Up Advisory Class button did not open its modal.');
           if (setupModal.querySelector('#advisoryGradeLevel')?.tagName !== 'SELECT') throw new Error('Advisory grade level is not a dropdown.');
-          if (!setupModal.querySelector('#advisoryGradeLevel option[value="Kindergarten"]')?.disabled || !setupModal.querySelector('#advisoryGradeLevel option[value="11"]')?.disabled || !setupModal.querySelector('#advisoryGradeLevel option[value="12"]')?.disabled) throw new Error('Unsupported Advisory grade levels are not disabled.');
+          if (!setupModal.querySelector('#advisoryGradeLevel option[value="Kindergarten"]')?.disabled || setupModal.querySelector('#advisoryGradeLevel option[value="11"]')?.disabled || setupModal.querySelector('#advisoryGradeLevel option[value="12"]')?.disabled) throw new Error('Advisory Grades 11 and 12 must be available while unsupported grade levels remain disabled.');
+          const setupGrade = setupModal.querySelector('#advisoryGradeLevel');
+          setupGrade.value = '11';
+          setupGrade.dispatchEvent(new Event('change'));
+          if (setupModal.querySelector('#advisorySeniorHighSubjects')?.hidden || !setupModal.querySelector('[data-advisory-shs-subject]')) throw new Error('Senior High subject selection is unavailable during Advisory setup.');
           if (setupModal.querySelector('#advisorySectionSelect')?.tagName !== 'SELECT' || !setupModal.querySelector('#advisorySectionSelect option[value="__custom__"]')) throw new Error('Advisory section choices are unavailable.');
           if (!setupModal.querySelector('#advisoryIsSpecialClass') || !setupModal.querySelector('#advisorySpecialProgramName') || !setupModal.querySelector('#advisorySpecialSubject1') || !setupModal.querySelector('#advisorySpecialSubject2')) throw new Error('Special Class setup fields were not rendered.');
           setupModal.querySelector('#advisoryIsSpecialClass').click();
@@ -281,6 +285,11 @@ function createWindow() {
           if (advisoryPage.querySelector('[data-open-advisory-roster-tools]')) throw new Error('Manage Roster still depends on a separate manager modal.');
           advisoryPage.querySelector('[data-advisory-page-tab="settings"]').click();
           if (advisoryPage.querySelector('[data-advisory-panel="settings"]').hidden || !advisoryPage.querySelector('[data-advisory-settings-form]') || !advisoryPage.querySelector('#advisoryInlineGrade') || !advisoryPage.querySelector('#advisoryInlineSection') || !advisoryPage.querySelector('#advisoryInlineSpecialClass') || !advisoryPage.querySelector('#advisoryInlineSpecialSubject1') || !advisoryPage.querySelector('[data-advisory-panel="settings"]').textContent.includes('Managed in Global Settings')) throw new Error('Editable Advisory-only settings were not rendered inline.');
+          if (!advisoryPage.querySelector('#advisoryInlineGrade option[value="11"]') || !advisoryPage.querySelector('#advisoryInlineGrade option[value="12"]')) throw new Error('Advisory Settings is missing Grades 11 or 12.');
+          const inlineGrade = advisoryPage.querySelector('#advisoryInlineGrade');
+          inlineGrade.value = '11';
+          inlineGrade.dispatchEvent(new Event('change'));
+          if (advisoryPage.querySelector('[data-advisory-inline-shs]')?.hidden || !advisoryPage.querySelector('[data-advisory-inline-shs-picker] [data-advisory-shs-subject]')) throw new Error('Senior High subject selection is unavailable in Advisory Settings.');
           if (advisoryPage.querySelector('[data-open-advisory-settings]')) throw new Error('Advisory Settings still depends on an edit modal.');
           advisoryPage.querySelector('[data-advisory-page-tab="grades"]').click();
           showAdvisoryClassSetupModal();
