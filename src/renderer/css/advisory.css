@@ -390,6 +390,8 @@
 .advisory-grade-matrix--finals-only col.advisory-general-col { width: 8%; }
 .advisory-grade-matrix th:not(:first-child),
 .advisory-grade-matrix td:not(:first-child) { text-align: center; }
+.advisory-grade-matrix thead { position: sticky; top: 0; z-index: 4; }
+.advisory-grade-matrix thead th { position: static; top: auto; }
 .advisory-grade-matrix thead tr:nth-child(2) th { text-align: center; }
 .advisory-grade-matrix .advisory-learner-heading,
 .advisory-grade-matrix tbody td:first-child { position: sticky; left: 0; width: 230px; min-width: 230px; max-width: 230px; background: var(--bg-surface); box-shadow: 2px 0 0 var(--border-subtle); }

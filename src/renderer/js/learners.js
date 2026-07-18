@@ -49,6 +49,10 @@ function showAddLearnerModal() {
               <option value="F">Female / Girl</option>
             </select>
           </div>
+          <div class="field" style="flex: 1; margin-bottom: 0;">
+            <label class="field-label">Birthdate <span class="text-muted">(Optional)</span></label>
+            <input id="modalLearnerBirthdate" type="date" class="field-input" max="${todayIsoDate()}" />
+          </div>
         </div>
         <div class="add-learner-shortcuts">
           <div class="add-learner-shortcuts__title">Other ways to add learners</div>
@@ -91,6 +95,7 @@ function showAddLearnerModal() {
   const firstInput = overlay.querySelector('#modalLearnerFirst');
   const middleInput = overlay.querySelector('#modalLearnerMiddle');
   const sexInput = overlay.querySelector('#modalLearnerSex');
+  const birthdateInput = overlay.querySelector('#modalLearnerBirthdate');
   const confirmBtn = overlay.querySelector('#btnConfirmAddLearner');
 
   const submit = () => {
@@ -99,9 +104,14 @@ function showAddLearnerModal() {
     const firstName = normalizeNamePart(firstInput.value);
     const middleName = normalizeNamePart(middleInput.value);
     const sex = sexInput.value;
+    const birthdateError = validateLearnerBirthdate(birthdateInput.value);
 
     if (!lastName && !firstName) {
       toast('Enter at least a learner name.', 'warning');
+      return;
+    }
+    if (birthdateError) {
+      toast(birthdateError, 'warning');
       return;
     }
 
@@ -111,7 +121,8 @@ function showAddLearnerModal() {
       lastName: lastName,
       firstName: firstName,
       middleName: middleName,
-      sex: sex
+      sex: sex,
+      birthdate: normalizeLearnerBirthdate(birthdateInput.value)
     };
 
     learner.displayName = formatLearnerName(learner.lastName, learner.firstName, learner.middleName);
@@ -245,6 +256,63 @@ function normalizeSex(value) {
   return '';
 }
 
+function todayIsoDate() {
+  const now = new Date();
+  return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+}
+
+function isoLearnerBirthdate(year, month, day) {
+  const y = Number(year);
+  const m = Number(month);
+  const d = Number(day);
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d) || y < 1900 || m < 1 || m > 12 || d < 1 || d > 31) return '';
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return '';
+  const normalized = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  return normalized <= todayIsoDate() ? normalized : '';
+}
+
+/** Normalizes UI, SF1, and Excel date values into the database's YYYY-MM-DD form. */
+function normalizeLearnerBirthdate(value) {
+  if (value === undefined || value === null || value === '') return '';
+  if (Object.prototype.toString.call(value) === '[object Date]' && !Number.isNaN(value.getTime())) {
+    return isoLearnerBirthdate(value.getUTCFullYear(), value.getUTCMonth() + 1, value.getUTCDate());
+  }
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0 && value < 100000) {
+    const excelDate = new Date(Date.UTC(1899, 11, 30) + Math.floor(value) * 86400000);
+    return isoLearnerBirthdate(excelDate.getUTCFullYear(), excelDate.getUTCMonth() + 1, excelDate.getUTCDate());
+  }
+  const raw = trim(value);
+  if (!raw) return '';
+  let match = raw.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/);
+  if (match) return isoLearnerBirthdate(match[1], match[2], match[3]);
+  match = raw.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2}|\d{4})$/);
+  if (match) {
+    let year = Number(match[3]);
+    if (year < 100) year += year <= Number(todayIsoDate().slice(2, 4)) ? 2000 : 1900;
+    return isoLearnerBirthdate(year, match[1], match[2]);
+  }
+  if (/[A-Za-z]/.test(raw)) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) return isoLearnerBirthdate(parsed.getUTCFullYear(), parsed.getUTCMonth() + 1, parsed.getUTCDate());
+  }
+  return '';
+}
+
+function validateLearnerBirthdate(value) {
+  return trim(value) && !normalizeLearnerBirthdate(value)
+    ? 'Birthdate must be a valid date from 1900 through today.'
+    : '';
+}
+
+function formatLearnerBirthdate(value) {
+  const normalized = normalizeLearnerBirthdate(value);
+  if (!normalized) return '—';
+  const [year, month, day] = normalized.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-PH', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
+    .format(new Date(Date.UTC(year, month - 1, day)));
+}
+
 /**
  * Order weight for sex groups.
  */
@@ -356,9 +424,10 @@ function renderLearnersRoster() {
       <thead>
         <tr style="border-bottom:2px solid var(--border-color);text-align:left">
           <th style="padding:var(--space-2);width:8%">No.</th>
-          <th style="padding:var(--space-2);width:25%">LRN</th>
+          <th style="padding:var(--space-2);width:18%">LRN</th>
           <th style="padding:var(--space-2)">Name</th>
-          <th style="padding:var(--space-2);width:15%">Sex</th>
+          <th style="padding:var(--space-2);width:9%">Sex</th>
+          <th style="padding:var(--space-2);width:15%">Birthdate</th>
           <th style="padding:var(--space-2);width:22%;text-align:center">Action</th>
         </tr>
       </thead>
@@ -404,6 +473,7 @@ function renderLearnersRoster() {
         <td style="padding:var(--space-2)">${esc(l.lrn || '—')}</td>
         <td style="padding:var(--space-2)"><strong>${esc(learnerDisplayName(l))}</strong>${badgeHtml}</td>
         <td style="padding:var(--space-2)">${esc(l.sex || '—')}</td>
+        <td style="padding:var(--space-2);white-space:nowrap">${esc(formatLearnerBirthdate(l.birthdate))}</td>
         <td style="padding:var(--space-2);text-align:center">
           <div class="roster-row-actions">
             ${exportBtnHtml}
@@ -486,6 +556,7 @@ function createTransferTargetLearner(learner, completedTermGrades) {
     firstName: learner.firstName,
     middleName: learner.middleName || '',
     sex: learner.sex,
+    birthdate: normalizeLearnerBirthdate(learner.birthdate),
     transferredInGrades: completedTermGrades
   };
   targetLearner.displayName = formatLearnerName(targetLearner.lastName, targetLearner.firstName, targetLearner.middleName);
@@ -726,6 +797,10 @@ function removeLearner(learnerId) {
                 <option value="F" ${learner.sex === 'F' ? 'selected' : ''}>Female / Girl</option>
               </select>
             </div>
+            <div class="field" style="flex: 1; margin-bottom: 0;">
+              <label class="field-label">Birthdate</label>
+              <input id="editLearnerBirthdate" type="date" class="field-input" max="${todayIsoDate()}" value="${esc(normalizeLearnerBirthdate(learner.birthdate))}" />
+            </div>
           </div>
           <button class="btn btn-primary btn-sm" id="btnSaveLearnerInfo" style="width: 100%;">
             Save Profile Info
@@ -804,9 +879,15 @@ function removeLearner(learnerId) {
     const editFirst = normalizeNamePart(overlay.querySelector('#editLearnerFirst').value);
     const editMiddle = normalizeNamePart(overlay.querySelector('#editLearnerMiddle').value);
     const editSex = overlay.querySelector('#editLearnerSex').value;
+    const editBirthdateInput = overlay.querySelector('#editLearnerBirthdate').value;
+    const editBirthdateError = validateLearnerBirthdate(editBirthdateInput);
 
     if (!editLast && !editFirst) {
       toast('Enter at least a learner name.', 'warning');
+      return;
+    }
+    if (editBirthdateError) {
+      toast(editBirthdateError, 'warning');
       return;
     }
 
@@ -815,6 +896,7 @@ function removeLearner(learnerId) {
     learner.firstName = editFirst;
     learner.middleName = editMiddle;
     learner.sex = editSex;
+    learner.birthdate = normalizeLearnerBirthdate(editBirthdateInput);
     learner.displayName = formatLearnerName(editLast, editFirst, editMiddle);
 
     saveDatabase();
@@ -903,7 +985,7 @@ function showBulkAddLearnersModal() {
                 Accepted formats:<br>
                 • <code>Last Name, First Name Middle Name</code> (e.g. <code>Dela Cruz, Juan Abad</code>)<br>
                 • <code>First Name Middle Name Last Name</code> (e.g. <code>Juan Abad Dela Cruz</code>)<br>
-                • Delimited (CSV/Excel copy): <code>LRN, Last, First, Sex, Middle</code>
+                • Delimited (CSV/Excel copy): <code>LRN, Last, First, Sex, Middle, Birthdate</code>
               </div>
               <textarea id="bulkLearnersText" class="field-textarea bulk-textarea" placeholder="Paste student names/list here..."></textarea>
             </div>
@@ -1006,6 +1088,7 @@ function showBulkAddLearnersModal() {
       let first = '';
       let middle = '';
       let sex = '';
+      let birthdate = '';
 
       if (cols.length >= 2) {
         // Delimited row parsing
@@ -1025,6 +1108,12 @@ function showBulkAddLearnersModal() {
           const foundSex = cols[sexIdx].toLowerCase();
           sex = foundSex.startsWith('m') ? 'M' : 'F';
           cols.splice(sexIdx, 1);
+        }
+
+        const birthdateIdx = cols.findIndex(col => Boolean(normalizeLearnerBirthdate(col)));
+        if (birthdateIdx !== -1) {
+          birthdate = normalizeLearnerBirthdate(cols[birthdateIdx]);
+          cols.splice(birthdateIdx, 1);
         }
 
         // Parse remaining columns for names
@@ -1066,6 +1155,7 @@ function showBulkAddLearnersModal() {
         firstName: first,
         middleName: middle,
         sex: sex,
+        birthdate: birthdate,
         displayName: formatLearnerName(last, first, middle)
       });
     }
@@ -1101,6 +1191,7 @@ function showBulkAddLearnersModal() {
             <div class="bulk-preview-item__name">${index + 1}. ${esc(l.displayName)}</div>
             <div class="bulk-preview-item__meta">
               <span style="font-family:monospace;color:var(--text-tertiary);">${esc(l.lrn || '—')}</span>
+              <span>${esc(formatLearnerBirthdate(l.birthdate))}</span>
               ${genderBadge}
             </div>
           </li>
@@ -1176,6 +1267,7 @@ function showBulkAddLearnersModal() {
           firstName: l.firstName,
           middleName: l.middleName,
           sex: l.sex,
+          birthdate: l.birthdate,
           displayName: l.displayName
         });
         added++;

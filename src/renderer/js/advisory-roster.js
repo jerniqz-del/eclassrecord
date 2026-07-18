@@ -46,6 +46,12 @@
   }
 
   function normalizeIncoming(learner, source) {
+    const rawBirthdate = text(learner?.birthdate ?? learner?.birthDate ?? learner?.dateOfBirth);
+    const birthdate = typeof globalScope.normalizeLearnerBirthdate === 'function'
+      ? globalScope.normalizeLearnerBirthdate(rawBirthdate)
+      : rawBirthdate;
+    const birthdateImportError = text(learner?.birthdateImportError)
+      || (rawBirthdate && !birthdate ? 'Birthdate must be a valid date from 1900 through today.' : '');
     return {
       linkedLearnerId: text(learner?.linkedLearnerId || learner?.id),
       lrn: text(learner?.lrn).replace(/\s+/g, ''),
@@ -54,7 +60,8 @@
       middleName: text(learner?.middleName),
       extensionName: text(learner?.extensionName),
       sex: normalizeSexValue(learner?.sex),
-      birthdate: text(learner?.birthdate),
+      birthdate,
+      ...(birthdateImportError ? { birthdateImportError } : {}),
       enrollmentStatus: text(learner?.enrollmentStatus) || 'active',
       source: text(source || learner?.source) || 'manual'
     };
@@ -65,6 +72,11 @@
     if (!learner.lastName) errors.push('Last name is required.');
     if (!learner.firstName) errors.push('First name is required.');
     if (learner.lrn && !/^\d{12}$/.test(learner.lrn)) errors.push('LRN must contain exactly 12 digits.');
+    if (learner.birthdateImportError) errors.push(learner.birthdateImportError);
+    else if (learner.birthdate && typeof globalScope.validateLearnerBirthdate === 'function') {
+      const birthdateError = globalScope.validateLearnerBirthdate(learner.birthdate);
+      if (birthdateError) errors.push(birthdateError);
+    }
     ['lastName', 'firstName', 'middleName', 'extensionName'].forEach(field => {
       if (learner[field] && !/^[\p{L}\p{M} .,'’\-]+$/u.test(learner[field])) errors.push(`${field} contains unsupported characters.`);
     });
@@ -188,10 +200,12 @@
       if (columns.length >= 2) {
         const lrnIndex = columns.findIndex(value => /^\d{12}$/.test(value.replace(/\s/g, '')));
         const sexIndex = columns.findIndex(value => /^(m|f|male|female|boy|girl)$/i.test(value));
+        const birthdateIndex = columns.findIndex(value => typeof globalScope.normalizeLearnerBirthdate === 'function' && globalScope.normalizeLearnerBirthdate(value));
         const lrn = lrnIndex >= 0 ? columns[lrnIndex].replace(/\s/g, '') : '';
         const sex = sexIndex >= 0 ? normalizeSexValue(columns[sexIndex]) : normalizeSexValue(defaultSex);
-        const names = columns.filter((_, columnIndex) => columnIndex !== lrnIndex && columnIndex !== sexIndex);
-        learner = { lrn, lastName: names[0] || '', firstName: names[1] || '', middleName: names[2] || '', extensionName: names[3] || '', sex };
+        const birthdate = birthdateIndex >= 0 ? globalScope.normalizeLearnerBirthdate(columns[birthdateIndex]) : '';
+        const names = columns.filter((_, columnIndex) => columnIndex !== lrnIndex && columnIndex !== sexIndex && columnIndex !== birthdateIndex);
+        learner = { lrn, lastName: names[0] || '', firstName: names[1] || '', middleName: names[2] || '', extensionName: names[3] || '', sex, birthdate };
       } else {
         learner = { ...parseLooseName(line), lrn: '', extensionName: '', sex: normalizeSexValue(defaultSex) };
       }
@@ -239,13 +253,14 @@
         <td class="advisory-roster__lrn">${escHtml(learner.lrn || '—')}</td>
         <td><strong>${escHtml(displayName(learner))}</strong></td>
         <td>${escHtml(learner.sex || '—')}</td>
+        <td>${escHtml(globalScope.formatLearnerBirthdate?.(learner.birthdate) || learner.birthdate || '—')}</td>
         <td>${escHtml(learner.enrollmentStatus || 'active')}</td>
         <td>${escHtml(learner.source || 'manual')}</td>
         <td class="advisory-roster__actions">
           <button class="btn btn-ghost btn-sm" type="button" data-edit-advisory-learner="${escHtml(learner.id)}">Edit</button>
           <button class="btn btn-danger btn-sm" type="button" data-remove-advisory-learner="${escHtml(learner.id)}">Remove</button>
         </td>
-      </tr>`).join('') : '<tr><td colspan="7"><div class="advisory-roster__empty">No learners yet. Import an existing roster, add learners manually, paste a list, or upload a supported SF1 file.</div></td></tr>';
+      </tr>`).join('') : '<tr><td colspan="8"><div class="advisory-roster__empty">No learners yet. Import an existing roster, add learners manually, paste a list, or upload a supported SF1 file.</div></td></tr>';
     body.querySelectorAll('[data-edit-advisory-learner]').forEach(button => button.addEventListener('click', () => showLearnerForm(button.dataset.editAdvisoryLearner)));
     body.querySelectorAll('[data-remove-advisory-learner]').forEach(button => button.addEventListener('click', () => removeLearner(button.dataset.removeAdvisoryLearner)));
   }
@@ -272,7 +287,7 @@
             <span class="advisory-workspace__count" data-advisory-manager-roster-count></span>
           </div>
           <div class="advisory-workspace__body">
-            <div class="advisory-roster-table-wrap"><table class="advisory-roster-table"><thead><tr><th>#</th><th>LRN</th><th>Official Name</th><th>Sex</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody data-advisory-manager-roster-body></tbody></table></div>
+            <div class="advisory-roster-table-wrap"><table class="advisory-roster-table"><thead><tr><th>#</th><th>LRN</th><th>Official Name</th><th>Sex</th><th>Birthdate</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody data-advisory-manager-roster-body></tbody></table></div>
           </div>
         </div>`;
       document.body.appendChild(overlay);
@@ -305,13 +320,14 @@
         <td class="advisory-roster__lrn">${escHtml(learner.lrn || '—')}</td>
         <td><strong>${escHtml(displayName(learner))}</strong></td>
         <td>${escHtml(learner.sex || '—')}</td>
+        <td>${escHtml(globalScope.formatLearnerBirthdate?.(learner.birthdate) || learner.birthdate || '—')}</td>
         <td>${escHtml(learner.enrollmentStatus || 'active')}</td>
         <td>${escHtml(learner.source || 'manual')}</td>
         <td class="advisory-roster__actions">
           <button class="btn btn-ghost btn-sm" type="button" data-edit-advisory-learner="${escHtml(learner.id)}">Edit</button>
           <button class="btn btn-danger btn-sm" type="button" data-remove-advisory-learner="${escHtml(learner.id)}">Remove</button>
         </td>
-      </tr>`).join('') : '<tr><td colspan="7"><div class="advisory-roster__empty">No learners yet. Import an existing roster, add learners manually, paste a list, or upload a supported SF1 file.</div></td></tr>';
+      </tr>`).join('') : '<tr><td colspan="8"><div class="advisory-roster__empty">No learners yet. Import an existing roster, add learners manually, paste a list, or upload a supported SF1 file.</div></td></tr>';
     body.querySelectorAll('[data-edit-advisory-learner]').forEach(button => button.addEventListener('click', () => showLearnerForm(button.dataset.editAdvisoryLearner)));
     body.querySelectorAll('[data-remove-advisory-learner]').forEach(button => button.addEventListener('click', () => removeLearner(button.dataset.removeAdvisoryLearner)));
     if (globalScope.AdvisoryGradeTransfer?.renderWorkspacePanel) globalScope.AdvisoryGradeTransfer.renderWorkspacePanel(overlay, advisoryClass);
@@ -364,7 +380,7 @@
       <div class="field"><label class="field-label">Learner Reference Number (LRN)</label><input class="field-input" data-field="lrn" maxlength="12" inputmode="numeric" value="${escHtml(existing?.lrn || '')}"></div>
       <div class="split-row"><div class="field"><label class="field-label">Last Name</label><input class="field-input" data-field="lastName" value="${escHtml(existing?.lastName || '')}"></div><div class="field"><label class="field-label">First Name</label><input class="field-input" data-field="firstName" value="${escHtml(existing?.firstName || '')}"></div></div>
       <div class="split-row"><div class="field"><label class="field-label">Middle Name</label><input class="field-input" data-field="middleName" value="${escHtml(existing?.middleName || '')}"></div><div class="field"><label class="field-label">Extension Name</label><input class="field-input" data-field="extensionName" value="${escHtml(existing?.extensionName || '')}"></div></div>
-      <div class="split-row"><div class="field"><label class="field-label">Sex</label><select class="field-select" data-field="sex"><option value=""></option><option value="M" ${existing?.sex === 'M' ? 'selected' : ''}>Male / Boy</option><option value="F" ${existing?.sex === 'F' ? 'selected' : ''}>Female / Girl</option></select></div><div class="field"><label class="field-label">Birthdate</label><input type="date" class="field-input" data-field="birthdate" value="${escHtml(existing?.birthdate || '')}"></div></div>
+      <div class="split-row"><div class="field"><label class="field-label">Sex</label><select class="field-select" data-field="sex"><option value=""></option><option value="M" ${existing?.sex === 'M' ? 'selected' : ''}>Male / Boy</option><option value="F" ${existing?.sex === 'F' ? 'selected' : ''}>Female / Girl</option></select></div><div class="field"><label class="field-label">Birthdate</label><input type="date" class="field-input" data-field="birthdate" max="${globalScope.todayIsoDate?.() || ''}" value="${escHtml(existing?.birthdate || '')}"></div></div>
       <div class="field"><label class="field-label">Enrollment Status</label><select class="field-select" data-field="enrollmentStatus"><option value="active">Active</option><option value="transferred">Transferred</option><option value="inactive">Inactive</option></select></div>
     </div><div class="modal__actions"><button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-save>${existing ? 'Save Changes' : 'Add Learner'}</button></div></div>`;
     document.body.appendChild(overlay);
@@ -439,7 +455,7 @@
   function showBulkModal() {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay advisory-nested-modal';
-    overlay.innerHTML = `<div class="modal modal--wide"><div class="modal__title">Bulk Add Advisory Learners</div><div class="modal__body advisory-scroll-body"><p class="text-muted">Paste one learner per row. Supported columns: LRN, Last Name, First Name, Middle Name, Extension, Sex. Valid rows can be selected independently after preview.</p><div class="field"><label class="field-label">Learner List</label><textarea class="field-textarea bulk-textarea" data-bulk-text></textarea></div><div class="field"><label class="field-label">Default Sex</label><select class="field-select" data-default-sex><option value="">Use row value / unspecified</option><option value="M">Male / Boy</option><option value="F">Female / Girl</option></select></div></div><div class="modal__actions"><button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-review>Review Rows</button></div></div>`;
+    overlay.innerHTML = `<div class="modal modal--wide"><div class="modal__title">Bulk Add Advisory Learners</div><div class="modal__body advisory-scroll-body"><p class="text-muted">Paste one learner per row. Supported columns: LRN, Last Name, First Name, Middle Name, Extension, Sex, Birthdate. Valid rows can be selected independently after preview.</p><div class="field"><label class="field-label">Learner List</label><textarea class="field-textarea bulk-textarea" data-bulk-text></textarea></div><div class="field"><label class="field-label">Default Sex</label><select class="field-select" data-default-sex><option value="">Use row value / unspecified</option><option value="M">Male / Boy</option><option value="F">Female / Girl</option></select></div></div><div class="modal__actions"><button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-review>Review Rows</button></div></div>`;
     document.body.appendChild(overlay);
     overlay.querySelector('[data-cancel]').addEventListener('click', () => closeElement(overlay));
     overlay.querySelector('[data-review]').addEventListener('click', () => {

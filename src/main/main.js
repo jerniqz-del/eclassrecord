@@ -465,14 +465,20 @@ function createWindow() {
             const general = matrix?.querySelector('.advisory-general-average');
             const learner = matrix?.querySelector('tbody td:first-child');
             const compact = matrix?.querySelector('.advisory-subject-name--compact');
+            wrap.scrollTop = Math.min(120, Math.max(0, wrap.scrollHeight - wrap.clientHeight));
+            const subjectHeader = matrix?.querySelector('thead tr:first-child .advisory-subject-heading');
+            const finalHeader = matrix?.querySelector('thead tr:nth-child(2) th');
+            const subjectHeaderRect = subjectHeader?.getBoundingClientRect();
+            const finalHeaderRect = finalHeader?.getBoundingClientRect();
             return {
               overflow: wrap.scrollWidth - wrap.clientWidth,
               generalVisible: Boolean(general && general.getBoundingClientRect().right <= wrap.getBoundingClientRect().right + 1),
               learnerWrap: learner ? getComputedStyle(learner).whiteSpace === 'normal' : false,
-              compactVisible: compact ? getComputedStyle(compact).display !== 'none' : false
+              compactVisible: compact ? getComputedStyle(compact).display !== 'none' : false,
+              headerRowsSeparated: Boolean(subjectHeaderRect && finalHeaderRect && finalHeaderRect.top >= subjectHeaderRect.bottom - 1)
             };
           })()`);
-          if (zoomResult.overflow > 2 || !zoomResult.generalVisible || !zoomResult.learnerWrap || (factor > 1 && !zoomResult.compactVisible)) {
+          if (zoomResult.overflow > 2 || !zoomResult.generalVisible || !zoomResult.learnerWrap || !zoomResult.headerRowsSeparated || (factor > 1 && !zoomResult.compactVisible)) {
             throw new Error(`Final-only layout failed at ${factor * 100}% zoom: ${JSON.stringify(zoomResult)}`);
           }
           zoomChecks.push(factor);

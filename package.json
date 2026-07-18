@@ -15,8 +15,9 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "test": "npm run test:database-future-proof && npm run test:admin-auth && npm run test:admin-test-mode && npm run test:admin-mock-files && npm run test:advisory-data && npm run test:special-program && npm run test:senior-high && npm run test:record-layout && npm run test:advisory-compatibility && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer && npm run test:adviser-grade-permission && npm run test:grade-conflicts && npm run test:advisory-backup && npm run test:advisory-e2e && npm run test:advisory-redesign",
+    "test": "npm run test:database-future-proof && npm run test:learner-birthdate && npm run test:admin-auth && npm run test:admin-test-mode && npm run test:admin-mock-files && npm run test:advisory-data && npm run test:special-program && npm run test:senior-high && npm run test:record-layout && npm run test:advisory-compatibility && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer && npm run test:adviser-grade-permission && npm run test:grade-conflicts && npm run test:advisory-backup && npm run test:advisory-e2e && npm run test:advisory-redesign",
     "test:database-future-proof": "node scripts/test-database-future-proof.js",
+    "test:learner-birthdate": "node scripts/test-learner-birthdate.js",
     "test:admin-auth": "node scripts/test-admin-auth.js",
     "test:admin-test-mode": "node scripts/test-admin-test-mode.js",
     "test:admin-mock-files": "node scripts/test-admin-mock-file-workflow.js",

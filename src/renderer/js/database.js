@@ -207,6 +207,11 @@ function normalizeDatabase() {
 
     if (!a.assessments) a.assessments = [];
     if (!a.scores) a.scores = {};
+    if (!Array.isArray(a.learners)) a.learners = [];
+    a.learners = a.learners.filter(learner => learner && typeof learner === 'object').map(learner => {
+      learner.birthdate = normalizeLearnerBirthdate(learner.birthdate ?? learner.birthDate ?? learner.dateOfBirth);
+      return learner;
+    });
     
     normalizeAssessmentComponents(a);
     ensureTemplateAssessments(a);

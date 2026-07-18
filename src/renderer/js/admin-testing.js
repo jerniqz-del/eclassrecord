@@ -49,7 +49,8 @@
       firstName: parts[1],
       middleName: parts[2],
       displayName: `${parts[0]}, ${parts[1]} ${parts[2].charAt(0)}.`,
-      sex: parts[3]
+      sex: parts[3],
+      birthdate: `20${String(8 + (index % 3)).padStart(2, '0')}-${String((index % 12) + 1).padStart(2, '0')}-${String((index % 24) + 1).padStart(2, '0')}`
     }));
   }
 
@@ -160,6 +161,7 @@
       firstName: learner.firstName,
       middleName: learner.middleName,
       sex: learner.sex,
+      birthdate: learner.birthdate,
       enrollmentStatus: 'active',
       source: 'class-load',
       createdAt: TEST_TIMESTAMP,

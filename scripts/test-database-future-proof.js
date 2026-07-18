@@ -103,6 +103,17 @@ function renderQrPixels(payload) {
   futureEnvelope.backupVersion = 99;
   await assert.rejects(() => context.openBackupEnvelope(futureEnvelope), /newer app version/);
 
+  // Optional learner birthdates are covered by the existing integrity envelope
+  // without breaking older backups whose learner records do not contain the field.
+  const birthdateProfile = fixture(5);
+  birthdateProfile.assignments[0].learners.push({
+    id: 'learner-birthdate', lrn: '123456789012', lastName: 'Dela Cruz', firstName: 'Juan', sex: 'M', birthdate: '2010-07-18'
+  });
+  const birthdateEnvelope = await context.createBackupEnvelope(birthdateProfile, '', { appVersion: '1.6.3-test' });
+  const restoredBirthdateProfile = await context.openBackupEnvelope(birthdateEnvelope);
+  assert.strictEqual(restoredBirthdateProfile.assignments[0].learners[0].birthdate, '2010-07-18');
+  assert.strictEqual((await context.openBackupEnvelope(plainEnvelope)).assignments[0].learners.length, 0, 'legacy backups without birthdates must remain readable');
+
   // Main-process secondary backups use the same envelope and are readable by the renderer importer.
   const fileIoModule = { exports: {} };
   const fileIoContext = {

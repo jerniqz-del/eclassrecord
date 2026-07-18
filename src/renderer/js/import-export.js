@@ -166,7 +166,13 @@ async function importSf1() {
       }
       
       // Merge learners
+      let invalidBirthdateCount = 0;
       for (let i = 0; i < learners.length; i++) {
+        if (learners[i].birthdateImportError) {
+          invalidBirthdateCount++;
+          learners[i].birthdate = '';
+          delete learners[i].birthdateImportError;
+        }
         learners[i].id = uid('learner');
         a.learners.push(learners[i]);
       }
@@ -175,6 +181,7 @@ async function importSf1() {
       saveDatabase();
       render();
       toast(`Successfully imported ${learners.length} learners from SF1.`, 'success');
+      if (invalidBirthdateCount) toast(`${invalidBirthdateCount} invalid or future birthdate${invalidBirthdateCount === 1 ? ' was' : 's were'} left blank.`, 'warning');
     } else if (result.error) {
       toast('SF1 processing failed: ' + result.error, 'error');
     }
@@ -569,6 +576,9 @@ function extractSf1Learners(table) {
     const parsed = header ? parseSf1RowWithHeader(row, header, currentSex) : parseSf1RowWithoutHeader(row, currentSex);
     if (parsed && parsed.lastName && parsed.firstName) {
       parsed.sex = normalizeSex(parsed.sex || currentSex);
+      const birthdateError = validateLearnerBirthdate(parsed.birthdate);
+      if (birthdateError) parsed.birthdateImportError = birthdateError;
+      else parsed.birthdate = normalizeLearnerBirthdate(parsed.birthdate);
       parsed.displayName = formatLearnerName(parsed.lastName, parsed.firstName, parsed.middleName);
       learners.push(parsed);
     }
@@ -577,7 +587,7 @@ function extractSf1Learners(table) {
 }
 
 function detectSf1Header(row) {
-  const header = { lrn: -1, name: -1, last: -1, first: -1, middle: -1, sex: -1 };
+  const header = { lrn: -1, name: -1, last: -1, first: -1, middle: -1, sex: -1, birthdate: -1 };
   let hits = 0;
   for (let c = 0; c < row.length; c++) {
     const cell = normalizeHeader(row[c]);
@@ -604,6 +614,10 @@ function detectSf1Header(row) {
     }
     if (cell === 'sex' || cell === 'gender' || cell.includes('sex') || cell.includes('gender')) {
       header.sex = c;
+      hits++;
+    }
+    if (cell === 'birthdate' || cell === 'birth date' || cell === 'date of birth' || cell === 'birthday' || cell.includes('birth date')) {
+      header.birthdate = c;
       hits++;
     }
   }
@@ -638,6 +652,7 @@ function parseSf1RowWithHeader(row, header, fallbackSex) {
     firstName: name.firstName,
     middleName: name.middleName,
     sex: header.sex >= 0 ? normalizeSex(row[header.sex]) : normalizeSex(fallbackSex),
+    birthdate: header.birthdate >= 0 ? trim(row[header.birthdate]) : '',
     displayName: ''
   };
 }
@@ -1127,7 +1142,9 @@ async function exportLearnerTransferFile(learnerId) {
       lrn: learner.lrn || '',
       lastName: learner.lastName,
       firstName: learner.firstName,
-      sex: learner.sex
+      middleName: learner.middleName || '',
+      sex: learner.sex,
+      birthdate: normalizeLearnerBirthdate(learner.birthdate)
     },
     completedTermGrades: compGrades
   };
@@ -1227,10 +1244,12 @@ async function importLearnerTransferFile() {
       lrn: l.lrn || '',
       lastName: l.lastName,
       firstName: l.firstName,
+      middleName: l.middleName || '',
       sex: normalizeSex(l.sex || ''),
+      birthdate: normalizeLearnerBirthdate(l.birthdate),
       transferredInGrades: payload.completedTermGrades || {}
     };
-    newLearner.displayName = formatLearnerName(newLearner.lastName, newLearner.firstName, '');
+    newLearner.displayName = formatLearnerName(newLearner.lastName, newLearner.firstName, newLearner.middleName);
     
     activeAssignment.learners.push(newLearner);
     saveDatabase();
@@ -1373,10 +1392,12 @@ function showDirectClassCopyModal() {
       lrn: sourceLearner.lrn || '',
       lastName: sourceLearner.lastName,
       firstName: sourceLearner.firstName,
+      middleName: sourceLearner.middleName || '',
       sex: sourceLearner.sex,
+      birthdate: normalizeLearnerBirthdate(sourceLearner.birthdate),
       transferredInGrades: compGrades
     };
-    targetLearner.displayName = formatLearnerName(targetLearner.lastName, targetLearner.firstName, '');
+    targetLearner.displayName = formatLearnerName(targetLearner.lastName, targetLearner.firstName, targetLearner.middleName);
     
     a.learners.push(targetLearner);
     saveDatabase();
@@ -1557,7 +1578,8 @@ function performRosterImport(sourceAsg, mode) {
       lastName: sourceLearner.lastName,
       firstName: sourceLearner.firstName,
       middleName: sourceLearner.middleName || '',
-      sex: sourceLearner.sex || ''
+      sex: sourceLearner.sex || '',
+      birthdate: normalizeLearnerBirthdate(sourceLearner.birthdate)
     };
     clonedLearner.displayName = formatLearnerName(clonedLearner.lastName, clonedLearner.firstName, clonedLearner.middleName);
 

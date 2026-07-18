@@ -88,7 +88,9 @@
       middleName: cleanString(item.middleName),
       extensionName: cleanString(item.extensionName),
       sex: cleanString(item.sex).toUpperCase(),
-      birthdate: cleanString(item.birthdate),
+      birthdate: typeof globalScope.normalizeLearnerBirthdate === 'function'
+        ? globalScope.normalizeLearnerBirthdate(item.birthdate ?? item.birthDate ?? item.dateOfBirth)
+        : cleanString(item.birthdate),
       enrollmentStatus: cleanString(item.enrollmentStatus) || 'active',
       source: cleanString(item.source) || 'manual',
       createdAt,
@@ -432,6 +434,9 @@
     if (collection === 'learners') {
       if (!candidate.lastName || !candidate.firstName) throw new Error('Learner first name and last name are required.');
       if (candidate.lrn && !/^\d{12}$/.test(candidate.lrn)) throw new Error('LRN must contain exactly 12 digits.');
+      if (candidate.birthdate && typeof globalScope.validateLearnerBirthdate === 'function' && globalScope.validateLearnerBirthdate(candidate.birthdate)) {
+        throw new Error(globalScope.validateLearnerBirthdate(candidate.birthdate));
+      }
       if (candidate.lrn && store.learners.some(item => item.id !== currentId && item.advisoryClassId === candidate.advisoryClassId && item.lrn === candidate.lrn)) {
         throw new Error('This LRN already belongs to another Advisory learner.');
       }
