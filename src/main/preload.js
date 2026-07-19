@@ -58,8 +58,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Metadata & System Checks
   getVersion: () => ipcRenderer.invoke('app:version'),
-  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
-  downloadUpdate: () => ipcRenderer.invoke('updater:download'),
+  getPerformanceProfile: () => ipcRenderer.invoke('system:performance-profile'),
+  checkForUpdates: (options) => ipcRenderer.invoke('updater:check', options),
+  downloadUpdate: (options) => ipcRenderer.invoke('updater:download', options),
   quitAndInstall: () => ipcRenderer.invoke('updater:quit-and-install'),
   openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
   fetchLinkPreview: (url) => ipcRenderer.invoke('link-preview:fetch', url),

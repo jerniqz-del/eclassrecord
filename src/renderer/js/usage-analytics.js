@@ -257,9 +257,13 @@
   function scheduleProfileSummary(profile = currentProfile(), delayMs = 1500) {
     if (!readConsent().enabled || isAdminTestMode() || isTestProfile(profile)) return;
     clearTimeout(scheduledTimer);
+    const requestedDelay = Math.max(0, Number(delayMs) || 0);
+    const effectiveDelay = globalScope.PerformanceMode?.isLowSpec?.()
+      ? Math.max(requestedDelay, 30000)
+      : requestedDelay;
     scheduledTimer = setTimeout(() => {
       maybeSendSummary(profile).catch(() => {});
-    }, Math.max(0, Number(delayMs) || 0));
+    }, effectiveDelay);
   }
 
   function updateSettingsUi() {

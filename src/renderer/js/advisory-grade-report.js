@@ -22,13 +22,7 @@
   }
 
   function reportSubjects(subjects) {
-    const key = globalScope.AdvisoryGradeTransfer.normalizeSubjectKey;
-    const musicArts = subjects.find(subject => key(subject.subjectName) === 'MUSIC ARTS');
-    const peHealth = subjects.find(subject => key(subject.subjectName) === 'PE HEALTH');
-    return subjects.flatMap(subject => [
-      { ...subject, derived: false },
-      ...(musicArts && peHealth && subject.id === peHealth.id ? [{ id: '__mapeh_average__', subjectName: 'MAPEH Average', derived: true }] : [])
-    ]);
+    return globalScope.AdvisoryGradeTransfer.subjectGroupsForGradeRecord(subjects);
   }
 
   function learnerName(learner) {
@@ -50,11 +44,16 @@
     const transfer = globalScope.AdvisoryGradeTransfer;
     const includeTerms = mode === 'terms';
     const subjectColumnCount = group.length * (includeTerms ? 4 : 1);
-    const averageWidth = includeAverage ? 9 : 0;
-    const subjectWidth = `calc((100% - ${learnerWidth}px - ${averageWidth}%) / ${Math.max(subjectColumnCount, 1)})`;
-    const columns = `<colgroup><col class="advisory-report__learner-column" style="width:${learnerWidth}px">${Array.from({ length: subjectColumnCount }, () => `<col class="advisory-report__subject-column" style="width:${subjectWidth}">`).join('')}${includeAverage ? `<col class="advisory-report__average-column" style="width:${averageWidth}%">` : ''}</colgroup>`;
+    const averageColumnCount = includeAverage ? (includeTerms ? 4 : 1) : 0;
+    const reservedAverageWidth = includeAverage && !includeTerms ? 9 : 0;
+    const fluidColumnCount = subjectColumnCount + (includeTerms ? averageColumnCount : 0);
+    const subjectWidth = `calc((100% - ${learnerWidth}px - ${reservedAverageWidth}%) / ${Math.max(fluidColumnCount, 1)})`;
+    const averageColumns = includeAverage
+      ? Array.from({ length: averageColumnCount }, () => `<col class="advisory-report__average-column" style="width:${includeTerms ? subjectWidth : `${reservedAverageWidth}%`}">`).join('')
+      : '';
+    const columns = `<colgroup><col class="advisory-report__learner-column" style="width:${learnerWidth}px">${Array.from({ length: subjectColumnCount }, () => `<col class="advisory-report__subject-column" style="width:${subjectWidth}">`).join('')}${averageColumns}</colgroup>`;
     const top = group.map(subject => `<th colspan="${includeTerms ? 4 : 1}">${esc(transfer.subjectDisplayName(subject.subjectName))}</th>`).join('');
-    const bottom = includeTerms ? `<tr>${group.map(() => '<th>T1</th><th>T2</th><th>T3</th><th>Final</th>').join('')}</tr>` : '';
+    const bottom = includeTerms ? `<tr>${group.map(() => '<th>T1</th><th>T2</th><th>T3</th><th>Final</th>').join('')}${includeAverage ? '<th>T1</th><th>T2</th><th>T3</th><th>Final</th>' : ''}</tr>` : '';
     const rows = learners.map(learner => {
       const gradesBySubject = group.map(subject => {
         const termCells = includeTerms ? terms.map(term => {
@@ -67,10 +66,12 @@
         return `${termCells}${valueCell(final)}`;
       }).join('');
       const generalAverage = transfer.calculateGeneralAverage(grades, learner.id, subjects);
-      const averageCell = includeAverage ? valueCell(generalAverage, transfer.formatGeneralAverage(generalAverage)) : '';
+      const averageCell = includeAverage
+        ? `${includeTerms ? terms.map(term => { const value = transfer.calculateGeneralTermAverage(grades, learner.id, subjects, term); return valueCell(value, transfer.formatGeneralAverage(value)); }).join('') : ''}${valueCell(generalAverage, transfer.formatGeneralAverage(generalAverage))}`
+        : '';
       return `<tr><td class="advisory-report__learner"><small>${esc(learner.lrn || 'No LRN')}</small><strong>${esc(learnerName(learner))}</strong></td>${gradesBySubject}${averageCell}</tr>`;
-    }).join('') || `<tr><td colspan="${subjectColumnCount + 1 + (includeAverage ? 1 : 0)}">No active learners are in this Advisory Class.</td></tr>`;
-    const averageHeader = includeAverage ? `<th rowspan="${includeTerms ? 2 : 1}" class="advisory-report__average">General Average</th>` : '';
+    }).join('') || `<tr><td colspan="${subjectColumnCount + averageColumnCount + 1}">No active learners are in this Advisory Class.</td></tr>`;
+    const averageHeader = includeAverage ? `<th colspan="${averageColumnCount}" class="advisory-report__average">General Average</th>` : '';
     return `<table class="advisory-report__table">${columns}<thead><tr><th rowspan="${includeTerms ? 2 : 1}" class="advisory-report__learner">LRN / Official Name</th>${top}${averageHeader}</tr>${bottom}</thead><tbody>${rows}</tbody></table>`;
   }
 

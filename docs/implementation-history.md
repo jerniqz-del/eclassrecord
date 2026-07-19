@@ -2,8 +2,8 @@
 
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
-Current app version: 1.6.5
-Last reviewed: 2026-07-18
+Current app version: 1.6.8
+Last reviewed: 2026-07-19
 
 ## 1. Project Foundation
 
@@ -240,6 +240,7 @@ Adjusted patches:
 | v1.6.0 | Added Grades 11–12 advisory subject selection, grade-source assignment and screen-only source colors, Manual and Quick Grade Entry, compact subject acronyms, keyboard navigation, and teacher-authorized adviser corrections with optional notes and preserved original grades. | Minor-version restore point covering the completed Senior High advisory grading workflow and its dedicated teacher/adviser regression suite. |
 | v1.6.3 | Added Senior High subject-group icons, expanded import/export coverage, and corrected the overlapping Individual Learner Grades PDF header. | Patch restore point for Senior High presentation and reporting refinements; no installer was built. |
 | v1.6.5 | Added birthdate-aware learner workflows, optional minimized usage analytics with explicit privacy consent, Advisory-aware application titles, and live in-app grade-source synchronization including split MAPEH components. | Tested release checkpoint for data entry, privacy, and Advisory grade-link improvements, published with a Windows installer. |
+| v1.6.8 | Added automatic daily online update checks, optional background downloads, update progress reporting, a save-protected restart-and-apply workflow, a device-local Low-Spec Mode, expandable Advisory term averages, and an exact unrounded decimal Grade Record view. | Tested release checkpoint for safer automatic updates, improved responsiveness on older PCs, and clearer Advisory grade review without changing stored grade values or backup compatibility. |
 
 ## Current Follow-Up Checks
 

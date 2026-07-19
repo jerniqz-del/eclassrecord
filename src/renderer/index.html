@@ -22,6 +22,14 @@
   <link rel="stylesheet" href="css/print.css" media="print" />
   <link rel="stylesheet" href="css/admin.css" />
   <link rel="stylesheet" href="css/pin-recovery.css" />
+  <link rel="stylesheet" href="css/performance.css" />
+  <script>
+    try {
+      if (localStorage.getItem('eclass_performance_mode_v1') === 'low') {
+        document.documentElement.dataset.performanceMode = 'low';
+      }
+    } catch (_error) {}
+  </script>
 </head>
 <body>
   
@@ -682,6 +690,29 @@
           </div>
         </div>
 
+        <!-- Device Performance Card -->
+        <div class="card">
+          <h2 class="card-title">Performance</h2>
+          <div class="settings-row">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Low-Spec Mode</div>
+              <div class="settings-row__desc" id="performanceModeStatus">Off. The app uses full visual effects and normal background activity.</div>
+              <div class="settings-row__desc u-mt-1">This preference stays only on this device and is not included in profiles or backups.</div>
+            </div>
+            <label class="welcome-checkbox-label checkbox-row">
+              <input type="checkbox" id="settingLowSpecMode" onchange="PerformanceMode.setLowSpec(this.checked)" />
+            </label>
+          </div>
+          <div class="settings-row section-divider">
+            <div class="settings-row__left">
+              <div class="settings-row__title">PC Recommendation</div>
+              <div class="settings-row__desc" id="performanceDeviceSummary">Select Detect My PC to check whether Low-Spec Mode is recommended.</div>
+              <div class="settings-row__desc u-mt-1" id="performanceRecommendation"></div>
+            </div>
+            <button class="btn btn-sm" type="button" onclick="PerformanceMode.detectDevice()">Detect My PC</button>
+          </div>
+        </div>
+
         <!-- Optional Usage Analytics Card -->
         <div class="card">
           <h2 class="card-title">Privacy &amp; Optional Usage Analytics</h2>
@@ -718,9 +749,27 @@
                 App Update Status
                 <div id="updateIndicator" class="update-indicator"></div>
               </div>
-              <div id="updateText" class="settings-row__desc">Up-to-date. Checking is run automatically on startup.</div>
+              <div id="updateText" class="settings-row__desc">Updates can be checked and downloaded automatically while you continue working.</div>
             </div>
             <button id="btnCheckUpdates" class="btn btn-sm" onclick="handleCheckUpdatesClick()">Check for Updates</button>
+          </div>
+          <div class="settings-row section-divider">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Automatically Check for Updates</div>
+              <div id="automaticUpdateScheduleStatus" class="settings-row__desc">Enabled. The app checks at most once every 24 hours while online.</div>
+            </div>
+            <label class="welcome-checkbox-label checkbox-row">
+              <input type="checkbox" id="settingAutomaticUpdateChecks" onchange="UpdateManager.setAutoCheck(this.checked)" checked />
+            </label>
+          </div>
+          <div class="settings-row section-divider">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Automatically Download Updates</div>
+              <div class="settings-row__desc">Downloads available updates in the background. The app restarts only after you choose to apply one or close normally.</div>
+            </div>
+            <label class="welcome-checkbox-label checkbox-row">
+              <input type="checkbox" id="settingAutomaticUpdateDownloads" onchange="UpdateManager.setAutoDownload(this.checked)" checked />
+            </label>
           </div>
         </div>
 
@@ -1766,9 +1815,20 @@
           console.log('Mock saveDatabase:', data);
           return true;
         },
-        getVersion: async () => '1.6.5-mock',
-        checkForUpdates: () => {},
-        downloadUpdate: () => {},
+        getVersion: async () => '1.6.8-mock',
+        getPerformanceProfile: async () => ({
+          totalMemoryBytes: 8 * 1024 ** 3,
+          freeMemoryBytes: 4 * 1024 ** 3,
+          logicalProcessors: 4,
+          cpuModel: 'Mock processor',
+          arch: 'x64',
+          platform: 'browser',
+          recommended: false,
+          reasons: []
+        }),
+        checkForUpdates: async () => ({ started: false, reason: 'browser' }),
+        downloadUpdate: async () => ({ started: false, reason: 'browser' }),
+        quitAndInstall: async () => ({ started: false, reason: 'browser' }),
         onMenuSave: () => {},
         onMenuExportJson: () => {},
         onMenuImportJson: () => {},
@@ -1787,6 +1847,7 @@
   <!-- Modular Scripts Injection -->
   <script src="js/changelog.js"></script>
   <script src="js/ui-helpers.js"></script>
+  <script src="js/performance-mode.js"></script>
   <script src="js/security.js"></script>
   <script src="js/grading.js"></script>
   <script src="js/learners.js"></script>
@@ -1794,6 +1855,7 @@
   <script src="js/advisory-backup.js"></script>
   <script src="js/database.js"></script>
   <script src="js/usage-analytics.js"></script>
+  <script src="js/update-manager.js"></script>
   <script src="js/import-export.js"></script>
   <script src="js/record-table.js"></script>
   <script src="js/advisory-dashboard.js"></script>
@@ -1822,6 +1884,6 @@
   <script src="js/special-program.js"></script>
   <script src="js/pin-recovery.js"></script>
   <script src="js/admin-testing.js"></script>
-  <script>initFontSize(); initSidebarResizer(); if (typeof initSidebarAd === 'function') initSidebarAd(); initPinRecovery(); UsageAnalytics.init();</script>
+  <script>PerformanceMode.init(); initFontSize(); initSidebarResizer(); if (typeof initSidebarAd === 'function') initSidebarAd(); initPinRecovery(); UsageAnalytics.init(); UpdateManager.init();</script>
 </body>
 </html>

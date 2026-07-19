@@ -9,6 +9,7 @@ const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session } = require('e
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const os = require('os');
 
 const isSmokeTest = process.argv.includes('--smoke-test') || process.argv.includes('--offline-smoke-test');
 const isOfflineSmokeTest = process.argv.includes('--offline-smoke-test');
@@ -100,11 +101,14 @@ function createWindow() {
       try {
         const result = await mainWindow.webContents.executeJavaScript(`(async () => {
           try {
-          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage', 'PinRecovery', 'AdminTestMode', 'UsageAnalytics'];
+          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage', 'PinRecovery', 'AdminTestMode', 'UsageAnalytics', 'UpdateManager', 'PerformanceMode'];
           const missing = required.filter(name => !globalThis[name]);
           if (missing.length) throw new Error('Missing renderer modules: ' + missing.join(', '));
           if (!document.getElementById('settingUsageAnalytics') || !document.getElementById('welcomeUsageAnalyticsCheckbox') || !document.getElementById('usagePrivacyModal')) {
             throw new Error('Optional usage analytics privacy controls were not rendered.');
+          }
+          if (!document.getElementById('settingLowSpecMode') || !document.getElementById('performanceDeviceSummary')) {
+            throw new Error('Low-Spec Mode settings controls were not rendered.');
           }
           const analyticsFixture = {
             region: 'Region V', division: 'Smoke Division', district: 'Must Not Leave Device',
@@ -1009,17 +1013,40 @@ ipcMain.handle('app:version', () => {
   return app.getVersion();
 });
 
-ipcMain.handle('updater:check', async () => {
-  return updater.checkForUpdates(mainWindow);
+ipcMain.handle('system:performance-profile', () => {
+  const totalMemoryBytes = os.totalmem();
+  const freeMemoryBytes = os.freemem();
+  const cpus = os.cpus() || [];
+  const logicalProcessors = cpus.length;
+  const reasons = [];
+
+  if (totalMemoryBytes <= 5 * 1024 ** 3) reasons.push('Limited system memory');
+  if (logicalProcessors <= 2) reasons.push('Limited processor capacity');
+
+  return {
+    totalMemoryBytes,
+    freeMemoryBytes,
+    logicalProcessors,
+    cpuModel: String(cpus[0]?.model || '').trim().slice(0, 120),
+    arch: os.arch(),
+    platform: os.platform(),
+    recommended: reasons.length > 0,
+    reasons
+  };
 });
 
-ipcMain.handle('updater:download', async () => {
-  return updater.downloadUpdate();
+ipcMain.handle('updater:check', async (_event, options) => {
+  return updater.checkForUpdates(mainWindow, options);
+});
+
+ipcMain.handle('updater:download', async (_event, options) => {
+  return updater.downloadUpdate(options);
 });
 
 ipcMain.handle('updater:quit-and-install', async () => {
-  isConfirmedExit = true;
-  return updater.quitAndInstall();
+  const result = updater.quitAndInstall();
+  if (result && result.started) isConfirmedExit = true;
+  return result;
 });
 
 ipcMain.handle('shell:open-external', async (_event, url) => {

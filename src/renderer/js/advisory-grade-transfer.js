@@ -16,9 +16,15 @@
   const SCHEMA_VERSION = '1.0';
   const ADVISER_NOTE_MAX_LENGTH = 500;
   const MAPEH_AVERAGE_ID = '__mapeh_average__';
+  const GENERAL_AVERAGE_ID = '__general_average__';
+  const DECIMAL_VIEW_STORAGE_KEY = 'eclass_advisory_decimal_view_v1';
   let advisoryPanelTab = 'grades';
   const expandedAdvisorySubjects = new Set();
   let advisorySubjectSort = { subjectId: '', direction: '' };
+  let advisoryDecimalView = (() => {
+    try { return globalScope.localStorage?.getItem(DECIMAL_VIEW_STORAGE_KEY) === 'true'; }
+    catch (_error) { return false; }
+  })();
 
   function text(value) {
     return value === undefined || value === null ? '' : String(value).trim();
@@ -50,6 +56,19 @@
         && normalizeGradeLevel(item.gradeLevel) === gradeLevel
         && globalScope.AdvisoryRoster.normalizeMatchText(item.section) === section)
       .sort((left, right) => text(left.subject || left.name).localeCompare(text(right.subject || right.name), 'fil'));
+  }
+
+  function formatVisibleGrade(value, alwaysDecimal = false) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return '\u2014';
+    return advisoryDecimalView || alwaysDecimal ? numeric.toFixed(2) : String(numeric);
+  }
+
+  function setAdvisoryDecimalView(enabled) {
+    advisoryDecimalView = Boolean(enabled);
+    try { globalScope.localStorage?.setItem(DECIMAL_VIEW_STORAGE_KEY, String(advisoryDecimalView)); }
+    catch (_error) { /* Device-only display preference is best-effort. */ }
+    return advisoryDecimalView;
   }
 
   function localSourceMapehPart(subject, sourceClass) {
@@ -1248,7 +1267,9 @@
       const visible = visibleLearners();
       const navigationIndex = visible.findIndex(item => item.id === learner.id);
       const completed = editableRoster.filter(item => latestGrades.some(gradeItem => gradeItem.advisoryLearnerId === item.id && gradeItem.advisorySubjectId === subject.id && gradeItem.term === term)).length;
-      const subjectFinal = calculateSubjectFinal(latestGrades, learner.id, subject.id);
+      const subjectFinal = advisoryDecimalView
+        ? calculateSubjectFinalExact(latestGrades, learner.id, subject.id)
+        : calculateSubjectFinal(latestGrades, learner.id, subject.id);
       overlay.innerHTML = `
         <div class="modal modal--wide advisory-quick-grade-modal" role="dialog" aria-modal="true" aria-labelledby="advisoryQuickGradeTitle">
           <div class="modal__title" id="advisoryQuickGradeTitle">Quick Grade Entry</div>
@@ -1265,7 +1286,7 @@
                 <p>${globalScope.esc(learner.lrn || 'No LRN')} · ${globalScope.esc(subject.subjectName)} · Term ${term}</p>
                 <label class="field-label" for="advisoryQuickGradeInput">Final Grade</label>
                 <input class="advisory-quick-grade-input" id="advisoryQuickGradeInput" type="number" min="60" max="100" step="1" inputmode="decimal" value="${globalScope.esc(grade?.finalGrade ?? '')}" data-saved-value="${globalScope.esc(grade?.finalGrade ?? '')}" data-advisory-quick-grade-input aria-describedby="advisoryQuickGradeHint">
-                <div class="advisory-quick-grade-summary"><span>Allowed: 60–100</span>${subject.sourceType === 'manual' ? '' : `<span>Original: <strong>${globalScope.esc(grade?.submittedFinalGrade ?? grade?.finalGrade ?? '—')}</strong></span>`}<span>Subject Final: <strong>${subjectFinal === null ? '—' : subjectFinal}</strong></span></div>
+                <div class="advisory-quick-grade-summary"><span>Allowed: 60–100</span>${subject.sourceType === 'manual' ? '' : `<span>Original: <strong>${globalScope.esc(grade?.submittedFinalGrade ?? grade?.finalGrade ?? '—')}</strong></span>`}<span>Subject Final: <strong>${subjectFinal === null ? '—' : globalScope.esc(formatVisibleGrade(subjectFinal))}</strong></span></div>
                 <p id="advisoryQuickGradeHint">Press Enter to save and continue to the next learner. ${subject.sourceType === 'manual' ? 'Leave blank to clear the grade.' : 'Teacher-submitted grades cannot be cleared.'}</p>
               </section>
               <div class="advisory-quick-grade-navigation"><button class="btn btn-ghost" type="button" data-advisory-quick-prev ${navigationIndex <= 0 ? 'disabled' : ''}>Previous</button><button class="btn btn-primary" type="button" data-advisory-quick-next>${navigationIndex >= 0 && navigationIndex < visible.length - 1 ? 'Save & Next' : 'Save Grade'}</button></div>
@@ -1381,14 +1402,19 @@
     panel.querySelector('[data-undo-latest-import]').addEventListener('click', () => requestUndoLatest(advisoryClass.id));
   }
 
-  function calculateSubjectFinal(grades, learnerId, subjectId) {
+  function calculateSubjectFinalExact(grades, learnerId, subjectId) {
     const values = ['1', '2', '3'].map(term => {
       const record = grades.find(item => item.advisoryLearnerId === learnerId && item.advisorySubjectId === subjectId && item.term === term);
       return record && Number.isFinite(Number(record.finalGrade)) ? Number(record.finalGrade) : null;
     });
     return values.every(value => value !== null)
-      ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+      ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2))
       : null;
+  }
+
+  function calculateSubjectFinal(grades, learnerId, subjectId) {
+    const exact = calculateSubjectFinalExact(grades, learnerId, subjectId);
+    return exact === null ? null : Math.round(exact);
   }
 
   function mapehComponents(subjects) {
@@ -1397,7 +1423,22 @@
     return musicArts && peHealth ? { musicArts, peHealth } : null;
   }
 
-  function calculateMapehTermAverage(grades, learnerId, subjects, term) {
+  function subjectGroupsForGradeRecord(subjects) {
+    const orderedSubjects = (subjects || []).map(subject => ({ ...subject, derived: false }));
+    const components = mapehComponents(orderedSubjects);
+    if (!components) return orderedSubjects;
+
+    const firstComponentIndex = orderedSubjects.findIndex(subject =>
+      subject.id === components.musicArts.id || subject.id === components.peHealth.id);
+    orderedSubjects.splice(firstComponentIndex, 0, {
+      id: MAPEH_AVERAGE_ID,
+      subjectName: 'MAPEH Average',
+      derived: true
+    });
+    return orderedSubjects;
+  }
+
+  function calculateMapehTermAverageExact(grades, learnerId, subjects, term) {
     const components = mapehComponents(subjects);
     if (!components) return null;
     const values = [components.musicArts, components.peHealth].map(subject => {
@@ -1405,14 +1446,60 @@
       return record && Number.isFinite(Number(record.finalGrade)) ? Number(record.finalGrade) : null;
     });
     return values.every(value => value !== null)
-      ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+      ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2))
+      : null;
+  }
+
+  function calculateMapehTermAverage(grades, learnerId, subjects, term) {
+    const exact = calculateMapehTermAverageExact(grades, learnerId, subjects, term);
+    return exact === null ? null : Math.round(exact);
+  }
+
+  function calculateMapehFinalExact(grades, learnerId, subjects) {
+    const values = ['1', '2', '3'].map(term => calculateMapehTermAverageExact(grades, learnerId, subjects, term));
+    return values.every(value => value !== null)
+      ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2))
       : null;
   }
 
   function calculateMapehFinal(grades, learnerId, subjects) {
-    const values = ['1', '2', '3'].map(term => calculateMapehTermAverage(grades, learnerId, subjects, term));
+    const exact = calculateMapehFinalExact(grades, learnerId, subjects);
+    return exact === null ? null : Math.round(exact);
+  }
+
+  function calculateGeneralTermAverage(grades, learnerId, subjects, term) {
+    const includedSubjects = (subjects || []).filter(subject => !subject.isArchived && subject.includeInGeneralAverage !== false);
+    if (!includedSubjects.length || !['1', '2', '3'].includes(String(term))) return null;
+    const components = mapehComponents(includedSubjects);
+    const regularSubjects = components
+      ? includedSubjects.filter(subject => ![components.musicArts.id, components.peHealth.id].includes(subject.id))
+      : includedSubjects;
+    const values = regularSubjects.map(subject => {
+      const record = grades.find(item => item.advisoryLearnerId === learnerId
+        && item.advisorySubjectId === subject.id && item.term === String(term));
+      return record && Number.isFinite(Number(record.finalGrade)) ? Number(record.finalGrade) : null;
+    });
+    if (components) values.push(calculateMapehTermAverage(grades, learnerId, includedSubjects, term));
     return values.every(value => value !== null)
-      ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+      ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2))
+      : null;
+  }
+
+  function calculateGeneralTermAverageExact(grades, learnerId, subjects, term) {
+    const includedSubjects = (subjects || []).filter(subject => !subject.isArchived && subject.includeInGeneralAverage !== false);
+    if (!includedSubjects.length || !['1', '2', '3'].includes(String(term))) return null;
+    const components = mapehComponents(includedSubjects);
+    const regularSubjects = components
+      ? includedSubjects.filter(subject => ![components.musicArts.id, components.peHealth.id].includes(subject.id))
+      : includedSubjects;
+    const values = regularSubjects.map(subject => {
+      const record = grades.find(item => item.advisoryLearnerId === learnerId
+        && item.advisorySubjectId === subject.id && item.term === String(term));
+      return record && Number.isFinite(Number(record.finalGrade)) ? Number(record.finalGrade) : null;
+    });
+    if (components) values.push(calculateMapehTermAverageExact(grades, learnerId, includedSubjects, term));
+    return values.every(value => value !== null)
+      ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2))
       : null;
   }
 
@@ -1556,11 +1643,26 @@
   function gradeCell(record, extraClass = '') {
     if (!record) return `<td class="is-missing ${extraClass}" title="Missing grade">&mdash;</td>`;
     const conflict = record.conflictStatus && !['none', 'resolved'].includes(record.conflictStatus);
-    return `<td class="${conflict ? 'has-conflict' : 'has-grade'} ${extraClass}" title="${globalScope.esc(record.sourceClassName || record.sourceType)}">${globalScope.esc(record.finalGrade)}</td>`;
+    return `<td class="${conflict ? 'has-conflict' : 'has-grade'} ${extraClass}" title="${globalScope.esc(record.sourceClassName || record.sourceType)}">${globalScope.esc(formatVisibleGrade(record.finalGrade))}</td>`;
+  }
+
+  function calculateGeneralAverageExact(grades, learnerId, subjects) {
+    const includedSubjects = (subjects || []).filter(subject => !subject.isArchived && subject.includeInGeneralAverage !== false);
+    if (!includedSubjects.length) return null;
+    const components = mapehComponents(includedSubjects);
+    const regularSubjects = components
+      ? includedSubjects.filter(subject => ![components.musicArts.id, components.peHealth.id].includes(subject.id))
+      : includedSubjects;
+    const finals = regularSubjects.map(subject => calculateSubjectFinalExact(grades, learnerId, subject.id));
+    if (components) finals.push(calculateMapehFinalExact(grades, learnerId, includedSubjects));
+    return finals.every(value => value !== null)
+      ? Number((finals.reduce((sum, value) => sum + value, 0) / finals.length).toFixed(2))
+      : null;
   }
 
   function editableGradeCell(record, learner, subject, term, extraClass = '', entryMode = 'manual') {
-    const value = record && Number.isFinite(Number(record.finalGrade)) ? Number(record.finalGrade) : '';
+    const rawValue = record && Number.isFinite(Number(record.finalGrade)) ? Number(record.finalGrade) : '';
+    const value = rawValue === '' ? '' : formatVisibleGrade(rawValue);
     const label = `${subject.subjectName}, Term ${term}, ${globalScope.AdvisoryRoster.displayName(learner)}`;
     const isTeacherSubmission = entryMode === 'adviser-adjustment';
     const original = isTeacherSubmission && Number.isFinite(Number(record?.submittedFinalGrade)) ? Number(record.submittedFinalGrade) : null;
@@ -1579,7 +1681,7 @@
   }
 
   function calculatedGradeCell(value, title, extraClass = '', attributes = '') {
-    return `<td class="${value === null ? 'is-missing' : 'has-grade'} ${extraClass}" title="${globalScope.esc(title)}" ${attributes}>${value === null ? '&mdash;' : value}</td>`;
+    return `<td class="${value === null ? 'is-missing' : 'has-grade'} ${extraClass}" title="${globalScope.esc(title)}" ${attributes}>${value === null ? '&mdash;' : globalScope.esc(formatVisibleGrade(value))}</td>`;
   }
 
   function refreshManualGradeCalculations(panel, learners, subjects) {
@@ -1587,13 +1689,25 @@
     panel.querySelectorAll('[data-advisory-calculation]').forEach(cell => {
       const learnerId = cell.dataset.learnerId;
       let value = null;
-      if (cell.dataset.advisoryCalculation === 'subject-final') value = calculateSubjectFinal(grades, learnerId, cell.dataset.subjectId);
-      if (cell.dataset.advisoryCalculation === 'mapeh-term') value = calculateMapehTermAverage(grades, learnerId, subjects, cell.dataset.term);
-      if (cell.dataset.advisoryCalculation === 'mapeh-final') value = calculateMapehFinal(grades, learnerId, subjects);
-      if (cell.dataset.advisoryCalculation === 'general-average') value = calculateGeneralAverage(grades, learnerId, subjects);
+      if (cell.dataset.advisoryCalculation === 'subject-final') value = advisoryDecimalView
+        ? calculateSubjectFinalExact(grades, learnerId, cell.dataset.subjectId)
+        : calculateSubjectFinal(grades, learnerId, cell.dataset.subjectId);
+      if (cell.dataset.advisoryCalculation === 'mapeh-term') value = advisoryDecimalView
+        ? calculateMapehTermAverageExact(grades, learnerId, subjects, cell.dataset.term)
+        : calculateMapehTermAverage(grades, learnerId, subjects, cell.dataset.term);
+      if (cell.dataset.advisoryCalculation === 'mapeh-final') value = advisoryDecimalView
+        ? calculateMapehFinalExact(grades, learnerId, subjects)
+        : calculateMapehFinal(grades, learnerId, subjects);
+      if (cell.dataset.advisoryCalculation === 'general-term-average') value = advisoryDecimalView
+        ? calculateGeneralTermAverageExact(grades, learnerId, subjects, cell.dataset.term)
+        : calculateGeneralTermAverage(grades, learnerId, subjects, cell.dataset.term);
+      if (cell.dataset.advisoryCalculation === 'general-average') value = advisoryDecimalView
+        ? calculateGeneralAverageExact(grades, learnerId, subjects)
+        : calculateGeneralAverage(grades, learnerId, subjects);
       cell.classList.toggle('is-missing', value === null);
       cell.classList.toggle('has-grade', value !== null);
-      cell.innerHTML = value === null ? '&mdash;' : (cell.dataset.advisoryCalculation === 'general-average' ? formatGeneralAverage(value) : globalScope.esc(value));
+      const isGeneral = ['general-term-average', 'general-average'].includes(cell.dataset.advisoryCalculation);
+      cell.innerHTML = value === null ? '&mdash;' : globalScope.esc(isGeneral ? formatVisibleGrade(value, true) : formatVisibleGrade(value));
     });
     panel.querySelectorAll('[data-advisory-received-subject]').forEach(cell => {
       const received = grades.filter(grade => grade.advisorySubjectId === cell.dataset.advisoryReceivedSubject).length;
@@ -1634,8 +1748,10 @@
       learner,
       index,
       grade: subjectId === MAPEH_AVERAGE_ID
-        ? calculateMapehFinal(grades, learner.id, subjects)
-        : calculateSubjectFinal(grades, learner.id, subjectId)
+        ? (advisoryDecimalView ? calculateMapehFinalExact(grades, learner.id, subjects) : calculateMapehFinal(grades, learner.id, subjects))
+        : subjectId === GENERAL_AVERAGE_ID
+          ? (advisoryDecimalView ? calculateGeneralAverageExact(grades, learner.id, subjects) : calculateGeneralAverage(grades, learner.id, subjects))
+          : (advisoryDecimalView ? calculateSubjectFinalExact(grades, learner.id, subjectId) : calculateSubjectFinal(grades, learner.id, subjectId))
     }))
       .sort((left, right) => {
         if (left.grade === null && right.grade === null) return left.index - right.index;
@@ -1708,20 +1824,19 @@
     const quickGradeSubjects = subjects.filter(subject => subject.sourceType === 'manual'
       || grades.some(grade => grade.advisorySubjectId === subject.id && grade.adviserEditAllowed === true));
     const batches = store.importBatches.filter(item => item.advisoryClassId === advisoryClass.id).sort((a, b) => text(b.importedAt).localeCompare(text(a.importedAt)));
-    const components = mapehComponents(subjects);
-    const subjectGroups = subjects.flatMap(subject => [
-      { ...subject, derived: false },
-      ...(components && subject.id === components.peHealth.id
-        ? [{ id: MAPEH_AVERAGE_ID, subjectName: 'MAPEH Average', derived: true }]
-        : [])
-    ]);
+    const subjectGroups = subjectGroupsForGradeRecord(subjects);
     const sortedLearners = sortLearnersBySubject(learners, grades, advisorySubjectSort.subjectId, advisorySubjectSort.direction, subjects);
-    const hasExpandedSubject = subjectGroups.some(subject => expandedAdvisorySubjects.has(subject.id));
-    const allTermsExpanded = subjectGroups.length > 0 && subjectGroups.every(subject => expandedAdvisorySubjects.has(subject.id));
+    const generalAverageExpanded = expandedAdvisorySubjects.has(GENERAL_AVERAGE_ID);
+    const expandableGradeGroups = [...subjectGroups.map(subject => subject.id), GENERAL_AVERAGE_ID];
+    const hasExpandedSubject = expandableGradeGroups.some(id => expandedAdvisorySubjects.has(id));
+    const allTermsExpanded = expandableGradeGroups.every(id => expandedAdvisorySubjects.has(id));
     const totalSubjectColumns = subjectGroups.reduce((total, subject) => total + (expandedAdvisorySubjects.has(subject.id) ? 4 : 1), 0);
+    const totalGradeColumns = totalSubjectColumns + (generalAverageExpanded ? 4 : 1);
     const colgroup = `<colgroup><col class="advisory-learner-col">${subjectGroups.map(subject => expandedAdvisorySubjects.has(subject.id)
       ? '<col class="advisory-term-col"><col class="advisory-term-col"><col class="advisory-term-col"><col class="advisory-final-col">'
-      : '<col class="advisory-final-col">').join('')}<col class="advisory-general-col"></colgroup>`;
+      : '<col class="advisory-final-col">').join('')}${generalAverageExpanded
+        ? '<col class="advisory-general-term-col"><col class="advisory-general-term-col"><col class="advisory-general-term-col"><col class="advisory-general-col">'
+        : '<col class="advisory-general-col">'}</colgroup>`;
 
     const matrix = subjects.length ? `
       <div class="advisory-grade-scroll-tools">
@@ -1741,20 +1856,27 @@
                 const sourceClass = subject.derived ? '' : gradeSourceClass(subject.sourceType);
                 return `<th colspan="${expanded ? 4 : 1}" class="advisory-subject-heading advisory-subject-end ${expanded ? '' : 'advisory-subject-heading--collapsed'} ${subject.derived ? 'advisory-mapeh-average' : sourceClass}"><div class="advisory-subject-heading__controls"><button type="button" class="advisory-subject-sort" data-sort-advisory-subject="${globalScope.esc(subject.id)}" aria-label="Sort learners by ${globalScope.esc(subject.subjectName)} final grade" aria-pressed="${activeSort ? 'true' : 'false'}" title="${globalScope.esc(subject.subjectName)} — sort by final grade"><span class="advisory-subject-name--full">${globalScope.esc(subjectDisplayName(subject.subjectName))}</span><span class="advisory-subject-name--compact">${globalScope.esc(subjectCompactName(subject.subjectName))}</span><small aria-hidden="true">${sortLabel}</small></button><button type="button" class="advisory-subject-expand" data-expand-advisory-subject="${globalScope.esc(subject.id)}" aria-expanded="${expanded}" aria-label="${expanded ? 'Hide' : 'Show'} term grades for ${globalScope.esc(subject.subjectName)}" title="${expanded ? 'Hide Terms 1–3' : 'Show Terms 1–3'}"><span aria-hidden="true">${expanded ? '−' : '+'}</span></button></div></th>`;
               }).join('')}
-              <th rowspan="2" class="advisory-general-average">General Average</th>
+              <th colspan="${generalAverageExpanded ? 4 : 1}" class="advisory-subject-heading advisory-subject-end advisory-general-average ${generalAverageExpanded ? '' : 'advisory-subject-heading--collapsed'}"><div class="advisory-subject-heading__controls"><button type="button" class="advisory-subject-sort" data-sort-advisory-subject="${GENERAL_AVERAGE_ID}" aria-label="Sort learners by General Average" aria-pressed="${advisorySubjectSort.subjectId === GENERAL_AVERAGE_ID ? 'true' : 'false'}" title="General Average - sort by final average"><span class="advisory-subject-name--full">General Average</span><span class="advisory-subject-name--compact">GEN AVG</span><small aria-hidden="true">${advisorySubjectSort.subjectId === GENERAL_AVERAGE_ID ? (advisorySubjectSort.direction === 'desc' ? '&darr;' : '&uarr;') : '&#8597;'}</small></button><button type="button" class="advisory-subject-expand" data-expand-advisory-subject="${GENERAL_AVERAGE_ID}" aria-expanded="${generalAverageExpanded}" aria-label="${generalAverageExpanded ? 'Hide' : 'Show'} General Average term averages" title="${generalAverageExpanded ? 'Hide Term Averages' : 'Show Term Averages'}"><span aria-hidden="true">${generalAverageExpanded ? '&minus;' : '+'}</span></button></div></th>
             </tr>
             <tr>${subjectGroups.map(subject => {
               const sourceClass = subject.derived ? 'advisory-mapeh-average' : gradeSourceClass(subject.sourceType);
               return expandedAdvisorySubjects.has(subject.id)
                 ? `<th class="${sourceClass}">T1</th><th class="${sourceClass}">T2</th><th class="${sourceClass}">T3</th><th class="advisory-final-column advisory-subject-end ${sourceClass}">Final</th>`
                 : `<th class="advisory-final-column advisory-subject-end ${sourceClass}">Final</th>`;
-            }).join('')}</tr>
+            }).join('')}${generalAverageExpanded
+              ? '<th class="advisory-general-average">T1</th><th class="advisory-general-average">T2</th><th class="advisory-general-average">T3</th><th class="advisory-general-average advisory-final-column advisory-subject-end">Final</th>'
+              : '<th class="advisory-general-average advisory-final-column advisory-subject-end">Final</th>'}</tr>
           </thead>
           <tbody>${sortedLearners.length ? sortedLearners.map(learner => {
             const subjectCells = subjectGroups.map(subject => {
               if (subject.derived) {
-                const termCells = expandedAdvisorySubjects.has(subject.id) ? ['1', '2', '3'].map(term => calculatedGradeCell(calculateMapehTermAverage(grades, learner.id, subjects, term), `MAPEH Term ${term} average`, 'advisory-mapeh-average', `data-advisory-calculation="mapeh-term" data-learner-id="${globalScope.esc(learner.id)}" data-term="${term}"`)).join('') : '';
-                return `${termCells}${calculatedGradeCell(calculateMapehFinal(grades, learner.id, subjects), 'Average of the three MAPEH term averages', 'advisory-final-column advisory-subject-end advisory-mapeh-average', `data-advisory-calculation="mapeh-final" data-learner-id="${globalScope.esc(learner.id)}"`)}`;
+                const termCells = expandedAdvisorySubjects.has(subject.id) ? ['1', '2', '3'].map(term => calculatedGradeCell(advisoryDecimalView
+                  ? calculateMapehTermAverageExact(grades, learner.id, subjects, term)
+                  : calculateMapehTermAverage(grades, learner.id, subjects, term), `MAPEH Term ${term} average`, 'advisory-mapeh-average', `data-advisory-calculation="mapeh-term" data-learner-id="${globalScope.esc(learner.id)}" data-term="${term}"`)).join('') : '';
+                const mapehFinal = advisoryDecimalView
+                  ? calculateMapehFinalExact(grades, learner.id, subjects)
+                  : calculateMapehFinal(grades, learner.id, subjects);
+                return `${termCells}${calculatedGradeCell(mapehFinal, 'Average of the three MAPEH term averages', 'advisory-final-column advisory-subject-end advisory-mapeh-average', `data-advisory-calculation="mapeh-final" data-learner-id="${globalScope.esc(learner.id)}"`)}`;
               }
               const sourceClass = gradeSourceClass(subject.sourceType);
               const termCells = expandedAdvisorySubjects.has(subject.id) ? ['1', '2', '3'].map(term => {
@@ -1763,12 +1885,23 @@
                 if (record?.sourceType === 'grade-transfer-file' && record.adviserEditAllowed === true) return permittedTransferGradeCell(record, learner, subject, term, sourceClass);
                 return gradeCell(record, sourceClass);
               }).join('') : '';
-              const finalGrade = calculateSubjectFinal(grades, learner.id, subject.id);
+              const finalGrade = advisoryDecimalView
+                ? calculateSubjectFinalExact(grades, learner.id, subject.id)
+                : calculateSubjectFinal(grades, learner.id, subject.id);
               return `${termCells}${calculatedGradeCell(finalGrade, 'Average of Terms 1–3', `advisory-final-column advisory-subject-end ${sourceClass}`, `data-advisory-calculation="subject-final" data-learner-id="${globalScope.esc(learner.id)}" data-subject-id="${globalScope.esc(subject.id)}"`)}`;
             }).join('');
-            const generalAverage = calculateGeneralAverage(grades, learner.id, subjects);
-            return `<tr><td><small>${globalScope.esc(learner.lrn || 'No LRN')}</small><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</strong></td>${subjectCells}<td class="advisory-general-average ${generalAverage === null ? 'is-missing' : 'has-grade'}" data-advisory-calculation="general-average" data-learner-id="${globalScope.esc(learner.id)}" title="Available when every subject has all three term grades">${generalAverage === null ? '&mdash;' : formatGeneralAverage(generalAverage)}</td></tr>`;
-          }).join('') : `<tr><td colspan="${totalSubjectColumns + 2}"><div class="advisory-roster__empty">No learners are in the official roster. Use Manage Roster to import or add learners.</div></td></tr>`}</tbody>
+            const generalAverage = advisoryDecimalView
+              ? calculateGeneralAverageExact(grades, learner.id, subjects)
+              : calculateGeneralAverage(grades, learner.id, subjects);
+            const generalTermCells = generalAverageExpanded ? ['1', '2', '3'].map(term => {
+              const value = advisoryDecimalView
+                ? calculateGeneralTermAverageExact(grades, learner.id, subjects, term)
+                : calculateGeneralTermAverage(grades, learner.id, subjects, term);
+              return calculatedGradeCell(value, `General Average for Term ${term}`, 'advisory-general-average', `data-advisory-calculation="general-term-average" data-learner-id="${globalScope.esc(learner.id)}" data-term="${term}"`);
+            }).join('') : '';
+            const generalFinalCell = `<td class="advisory-general-average advisory-final-column advisory-subject-end ${generalAverage === null ? 'is-missing' : 'has-grade'}" data-advisory-calculation="general-average" data-learner-id="${globalScope.esc(learner.id)}" title="Available when every included subject has all three term grades">${generalAverage === null ? '&mdash;' : globalScope.esc(formatVisibleGrade(generalAverage, true))}</td>`;
+            return `<tr><td><small>${globalScope.esc(learner.lrn || 'No LRN')}</small><strong>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</strong></td>${subjectCells}${generalTermCells}${generalFinalCell}</tr>`;
+          }).join('') : `<tr><td colspan="${totalGradeColumns + 1}"><div class="advisory-roster__empty">No learners are in the official roster. Use Manage Roster to import or add learners.</div></td></tr>`}</tbody>
         </table>
       </div>` : '<div class="advisory-roster__empty">No subjects have been configured. Import the first Grade Transfer File or add a subject manually.</div>';
 
@@ -1791,7 +1924,7 @@
 
     panel.innerHTML = `
       <section id="advisoryGradeRecordPanel" role="tabpanel" data-advisory-panel="grades">
-        <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Final grades are shown by default. Show every term at once or use the + beside an individual subject.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-terms aria-pressed="${allTermsExpanded}">${allTermsExpanded ? 'Hide Terms 1–3' : 'Show Terms 1–3'}</button>${quickGradeSubjects.length ? '<button class="btn btn-primary btn-sm" type="button" data-advisory-quick-grade>Quick Grade Entry</button>' : ''}${advisoryClass.isSpecialClass ? '<button class="btn btn-ghost btn-sm" type="button" data-manage-special-subjects>Manage Special Subjects</button>' : ''}<button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
+        <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Final grades are shown by default. Show every term at once or use the + beside a subject or General Average.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-decimals aria-pressed="${advisoryDecimalView}">Decimal View: ${advisoryDecimalView ? 'On' : 'Off'}</button><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-terms aria-pressed="${allTermsExpanded}">${allTermsExpanded ? 'Hide Terms 1–3' : 'Show Terms 1–3'}</button>${quickGradeSubjects.length ? '<button class="btn btn-primary btn-sm" type="button" data-advisory-quick-grade>Quick Grade Entry</button>' : ''}${advisoryClass.isSpecialClass ? '<button class="btn btn-ghost btn-sm" type="button" data-manage-special-subjects>Manage Special Subjects</button>' : ''}<button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
         ${matrix}
       </section>
       <section id="advisoryGradeSourcesPanel" role="tabpanel" data-advisory-panel="sources" hidden>
@@ -1887,9 +2020,13 @@
       });
     });
     panel.querySelector('[data-manage-special-subjects]')?.addEventListener('click', () => setPanelTab('settings', workspace));
+    panel.querySelector('[data-toggle-advisory-decimals]')?.addEventListener('click', () => {
+      setAdvisoryDecimalView(!advisoryDecimalView);
+      renderWorkspacePanel(workspace, advisoryClass);
+    });
     panel.querySelector('[data-toggle-advisory-terms]')?.addEventListener('click', () => {
-      if (allTermsExpanded) subjectGroups.forEach(subject => expandedAdvisorySubjects.delete(subject.id));
-      else subjectGroups.forEach(subject => expandedAdvisorySubjects.add(subject.id));
+      if (allTermsExpanded) expandableGradeGroups.forEach(id => expandedAdvisorySubjects.delete(id));
+      else expandableGradeGroups.forEach(id => expandedAdvisorySubjects.add(id));
       renderWorkspacePanel(workspace, advisoryClass);
     });
     panel.querySelectorAll('[data-expand-advisory-subject]').forEach(button => button.addEventListener('click', () => {
@@ -2078,11 +2215,20 @@
     applyImportPlan,
     undoImportBatch,
     latestUndoableBatch,
+    calculateSubjectFinalExact,
     calculateSubjectFinal,
+    calculateMapehTermAverageExact,
     calculateMapehTermAverage,
+    calculateMapehFinalExact,
     calculateMapehFinal,
+    subjectGroupsForGradeRecord,
+    calculateGeneralTermAverageExact,
+    calculateGeneralTermAverage,
+    calculateGeneralAverageExact,
     calculateGeneralAverage,
     formatGeneralAverage,
+    formatVisibleGrade,
+    setAdvisoryDecimalView,
     moveSubject,
     saveManualGrade,
     saveAdviserGradeAdjustment,

@@ -26,6 +26,29 @@ subjects.forEach((subject, subjectIndex) => ['1', '2', '3'].forEach((term, termI
 assert.strictEqual(Transfer.calculateSubjectFinal(profile.advisory.grades, learner.id, subjects[0].id), 86);
 assert.strictEqual(Transfer.calculateGeneralAverage(profile.advisory.grades, learner.id, subjects), 86.5);
 assert.strictEqual(Transfer.formatGeneralAverage(Transfer.calculateGeneralAverage(profile.advisory.grades, learner.id, subjects)), '86.50');
+assert.strictEqual(Transfer.calculateGeneralTermAverage(profile.advisory.grades, learner.id, subjects, '1'), 85.5);
+const decimalFixture = ['77', '80', '81'].map((value, index) => ({
+  advisoryLearnerId: 'decimal-learner', advisorySubjectId: 'decimal-subject', term: String(index + 1), finalGrade: Number(value)
+}));
+assert.strictEqual(Transfer.calculateSubjectFinal(decimalFixture, 'decimal-learner', 'decimal-subject'), 79);
+assert.strictEqual(Transfer.calculateSubjectFinalExact(decimalFixture, 'decimal-learner', 'decimal-subject'), 79.33);
+assert.strictEqual(Transfer.calculateGeneralAverageExact(decimalFixture, 'decimal-learner', [{ id: 'decimal-subject', subjectName: 'Example Subject' }]), 79.33);
+Transfer.setAdvisoryDecimalView(false);
+assert.strictEqual(Transfer.formatVisibleGrade(86), '86');
+Transfer.setAdvisoryDecimalView(true);
+assert.strictEqual(Transfer.formatVisibleGrade(86), '86.00');
+Transfer.setAdvisoryDecimalView(false);
+const mapehDisplayGroups = Transfer.subjectGroupsForGradeRecord([
+  { id: 'math', subjectName: 'Mathematics', displayOrder: 0 },
+  { id: 'music', subjectName: 'Music & Arts', displayOrder: 1 },
+  { id: 'pe', subjectName: 'PE & Health', displayOrder: 2 },
+  { id: 'science', subjectName: 'Science', displayOrder: 3 }
+]);
+assert.deepStrictEqual(
+  mapehDisplayGroups.map(subject => subject.subjectName),
+  ['Mathematics', 'MAPEH Average', 'Music & Arts', 'PE & Health', 'Science'],
+  'Learner Grade Record must place consolidated MAPEH before Music & Arts and PE & Health'
+);
 global.db = profile;
 const finalReport = Report.buildReport(advisoryClass, 'finals');
 const termsReport = Report.buildReport(advisoryClass, 'terms');
@@ -33,6 +56,8 @@ assert(finalReport.html.includes('Final Grades Only'));
 assert(!finalReport.html.includes('<th>T1</th>'));
 assert(termsReport.html.includes('Terms 1–3 and Final Grades'));
 assert(termsReport.html.includes('<th>T1</th><th>T2</th><th>T3</th><th>Final</th>'));
+assert(termsReport.html.includes('<th colspan="4" class="advisory-report__average">General Average</th>'));
+assert(termsReport.html.includes('85.50'), 'Detailed report must include the Term 1 General Average');
 assert(termsReport.html.includes('123456789012'));
 const multiPageProfile = JSON.parse(JSON.stringify(profile));
 for (let index = 3; index <= 8; index += 1) multiPageProfile.advisory.subjects.push({
@@ -186,6 +211,9 @@ assert(!reportUi.includes('adviserModificationNote'), 'teacher permission notes 
 assert(css.includes('.advisory-page__report-actions'));
 assert(css.includes('.advisory-report-preview-modal'));
 assert(transferUi.includes('data-expand-advisory-subject'));
+assert(transferUi.includes('data-toggle-advisory-decimals'));
+assert(transferUi.includes('general-term-average'));
+assert(transferUi.includes('calculateGeneralTermAverage'));
 assert(transferUi.includes('expandedAdvisorySubjects'));
 assert(transferUi.includes('data-advisory-matrix-scrollbar'));
 assert(transferUi.includes('press Shift and use the mouse wheel'));

@@ -1,0 +1,38 @@
+@media screen {
+  html[data-performance-mode="low"] {
+    scroll-behavior: auto;
+  }
+
+  html[data-performance-mode="low"] *,
+  html[data-performance-mode="low"] *::before,
+  html[data-performance-mode="low"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  html[data-performance-mode="low"] .modal-overlay,
+  html[data-performance-mode="low"] .topbar,
+  html[data-performance-mode="low"] .sidebar-ad,
+  html[data-performance-mode="low"] .glass,
+  html[data-performance-mode="low"] [class*="backdrop"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  html[data-performance-mode="low"] .card,
+  html[data-performance-mode="low"] .modal,
+  html[data-performance-mode="low"] .topbar,
+  html[data-performance-mode="low"] .sidebar-ad {
+    box-shadow: none !important;
+  }
+
+  html[data-performance-mode="low"] .sidebar-ad__track {
+    transform: translateX(0) !important;
+  }
+
+  html[data-performance-mode="low"] .sidebar-ad__dots {
+    display: none !important;
+  }
+}

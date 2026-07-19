@@ -383,12 +383,13 @@
 .advisory-grade-matrix col.advisory-learner-col { width: 230px; }
 .advisory-grade-matrix col.advisory-term-col { width: 54px; }
 .advisory-grade-matrix col.advisory-final-col { width: 66px; }
+.advisory-grade-matrix col.advisory-general-term-col { width: 62px; }
 .advisory-grade-matrix col.advisory-general-col { width: 108px; }
 .advisory-grade-matrix--finals-only col.advisory-final-col { width: 96px; }
 .advisory-grade-matrix--finals-only { width: calc(100% - 22px); min-width: 0; }
 .advisory-grade-matrix--finals-only col.advisory-learner-col { width: 18%; }
 .advisory-grade-matrix--finals-only col.advisory-final-col { width: auto; }
-.advisory-grade-matrix--finals-only col.advisory-general-col { width: 8%; }
+.advisory-grade-matrix--finals-only col.advisory-general-col { width: auto; }
 .advisory-grade-matrix th:not(:first-child),
 .advisory-grade-matrix td:not(:first-child) { text-align: center; }
 .advisory-grade-matrix thead { position: sticky; top: 0; z-index: 4; }

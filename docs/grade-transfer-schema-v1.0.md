@@ -10,7 +10,7 @@ Grade Transfer Files are UTF-8 JSON documents for offline exchange of one subjec
   "schemaVersion": "1.0",
   "exportId": "unique-export-id",
   "exportedAt": "2026-07-13T01:00:00.000Z",
-  "appVersion": "1.6.5",
+  "appVersion": "1.6.8",
   "school": { "name": "Example School", "schoolId": "123456" },
   "teacher": { "name": "Teacher A" },
   "schoolYear": "2026-2027",

@@ -244,6 +244,11 @@ function clearSidebarAdRotation() {
   }
 }
 
+function isSidebarAdLowSpecMode() {
+  return window.PerformanceMode?.isLowSpec?.()
+    || document.documentElement?.dataset?.performanceMode === 'low';
+}
+
 function isSidebarAdRotationPaused() {
   return sidebarAdState.paused || document.body.classList.contains('sidebar--collapsed');
 }
@@ -269,6 +274,7 @@ function showSidebarAdIndex(index) {
 
 function startSidebarAdRotation() {
   clearSidebarAdRotation();
+  if (isSidebarAdLowSpecMode()) return;
   if (sidebarAdState.ads.length <= 1) return;
   sidebarAdState.timerId = setInterval(() => {
     if (!isSidebarAdRotationPaused()) {
@@ -302,7 +308,8 @@ function renderSidebarAd(adOrAds) {
   if (!slot) return;
 
   clearSidebarAdRotation();
-  const ads = normalizeSidebarAds(adOrAds);
+  const normalizedAds = normalizeSidebarAds(adOrAds);
+  const ads = isSidebarAdLowSpecMode() ? normalizedAds.slice(0, 1) : normalizedAds;
   if (!ads.length) {
     slot.innerHTML = '';
     return;
@@ -381,10 +388,28 @@ async function refreshRemoteSidebarAds({ render = true } = {}) {
 }
 
 function startSidebarAdRemoteRefresh() {
+  if (isSidebarAdLowSpecMode()) return;
   if (sidebarAdState.remoteRefreshTimerId) return;
   sidebarAdState.remoteRefreshTimerId = setInterval(() => {
     refreshRemoteSidebarAds({ render: true });
   }, SIDEBAR_AD_REMOTE_REFRESH_MS);
+}
+
+function clearSidebarAdRemoteRefresh() {
+  if (sidebarAdState.remoteRefreshTimerId) {
+    clearInterval(sidebarAdState.remoteRefreshTimerId);
+    sidebarAdState.remoteRefreshTimerId = null;
+  }
+}
+
+function setSidebarAdLowSpecMode(enabled) {
+  clearSidebarAdRotation();
+  clearSidebarAdRemoteRefresh();
+  renderSidebarAd(getSidebarAds());
+  if (!enabled) {
+    refreshSidebarAdPreviews();
+    startSidebarAdRemoteRefresh();
+  }
 }
 
 function isSidebarAdOwnerToolsEnabled() {
@@ -686,8 +711,12 @@ function initSidebarAd() {
   localStorage.removeItem('owner_sidebar_ads_enabled');
   localStorage.removeItem('owner_sidebar_ads_v1');
   renderSidebarAd(getSidebarAds());
-  refreshSidebarAdPreviews();
-  refreshRemoteSidebarAds({ render: true });
-  startSidebarAdRemoteRefresh();
+  if (isSidebarAdLowSpecMode()) {
+    setTimeout(() => refreshRemoteSidebarAds({ render: true }), 30000);
+  } else {
+    refreshSidebarAdPreviews();
+    refreshRemoteSidebarAds({ render: true });
+    startSidebarAdRemoteRefresh();
+  }
   initSidebarAdOwnerTools();
 }

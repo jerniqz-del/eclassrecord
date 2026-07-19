@@ -444,9 +444,13 @@ const HELP_TOPICS = [
   }
 ];
 
+let helpCenterInitialized = false;
+
 function initHelpCenter() {
+  if (helpCenterInitialized) return;
   const catList = document.getElementById('helpCategoryList');
   if (!catList) return;
+  helpCenterInitialized = true;
 
   // Render categories
   catList.innerHTML = HELP_CATEGORIES.map(cat => `
@@ -459,6 +463,8 @@ function initHelpCenter() {
 
   renderHelpContent();
 }
+
+window.ensureHelpCenterInitialized = initHelpCenter;
 
 function setHelpCategory(catId) {
   helpActiveCategory = catId;
@@ -572,6 +578,7 @@ function clearHelpSearch() {
 
 // Bind to window load or trigger manually
 document.addEventListener('DOMContentLoaded', () => {
+  if (window.PerformanceMode?.isLowSpec?.()) return;
   // Wait slightly to ensure layouts are fully ready
   setTimeout(() => {
     initHelpCenter();
