@@ -301,7 +301,11 @@ async function saveDatabase() {
     }
   }
   
-  return saveRootDatabase();
+  const saved = await saveRootDatabase();
+  if (saved && typeof window !== 'undefined') {
+    window.UsageAnalytics?.scheduleProfileSummary?.(db);
+  }
+  return saved;
 }
 
 /**
@@ -434,6 +438,7 @@ function addAssignment() {
   };
 
   seedTemplateAssessments(assignment, templateForGrade(gradeLevel));
+  const populatedWithMockData = window.AdminTestMode?.populateNewAssignment?.(assignment) === true;
 
   db.assignments.push(assignment);
   db.currentAssignmentId = assignment.id;
@@ -457,7 +462,9 @@ function addAssignment() {
   if (typeof hideAddClassLoadModal === 'function') {
     hideAddClassLoadModal();
   }
-  toast('Class load added successfully.', 'success');
+  toast(populatedWithMockData
+    ? 'Class load added with temporary mock learners, grades, and attendance.'
+    : 'Class load added successfully.', 'success');
 }
 
 /**

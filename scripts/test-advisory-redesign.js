@@ -139,6 +139,17 @@ assert(dashboard.includes('subjectWatermarkMarkup'));
 assert(dashboard.includes('subjectCardIconMarkup'));
 ['language', 'reading-literacy', 'makabansa', 'mathematics', 'gmrc', 'araling-panlipunan', 'english', 'filipino', 'science', 'mapeh', 'epp-tle'].forEach(key => assert(dashboard.includes(key)));
 const html = fs.readFileSync(path.join(root, 'src/renderer/index.html'), 'utf8');
+[
+  'src/renderer/js/changelog.js',
+  'docs/implementation-history.md',
+  'docs/release-notes-v1.4.0.md',
+  'docs/release-notes-v1.4.5.md',
+  'docs/release-notes-v1.4.6.md',
+  'docs/release-notes-v1.5.0.md'
+].forEach(relativePath => {
+  const publicNotes = fs.readFileSync(path.join(root, relativePath), 'utf8');
+  assert(!/\badmin(?:istration|istrator)?\b|mock(?:\s+data|\s+workspace|\s+profile)?|test mode|fictional learners/i.test(publicNotes), `${relativePath} must not expose internal testing or privileged-control details`);
+});
 assert(html.includes('id="schoolDistrict"'));
 assert(html.includes('js/advisory-reset.js'));
 assert(html.includes('id="navAdvisory"'));
@@ -154,6 +165,7 @@ assert(page.includes("globalScope.openAdvisoryClassDashboard = openPage"));
 assert(page.includes('data-advisory-page-report'));
 assert(page.includes("nav.hidden = !configured"));
 assert(page.includes('advisory-page__reset'));
+assert(page.includes('`Grade ${advisoryClass.gradeLevel} — ${advisoryClass.section} · Advisory Class`'), 'Advisory Class must replace the teaching-load title in the app header');
 assert(page.includes("'ArrowLeft', 'ArrowRight', 'Home', 'End'"));
 const transferUi = fs.readFileSync(path.join(root, 'src/renderer/js/advisory-grade-transfer.js'), 'utf8');
 assert(!transferUi.includes('<label class="field-label">Normalized Subject Key</label>'));
@@ -193,6 +205,7 @@ assert(transferUi.includes('gradeSourceClass(subject.sourceType)'), 'Grade Sourc
 ['#dcfce7', '#dbeafe', '#ffedd5'].forEach(color => assert(css.includes(color), `Advisory source colors must include ${color}`));
 assert(css.includes('@media print'), 'Source color tints must have a print override');
 assert(css.includes('.advisory-teacher-note'));
+assert(css.includes('.advisory-source-explanation[hidden] { display: none !important; }'), 'inactive grade-source help panels must stay hidden');
 assert(css.includes('.advisory-permitted-grade-cell'));
 assert(transferUi.includes('data-advisory-add-manual'));
 assert(transferUi.includes('data-advisory-import-class'));

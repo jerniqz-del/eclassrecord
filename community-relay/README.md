@@ -64,6 +64,7 @@ The Worker creates these D1 tables automatically if they do not exist:
 - `POST /community/questions/:id/dismiss`
 - `GET /ads/sidebar`
 - `PUT /admin/sidebar-ads`
+- `POST /usage/class-summary`
 
 ## Sidebar Ad Rules
 
@@ -85,7 +86,7 @@ owner editor only when saving global ads.
 
 ## Privacy Boundary
 
-The relay accepts only these fields:
+The community-question endpoint accepts only these fields:
 
 - `question`
 - `appVersion`
@@ -95,3 +96,23 @@ The relay accepts only these fields:
 
 Do not send learner names, LRNs, grades, attendance records, school profile
 fields, rosters, backups, exported files, or private documents.
+
+## Optional Usage Analytics
+
+`POST /usage/class-summary` is separate from community questions and sidebar
+ads. It is called only after the user separately opts in. The accepted schema is:
+
+- `schemaVersion` (`1`)
+- current UTC `period` (`YYYY-MM`)
+- `region`
+- `division`
+- `gradeLevels`, containing only grade level and aggregate class count
+- `appVersion`
+
+District, teacher and school identity, section, subject, learner data, grades,
+scores, attendance, assessments, files, backups, device IDs, install IDs, and IP
+addresses are not accepted or stored in the analytics database. Admin Test Mode
+profiles are rejected. Accepted summaries are immediately merged into the
+`usage_monthly` aggregate table; the Worker does not retain raw analytics events.
+Monthly aggregates older than 24 months are deleted during subsequent accepted
+submissions.

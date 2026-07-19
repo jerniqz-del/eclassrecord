@@ -25,6 +25,65 @@ Transfer.matchingLocalClasses(profile, advisoryClass).map(item => item.id),
 );
 }
 
+// A single in-app MAPEH class supplies both split Advisory components and stays synchronized.
+{
+const profile = { teacherName: 'Adviser', schoolYear: '2026-2027', assignments: [] };
+AdvisoryData.normalizeAdvisoryData(profile);
+const advisoryClass = AdvisoryData.createClass(profile, { id: 'advisory-mapeh', schoolYear: profile.schoolYear, gradeLevel: '9', section: 'A', adviserName: 'Adviser', isActive: true });
+const advisoryLearners = [
+AdvisoryData.createLearner(profile, { id: 'advisory-mapeh-1', advisoryClassId: advisoryClass.id, lrn: '990000000001', lastName: 'Abad', firstName: 'Ana' }),
+AdvisoryData.createLearner(profile, { id: 'advisory-mapeh-2', advisoryClassId: advisoryClass.id, lrn: '990000000002', lastName: 'Bautista', firstName: 'Ben' })
+];
+const sourceClass = {
+id: 'class-mapeh-9', schoolYear: profile.schoolYear, gradeLevel: '9', section: 'A', subject: 'MAPEH',
+learners: [
+{ id: 'source-mapeh-1', lrn: advisoryLearners[0].lrn, lastName: 'Abad', firstName: 'Ana' },
+{ id: 'source-mapeh-2', lrn: advisoryLearners[1].lrn, lastName: 'Bautista', firstName: 'Ben' },
+{ id: 'source-mapeh-unmatched', lrn: '990000000099', lastName: 'Not', firstName: 'Enrolled' }
+]
+};
+profile.assignments.push(sourceClass);
+Transfer.ensureGradeLevelSubjects(profile, advisoryClass);
+const subjects = AdvisoryData.normalizeAdvisoryData(profile).subjects;
+const musicArts = subjects.find(item => item.advisoryClassId === advisoryClass.id && item.subjectName === 'Music & Arts');
+const peHealth = subjects.find(item => item.advisoryClassId === advisoryClass.id && item.subjectName === 'PE & Health');
+const grades = {
+music_arts: { 'source-mapeh-1': { '1': 81, '2': 82, '3': 83 }, 'source-mapeh-2': { '1': 84, '2': 85, '3': 86 } },
+pe_health: { 'source-mapeh-1': { '1': 91, '2': 92, '3': 93 }, 'source-mapeh-2': { '1': 94, '2': 95, '3': 96 } }
+};
+const readerParts = [];
+const getTermGrade = (_assignment, learnerId, term, part) => {
+readerParts.push(part);
+return grades[part]?.[learnerId]?.[term] ?? null;
+};
+[musicArts, peHealth].forEach(subject => AdvisoryData.updateSubject(profile, subject.id, {
+sourceType: 'local-subject-class', expectedSourceClassId: sourceClass.id,
+expectedSourceClass: 'MAPEH · Grade 9 - A', expectedSourceTeacher: profile.teacherName
+}));
+const linkedMusic = AdvisoryData.normalizeAdvisoryData(profile).subjects.find(item => item.id === musicArts.id);
+const linkedPe = AdvisoryData.normalizeAdvisoryData(profile).subjects.find(item => item.id === peHealth.id);
+assert.strictEqual(Transfer.localSourceMapehPart(linkedMusic, sourceClass), 'music_arts');
+assert.strictEqual(Transfer.localSourceMapehPart(linkedPe, sourceClass), 'pe_health');
+assert(Transfer.localSourceOptionLabel(linkedMusic, sourceClass).includes('Music & Arts component'));
+assert(Transfer.localSourceOptionLabel(linkedPe, sourceClass).includes('PE & Health component'));
+const musicResult = Transfer.syncLocalSubjectGrades(profile, advisoryClass, linkedMusic, { getTermGrade });
+const peResult = Transfer.syncLocalSubjectGrades(profile, advisoryClass, linkedPe, { getTermGrade });
+assert.deepStrictEqual([musicResult.created, musicResult.unmatched], [6, 1]);
+assert.deepStrictEqual([peResult.created, peResult.unmatched], [6, 1]);
+assert(readerParts.includes('music_arts') && readerParts.includes('pe_health'));
+let storedGrades = AdvisoryData.normalizeAdvisoryData(profile).grades;
+assert.strictEqual(storedGrades.find(item => item.advisoryLearnerId === advisoryLearners[0].id && item.advisorySubjectId === musicArts.id && item.term === '1').finalGrade, 81);
+assert.strictEqual(storedGrades.find(item => item.advisoryLearnerId === advisoryLearners[0].id && item.advisorySubjectId === peHealth.id && item.term === '1').finalGrade, 91);
+assert(storedGrades.filter(item => [musicArts.id, peHealth.id].includes(item.advisorySubjectId)).every(item => item.sourceType === 'local-subject-class' && item.sourceClassId === sourceClass.id));
+grades.music_arts['source-mapeh-1']['1'] = 89;
+grades.music_arts['source-mapeh-2']['3'] = null;
+const refresh = Transfer.syncLocalSubjectGrades(profile, advisoryClass, linkedMusic, { getTermGrade });
+assert.deepStrictEqual([refresh.updated, refresh.deleted], [1, 1], 'changed and cleared source grades must refresh the linked Advisory records');
+storedGrades = AdvisoryData.normalizeAdvisoryData(profile).grades;
+assert.strictEqual(storedGrades.find(item => item.advisoryLearnerId === advisoryLearners[0].id && item.advisorySubjectId === musicArts.id && item.term === '1').finalGrade, 89);
+assert(!storedGrades.some(item => item.advisoryLearnerId === advisoryLearners[1].id && item.advisorySubjectId === musicArts.id && item.term === '3'));
+}
+
 function fixture() {
   const profile = { teacherName: 'Teacher A', schoolName: 'Monbon ES', schoolId: '123456', division: 'Sorsogon', region: 'V', schoolYear: '2026-2027', assignments: [] };
   AdvisoryData.normalizeAdvisoryData(profile);

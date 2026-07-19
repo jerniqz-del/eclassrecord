@@ -682,6 +682,21 @@
           </div>
         </div>
 
+        <!-- Optional Usage Analytics Card -->
+        <div class="card">
+          <h2 class="card-title">Privacy &amp; Optional Usage Analytics</h2>
+          <div class="settings-row">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Share Minimized Class-Usage Statistics</div>
+              <div class="settings-row__desc" id="usageAnalyticsStatus">Disabled. No class usage summary is sent.</div>
+              <button type="button" class="welcome-inline-link u-mt-2" onclick="UsageAnalytics.showPrivacyNotice(event)">View exactly what is collected</button>
+            </div>
+            <label class="welcome-checkbox-label checkbox-row">
+              <input type="checkbox" id="settingUsageAnalytics" onchange="UsageAnalytics.setConsent(this.checked)" />
+            </label>
+          </div>
+        </div>
+
         <!-- Database Integrity Checker -->
         <div class="card">
           <h2 class="card-title">Database Integrity Checker</h2>
@@ -1137,6 +1152,10 @@
             <span>I have read and agree to the <button type="button" class="welcome-terms-link" onclick="showTermsModal(event)">Terms &amp; Conditions</button></span>
           </label>
           <label class="welcome-checkbox-label checkbox-row">
+            <input type="checkbox" id="welcomeUsageAnalyticsCheckbox" />
+            <span>Optional: Share minimized class-usage statistics. <button type="button" class="welcome-terms-link" onclick="UsageAnalytics.showPrivacyNotice(event)">Privacy details</button></span>
+          </label>
+          <label class="welcome-checkbox-label checkbox-row">
             <input type="checkbox" id="welcomeDoNotShowCheckbox" />
             Do not show again today
           </label>
@@ -1177,7 +1196,7 @@
         </section>
         <section>
           <h3>3. Local Data and Device Security</h3>
-          <p>The app stores class data locally on your device and in backup files that you create or restore. You are responsible for protecting your device, user account, PIN, passwords, backup files, exported documents, printed records, and any copies shared outside the app. Do not store or share learner information in a way that violates school rules, privacy laws, or professional obligations.</p>
+          <p>The app stores class records locally on your device and in backup files that you create or restore. If you separately enable Optional Usage Analytics, only the minimized fields described in Section 6 may be transmitted; learner records and official class contents remain local. You are responsible for protecting your device, user account, PIN, passwords, backup files, exported documents, printed records, and any copies shared outside the app. Do not store or share learner information in a way that violates school rules, privacy laws, or professional obligations.</p>
         </section>
         <section>
           <h3>4. Backups and Data Loss</h3>
@@ -1185,43 +1204,84 @@
         </section>
         <section>
           <h3>5. Optional Online Features</h3>
-          <p>Most core record work is designed for local use. Some optional features may use internet access, including update checks, release notes, external support links, feedback links, sponsor or ad placements, donation links, documentation links, and other online resources. These online features may be unavailable, delayed, changed, blocked, or removed without affecting your responsibility to maintain accurate local records.</p>
+          <p>Most core record work is designed for local use. Some optional features may use internet access, including update checks, release notes, optional usage analytics, external support links, feedback links, sponsor or ad placements, donation links, documentation links, and other online resources. These online features may be unavailable, delayed, changed, blocked, or removed without affecting your responsibility to maintain accurate local records.</p>
         </section>
         <section>
-          <h3>6. Sponsors, Ads, Donations, and External Links</h3>
+          <h3>6. Optional Usage Analytics and Privacy</h3>
+          <p>Optional Usage Analytics is disabled by default and is not required to use the app. If you separately enable it, the app may send Region, Division, grade levels used, aggregate counts of created teaching-load and advisory classes, app version, and reporting month to the E-Class Record Cloudflare service. District, teacher name, school name or ID, section, subject, learner names, LRNs, birthdates, sex, grades, scores, attendance, assessment data, files, exports, and backups are not included. The service immediately merges accepted summaries into monthly aggregate counters and does not store a device identifier or the request IP address in the analytics database. Aggregates are retained for up to 24 months. You may disable analytics at any time in Settings; this stops future submissions but previously merged aggregates cannot be separated by user. Analytics consent and submission history are stored only as local app preferences and are not included in profile backups.</p>
+        </section>
+        <section>
+          <h3>7. Sponsors, Ads, Donations, and External Links</h3>
           <p>The app may display support messages, donation prompts, sponsor placements, or ads to help sustain development. Sponsored or external content does not change your class records and should not be treated as official school guidance. When you open an external link, you may leave the app and interact with a third-party website or service under that party's own terms and privacy practices.</p>
         </section>
         <section>
-          <h3>7. No Warranty</h3>
+          <h3>8. No Warranty</h3>
           <p>The app is provided as-is and as-available. No guarantee is made that the app, calculations, templates, imports, exports, reports, attendance tools, update checks, or policy-related wording will be accurate, complete, uninterrupted, secure, compatible with every device, or free from mistakes. You should independently review any output before using it for official purposes.</p>
         </section>
         <section>
-          <h3>8. Limitation of Liability</h3>
+          <h3>9. Limitation of Liability</h3>
           <p>To the fullest extent allowed by law, the developer, contributors, maintainers, and distributors are not liable for losses, damages, penalties, missed deadlines, incorrect submissions, data loss, privacy incidents, device issues, school compliance issues, or other consequences arising from use of the app, inability to use the app, reliance on generated outputs, or use of external services.</p>
         </section>
         <section>
-          <h3>9. Acceptable Use</h3>
+          <h3>10. Acceptable Use</h3>
           <p>You agree to use the app only for lawful, professional, and authorized purposes. You must not use the app to falsify records, misrepresent learner performance, bypass school processes, upload or share data without authority, interfere with app security, reverse engineer protected portions where prohibited, or use the app in a way that harms learners, colleagues, schools, or systems.</p>
         </section>
         <section>
-          <h3>10. Intellectual Property</h3>
+          <h3>11. Intellectual Property</h3>
           <p>The app's code, interface, design, text, bundled assets, and documentation belong to their respective owners and are protected by applicable intellectual property rules. You may use the app for its intended purpose, but you may not claim ownership of the app, redistribute modified versions without permission where permission is required, or remove ownership notices.</p>
         </section>
         <section>
-          <h3>11. Updates and Changes</h3>
+          <h3>12. Updates and Changes</h3>
           <p>The app may be updated to add features, adjust behavior, fix issues, change sponsor or support messages, improve security, or revise these Terms. When the Terms version changes, you may be asked to review and accept the updated Terms before continuing to use the app.</p>
         </section>
         <section>
-          <h3>12. Support</h3>
+          <h3>13. Support</h3>
           <p>Support may be provided through the app, external links, community channels, or direct contact options when available. Support is not guaranteed, and response times may vary. You remain responsible for maintaining backups and verifying important outputs even when support is requested.</p>
         </section>
         <section>
-          <h3>13. Agreement</h3>
+          <h3>14. Agreement</h3>
           <p>By checking the acceptance box and continuing into the app, you confirm that you have read, understood, and agreed to these Terms &amp; Conditions of Service for the version shown above.</p>
         </section>
       </div>
       <div class="modal__actions">
         <button class="btn btn-cancel btn-sm" onclick="closeTermsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Optional Usage Analytics Privacy Notice -->
+  <div id="usagePrivacyModal" class="modal-overlay modal-z-higher" style="display:none">
+    <div class="modal modal--wide terms-modal">
+      <div class="modal__title">Optional Usage Analytics Privacy Notice</div>
+      <div class="modal__body terms-modal__body">
+        <p class="terms-modal__version">Notice version: 2026-07-18-analytics-v1</p>
+        <section>
+          <h3>Choice and purpose</h3>
+          <p>Analytics is disabled by default. If you opt in, minimized monthly statistics help the developer understand which grade levels use the app and prioritize compatible features. The app remains fully usable when analytics is disabled.</p>
+        </section>
+        <section>
+          <h3>Information transmitted</h3>
+          <p>Region, Division, grade levels used, aggregate counts of created teaching-load and advisory classes, app version, and reporting month.</p>
+        </section>
+        <section>
+          <h3>Information never transmitted by analytics</h3>
+          <p>District, teacher name, school name or ID, section, subject, learner names, LRNs, birthdates, sex, grades, scores, attendance, assessment data, filenames, exports, backups, and Admin Test Mode data.</p>
+        </section>
+        <section>
+          <h3>Method, recipient, retention, and safeguards</h3>
+          <p>The app sends the minimized summary over HTTPS to the E-Class Record Cloudflare Worker. The Worker validates an allowlisted schema and immediately merges the summary into monthly aggregate counters without storing a device identifier or request IP address in the analytics database. Monthly aggregates are retained for up to 24 months. Cloudflare may process ordinary connection metadata under its service practices.</p>
+        </section>
+        <section>
+          <h3>Your control</h3>
+          <p>You may enable or withdraw consent at any time in Settings. Withdrawal stops future summaries. Because accepted summaries are immediately merged without a user or device identifier, an earlier contribution cannot be isolated from the aggregate. Consent and deduplication preferences remain on this device, outside profiles and backups.</p>
+        </section>
+        <section>
+          <h3>Controller and contact</h3>
+          <p>The E-Class Record App developer and maintainer is responsible for this optional analytics processing. Use the app's Feedback action or the project's GitHub repository to ask privacy questions or exercise applicable data-privacy rights.</p>
+        </section>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-cancel btn-sm" type="button" onclick="UsageAnalytics.closePrivacyNotice()">Close</button>
       </div>
     </div>
   </div>
@@ -1706,7 +1766,7 @@
           console.log('Mock saveDatabase:', data);
           return true;
         },
-        getVersion: async () => '1.6.3-mock',
+        getVersion: async () => '1.6.5-mock',
         checkForUpdates: () => {},
         downloadUpdate: () => {},
         onMenuSave: () => {},
@@ -1733,6 +1793,7 @@
   <script src="js/advisory-data.js"></script>
   <script src="js/advisory-backup.js"></script>
   <script src="js/database.js"></script>
+  <script src="js/usage-analytics.js"></script>
   <script src="js/import-export.js"></script>
   <script src="js/record-table.js"></script>
   <script src="js/advisory-dashboard.js"></script>
@@ -1761,6 +1822,6 @@
   <script src="js/special-program.js"></script>
   <script src="js/pin-recovery.js"></script>
   <script src="js/admin-testing.js"></script>
-  <script>initFontSize(); initSidebarResizer(); if (typeof initSidebarAd === 'function') initSidebarAd(); initPinRecovery();</script>
+  <script>initFontSize(); initSidebarResizer(); if (typeof initSidebarAd === 'function') initSidebarAd(); initPinRecovery(); UsageAnalytics.init();</script>
 </body>
 </html>

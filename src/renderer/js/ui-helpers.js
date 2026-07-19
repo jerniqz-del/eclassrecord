@@ -642,7 +642,7 @@ function alertModal(title, message, onOk) {
  * Checks if the welcome modal should be shown on startup.
  * Called during DOMContentLoaded.
  */
-const TERMS_VERSION = '2026-07-06';
+const TERMS_VERSION = '2026-07-18-analytics-v1';
 
 function hasAcceptedCurrentTerms() {
   return localStorage.getItem('terms_accepted_version') === TERMS_VERSION;
@@ -657,6 +657,7 @@ function prepareWelcomeTermsGate() {
   if (checkbox) {
     checkbox.checked = hasAcceptedCurrentTerms();
   }
+  window.UsageAnalytics?.updateSettingsUi?.();
   updateWelcomeTermsGate();
 }
 
@@ -966,6 +967,8 @@ function closeWelcomeModal() {
   }
 
   localStorage.setItem('terms_accepted_version', TERMS_VERSION);
+  const analyticsCheckbox = document.getElementById('welcomeUsageAnalyticsCheckbox');
+  window.UsageAnalytics?.applyWelcomeChoice?.(Boolean(analyticsCheckbox?.checked));
 
   const checkbox = document.getElementById('welcomeDoNotShowCheckbox');
   if (checkbox && checkbox.checked) {

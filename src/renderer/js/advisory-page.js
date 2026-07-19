@@ -53,6 +53,8 @@
     if (addedSubjects.length) globalScope.queueMicrotask?.(() => globalScope.saveDatabase?.());
     const escHtml = globalScope.esc || (value => String(value ?? ''));
     const count = rosterCount(advisoryClass);
+    const currentTitle = document.getElementById('currentTitle');
+    if (currentTitle) currentTitle.textContent = `Grade ${advisoryClass.gradeLevel} — ${advisoryClass.section} · Advisory Class`;
     const header = page.querySelector('[data-advisory-page-header]');
     header.innerHTML = `
       <div>

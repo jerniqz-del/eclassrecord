@@ -100,9 +100,21 @@ function createWindow() {
       try {
         const result = await mainWindow.webContents.executeJavaScript(`(async () => {
           try {
-          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage', 'PinRecovery', 'AdminTestMode'];
+          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage', 'PinRecovery', 'AdminTestMode', 'UsageAnalytics'];
           const missing = required.filter(name => !globalThis[name]);
           if (missing.length) throw new Error('Missing renderer modules: ' + missing.join(', '));
+          if (!document.getElementById('settingUsageAnalytics') || !document.getElementById('welcomeUsageAnalyticsCheckbox') || !document.getElementById('usagePrivacyModal')) {
+            throw new Error('Optional usage analytics privacy controls were not rendered.');
+          }
+          const analyticsFixture = {
+            region: 'Region V', division: 'Smoke Division', district: 'Must Not Leave Device',
+            teacherName: 'Must Not Leave Device', assignments: [{ gradeLevel: 11 }]
+          };
+          const analyticsSummary = UsageAnalytics.buildUsageSummary(analyticsFixture, 'smoke', new Date('2026-07-18T00:00:00.000Z'));
+          const analyticsText = JSON.stringify(analyticsSummary);
+          if (!analyticsSummary || analyticsText.includes('district') || analyticsText.includes('Must Not Leave Device')) {
+            throw new Error('Optional usage analytics did not enforce payload minimization.');
+          }
           if (typeof getActiveProfileDatabase !== 'function') throw new Error('Active profile database accessor is unavailable.');
           const mockTestProfile = AdminTestMode.buildCompleteMockProfile();
           if (!mockTestProfile.isMockTestData || mockTestProfile.assignments?.length !== 4 || mockTestProfile.advisory?.learners?.length !== 24) {
@@ -232,6 +244,7 @@ function createWindow() {
           openAdvisoryClassDashboard();
           const advisoryPage = document.querySelector('.advisory-page');
           if (document.querySelector('.advisory-page-view')?.style.display === 'none' || !advisoryPage?.querySelector('[data-advisory-grade-panel]')) throw new Error('Dedicated Advisory Class page did not open.');
+          if (document.getElementById('currentTitle')?.textContent.trim() !== 'Grade 4 — Offline · Advisory Class') throw new Error('Advisory Class did not replace the teaching-load title in the app header.');
           if (document.querySelector('[data-advisory-workspace]')) throw new Error('Advisory Class still opened as a workspace modal.');
           if (!advisoryPage.querySelector('.advisory-final-column') || !advisoryPage.querySelector('.advisory-general-average')) throw new Error('Final-grade columns were not rendered.');
           if (getComputedStyle(advisoryPage.querySelector('th.advisory-general-average')).whiteSpace !== 'normal') throw new Error('General Average header does not wrap within its column.');
@@ -311,6 +324,7 @@ function createWindow() {
           const localSourceRadio = subjectModal.querySelector('input[value="local-subject-class"]');
           localSourceRadio.click();
           if (subjectModal.querySelector('[data-local-source-class]')?.hidden || !subjectModal.querySelector('[data-local-source-class] option[value="smoke-subject"]')) throw new Error('Matching local class source choices were not shown.');
+          if (getComputedStyle(subjectModal.querySelector('[data-source-help="grade-transfer-file"]')).display !== 'none') throw new Error('Inactive Grade Transfer File help remained visible after choosing a class in this app.');
           subjectModal.remove();
           advisoryPage.querySelector('[data-advisory-page-tab="roster"]').click();
           advisoryPage.querySelector('[data-advisory-import-class]').click();
@@ -447,7 +461,7 @@ function createWindow() {
           if (restoredNavigation.currentView !== realNavigation.currentView || restoredNavigation.recordTab !== realNavigation.recordTab) throw new Error('Exiting test mode did not restore the previous view and term.');
           if (document.getElementById('adminTestModeBanner')) throw new Error('The Admin Test Mode banner remained after exit.');
 
-          return { modules: required.length, adminTestWorkspace: true, adminTestLifecycle: true, adminSaveSuppression: true, adminShortcut: true, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectWatermark: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, qrRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
+          return { modules: required.length, usageAnalytics: true, adminTestWorkspace: true, adminTestLifecycle: true, adminSaveSuppression: true, adminShortcut: true, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectWatermark: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, qrRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }

@@ -2,6 +2,9 @@ const MAX_QUESTION_LENGTH = 700;
 const MAX_RECENT_QUESTIONS = 50;
 const MAX_SIDEBAR_ADS = 8;
 const ADS_CONFIG_KEY = 'sidebar_ads';
+const USAGE_SCHEMA_VERSION = '1';
+const USAGE_RETENTION_MONTHS = 24;
+const MAX_USAGE_BODY_BYTES = 8192;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -66,6 +69,113 @@ async function ensureSchema(env) {
       updatedAt TEXT NOT NULL
     )
   `).run();
+
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS usage_monthly (
+      period TEXT NOT NULL,
+      region TEXT NOT NULL,
+      division TEXT NOT NULL,
+      gradeLevel INTEGER NOT NULL,
+      appVersion TEXT NOT NULL,
+      classSnapshotTotal INTEGER NOT NULL DEFAULT 0,
+      reports INTEGER NOT NULL DEFAULT 0,
+      updatedAt TEXT NOT NULL,
+      PRIMARY KEY (period, region, division, gradeLevel, appVersion)
+    )
+  `).run();
+}
+
+function monthKey(date = new Date()) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function usageCutoffPeriod(now = new Date()) {
+  const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - USAGE_RETENTION_MONTHS + 1, 1));
+  return monthKey(cutoff);
+}
+
+function normalizeUsagePayload(body, now = new Date()) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new Error('Usage summary must be an object.');
+  }
+
+  const forbiddenFields = [
+    'district', 'teacherName', 'schoolName', 'schoolId', 'section', 'subject',
+    'learners', 'lrn', 'birthdate', 'grades', 'scores', 'attendance',
+    'assessments', 'files', 'backups', 'installId', 'deviceId', 'ip'
+  ];
+  if (forbiddenFields.some(field => Object.prototype.hasOwnProperty.call(body, field))) {
+    throw new Error('Usage summary contains a prohibited field.');
+  }
+  if (String(body.schemaVersion || '') !== USAGE_SCHEMA_VERSION) {
+    throw new Error('Unsupported usage summary schema.');
+  }
+
+  const period = limitText(body.period, 7);
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period) || period !== monthKey(now)) {
+    throw new Error('Usage summary period must be the current UTC month.');
+  }
+
+  const region = limitText(body.region, 80);
+  const division = limitText(body.division, 140);
+  const appVersion = limitText(body.appVersion, 40);
+  if (!region || !division || !appVersion) throw new Error('Region, Division, and app version are required.');
+  if (/test data|mock/i.test(`${region} ${division}`)) throw new Error('Test data is not accepted.');
+  if (!/^[0-9A-Za-z.+_-]{1,40}$/.test(appVersion)) throw new Error('Invalid app version.');
+
+  if (!Array.isArray(body.gradeLevels) || !body.gradeLevels.length || body.gradeLevels.length > 12) {
+    throw new Error('One to twelve grade-level summaries are required.');
+  }
+
+  const seen = new Set();
+  const gradeLevels = body.gradeLevels.map(item => {
+    const gradeLevel = Number(item?.gradeLevel);
+    const classCount = Number(item?.classCount);
+    if (!Number.isInteger(gradeLevel) || gradeLevel < 1 || gradeLevel > 12 || seen.has(gradeLevel)) {
+      throw new Error('Grade levels must be unique integers from 1 to 12.');
+    }
+    if (!Number.isInteger(classCount) || classCount < 1 || classCount > 100) {
+      throw new Error('Class counts must be integers from 1 to 100.');
+    }
+    seen.add(gradeLevel);
+    return { gradeLevel, classCount };
+  });
+
+  return { schemaVersion: USAGE_SCHEMA_VERSION, period, region, division, gradeLevels, appVersion };
+}
+
+async function storeUsageSummary(request, env) {
+  const declaredLength = Number(request.headers.get('Content-Length') || 0);
+  if (declaredLength > MAX_USAGE_BODY_BYTES) return json({ error: 'Usage summary is too large.' }, 413);
+
+  const now = new Date();
+  const payload = normalizeUsagePayload(await readJson(request), now);
+  const updatedAt = now.toISOString();
+  const statements = payload.gradeLevels.map(item => env.DB.prepare(`
+    INSERT INTO usage_monthly (
+      period, region, division, gradeLevel, appVersion, classSnapshotTotal, reports, updatedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+    ON CONFLICT(period, region, division, gradeLevel, appVersion) DO UPDATE SET
+      classSnapshotTotal = usage_monthly.classSnapshotTotal + excluded.classSnapshotTotal,
+      reports = usage_monthly.reports + 1,
+      updatedAt = excluded.updatedAt
+  `).bind(
+    payload.period,
+    payload.region,
+    payload.division,
+    item.gradeLevel,
+    payload.appVersion,
+    item.classCount,
+    updatedAt
+  ));
+
+  if (typeof env.DB.batch === 'function') await env.DB.batch(statements);
+  else for (const statement of statements) await statement.run();
+  await env.DB.prepare('DELETE FROM usage_monthly WHERE period < ?')
+    .bind(usageCutoffPeriod(now))
+    .run();
+
+  return json({ success: true, aggregateOnly: true, retainedMonths: USAGE_RETENTION_MONTHS }, 202);
 }
 
 function normalizeQuestionPayload(body) {
@@ -229,6 +339,14 @@ async function handleRequest(request, env) {
       return await putSidebarAds(request, env);
     } catch (err) {
       return json({ error: err.message || 'Invalid sidebar ad config.' }, 400);
+    }
+  }
+
+  if (request.method === 'POST' && url.pathname === '/usage/class-summary') {
+    try {
+      return await storeUsageSummary(request, env);
+    } catch (err) {
+      return json({ error: err.message || 'Invalid usage summary.' }, 400);
     }
   }
 

@@ -6,7 +6,7 @@ This public update brings together the restored v1.4 feature set, the new global
 
 - Added a persistent sidebar sponsor carousel with owner-managed global ads.
 - Added a hidden owner ad editor opened with `Ctrl + Alt + Shift + A`.
-- Added Cloudflare relay support for global sidebar ads through `/ads/sidebar` and protected owner saves through `/admin/sidebar-ads`.
+- Added Cloudflare relay support for centrally managed global sidebar ads.
 - Cached the latest successful remote ads so offline users still see safe sponsor content, with bundled ads as the final fallback.
 - Moved the sidebar ad placement to the bottom of the sidebar body, directly above the `Collapse Sidebar` divider.
 - Added Dashboard grid/list view switching and saved the teacher's preferred view locally.
@@ -34,7 +34,6 @@ This public update brings together the restored v1.4 feature set, the new global
 - Existing class records, learner rosters, scores, backups, and grading formulas remain compatible.
 - Community Help and global sidebar ads require internet access; offline FAQ answers and bundled/cached ads continue to work.
 - Sidebar sponsor content is hidden from print and PDF output.
-- The hidden ad editor requires the Cloudflare `ADS_ADMIN_TOKEN`; normal users cannot edit global ads in Settings.
 
 ## Update Notes
 

@@ -93,12 +93,28 @@ async function testLifecycle() {
   assert.strictEqual(AdminTestMode.isActive(), true);
   assert.strictEqual(AdminTestMode.shouldSuppressPersistence(), true);
   assert.strictEqual(activeDb.isMockTestData, true);
+  const addedClass = {
+    id: 'class-added-during-test', gradeLevel: '7', section: 'New Test', subject: 'Science',
+    subjectGroup: 'REGULAR', learners: [], assessments: [], scores: {}
+  };
+  assert.strictEqual(AdminTestMode.populateNewAssignment(addedClass), true);
+  assert.strictEqual(addedClass.isMockTestData, true);
+  assert.strictEqual(addedClass.learners.length, 24);
+  assert.deepStrictEqual([...new Set(addedClass.assessments.map(item => item.term))].sort(), ['1', '2', '3']);
+  assert.ok(Object.keys(addedClass.scores).length > 0);
+  assert.ok(Object.keys(addedClass.scores).length < addedClass.learners.length * addedClass.assessments.length);
+  assert.ok(addedClass.attendanceSessions.length > 0);
+  assert.ok(addedClass.attendanceNoClassDays.length > 0);
+  assert.ok(addedClass.supportRecords.length > 0);
   activeDb.teacherName = 'CHANGED MOCK DATA';
   assert.strictEqual(AdminTestMode.exitTestMode(), true);
   assert.strictEqual(activeDb, original, 'exit must restore the exact original object reference');
   assert.strictEqual(JSON.stringify(original), originalBytes, 'real profile must remain byte-for-byte unchanged');
   assert.deepStrictEqual(navigation, { currentView: 'attendance', recordTab: '3' });
   assert.strictEqual(AdminTestMode.isActive(), false);
+  const ordinaryClass = { learners: [], assessments: [], scores: {} };
+  assert.strictEqual(AdminTestMode.populateNewAssignment(ordinaryClass), false);
+  assert.deepStrictEqual(ordinaryClass, { learners: [], assessments: [], scores: {} });
   assert.ok(renderCalls >= 2);
 
   global.saveDatabase = async () => {
@@ -129,6 +145,7 @@ function testSafetyWiring() {
   assert.ok(adminTesting.includes("querySelector('.adm-panel')"));
   assert.ok(adminTesting.includes("querySelector('.adm-tabs')"));
   assert.ok(adminTesting.includes('function handleAdminShortcut'));
+  assert.ok(database.includes('AdminTestMode?.populateNewAssignment?.(assignment)'), 'new classes must receive mock data only through the Admin Test Mode guard');
   assert.ok(index.includes('id="sidebarBrandIcon"'));
   assert.ok(adminTesting.includes("getElementById('sidebarBrandIcon')"));
   assert.ok(adminTesting.includes("addEventListener('keydown', handleAdminShortcut, true)"));

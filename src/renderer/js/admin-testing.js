@@ -128,6 +128,24 @@
     };
   }
 
+  function populateNewAssignment(assignment) {
+    if (!session.active || !assignment || typeof assignment !== 'object') return false;
+    const classKey = String(assignment.id || 'added-class').replace(/[^a-z0-9_-]+/gi, '-');
+    const learners = mockLearners(classKey);
+    const isMapeh = String(assignment.subjectGroup || '').toUpperCase() === 'MAPEH'
+      || String(assignment.subject || '').trim().toUpperCase() === 'MAPEH';
+    const assessments = assessmentDefinitions(classKey, isMapeh);
+    Object.assign(assignment, {
+      isMockTestData: true,
+      mockTestLabel: TEST_MARKER,
+      learners,
+      assessments,
+      scores: mockScores(learners, assessments),
+      ...attendanceFixture(learners)
+    });
+    return true;
+  }
+
   function advisoryFixture(sourceAssignment) {
     const advisoryClassId = 'mock-advisory-grade-11-integrity';
     const adviserName = `Admin Test Adviser — ${TEST_MARKER}`;
@@ -547,6 +565,7 @@
     markExportFilename,
     markCsvContent,
     blockExternalAction,
+    populateNewAssignment,
     startCompleteWorkspace,
     exitTestMode,
     initializeBrowserRuntime

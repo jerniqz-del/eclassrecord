@@ -52,6 +52,126 @@
       .sort((left, right) => text(left.subject || left.name).localeCompare(text(right.subject || right.name), 'fil'));
   }
 
+  function localSourceMapehPart(subject, sourceClass) {
+    const sourceName = normalizeSubjectKey(sourceClass?.subject || sourceClass?.name);
+    const isMapeh = sourceName === 'MAPEH' || sourceName.includes('MUSIC ARTS PHYSICAL EDUCATION AND HEALTH');
+    if (!isMapeh) return '';
+    const subjectKey = normalizeSubjectKey(subject?.subjectName || subject?.normalizedSubjectKey);
+    if (subjectKey === 'MUSIC ARTS' || subjectKey === 'MUSIC AND ARTS') return 'music_arts';
+    if (subjectKey === 'PE HEALTH' || subjectKey === 'PE AND HEALTH') return 'pe_health';
+    return '';
+  }
+
+  function localSourceOptionLabel(subject, sourceClass) {
+    const base = `${text(sourceClass?.subject || sourceClass?.name)} · Grade ${text(sourceClass?.gradeLevel)} - ${text(sourceClass?.section)}`;
+    const part = localSourceMapehPart(subject, sourceClass);
+    if (part === 'music_arts') return `${base} · Music & Arts component`;
+    if (part === 'pe_health') return `${base} · PE & Health component`;
+    return base;
+  }
+
+  function readLocalSourceTermGrade(sourceClass, learnerId, term, mapePart) {
+    if (mapePart) return globalScope.computeTerm?.(sourceClass, learnerId, term, mapePart)?.termGrade ?? null;
+    if (typeof globalScope.getLearnerTermGradeForExport === 'function') {
+      return globalScope.getLearnerTermGradeForExport(sourceClass, learnerId, term);
+    }
+    return globalScope.computeTerm?.(sourceClass, learnerId, term)?.termGrade ?? null;
+  }
+
+  function localGradeValues(advisoryClass, subject, sourceClass, advisoryLearner, term, finalGrade) {
+    return {
+      advisoryClassId: advisoryClass.id,
+      advisoryLearnerId: advisoryLearner.id,
+      advisorySubjectId: subject.id,
+      schoolYear: text(advisoryClass.schoolYear),
+      learnerLrn: text(advisoryLearner.lrn),
+      subjectName: text(subject.subjectName),
+      normalizedSubjectKey: text(subject.normalizedSubjectKey || normalizeSubjectKey(subject.subjectName)),
+      gradeLevel: text(advisoryClass.gradeLevel),
+      section: text(advisoryClass.section),
+      term: String(term),
+      finalGrade: Number(finalGrade),
+      gradeStatus: 'final',
+      sourceType: 'local-subject-class',
+      sourceClassId: text(sourceClass.id),
+      sourceClassName: text(sourceClass.name || `${sourceClass.subject} · Grade ${sourceClass.gradeLevel} - ${sourceClass.section}`),
+      sourceTeacherName: text(sourceClass.teacherName || subject.expectedSourceTeacher),
+      validationStatus: 'valid',
+      conflictStatus: 'none',
+      remarks: '',
+      adviserEditAllowed: false
+    };
+  }
+
+  function syncLocalSubjectGrades(profileDb, advisoryClass, subject, options = {}) {
+    const result = { changed: false, created: 0, updated: 0, deleted: 0, unmatched: 0, missing: 0, sourceMissing: false };
+    if (!profileDb || !advisoryClass || !subject || subject.sourceType !== 'local-subject-class') return result;
+    const sourceClass = (profileDb.assignments || []).find(item => item.id === subject.expectedSourceClassId);
+    if (!sourceClass) { result.sourceMissing = true; return result; }
+    const store = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb);
+    const desired = new Map();
+    const matchedAdvisoryLearners = new Set();
+    const mapePart = localSourceMapehPart(subject, sourceClass);
+    const gradeReader = typeof options.getTermGrade === 'function' ? options.getTermGrade : readLocalSourceTermGrade;
+    (sourceClass.learners || []).forEach(sourceLearner => {
+      const match = matchLearner(store, advisoryClass.id, sourceLearner);
+      if (!match.learner || matchedAdvisoryLearners.has(match.learner.id)) { result.unmatched += 1; return; }
+      matchedAdvisoryLearners.add(match.learner.id);
+      ['1', '2', '3'].forEach(term => {
+        const finalGrade = gradeReader(sourceClass, sourceLearner.id, term, mapePart);
+        const numericGrade = Number(finalGrade);
+        if (finalGrade === null || finalGrade === undefined || finalGrade === '' || finalGrade === 'T/O'
+          || !Number.isFinite(numericGrade) || numericGrade < 60 || numericGrade > 100) {
+          result.missing += 1;
+          return;
+        }
+        desired.set(`${match.learner.id}|${term}`, localGradeValues(advisoryClass, subject, sourceClass, match.learner, term, numericGrade));
+      });
+    });
+    const existing = store.grades.filter(item => item.advisoryClassId === advisoryClass.id && item.advisorySubjectId === subject.id);
+    desired.forEach((values, key) => {
+      const record = existing.find(item => `${item.advisoryLearnerId}|${item.term}` === key);
+      if (!record) {
+        globalScope.AdvisoryData.createGrade(profileDb, values);
+        result.created += 1;
+        result.changed = true;
+        return;
+      }
+      const changed = Object.entries(values).some(([field, value]) => record[field] !== value);
+      if (changed) {
+        globalScope.AdvisoryData.updateGrade(profileDb, record.id, values);
+        result.updated += 1;
+        result.changed = true;
+      }
+    });
+    existing.forEach(record => {
+      const key = `${record.advisoryLearnerId}|${record.term}`;
+      const belongsToLocalLink = record.sourceType === 'local-subject-class';
+      if (!desired.has(key) && (belongsToLocalLink || options.replaceExisting === true)) {
+        globalScope.AdvisoryData.deleteGrade(profileDb, record.id);
+        result.deleted += 1;
+        result.changed = true;
+      }
+    });
+    return result;
+  }
+
+  function syncAllLocalSubjectGrades(profileDb, advisoryClass) {
+    const store = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb);
+    const results = store.subjects
+      .filter(subject => subject.advisoryClassId === advisoryClass.id && !subject.isArchived && subject.sourceType === 'local-subject-class')
+      .map(subject => syncLocalSubjectGrades(profileDb, advisoryClass, subject));
+    return { changed: results.some(result => result.changed), results };
+  }
+
+  function clearLocalSubjectGrades(profileDb, advisoryClassId, subjectId) {
+    const store = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb);
+    const linked = store.grades.filter(item => item.advisoryClassId === advisoryClassId
+      && item.advisorySubjectId === subjectId && item.sourceType === 'local-subject-class');
+    linked.forEach(item => globalScope.AdvisoryData.deleteGrade(profileDb, item.id));
+    return linked.length;
+  }
+
   function splitMapehSubjects(subjects) {
     return (subjects || []).flatMap(subjectName => /mapeh|music, arts, physical education, and health/i.test(subjectName)
       ? ['Music & Arts', 'PE & Health']
@@ -972,7 +1092,7 @@
             <label class="advisory-source-option"><input type="radio" name="advisorySourceType" value="manual"><span><strong>Manual entry</strong><small>Use when grades will be entered by the adviser.</small></span></label>
           </fieldset>
           <div class="advisory-source-explanation" data-source-help="grade-transfer-file"><strong>No additional setup needed.</strong><span>The app reads the school year, grade and section, subject, and term directly from the Grade Transfer File, then checks them before showing the import preview.</span></div>
-          <div class="field" data-source-help="local-subject-class" hidden><label class="field-label">Choose the class</label><select class="field-select" data-local-source-class><option value="">Select a class</option>${localClasses.map(item => `<option value="${globalScope.esc(item.id)}">${globalScope.esc(item.subject)} · Grade ${globalScope.esc(item.gradeLevel)} - ${globalScope.esc(item.section)}</option>`).join('')}</select><p class="field-help">Only classes matching this Advisory Class school year, grade level, and section are listed.</p></div>
+          <div class="field" data-source-help="local-subject-class" hidden><label class="field-label">Choose the class</label><select class="field-select" data-local-source-class><option value="">Select a class</option>${localClasses.map(item => `<option value="${globalScope.esc(item.id)}">${globalScope.esc(localSourceOptionLabel(existing, item))}</option>`).join('')}</select><p class="field-help">Only classes matching this Advisory Class school year, grade level, and section are listed. A MAPEH class supplies its Music &amp; Arts or PE &amp; Health component automatically.</p></div>
           <div class="advisory-source-explanation" data-source-help="manual" hidden><strong>Manual source selected.</strong><span>In the Grade Record, click the + beside this subject, then enter each learner&apos;s Term 1–3 final grades.</span></div>
         </div>
         <div class="modal__actions">${existing.isSpecialProgramSubject ? '<button class="btn btn-danger btn-sm" data-delete-subject>Archive Subject</button>' : ''}<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-save>Save Source</button></div>
@@ -1003,7 +1123,7 @@
         subjectName,
         sourceType,
         expectedSourceTeacher: sourceType === 'local-subject-class' ? text(selectedLocalClass?.teacherName || activeDb().teacherName) : '',
-        expectedSourceClass: sourceType === 'local-subject-class' ? text(selectedLocalClass?.name || `${selectedLocalClass?.subject} · Grade ${selectedLocalClass?.gradeLevel} - ${selectedLocalClass?.section}`) : '',
+        expectedSourceClass: sourceType === 'local-subject-class' ? localSourceOptionLabel(existing, selectedLocalClass) : '',
         expectedSourceClassId: sourceType === 'local-subject-class' ? text(selectedLocalClass?.id) : '',
         expectedGradeLevel: advisoryClass.gradeLevel,
         expectedSection: advisoryClass.section,
@@ -1016,11 +1136,17 @@
       const duplicate = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb()).subjects.some(item => item.advisoryClassId === advisoryClass.id && item.id !== existing?.id && item.normalizedSubjectKey === values.normalizedSubjectKey);
       if (duplicate) { globalScope.toast('This Advisory subject already exists.', 'warning'); return; }
       globalScope.AdvisoryData.updateSubject(activeDb(), existing.id, values);
+      const savedSubject = globalScope.AdvisoryData.normalizeAdvisoryData(activeDb()).subjects.find(item => item.id === existing.id);
+      const syncResult = sourceType === 'local-subject-class'
+        ? syncLocalSubjectGrades(activeDb(), advisoryClass, savedSubject, { replaceExisting: true })
+        : { changed: clearLocalSubjectGrades(activeDb(), advisoryClass.id, existing.id) > 0, created: 0, updated: 0, deleted: 0, unmatched: 0, missing: 0 };
       await globalScope.saveDatabase();
       overlay.remove();
       globalScope.AdvisoryRoster.renderWorkspace();
       globalScope.renderDashboardOverview();
-      globalScope.toast('Advisory subject saved.', 'success');
+      globalScope.toast(sourceType === 'local-subject-class'
+        ? `Grade source linked: ${syncResult.created + syncResult.updated} grade record${syncResult.created + syncResult.updated === 1 ? '' : 's'} synchronized${syncResult.unmatched ? `; ${syncResult.unmatched} learner${syncResult.unmatched === 1 ? '' : 's'} unmatched` : ''}.`
+        : 'Advisory subject saved.', syncResult.unmatched ? 'warning' : 'success');
     });
     overlay.querySelector('[data-delete-subject]')?.addEventListener('click', () => {
       const gradeCount = store.grades.filter(item => item.advisorySubjectId === existing.id).length;
@@ -1568,6 +1694,8 @@
     const panel = workspace?.querySelector('[data-advisory-grade-panel]');
     if (!panel) return;
     const profileDb = activeDb();
+    const localSync = syncAllLocalSubjectGrades(profileDb, advisoryClass);
+    if (localSync.changed) globalScope.queueMicrotask?.(() => globalScope.saveDatabase?.());
     const store = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb);
     const allSubjects = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id).sort((a, b) => a.displayOrder - b.displayOrder);
     const subjects = allSubjects.filter(item => !item.isArchived);
@@ -1922,6 +2050,11 @@
     ADVISER_NOTE_MAX_LENGTH,
     normalizeSubjectKey,
     matchingLocalClasses,
+    localSourceMapehPart,
+    localSourceOptionLabel,
+    syncLocalSubjectGrades,
+    syncAllLocalSubjectGrades,
+    clearLocalSubjectGrades,
     standardSubjectsForGrade,
     isSeniorHighGrade,
     seniorHighSubjectPickerMarkup,

@@ -7,17 +7,21 @@ const PORT = Number(process.env.PORT || 8787);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'questions.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
+const USAGE_FILE = path.join(DATA_DIR, 'usage-monthly.json');
 const MAX_QUESTION_LENGTH = 700;
 const MAX_RECENT_QUESTIONS = 500;
 const MAX_SIDEBAR_ADS = 8;
 const MAX_BODY_LENGTH = 32768;
 const ADS_CONFIG_KEY = 'sidebar_ads';
+const USAGE_SCHEMA_VERSION = '1';
+const USAGE_RETENTION_MONTHS = 24;
 const ADS_ADMIN_TOKEN = process.env.ADS_ADMIN_TOKEN || '';
 
 function ensureStore() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, '[]');
   if (!fs.existsSync(CONFIG_FILE)) fs.writeFileSync(CONFIG_FILE, '{}');
+  if (!fs.existsSync(USAGE_FILE)) fs.writeFileSync(USAGE_FILE, '[]');
 }
 
 function readQuestions() {
@@ -48,6 +52,21 @@ function readConfig() {
 function writeConfig(config) {
   ensureStore();
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config || {}, null, 2));
+}
+
+function readUsageAggregates() {
+  ensureStore();
+  try {
+    const parsed = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_err) {
+    return [];
+  }
+}
+
+function writeUsageAggregates(rows) {
+  ensureStore();
+  fs.writeFileSync(USAGE_FILE, JSON.stringify(rows, null, 2));
 }
 
 function sendJson(res, status, body) {
@@ -96,6 +115,88 @@ function normalizeQuestionPayload(body) {
       : new Date().toISOString(),
     dismissedBy: []
   };
+}
+
+function monthKey(date = new Date()) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function usageCutoffPeriod(now = new Date()) {
+  const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - USAGE_RETENTION_MONTHS + 1, 1));
+  return monthKey(cutoff);
+}
+
+function normalizeUsagePayload(body, now = new Date()) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('Usage summary must be an object.');
+  const forbiddenFields = [
+    'district', 'teacherName', 'schoolName', 'schoolId', 'section', 'subject',
+    'learners', 'lrn', 'birthdate', 'grades', 'scores', 'attendance',
+    'assessments', 'files', 'backups', 'installId', 'deviceId', 'ip'
+  ];
+  if (forbiddenFields.some(field => Object.prototype.hasOwnProperty.call(body, field))) {
+    throw new Error('Usage summary contains a prohibited field.');
+  }
+  if (String(body.schemaVersion || '') !== USAGE_SCHEMA_VERSION) throw new Error('Unsupported usage summary schema.');
+
+  const period = limitText(body.period, 7);
+  const region = limitText(body.region, 80);
+  const division = limitText(body.division, 140);
+  const appVersion = limitText(body.appVersion, 40);
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period) || period !== monthKey(now)) {
+    throw new Error('Usage summary period must be the current UTC month.');
+  }
+  if (!region || !division || !appVersion) throw new Error('Region, Division, and app version are required.');
+  if (/test data|mock/i.test(`${region} ${division}`)) throw new Error('Test data is not accepted.');
+  if (!/^[0-9A-Za-z.+_-]{1,40}$/.test(appVersion)) throw new Error('Invalid app version.');
+  if (!Array.isArray(body.gradeLevels) || !body.gradeLevels.length || body.gradeLevels.length > 12) {
+    throw new Error('One to twelve grade-level summaries are required.');
+  }
+
+  const seen = new Set();
+  const gradeLevels = body.gradeLevels.map(item => {
+    const gradeLevel = Number(item?.gradeLevel);
+    const classCount = Number(item?.classCount);
+    if (!Number.isInteger(gradeLevel) || gradeLevel < 1 || gradeLevel > 12 || seen.has(gradeLevel)) {
+      throw new Error('Grade levels must be unique integers from 1 to 12.');
+    }
+    if (!Number.isInteger(classCount) || classCount < 1 || classCount > 100) {
+      throw new Error('Class counts must be integers from 1 to 100.');
+    }
+    seen.add(gradeLevel);
+    return { gradeLevel, classCount };
+  });
+  return { period, region, division, gradeLevels, appVersion };
+}
+
+function storeUsageSummaryLocally(payload, now = new Date()) {
+  const updatedAt = now.toISOString();
+  const rows = readUsageAggregates().filter(row => row.period >= usageCutoffPeriod(now));
+  payload.gradeLevels.forEach(item => {
+    const existing = rows.find(row =>
+      row.period === payload.period &&
+      row.region === payload.region &&
+      row.division === payload.division &&
+      row.gradeLevel === item.gradeLevel &&
+      row.appVersion === payload.appVersion
+    );
+    if (existing) {
+      existing.classSnapshotTotal += item.classCount;
+      existing.reports += 1;
+      existing.updatedAt = updatedAt;
+    } else {
+      rows.push({
+        period: payload.period,
+        region: payload.region,
+        division: payload.division,
+        gradeLevel: item.gradeLevel,
+        appVersion: payload.appVersion,
+        classSnapshotTotal: item.classCount,
+        reports: 1,
+        updatedAt
+      });
+    }
+  });
+  writeUsageAggregates(rows);
 }
 
 function publicQuestion(question) {
@@ -232,6 +333,18 @@ async function handleRequest(req, res) {
       sendJson(res, 200, { success: true, ...config[ADS_CONFIG_KEY] });
     } catch (err) {
       sendJson(res, 400, { error: err.message || 'Invalid sidebar ad config.' });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/usage/class-summary') {
+    try {
+      const now = new Date();
+      const payload = normalizeUsagePayload(await readBody(req), now);
+      storeUsageSummaryLocally(payload, now);
+      sendJson(res, 202, { success: true, aggregateOnly: true, retainedMonths: USAGE_RETENTION_MONTHS });
+    } catch (err) {
+      sendJson(res, 400, { error: err.message || 'Invalid usage summary.' });
     }
     return;
   }
