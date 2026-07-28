@@ -5,8 +5,8 @@
  * scores, and configuration through Electron IPC bridge.
  */
 
-const DB_VERSION = 5;
-const ROOT_DB_VERSION = 5;
+const DB_VERSION = 7;
+const ROOT_DB_VERSION = 6;
 
 function timestampNow() {
   return new Date().toISOString();
@@ -30,6 +30,23 @@ function normalizeProfileRecord(profile) {
   if (!profile || typeof profile !== 'object') return null;
   if (profile.pinEnabled === undefined) profile.pinEnabled = false;
   if (profile.secondaryBackupPath === undefined) profile.secondaryBackupPath = '';
+  const normalizedRecoveryId = BackupRecoveryId.normalizeBackupRecoveryId(profile.backupRecoveryId);
+  profile.backupRecoveryId = normalizedRecoveryId || BackupRecoveryId.generateBackupRecoveryId();
+  if (!profile.sharedFolderSync || typeof profile.sharedFolderSync !== 'object') {
+    profile.sharedFolderSync = {
+      enabled: false,
+      baseRevisionId: '',
+      ownRevisionId: '',
+      integratedRevisionIds: [],
+      lastPublishedDigest: '',
+      lastFolderWriteAt: '',
+      lastCheckedAt: '',
+      lastError: ''
+    };
+  }
+  if (!Array.isArray(profile.sharedFolderSync.integratedRevisionIds)) {
+    profile.sharedFolderSync.integratedRevisionIds = [];
+  }
   if (profile.createdAt === undefined) profile.createdAt = profile.lastUpdatedAt || '';
   if (profile.lastUpdatedAt === undefined) profile.lastUpdatedAt = profile.createdAt || '';
   if (profile.recovery === undefined) profile.recovery = null;
@@ -58,6 +75,13 @@ function normalizeRootDatabase(root) {
   nextRoot.version = normalizeVersion(nextRoot.version, ROOT_DB_VERSION);
   if (!Array.isArray(nextRoot.profiles)) nextRoot.profiles = [];
   nextRoot.profiles = nextRoot.profiles.map(normalizeProfileRecord).filter(Boolean);
+  const recoveryIds = new Set();
+  for (const profile of nextRoot.profiles) {
+    while (recoveryIds.has(profile.backupRecoveryId)) {
+      profile.backupRecoveryId = BackupRecoveryId.generateBackupRecoveryId();
+    }
+    recoveryIds.add(profile.backupRecoveryId);
+  }
   if (typeof nextRoot.activeProfileId !== 'string') nextRoot.activeProfileId = '';
   if (nextRoot.activeProfileId && !nextRoot.profiles.some(p => p.id === nextRoot.activeProfileId)) {
     nextRoot.activeProfileId = '';
@@ -155,6 +179,7 @@ function normalizeDatabase() {
   if (db.district === undefined) db.district = '';
   if (db.autoBlur === undefined) db.autoBlur = false;
   normalizeAdvisoryData(db);
+  if (typeof ToolsData !== 'undefined') ToolsData.normalize(db);
   
   for (let i = 0; i < db.assignments.length; i++) {
     const a = db.assignments[i];
@@ -304,6 +329,7 @@ async function saveDatabase() {
   const saved = await saveRootDatabase();
   if (saved && typeof window !== 'undefined') {
     window.UsageAnalytics?.scheduleProfileSummary?.(db);
+    window.SharedFolderSync?.schedulePublish?.();
   }
   return saved;
 }
@@ -519,6 +545,7 @@ function updateProfile() {
   if (divisionEl) db.division = divisionEl.value;
   if (districtEl) db.district = districtEl.value;
   if (yearEl) db.schoolYear = yearEl.value;
+  if (typeof updateSidebarUserName === 'function') updateSidebarUserName();
 }
 
 function syncDistrictProfileField() {

@@ -19,6 +19,9 @@
   <link rel="stylesheet" href="css/animations.css" />
   <link rel="stylesheet" href="css/mobile-sync.css" />
   <link rel="stylesheet" href="css/calendar.css" />
+  <link rel="stylesheet" href="css/backup-recovery.css" />
+  <link rel="stylesheet" href="css/shared-folder-sync.css" />
+  <link rel="stylesheet" href="css/teacher-tools.css" />
   <link rel="stylesheet" href="css/print.css" media="print" />
   <link rel="stylesheet" href="css/admin.css" />
   <link rel="stylesheet" href="css/pin-recovery.css" />
@@ -109,6 +112,15 @@
           </svg>
           <span class="nav-btn__label">Attendance</span>
         </button>
+        <button id="navTools" class="nav-btn" onclick="setView('tools')" title="Teacher Tools">
+          <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14.7 6.3a4 4 0 0 0-5-5L7.4 3.6l3 3 2.3-2.3a4 4 0 0 0 2 2z"></path>
+            <path d="m8.5 8.5-6.8 6.8a2.4 2.4 0 0 0 3.4 3.4l6.8-6.8"></path>
+            <path d="m15 12 6 6"></path>
+            <path d="m17 10 2-2"></path>
+          </svg>
+          <span class="nav-btn__label">Tools</span>
+        </button>
         <button id="navSync" class="nav-btn" onclick="setView('sync')" title="Mobile Sync" style="display: none;">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
@@ -190,12 +202,16 @@
               <option value="2035-2036">2035-2036</option>
             </select>
             <span class="meta-dot">&middot;</span>
-            <span id="headerSchoolName">Loading…</span>
+            <span id="headerSchoolName">Loading&hellip;</span>
             <span class="meta-dot">&middot;</span>
-            <span id="headerPolicy">Loading…</span>
+            <span id="headerPolicy">Loading&hellip;</span>
           </div>
         </div>
         <div class="app-header__actions">
+          <button id="sharedSyncIndicator" class="shared-sync-indicator" type="button" onclick="SharedFolderSync.openStatus()" title="Shared Folder Sync is off">
+            <span class="shared-sync-indicator__icon" aria-hidden="true"></span>
+            <span id="sharedSyncIndicatorLabel">Sync Off</span>
+          </button>
           <span id="autoSaveIndicator" class="auto-save-indicator" title="Changes automatically saved">
             <svg class="auto-save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
@@ -575,6 +591,20 @@
         </div>
       </section>
 
+      <!-- Teacher Tools View -->
+      <section class="view-section view-section--flex" data-view="tools" style="display:none">
+        <div id="teacherToolsView" class="teacher-tools panel-fill">
+          <header class="teacher-tools__header no-print">
+            <div>
+              <h1 class="teacher-tools__title">Teacher Tools</h1>
+            </div>
+            <div id="teacherToolsTabs" class="teacher-tools__tabs" role="tablist" aria-label="Teacher tools"></div>
+          </header>
+          <div id="teacherToolsContent" class="teacher-tools__content"></div>
+          <div id="teacherToolsPrintSheet" class="teacher-tools-print-sheet" aria-hidden="true"></div>
+        </div>
+      </section>
+
       <!-- Settings & App Details View -->
       <section class="view-section" data-view="settings">
         
@@ -615,7 +645,7 @@
 
         <!-- Auto-Backup Folder Card -->
         <div class="card">
-          <h2 class="card-title">Secondary Auto-Backup Folder</h2>
+            <h2 class="card-title">Shared Backup Folder</h2>
           <div class="settings-row">
             <div class="settings-row__left">
               <div class="settings-row__title">Backup Directory Path</div>
@@ -624,6 +654,54 @@
             <div class="action-cluster">
               <button id="btnClearBackupFolder" class="btn btn-ghost btn-sm" onclick="clearSecondaryBackupFolder()" style="display:none">Clear</button>
               <button class="btn btn-sm" onclick="selectSecondaryBackupFolder()">Select Folder</button>
+            </div>
+          </div>
+          <div class="settings-row section-divider">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Multi-PC Shared Folder Sync</div>
+              <div id="sharedSyncSettingsStatus" class="settings-row__desc">Sync is off. Your records still save locally and ordinary backups continue to work.</div>
+              <div id="sharedSyncSettingsDetails" class="shared-sync-details" hidden></div>
+            </div>
+            <div class="action-cluster">
+              <button id="btnSharedSyncCheck" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.checkNow()" hidden>Check Now</button>
+              <button id="btnSharedSyncReview" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.reviewPending()" hidden>Review Changes</button>
+              <button id="btnSharedSyncDevice" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.renameDevice()" hidden>Rename Device</button>
+              <button id="btnSharedSyncToggle" class="btn btn-sm" type="button" onclick="SharedFolderSync.toggleSync()">Enable Sync</button>
+            </div>
+          </div>
+          <div class="settings-row section-divider">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Your Backup Recovery ID</div>
+              <div class="settings-row__desc">
+                <code id="backupRecoveryIdValue" class="backup-recovery-id">Preparing ID&hellip;</code>
+                <span class="backup-recovery-note">Use this ID to find your backups on another PC. It does not replace your PIN.</span>
+              </div>
+            </div>
+            <div class="action-cluster">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.copyRecoveryId()" title="Copy Backup Recovery ID">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy
+              </button>
+              <button class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.regenerateRecoveryId()">Regenerate</button>
+            </div>
+          </div>
+          <div class="backup-discovery section-divider">
+            <div>
+              <div class="settings-row__title">Restore From a Shared Backup Folder</div>
+              <div class="settings-row__desc">Enter the Backup Recovery ID, then choose the OneDrive, Google Drive, Dropbox, network, removable, or local folder containing the backup.</div>
+            </div>
+            <div class="backup-discovery__controls">
+              <input id="backupRecoverySearchInput" class="field-input backup-recovery-input" type="text" autocomplete="off" spellcheck="false" placeholder="ECR-XXXX-XXXX-XXXX-XXXX-XXXX" aria-label="Backup Recovery ID to find" />
+              <button id="btnScanBackupFolder" class="btn btn-sm" type="button" onclick="BackupRecovery.scanForBackup()">Choose Folder &amp; Find Backup</button>
+            </div>
+            <div id="backupDiscoveryStatus" class="settings-row__desc" aria-live="polite"></div>
+            <div id="backupDiscoveryResult" class="backup-discovery__result" hidden>
+              <dl class="backup-discovery__metadata">
+                <div><dt>Profile</dt><dd id="backupDiscoveryProfile">Unknown profile</dd></div>
+                <div><dt>Saved</dt><dd id="backupDiscoveryCreatedAt"></dd></div>
+                <div><dt>Protection</dt><dd id="backupDiscoveryProtection"></dd></div>
+              </dl>
+              <button class="btn btn-primary btn-sm" type="button" onclick="BackupRecovery.restoreSelectedBackup()">Restore This Backup</button>
             </div>
           </div>
         </div>
@@ -1815,7 +1893,7 @@
           console.log('Mock saveDatabase:', data);
           return true;
         },
-        getVersion: async () => '1.6.8-mock',
+        getVersion: async () => '1.7.0-mock',
         getPerformanceProfile: async () => ({
           totalMemoryBytes: 8 * 1024 ** 3,
           freeMemoryBytes: 4 * 1024 ** 3,
@@ -1849,10 +1927,14 @@
   <script src="js/ui-helpers.js"></script>
   <script src="js/performance-mode.js"></script>
   <script src="js/security.js"></script>
+  <script src="js/backup-recovery-id.js"></script>
+  <script src="js/shared-sync-crypto.js"></script>
+  <script src="js/shared-sync-merge.js"></script>
   <script src="js/grading.js"></script>
   <script src="js/learners.js"></script>
   <script src="js/advisory-data.js"></script>
   <script src="js/advisory-backup.js"></script>
+  <script src="js/teacher-tools-core.js"></script>
   <script src="js/database.js"></script>
   <script src="js/usage-analytics.js"></script>
   <script src="js/update-manager.js"></script>
@@ -1881,9 +1963,12 @@
   <script src="js/ad-manager.js"></script>
   <script src="js/attendance-excused.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/teacher-tools.js"></script>
   <script src="js/special-program.js"></script>
   <script src="js/pin-recovery.js"></script>
+  <script src="js/backup-recovery.js"></script>
+  <script src="js/shared-folder-sync.js"></script>
   <script src="js/admin-testing.js"></script>
-  <script>PerformanceMode.init(); initFontSize(); initSidebarResizer(); if (typeof initSidebarAd === 'function') initSidebarAd(); initPinRecovery(); UsageAnalytics.init(); UpdateManager.init();</script>
+  <script>PerformanceMode.init(); initFontSize(); initSidebarResizer(); if (typeof initSidebarAd === 'function') initSidebarAd(); initTeacherTools(); initPinRecovery(); initBackupRecovery(); initSharedFolderSync(); UsageAnalytics.init(); UpdateManager.init();</script>
 </body>
 </html>

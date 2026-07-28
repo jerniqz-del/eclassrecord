@@ -1,6 +1,6 @@
 {
   "name": "eclass-record",
-  "version": "1.6.8",
+  "version": "1.7.0",
   "description": "Local, teacher-owned class record for DepEd three-term and legacy grading workflows",
   "author": "E-Class Record App",
   "license": "MIT",
@@ -15,8 +15,13 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "test": "npm run test:database-future-proof && npm run test:learner-birthdate && npm run test:usage-analytics && npm run test:auto-updater && npm run test:performance-mode && npm run test:admin-auth && npm run test:admin-test-mode && npm run test:admin-mock-files && npm run test:advisory-data && npm run test:special-program && npm run test:senior-high && npm run test:record-layout && npm run test:advisory-compatibility && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer && npm run test:adviser-grade-permission && npm run test:grade-conflicts && npm run test:advisory-backup && npm run test:advisory-e2e && npm run test:advisory-redesign",
+    "bundle:games": "node scripts/bundle-offline-games.js",
+    "test": "npm run test:database-future-proof && npm run test:backup-recovery && npm run test:shared-folder-sync && npm run test:teacher-tools && npm run test:obfuscation-isolation && npm run test:learner-birthdate && npm run test:usage-analytics && npm run test:auto-updater && npm run test:performance-mode && npm run test:admin-auth && npm run test:admin-test-mode && npm run test:admin-mock-files && npm run test:advisory-data && npm run test:special-program && npm run test:senior-high && npm run test:record-layout && npm run test:advisory-compatibility && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer && npm run test:adviser-grade-permission && npm run test:grade-conflicts && npm run test:advisory-backup && npm run test:advisory-e2e && npm run test:advisory-redesign",
     "test:database-future-proof": "node scripts/test-database-future-proof.js",
+    "test:backup-recovery": "node scripts/test-backup-recovery.js",
+    "test:shared-folder-sync": "node scripts/test-shared-folder-sync.js",
+    "test:teacher-tools": "node scripts/test-teacher-tools.js",
+    "test:obfuscation-isolation": "node scripts/test-obfuscation-isolation.js",
     "test:learner-birthdate": "node scripts/test-learner-birthdate.js",
     "test:usage-analytics": "node scripts/test-usage-analytics.js",
     "test:auto-updater": "node scripts/test-auto-updater.js",
@@ -47,10 +52,13 @@
     "community-relay": "node community-relay/server.js"
   },
   "dependencies": {
+    "2048-html": "1.0.0",
     "electron-updater": "^6.3.0",
     "jsqr": "^1.4.0",
+    "minesjs": "1.0.2",
     "pdf-parse": "^2.4.5",
     "qrcode": "^1.5.4",
+    "sudoku-gen": "1.0.2",
     "tesseract.js": "^7.0.0",
     "xlsx": "^0.18.5"
   },

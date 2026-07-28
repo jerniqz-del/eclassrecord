@@ -232,7 +232,7 @@ function createPopulatedProfile() {
   const databaseSource = fs.readFileSync(path.join(root, 'src/renderer/js/database.js'), 'utf8');
   const importSource = fs.readFileSync(path.join(root, 'src/renderer/js/import-export.js'), 'utf8');
   const htmlSource = fs.readFileSync(path.join(root, 'src/renderer/index.html'), 'utf8');
-  assert(databaseSource.includes('const DB_VERSION = 5;'), 'profile database version must be migrated');
+  assert(databaseSource.includes('const DB_VERSION = 7;'), 'profile database version must be migrated');
   assert(databaseSource.includes('normalizeAdvisoryData(db);'), 'database normalization must migrate advisory data');
   assert(databaseSource.indexOf('normalizeDatabase();') < databaseSource.indexOf('updateProfile();'), 'save must normalize before persistence');
   assert(htmlSource.indexOf('js/advisory-data.js') < htmlSource.indexOf('js/database.js'), 'data model must load before database startup');

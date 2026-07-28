@@ -284,6 +284,25 @@ const HELP_TOPICS = [
     `
   },
   {
+    id: 'teacher_tools',
+    category: 'grading_scoring',
+    title: 'Teacher Tools Workspace',
+    keywords: 'tools group randomizer name picker grade simulator games sudoku 2048 minesweeper active class temporary preview apply revert',
+    content: `
+      <p>Open <strong>Tools</strong> below Attendance for classroom utilities and short offline games. Group Randomizer, Name Picker, and Grade Simulator share the app's Active Class selection.</p>
+      <h5>Classroom Utilities:</h5>
+      <ul>
+        <li><strong>Group Randomizer:</strong> Create complete-random or sex-balanced groups, then copy or print the temporary result.</li>
+        <li><strong>Name Picker:</strong> Draw every eligible learner once before the bag resets.</li>
+        <li><strong>Grade Simulator:</strong> Try raw-score changes on a detached preview. Nothing is saved until you review and apply the change summary.</li>
+        <li><strong>Offline Games:</strong> Play locally bundled Sudoku, 2048, or Minesweeper without network access.</li>
+      </ul>
+      <div class="help-highlight-box">
+        <strong>Record safety:</strong> Random groups, picker draws, simulation previews, and game progress remain temporary. Applying or reversing a Grade Simulator change uses the official save path, verifies protected profiles, and records a compact reversal history.
+      </div>
+    `
+  },
+  {
     id: 'direct_transfer_how',
     category: 'direct_transfers',
     title: 'How Direct Student Transfers Work',
@@ -384,14 +403,14 @@ const HELP_TOPICS = [
   {
     id: 'secondary_backup',
     category: 'backups_settings',
-    title: 'Configuring Secondary Auto-Backup Folder',
-    keywords: 'secondary auto-backup folder directory path onedrive google drive copy rolling daily cloud sync saving safety',
+    title: 'Shared Folders, Recovery & Multi-PC Sync',
+    keywords: 'secondary auto-backup shared folder directory path onedrive google drive dropbox network removable copy rolling cloud sync recovery id another pc conflicts offline',
     content: `
-      <p>Automate your safety net! You can link a cloud-synced folder (such as OneDrive, Dropbox, or Google Drive) to automatically copy your work.</p>
-      <h5>How to Link a Backup Directory:</h5>
+      <p>A shared folder can be a OneDrive, Google Drive, Dropbox, network, removable-drive, or ordinary local folder. A cloud account is optional: local saving, manual backups, and the Shared Backup Folder continue to work without one.</p>
+      <h5>Shared Backup Folder:</h5>
       <ol>
         <li>Navigate to the <strong>Settings</strong> view.</li>
-        <li>Find the <strong>Secondary Auto-Backup Folder</strong> card.</li>
+        <li>Find the <strong>Shared Backup Folder</strong> card.</li>
         <li>Click <strong>Select Folder</strong> and pick a directory.</li>
         <li>Every time you save or exit, the app writes:
           <ul>
@@ -400,6 +419,23 @@ const HELP_TOPICS = [
           </ul>
         </li>
       </ol>
+      <h5>How to Restore on Another PC:</h5>
+      <ol>
+        <li>On the original PC, copy the <strong>Backup Recovery ID</strong> shown in Settings and keep the profile PIN.</li>
+        <li>If using a cloud or network service, wait for that service to finish transferring the backup folder.</li>
+        <li>On the other PC, open Settings and enter the same Backup Recovery ID under <strong>Restore From a Shared Backup Folder</strong>.</li>
+        <li>Choose the synced backup folder. The app will find the newest valid matching backup.</li>
+        <li>Review the profile and saved date, click <strong>Restore This Backup</strong>, then enter the backup's PIN when requested.</li>
+      </ol>
+      <p>The Backup Recovery ID only finds the correct files. It cannot decrypt records and does not replace the profile PIN.</p>
+      <h5>Multi-PC Shared Folder Sync:</h5>
+      <ol>
+        <li>Enable PIN Lock Security, then select <strong>Enable Sync</strong> in Settings.</li>
+        <li>Choose the same shared folder on each PC. Each device writes its own encrypted revision, so one PC does not silently overwrite another.</li>
+        <li>The header indicator shows whether the folder is current, being checked, waiting for review, or having difficulty.</li>
+        <li>When another device has changes, select <strong>Review Changes</strong>. Independent edits are combined automatically. When both devices changed the same item, choose which value to keep.</li>
+      </ol>
+      <p>The indicator confirms only what E-Class Record can read from and write to the selected folder. Your folder provider controls actual cloud upload and download, so confirm its own status before shutting down or switching PCs.</p>
     `
   },
   {

@@ -6,6 +6,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const JavaScriptObfuscator = require('javascript-obfuscator');
 
 const DEFAULT_OPTIONS = {
@@ -35,6 +36,13 @@ function getAllJsFiles(dir, filesList = []) {
   return filesList;
 }
 
+function getIdentifiersPrefix(targetDir, filePath) {
+  const relativePath = path.relative(path.resolve(targetDir), path.resolve(filePath))
+    .replace(/\\/g, '/');
+  const digest = crypto.createHash('sha256').update(relativePath).digest('hex').slice(0, 12);
+  return `_ecr_${digest}_`;
+}
+
 function obfuscateDirectory(targetDir, options = DEFAULT_OPTIONS) {
   const resolvedTarget = path.resolve(targetDir);
   if (!fs.existsSync(resolvedTarget)) {
@@ -48,7 +56,11 @@ function obfuscateDirectory(targetDir, options = DEFAULT_OPTIONS) {
   jsFiles.forEach((filePath) => {
     console.log(`Obfuscating: ${path.relative(resolvedTarget, filePath)}`);
     const rawCode = fs.readFileSync(filePath, 'utf8');
-    const obfuscatedResult = JavaScriptObfuscator.obfuscate(rawCode, options);
+    const fileOptions = {
+      ...options,
+      identifiersPrefix: getIdentifiersPrefix(resolvedTarget, filePath)
+    };
+    const obfuscatedResult = JavaScriptObfuscator.obfuscate(rawCode, fileOptions);
     fs.writeFileSync(filePath, obfuscatedResult.getObfuscatedCode(), 'utf8');
   });
 
@@ -66,5 +78,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  obfuscateDirectory
+  obfuscateDirectory,
+  getIdentifiersPrefix
 };

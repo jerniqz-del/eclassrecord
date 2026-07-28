@@ -22,6 +22,7 @@ if (isSmokeTest) {
 // File I/O resolves its database path while loading, so smoke paths must be
 // isolated before this module (and any updater helpers) are required.
 const fileIO = require('./file-io');
+const sharedFolderSync = require('./shared-folder-sync');
 const updater = require('./updater');
 const zipArchive = require('./zip-archive');
 const recoveryQr = require('./recovery-qr');
@@ -31,6 +32,9 @@ const { verifyAdminPassphrase } = require('./admin-auth');
 let mainWindow = null;
 let isConfirmedExit = false;
 let selectBluetoothDeviceCallback = null;
+const discoveredBackupHandles = new Map();
+const DISCOVERED_BACKUP_HANDLE_TTL_MS = 10 * 60 * 1000;
+const sharedSyncWatchers = new Map();
 
 function attachmentRoot() {
   return path.join(app.getPath('appData'), 'EClassRecordPortable', 'attachments');
@@ -38,6 +42,50 @@ function attachmentRoot() {
 
 function safePathPart(value) {
   return String(value || 'item').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'item';
+}
+
+function pruneDiscoveredBackupHandles() {
+  const cutoff = Date.now() - DISCOVERED_BACKUP_HANDLE_TTL_MS;
+  for (const [handle, entry] of discoveredBackupHandles) {
+    if (entry.createdAt < cutoff) discoveredBackupHandles.delete(handle);
+  }
+}
+
+function watchSharedSyncFolder(backupRecoveryId) {
+  const key = String(backupRecoveryId || '');
+  if (sharedSyncWatchers.has(key)) return;
+  let paths;
+  try {
+    paths = sharedFolderSync.repositoryPaths(key);
+  } catch (_error) {
+    return;
+  }
+  fs.mkdirSync(paths.heads, { recursive: true });
+  fs.mkdirSync(paths.bases, { recursive: true });
+  let debounceTimer = null;
+  try {
+    const watcher = fs.watch(paths.root, { recursive: true }, () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (mainWindow?.webContents && !mainWindow.webContents.isDestroyed()) {
+          mainWindow.webContents.send('shared-sync-folder-changed', key);
+        }
+      }, 800);
+    });
+    watcher.on('error', () => {
+      watcher.close();
+      sharedSyncWatchers.delete(key);
+    });
+    sharedSyncWatchers.set(key, watcher);
+  } catch (_error) {
+    // Periodic renderer scans remain active when native watching is unavailable.
+  }
+}
+
+function unwatchSharedSyncFolder(backupRecoveryId) {
+  const key = String(backupRecoveryId || '');
+  sharedSyncWatchers.get(key)?.close();
+  sharedSyncWatchers.delete(key);
 }
 
 function resolveAttachmentPath(relativePath) {
@@ -101,14 +149,83 @@ function createWindow() {
       try {
         const result = await mainWindow.webContents.executeJavaScript(`(async () => {
           try {
-          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage', 'PinRecovery', 'AdminTestMode', 'UsageAnalytics', 'UpdateManager', 'PerformanceMode'];
+          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage', 'PinRecovery', 'BackupRecovery', 'SharedSyncCrypto', 'SharedSyncMerge', 'SharedFolderSync', 'TeacherToolsCore', 'ToolsData', 'GradeSimulator', 'TeacherTools', 'AdminTestMode', 'UsageAnalytics', 'UpdateManager', 'PerformanceMode'];
           const missing = required.filter(name => !globalThis[name]);
           if (missing.length) throw new Error('Missing renderer modules: ' + missing.join(', '));
+          if (!document.getElementById('navTools') || !document.querySelector('[data-view="tools"]')) {
+            throw new Error('Teacher Tools navigation or workspace was not rendered.');
+          }
+          const smokeLearners = [
+            { id: 'learner-1', sex: 'Male' },
+            { id: 'learner-2', sex: 'Male' },
+            { id: 'learner-3', sex: 'Female' },
+            { id: 'learner-4', sex: 'Female' },
+            { id: 'learner-5', sex: '' }
+          ];
+          const smokeGroups = TeacherToolsCore.randomizeGroups(smokeLearners, 2, 'balanced');
+          const groupedIds = smokeGroups.flat().map(learner => learner.id);
+          if (new Set(groupedIds).size !== smokeLearners.length || groupedIds.length !== smokeLearners.length) {
+            throw new Error('Teacher Tools grouping duplicated or omitted a learner.');
+          }
+          if (Math.abs(smokeGroups[0].length - smokeGroups[1].length) > 1) {
+            throw new Error('Teacher Tools grouping produced uneven group sizes.');
+          }
+          const smokeAssignment = {
+            id: 'tools-smoke-assignment',
+            learners: [{ id: 'learner-1' }],
+            assessments: [{ id: 'assessment-1', term: '1', maxScore: 20 }],
+            scores: { 'learner-1|assessment-1': 10 }
+          };
+          const smokeSession = GradeSimulator.createSession(smokeAssignment, '1');
+          GradeSimulator.setScore(smokeSession, 'learner-1', 'assessment-1', 15);
+          if (smokeAssignment.scores['learner-1|assessment-1'] !== 10 || smokeSession.draft.scores['learner-1|assessment-1'] !== 15) {
+            throw new Error('Grade Simulator preview was not isolated from official scores.');
+          }
+          TeacherTools.activate('groups');
+          const toolsClassSelect = document.getElementById('groupRandomizerClassSelect');
+          if (!toolsClassSelect?.classList.contains('select-class-dropdown') || !toolsClassSelect.closest('.record-class-selector')) {
+            throw new Error('Teacher Tools Active Class selector does not match the Grading Sheet structure.');
+          }
+          TeacherTools.activate('games');
+          const toolsGameFrame = document.getElementById('teacherToolsGameFrame');
+          if (!toolsGameFrame || toolsGameFrame.getAttribute('sandbox') !== 'allow-scripts') {
+            throw new Error('Offline games iframe is missing its scripts-only sandbox.');
+          }
+          await new Promise(resolve => setTimeout(resolve, 120));
+          TeacherTools.openGame('2048');
+          TeacherTools.activate('games');
+          await new Promise(resolve => setTimeout(resolve, 180));
+          if (!document.getElementById('teacherToolsGameFrame')?.src.endsWith('/games/2048/index.html')) {
+            throw new Error('The bundled 2048 game did not open.');
+          }
+          TeacherTools.openGame('minesweeper');
+          TeacherTools.activate('games');
+          await new Promise(resolve => setTimeout(resolve, 180));
+          if (!document.getElementById('teacherToolsGameFrame')?.src.endsWith('/games/minesweeper/index.html')) {
+            throw new Error('The bundled Minesweeper game did not open.');
+          }
+          TeacherTools.openGame('sudoku');
+          TeacherTools.activate('games');
+          await new Promise(resolve => setTimeout(resolve, 120));
+          if (!document.getElementById('teacherToolsGameFrame')?.src.endsWith('/games/sudoku/index.html')) {
+            throw new Error('The bundled Sudoku game did not open.');
+          }
+          TeacherTools.activate('groups');
           if (!document.getElementById('settingUsageAnalytics') || !document.getElementById('welcomeUsageAnalyticsCheckbox') || !document.getElementById('usagePrivacyModal')) {
             throw new Error('Optional usage analytics privacy controls were not rendered.');
           }
           if (!document.getElementById('settingLowSpecMode') || !document.getElementById('performanceDeviceSummary')) {
             throw new Error('Low-Spec Mode settings controls were not rendered.');
+          }
+          if (!document.getElementById('backupRecoveryIdValue') || !document.getElementById('backupRecoverySearchInput') || !document.getElementById('btnScanBackupFolder')) {
+            throw new Error('Backup Recovery ID settings controls were not rendered.');
+          }
+          if (!document.getElementById('sharedSyncIndicator') || !document.getElementById('sharedSyncSettingsStatus') || !document.getElementById('btnSharedSyncToggle')) {
+            throw new Error('Shared Folder Sync status controls were not rendered.');
+          }
+          const smokeRecoveryId = BackupRecoveryId.generateBackupRecoveryId();
+          if (!BackupRecoveryId.isValidBackupRecoveryId(smokeRecoveryId) || BackupRecoveryId.normalizeBackupRecoveryId(smokeRecoveryId.toLowerCase()) !== smokeRecoveryId) {
+            throw new Error('Backup Recovery ID generation or normalization failed.');
           }
           const analyticsFixture = {
             region: 'Region V', division: 'Smoke Division', district: 'Must Not Leave Device',
@@ -454,6 +571,39 @@ function createWindow() {
           const mockProfile = getActiveProfileDatabase();
           if (mockProfile === realProfileReference || mockProfile.assignments?.length !== 4) throw new Error('The runtime workspace was not replaced with the complete mock profile.');
           if (!AdminTestMode.shouldSuppressPersistence()) throw new Error('Persistence was not suppressed while Admin Test Mode was active.');
+          const rouletteAssignment = mockProfile.assignments.find(assignment => TeacherToolsCore.activeLearners(assignment).length >= 2);
+          if (!rouletteAssignment) throw new Error('The mock workspace did not provide a class for the Name Picker roulette test.');
+          mockProfile.currentAssignmentId = rouletteAssignment.id;
+          setView('tools');
+          TeacherTools.activate('picker');
+          TeacherTools.pickName();
+          await new Promise(resolve => setTimeout(resolve, 90));
+          if (!document.querySelector('.name-picker-stage.is-spinning')) throw new Error('Name Picker roulette did not enter its spinning state.');
+          const rouletteButtons = Array.from(document.querySelectorAll('.name-picker-stage__actions button'));
+          if (!rouletteButtons.length || rouletteButtons.some(button => !button.disabled)) throw new Error('Name Picker controls remained active while the roulette was spinning.');
+          await new Promise(resolve => setTimeout(resolve, 3400));
+          const rouletteName = document.getElementById('namePickerRouletteName');
+          if (!rouletteName || rouletteName.textContent.trim() === 'Ready to pick' || document.querySelector('.name-picker-stage.is-spinning')) {
+            throw new Error('Name Picker roulette did not settle on a learner.');
+          }
+          TeacherTools.activate('simulator');
+          await new Promise(resolve => setTimeout(resolve, 80));
+          const simulatorWrap = document.querySelector('.simulator-table-wrap');
+          if (!simulatorWrap || simulatorWrap.scrollWidth - simulatorWrap.clientWidth > 2) {
+            throw new Error('Grade Simulator table still requires horizontal scrolling.');
+          }
+          const previousAppZoom = parseInt(document.documentElement.style.fontSize, 10) || 100;
+          const simulatorZoomLevels = [];
+          for (const zoom of [100, 125, 150, 200]) {
+            setZoomPct(zoom);
+            await new Promise(resolve => setTimeout(resolve, 50));
+            const zoomedSimulatorWrap = document.querySelector('.simulator-table-wrap');
+            if (!zoomedSimulatorWrap || zoomedSimulatorWrap.scrollWidth - zoomedSimulatorWrap.clientWidth > 2) {
+              throw new Error('Grade Simulator table overflowed at ' + zoom + '% app zoom.');
+            }
+            simulatorZoomLevels.push(zoom);
+          }
+          setZoomPct(previousAppZoom);
           mockProfile.teacherName = 'MUTATED TEST TEACHER';
           const suppressedSave = await saveDatabase();
           if (!suppressedSave) throw new Error('A suppressed test-mode save did not report safe in-memory success.');
@@ -465,7 +615,7 @@ function createWindow() {
           if (restoredNavigation.currentView !== realNavigation.currentView || restoredNavigation.recordTab !== realNavigation.recordTab) throw new Error('Exiting test mode did not restore the previous view and term.');
           if (document.getElementById('adminTestModeBanner')) throw new Error('The Admin Test Mode banner remained after exit.');
 
-          return { modules: required.length, usageAnalytics: true, adminTestWorkspace: true, adminTestLifecycle: true, adminSaveSuppression: true, adminShortcut: true, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectWatermark: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, qrRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
+          return { modules: required.length, teacherTools: true, namePickerRoulette: true, compactGradeSimulator: true, simulatorZoomLevels, usageAnalytics: true, backupRecovery: true, sharedFolderSync: true, adminTestWorkspace: true, adminTestLifecycle: true, adminSaveSuppression: true, adminShortcut: true, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectWatermark: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, qrRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }
@@ -792,6 +942,100 @@ ipcMain.handle('dialog:select-folder', async () => {
     return null;
   }
   return result.filePaths[0];
+});
+
+ipcMain.handle('backup:select-and-scan', async (_event, backupRecoveryId) => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Find Backup in OneDrive or Local Folder',
+    properties: ['openDirectory']
+  });
+  if (result.canceled || result.filePaths.length === 0) return { canceled: true };
+
+  pruneDiscoveredBackupHandles();
+  const scan = fileIO.scanBackupDirectory(result.filePaths[0], backupRecoveryId);
+  if (!scan.latest) {
+    return {
+      canceled: false,
+      found: false,
+      invalidMatchingFiles: scan.invalidMatchingFiles
+    };
+  }
+
+  const handle = crypto.randomUUID();
+  if (discoveredBackupHandles.size >= 100) {
+    const oldestHandle = discoveredBackupHandles.keys().next().value;
+    discoveredBackupHandles.delete(oldestHandle);
+  }
+  discoveredBackupHandles.set(handle, {
+    filePath: scan.latest.filePath,
+    backupRecoveryId: scan.latest.backupRecoveryId,
+    createdAt: Date.now()
+  });
+  const { filePath: _filePath, ...metadata } = scan.latest;
+  return {
+    canceled: false,
+    found: true,
+    handle,
+    metadata,
+    matchCount: scan.matchCount,
+    invalidMatchingFiles: scan.invalidMatchingFiles
+  };
+});
+
+ipcMain.handle('backup:read-discovered', async (_event, handle) => {
+  pruneDiscoveredBackupHandles();
+  const normalizedHandle = String(handle || '');
+  const entry = discoveredBackupHandles.get(normalizedHandle);
+  if (!entry) throw new Error('This backup selection has expired. Scan the folder again.');
+  discoveredBackupHandles.delete(normalizedHandle);
+  const backup = fileIO.readValidDiscoveredBackup(entry.filePath, entry.backupRecoveryId);
+  return { content: backup.content };
+});
+
+ipcMain.handle('shared-sync:device-info', async () => {
+  return sharedFolderSync.getDeviceInfo();
+});
+
+ipcMain.handle('shared-sync:rename-device', async (_event, label) => {
+  return sharedFolderSync.renameDevice(label);
+});
+
+ipcMain.handle('shared-sync:state', async (_event, backupRecoveryId) => {
+  const state = sharedFolderSync.getState(backupRecoveryId);
+  if (state.configured && state.available) watchSharedSyncFolder(backupRecoveryId);
+  return state;
+});
+
+ipcMain.handle('shared-sync:configure-folder', async (_event, backupRecoveryId) => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select Shared Sync Folder',
+    properties: ['openDirectory', 'createDirectory']
+  });
+  if (result.canceled || result.filePaths.length === 0) return { canceled: true };
+  const state = sharedFolderSync.configureFolder(backupRecoveryId, result.filePaths[0]);
+  watchSharedSyncFolder(backupRecoveryId);
+  return { canceled: false, ...state };
+});
+
+ipcMain.handle('shared-sync:disable', async (_event, backupRecoveryId) => {
+  unwatchSharedSyncFolder(backupRecoveryId);
+  return sharedFolderSync.disableFolder(backupRecoveryId);
+});
+
+ipcMain.handle('shared-sync:write-head', async (_event, backupRecoveryId, envelopeText) => {
+  return sharedFolderSync.writeEnvelope('head', backupRecoveryId, envelopeText);
+});
+
+ipcMain.handle('shared-sync:write-base', async (_event, backupRecoveryId, envelopeText) => {
+  return sharedFolderSync.writeEnvelope('base', backupRecoveryId, envelopeText);
+});
+
+ipcMain.handle('shared-sync:scan', async (_event, backupRecoveryId) => {
+  return sharedFolderSync.scan(backupRecoveryId);
+});
+
+ipcMain.handle('shared-sync:read', async (_event, handle) => {
+  return sharedFolderSync.read(handle);
 });
 
 ipcMain.handle('dialog:import-sf1', async () => {

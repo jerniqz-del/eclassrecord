@@ -38,7 +38,7 @@ const STAGE_ALLOWLIST = [
   'docs/facebook-post-v1.4.5.md',
   'docs/release-notes-v1.4.6.md',
   'docs/facebook-post-v1.4.6.md',
-  'docs/release-notes-v1.6.8.md'
+  'docs/release-notes-v1.7.0.md'
 ];
 
 const NEVER_STAGE = [

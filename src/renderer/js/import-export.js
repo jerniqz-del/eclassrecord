@@ -59,9 +59,9 @@ function promptBackupPinModal(onConfirm, onCancel) {
   overlay.style.zIndex = '11000';
   overlay.innerHTML = `
     <div class="modal">
-      <div class="modal__title">PIN Protected Backup</div>
+      <div class="modal__title">PIN-Protected Backup</div>
       <div class="modal__body">
-        <p style="margin-top:0">This backup is encrypted and secured with a PIN. Please enter the PIN to decrypt and upload.</p>
+        <p style="margin-top:0">This backup is encrypted. Enter the PIN that protected it to decrypt and restore its contents.</p>
         <div class="field">
           <label class="field-label">Enter 6-digit PIN</label>
           <input type="password" id="backupDecryptPin" class="field-input" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="off" />
@@ -70,7 +70,7 @@ function promptBackupPinModal(onConfirm, onCancel) {
       </div>
       <div class="modal__actions">
         <button class="btn btn-cancel btn-sm" id="btnCancelBackupDecrypt">Cancel</button>
-        <button class="btn btn-primary btn-sm" id="btnConfirmBackupDecrypt">Decrypt & Import</button>
+        <button class="btn btn-primary btn-sm" id="btnConfirmBackupDecrypt">Decrypt &amp; Restore</button>
       </div>
     </div>
   `;

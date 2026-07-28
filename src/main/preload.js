@@ -7,6 +7,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const QRCode = require('qrcode');
 const jsQR = require('jsqr');
+const { getSudoku } = require('sudoku-gen');
 
 function requireRecoveryPayload(payload) {
   const text = String(payload || '');
@@ -31,6 +32,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   importGradeTransfer: () => ipcRenderer.invoke('dialog:import-grade-transfer'),
   exportAdvisoryResetBackup: (request) => ipcRenderer.invoke('dialog:export-advisory-reset-backup', request),
   selectFolder: () => ipcRenderer.invoke('dialog:select-folder'),
+  selectAndScanBackupFolder: (backupRecoveryId) => ipcRenderer.invoke('backup:select-and-scan', backupRecoveryId),
+  readDiscoveredBackup: (handle) => ipcRenderer.invoke('backup:read-discovered', handle),
+  getSharedSyncDeviceInfo: () => ipcRenderer.invoke('shared-sync:device-info'),
+  renameSharedSyncDevice: (label) => ipcRenderer.invoke('shared-sync:rename-device', label),
+  getSharedSyncState: (backupRecoveryId) => ipcRenderer.invoke('shared-sync:state', backupRecoveryId),
+  configureSharedSyncFolder: (backupRecoveryId) => ipcRenderer.invoke('shared-sync:configure-folder', backupRecoveryId),
+  disableSharedSync: (backupRecoveryId) => ipcRenderer.invoke('shared-sync:disable', backupRecoveryId),
+  writeSharedSyncHead: (backupRecoveryId, envelopeText) => ipcRenderer.invoke('shared-sync:write-head', backupRecoveryId, envelopeText),
+  writeSharedSyncBase: (backupRecoveryId, envelopeText) => ipcRenderer.invoke('shared-sync:write-base', backupRecoveryId, envelopeText),
+  scanSharedSyncFolder: (backupRecoveryId) => ipcRenderer.invoke('shared-sync:scan', backupRecoveryId),
+  readSharedSyncFile: (handle) => ipcRenderer.invoke('shared-sync:read', handle),
+  onSharedSyncFolderChanged: (callback) => ipcRenderer.on('shared-sync-folder-changed', (_event, backupRecoveryId) => callback(backupRecoveryId)),
   importSf1: () => ipcRenderer.invoke('dialog:import-sf1'),
   exportCsv: (csvString, defaultFileName) => ipcRenderer.invoke('dialog:export-csv', csvString, defaultFileName),
   showPrintChoose: () => ipcRenderer.invoke('dialog:print-choose'),
@@ -49,6 +62,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const pixels = new Uint8ClampedArray(data);
     if (pixels.length !== safeWidth * safeHeight * 4) throw new Error('Recovery QR image pixels are incomplete.');
     return jsQR(pixels, safeWidth, safeHeight, { inversionAttempts: 'attemptBoth' })?.data || '';
+  },
+  generateSudoku: (difficulty = 'medium') => {
+    const safeDifficulty = ['easy', 'medium', 'hard', 'expert'].includes(String(difficulty))
+      ? String(difficulty)
+      : 'medium';
+    const sudoku = getSudoku(safeDifficulty);
+    return {
+      puzzle: String(sudoku.puzzle || ''),
+      solution: String(sudoku.solution || ''),
+      difficulty: safeDifficulty
+    };
   },
   exportRecoveryQr: (dataUrl, defaultFileName) => ipcRenderer.invoke('dialog:export-recovery-qr', dataUrl, defaultFileName),
   printRecoveryQr: (dataUrl, label) => ipcRenderer.invoke('dialog:print-recovery-qr', dataUrl, label),
