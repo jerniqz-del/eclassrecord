@@ -17,6 +17,7 @@ A premium, modern offline desktop application designed for Filipino teachers to 
 - **Native File Dialogs**: Backup and recovery in JSON backups, and grades reports exporting in standard CSV files.
 - **Over-the-Air (OTA) Updates**: Automated startup updates check and download from GitHub Releases.
 - **Change History & Patch Notes**: In-app Help Center documentation plus [implementation history](docs/implementation-history.md) covering changes from the first build through the latest restored updates.
+- **Future Development Notes**: Deferred and unimplemented product concepts are tracked separately in [future developments](docs/future-developments.md).
 - **Responsive & Printable Layouts**: Dedicated `@media print` styling for clean physical paper reporting.
 
 ## Directory Structure
@@ -72,6 +73,7 @@ This ensures that upgrading from the older single-file HTA version automatically
 - [Advisory Class user guide](docs/advisory-class-guide.md)
 - [Advisory database compatibility contract](docs/advisory-database-compatibility.md)
 - [Database, backup, and PIN recovery compatibility](docs/database-backup-pin-recovery.md)
+- [OneDrive backup and multi-PC sync guide](docs/onedrive-backup-sync-guide.md)
 - [Grade Transfer File schema v1.0](docs/grade-transfer-schema-v1.0.md)
 - [Manual smoke-test checklist](docs/manual-smoke-test-advisory.md)
 

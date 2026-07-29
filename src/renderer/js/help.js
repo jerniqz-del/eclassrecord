@@ -420,39 +420,58 @@ const HELP_TOPICS = [
   {
     id: 'secondary_backup',
     category: 'backups_settings',
-    title: 'Shared Folders, Recovery & Multi-PC Sync',
-    keywords: 'secondary auto-backup shared folder directory path onedrive google drive dropbox network removable copy rolling cloud sync recovery id another pc conflicts offline',
+    title: 'OneDrive Backup & Multi-PC Sync — Step-by-Step',
+    keywords: 'secondary auto-backup shared folder directory path onedrive copy rolling cloud sync recovery id another pc conflicts offline create new id connect existing id always keep on this device tutorial',
     content: `
-      <p>A shared folder can be a OneDrive, Google Drive, Dropbox, network, removable-drive, or ordinary local folder. A cloud account is optional: local saving, manual backups, and the Shared Backup Folder continue to work without one.</p>
-      <h5>Shared Backup Folder:</h5>
+      <p>Use this guide to protect a PIN-enabled profile in OneDrive and safely connect it to another PC. Local saving and manual backups remain available even when OneDrive is offline.</p>
+      <div class="help-highlight-box">
+        <strong>Before you begin:</strong> Install and sign in to the OneDrive desktop app on every PC. Use a dedicated, locally available subfolder inside OneDrive—not the OneDrive root. If needed, right-click the folder in File Explorer and choose <strong>Always keep on this device</strong>.
+      </div>
+      <p>For an explanation without changing anything, select <strong>Start Interactive Tour</strong> in the OneDrive Backup & Sync card. The dedicated tour stays in Settings and only highlights the backup controls.</p>
+      <h5>Part 1 — Set up the main PC:</h5>
       <ol>
-        <li>Navigate to the <strong>Settings</strong> view.</li>
-        <li>Find the <strong>Shared Backup Folder</strong> card.</li>
-        <li>Click <strong>Select Folder</strong> and pick a directory.</li>
-        <li>Every time you save or exit, the app writes:
-          <ul>
-            <li>A duplicate copy of the primary database.</li>
-            <li>A rolling daily backup (kept up to 30 days) to prevent data loss.</li>
-          </ul>
-        </li>
+        <li>Unlock the profile that already contains the records you want to keep.</li>
+        <li>Open <strong>Settings → OneDrive Backup & Sync</strong>.</li>
+        <li>Confirm that <strong>Backup Recovery ID</strong> is empty, then select <strong>Create New ID</strong>.</li>
+        <li>Verify the current six-digit profile PIN.</li>
+        <li>Select a dedicated folder inside OneDrive, such as <code>OneDrive\\E-Class Record Backups</code>.</li>
+        <li>Wait while the app validates the folder, creates a restore point, generates the Recovery ID, and verifies the first encrypted revision.</li>
+        <li>Select <strong>Copy</strong> and keep the Recovery ID available for the other PC. Keep the profile PIN separately.</li>
+        <li>Wait for <strong>Folder Up to Date</strong>, then also wait for the OneDrive app to report that syncing is complete.</li>
       </ol>
-      <h5>How to Restore on Another PC:</h5>
+      <p>Do not manually rename, move, edit, or combine files inside the generated <code>E-Class Record\\&lt;Recovery ID&gt;</code> structure.</p>
+      <h5>Part 2 — Connect another PC:</h5>
       <ol>
-        <li>On the original PC, copy the <strong>Backup Recovery ID</strong> shown in Settings and keep the profile PIN.</li>
-        <li>If using a cloud or network service, wait for that service to finish transferring the backup folder.</li>
-        <li>On the other PC, open Settings and enter the same Backup Recovery ID under <strong>Restore From a Shared Backup Folder</strong>.</li>
-        <li>Choose the synced backup folder. The app will find the newest valid matching backup.</li>
-        <li>Review the profile and saved date, click <strong>Restore This Backup</strong>, then enter the backup's PIN when requested.</li>
+        <li>Sign in to the same OneDrive account and wait for the folder to download.</li>
+        <li>Make the folder locally available with <strong>Always keep on this device</strong>.</li>
+        <li>Create or open the PIN-enabled local profile that will receive the records. It must not already have a Recovery ID.</li>
+        <li>Open <strong>Settings → OneDrive Backup & Sync</strong>, paste the ID from the main PC, and select <strong>Connect Existing ID</strong>.</li>
+        <li>Verify the current local profile PIN, then select the corresponding local copy of the same OneDrive folder.</li>
+        <li>Enter the same six-digit PIN used by the profile on the main PC.</li>
+        <li>Let the app scan and validate the encrypted repository before writing anything.</li>
+        <li>If both PCs contain data, review the comparison. Unique and non-conflicting records are preserved; differing values require your choice.</li>
+        <li>Complete the review and wait for <strong>Folder Up to Date</strong>.</li>
       </ol>
-      <p>The Backup Recovery ID only finds the correct files. It cannot decrypt records and does not replace the profile PIN.</p>
-      <h5>Multi-PC Shared Folder Sync:</h5>
+      <p>A wrong PIN, damaged file, canceled review, or interrupted connection leaves the previous local profile unchanged. The Recovery ID finds the encrypted profile; it does not replace the PIN.</p>
+      <h5>Profiles Found in OneDrive:</h5>
       <ol>
-        <li>Enable PIN Lock Security, then select <strong>Enable Sync</strong> in Settings.</li>
-        <li>Choose the same shared folder on each PC. Each device writes its own encrypted revision, so one PC does not silently overwrite another.</li>
-        <li>The header indicator shows whether the folder is current, being checked, waiting for review, or having difficulty.</li>
-        <li>When another device has changes, select <strong>Review Changes</strong>. Independent edits are combined automatically. When both devices changed the same item, choose which value to keep.</li>
+        <li>Open Settings and select <strong>Refresh</strong> under <strong>Profiles Found in OneDrive</strong>.</li>
+        <li>Match the profile name and Recovery ID.</li>
+        <li>Select <strong>Connect</strong> for a synchronized profile or <strong>View Backup</strong> for an ordinary recovery copy.</li>
       </ol>
-      <p>The indicator confirms only what E-Class Record can read from and write to the selected folder. Your folder provider controls actual cloud upload and download, so confirm its own status before shutting down or switching PCs.</p>
+      <h5>Normal daily use:</h5>
+      <ul>
+        <li>Work normally. E-Class Record saves and verifies the local database before publishing encrypted changes.</li>
+        <li>Before changing PCs, wait for both <strong>Folder Up to Date</strong> and OneDrive's own completed-sync status.</li>
+        <li>On the next PC, wait for OneDrive to download, then use <strong>Check Now</strong> under <strong>Advanced backup and device settings</strong>.</li>
+        <li>If <strong>Review Changes</strong> appears, resolve the differences before continuing.</li>
+        <li>If OneDrive is unavailable, continue locally. The app will scan again when the folder returns.</li>
+      </ul>
+      <h5>If the profile is not available yet:</h5>
+      <p>Check OneDrive on both PCs, then choose <strong>Wait and Check Again</strong>. Choosing <strong>Continue Working Offline</strong> keeps the Recovery ID empty and writes no shared files, so you can safely retry <strong>Connect Existing ID</strong> later.</p>
+      <div class="help-highlight-box">
+        <strong>Safety:</strong> Do not start a new identity merely because OneDrive is delayed. Do not select <strong>Start New Identity</strong> unless you intentionally want to separate this PC from the other synchronized PCs. Keep periodic manual JSON backups as an additional recovery path.
+      </div>
     `
   },
   {
@@ -628,6 +647,19 @@ function clearHelpSearch() {
   }
   filterHelpTopics();
 }
+
+function openHelpTopic(topicId) {
+  const topic = HELP_TOPICS.find(item => item.id === topicId);
+  if (!topic) return;
+  if (typeof setView === 'function') setView('help');
+  initHelpCenter();
+  setHelpCategory(topic.category);
+  setTimeout(() => {
+    document.getElementById(`guide-${topic.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 0);
+}
+
+window.openHelpTopic = openHelpTopic;
 
 // Bind to window load or trigger manually
 document.addEventListener('DOMContentLoaded', () => {
