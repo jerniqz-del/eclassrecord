@@ -19,6 +19,96 @@
   padding-top: var(--space-4);
 }
 
+.backup-sync-card {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.backup-sync-card > .card-title,
+.backup-sync-card > p {
+  margin-bottom: 0;
+}
+
+.backup-sync-primary {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 920px;
+}
+
+.backup-sync-primary .backup-discovery__controls {
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.backup-sync-primary .backup-recovery-input {
+  flex: 1 1 330px;
+}
+
+.backup-found {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+}
+
+.backup-found__heading,
+.backup-found__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.backup-found__list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.backup-found__item,
+.backup-found__empty {
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-muted);
+}
+
+.backup-found__content {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.backup-found__content code {
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.backup-found__content span,
+.backup-found__content small,
+.backup-found__empty {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.backup-found__content small {
+  overflow-wrap: anywhere;
+}
+
+.backup-sync-advanced {
+  padding-top: var(--space-4);
+}
+
+.backup-sync-advanced summary {
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.backup-sync-advanced[open] summary {
+  margin-bottom: var(--space-3);
+}
+
 .backup-discovery__controls {
   display: flex;
   align-items: center;
@@ -78,7 +168,9 @@
 
 @media (max-width: 720px) {
   .backup-discovery__controls,
-  .backup-discovery__result {
+  .backup-discovery__result,
+  .backup-found__heading,
+  .backup-found__item {
     align-items: stretch;
     flex-direction: column;
   }

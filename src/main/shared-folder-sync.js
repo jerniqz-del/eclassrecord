@@ -2,6 +2,7 @@ const { app } = require('electron');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const childProcess = require('child_process');
 const BackupRecoveryId = require('../renderer/js/backup-recovery-id');
 
 const SYNC_FORMAT = 'eclass-record-sync';
@@ -69,6 +70,99 @@ function ensureConfig() {
   return config;
 }
 
+function configuredEntry(recoveryId) {
+  const value = config.folders[recoveryId];
+  if (typeof value === 'string') {
+    return { path: value, layoutVersion: 1, oneDriveRoot: '' };
+  }
+  if (!value || typeof value !== 'object') return null;
+  return {
+    path: String(value.path || ''),
+    layoutVersion: Number(value.layoutVersion) === 2 ? 2 : 1,
+    oneDriveRoot: String(value.oneDriveRoot || '')
+  };
+}
+
+function uniqueExistingDirectories(values) {
+  const seen = new Set();
+  const roots = [];
+  for (const value of values) {
+    if (!value) continue;
+    try {
+      const resolved = fs.realpathSync.native(path.resolve(String(value)));
+      const key = process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+      if (seen.has(key) || !fs.statSync(resolved).isDirectory()) continue;
+      seen.add(key);
+      roots.push(resolved);
+    } catch (_error) {
+      // Missing, unavailable, or Files On-Demand-only roots are not eligible.
+    }
+  }
+  return roots;
+}
+
+function registeredOneDriveRoots() {
+  if (process.platform !== 'win32') return [];
+  try {
+    const output = childProcess.execFileSync('reg.exe', [
+      'query',
+      'HKCU\\Software\\Microsoft\\OneDrive\\Accounts',
+      '/s',
+      '/v',
+      'UserFolder'
+    ], { encoding: 'utf8', windowsHide: true, timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] });
+    return String(output).split(/\r?\n/)
+      .map(line => line.match(/UserFolder\s+REG_\w+\s+(.+)$/i)?.[1]?.trim())
+      .filter(Boolean);
+  } catch (_error) {
+    return [];
+  }
+}
+
+function detectOneDriveRoots(extraRoots = []) {
+  return uniqueExistingDirectories([
+    process.env.OneDrive,
+    process.env.OneDriveConsumer,
+    process.env.OneDriveCommercial,
+    ...registeredOneDriveRoots(),
+    ...(Array.isArray(extraRoots) ? extraRoots : [])
+  ]);
+}
+
+function isStrictDescendant(candidate, root) {
+  const relative = path.relative(root, candidate);
+  return Boolean(relative && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
+function validateOneDriveFolder(folderPath, options = {}) {
+  const requested = path.resolve(String(folderPath || ''));
+  const stat = fs.statSync(requested);
+  if (!stat.isDirectory()) throw new Error('The selected OneDrive folder is unavailable.');
+  const resolved = fs.realpathSync.native(requested);
+  const roots = detectOneDriveRoots(options.oneDriveRoots);
+  const oneDriveRoot = roots.find(root => isStrictDescendant(resolved, root));
+  if (!oneDriveRoot) {
+    throw new Error('Select a folder inside a detected OneDrive account. The OneDrive root itself cannot be used.');
+  }
+
+  const probe = path.join(resolved, `.eclass-record-write-test-${process.pid}-${Date.now()}`);
+  const renamedProbe = `${probe}.ok`;
+  try {
+    fs.writeFileSync(probe, 'E-Class Record folder validation', { encoding: 'utf8', flag: 'wx' });
+    fs.renameSync(probe, renamedProbe);
+    fs.unlinkSync(renamedProbe);
+  } catch (error) {
+    try {
+      if (fs.existsSync(probe)) fs.unlinkSync(probe);
+      if (fs.existsSync(renamedProbe)) fs.unlinkSync(renamedProbe);
+    } catch (_cleanupError) {
+      // Best-effort cleanup of the validation probe.
+    }
+    throw new Error(`The selected OneDrive folder is not fully available and writable: ${error.message}`);
+  }
+  return { folderPath: resolved, oneDriveRoot };
+}
+
 function normalizeRecoveryId(value) {
   const recoveryId = BackupRecoveryId.normalizeBackupRecoveryId(value);
   if (!recoveryId) throw new Error('Enter a valid Backup Recovery ID.');
@@ -83,30 +177,45 @@ function safeRevisionId(value) {
 
 function configuredFolder(recoveryId) {
   const normalizedId = normalizeRecoveryId(recoveryId);
-  const folder = config.folders[normalizedId];
-  if (!folder || typeof folder !== 'string') throw new Error('Shared Folder Sync is not configured on this PC.');
-  return folder;
+  const entry = configuredEntry(normalizedId);
+  if (!entry?.path) throw new Error('Shared Folder Sync is not configured on this PC.');
+  return entry.path;
 }
 
 function repositoryPaths(recoveryId) {
   const normalizedId = normalizeRecoveryId(recoveryId);
   const selectedFolder = configuredFolder(normalizedId);
-  const root = path.join(selectedFolder, 'eclass-record-sync', normalizedId);
+  const entry = configuredEntry(normalizedId);
+  return pathsForFolder(selectedFolder, normalizedId, entry.layoutVersion);
+}
+
+function pathsForFolder(selectedFolder, recoveryId, layoutVersion) {
+  const root = layoutVersion === 2
+    ? path.join(selectedFolder, 'E-Class Record', recoveryId, 'Sync')
+    : path.join(selectedFolder, 'eclass-record-sync', recoveryId);
   return {
     selectedFolder,
+    layoutVersion,
     root,
     heads: path.join(root, 'heads'),
     bases: path.join(root, 'bases')
   };
 }
 
-function configureFolder(recoveryId, folderPath) {
+function configureFolder(recoveryId, folderPath, options = {}) {
   const normalizedId = normalizeRecoveryId(recoveryId);
-  const resolved = path.resolve(String(folderPath || ''));
-  const stat = fs.statSync(resolved);
-  if (!stat.isDirectory()) throw new Error('The selected shared folder is unavailable.');
+  const validation = options.requireOneDrive === false
+    ? { folderPath: fs.realpathSync.native(path.resolve(String(folderPath || ''))), oneDriveRoot: '' }
+    : validateOneDriveFolder(folderPath, options);
+  const resolved = validation.folderPath;
+  const legacyRoot = path.join(resolved, 'eclass-record-sync', normalizedId);
+  const layoutVersion = fs.existsSync(legacyRoot) ? 1 : 2;
   ensureConfig();
-  config.folders[normalizedId] = resolved;
+  config.folders[normalizedId] = {
+    path: resolved,
+    layoutVersion,
+    oneDriveRoot: validation.oneDriveRoot
+  };
   saveConfig();
   const paths = repositoryPaths(normalizedId);
   fs.mkdirSync(paths.heads, { recursive: true });
@@ -138,7 +247,8 @@ function getDeviceInfo() {
 function getState(recoveryId) {
   const normalizedId = normalizeRecoveryId(recoveryId);
   ensureConfig();
-  const folderPath = config.folders[normalizedId] || '';
+  const entry = configuredEntry(normalizedId);
+  const folderPath = entry?.path || '';
   let available = false;
   if (folderPath) {
     try {
@@ -151,8 +261,29 @@ function getState(recoveryId) {
     configured: Boolean(folderPath),
     available,
     folderPath,
+    layoutVersion: entry?.layoutVersion || 0,
+    oneDriveRoot: entry?.oneDriveRoot || '',
     deviceId: config.deviceId,
     deviceLabel: config.deviceLabel
+  };
+}
+
+function backupPaths(recoveryId) {
+  const normalizedId = normalizeRecoveryId(recoveryId);
+  const entry = configuredEntry(normalizedId);
+  if (!entry?.path) return null;
+  if (entry.layoutVersion !== 2) {
+    return {
+      layoutVersion: 1,
+      backupDir: entry.path,
+      restorePointDir: path.join(entry.path, 'backups')
+    };
+  }
+  const profileRoot = path.join(entry.path, 'E-Class Record', normalizedId);
+  return {
+    layoutVersion: 2,
+    backupDir: path.join(profileRoot, 'Backup'),
+    restorePointDir: path.join(profileRoot, 'Restore Points', config.deviceId.toLowerCase())
   };
 }
 
@@ -252,6 +383,28 @@ function scanDirectory(directory, recoveryId, kind) {
   return results;
 }
 
+function inspectFolder(recoveryId, folderPath, options = {}) {
+  const normalizedId = normalizeRecoveryId(recoveryId);
+  const validation = validateOneDriveFolder(folderPath, options);
+  const legacyPaths = pathsForFolder(validation.folderPath, normalizedId, 1);
+  const organizedPaths = pathsForFolder(validation.folderPath, normalizedId, 2);
+  const legacyExists = fs.existsSync(legacyPaths.root);
+  const organizedExists = fs.existsSync(organizedPaths.root);
+  if (legacyExists && organizedExists) {
+    throw new Error('Two synchronization repositories with this Recovery ID exist in the selected folder. No changes were applied.');
+  }
+  const paths = legacyExists ? legacyPaths : organizedPaths;
+  pruneHandles();
+  return {
+    folderPath: validation.folderPath,
+    oneDriveRoot: validation.oneDriveRoot,
+    layoutVersion: legacyExists ? 1 : 2,
+    repositoryFound: legacyExists || organizedExists,
+    heads: scanDirectory(paths.heads, normalizedId, 'head'),
+    bases: scanDirectory(paths.bases, normalizedId, 'base')
+  };
+}
+
 function scan(recoveryId) {
   const normalizedId = normalizeRecoveryId(recoveryId);
   pruneHandles();
@@ -280,11 +433,15 @@ module.exports = {
   SYNC_FORMAT,
   SYNC_VERSION,
   configureFolder,
+  inspectFolder,
+  detectOneDriveRoots,
+  validateOneDriveFolder,
   disableFolder,
   renameDevice,
   getDeviceInfo,
   getState,
   repositoryPaths,
+  backupPaths,
   verifyEnvelope,
   writeEnvelope,
   scan,

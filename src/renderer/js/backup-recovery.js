@@ -2,6 +2,8 @@
   'use strict';
 
   let selectedBackup = null;
+  let discoveredProfiles = [];
+  let discoveryLoaded = false;
 
   function activeProfile() {
     const root = globalScope.getRootDatabase?.();
@@ -27,9 +29,121 @@
     const value = document.getElementById('backupRecoveryIdValue');
     if (!value) return;
     const recoveryId = globalScope.BackupRecoveryId.normalizeBackupRecoveryId(profile?.backupRecoveryId);
-    value.textContent = recoveryId || 'Unavailable';
+    value.textContent = recoveryId || 'Not generated — local profile only';
+    const copyButton = document.getElementById('btnCopyBackupRecoveryId');
+    const regenerateButton = document.getElementById('btnRegenerateBackupRecoveryId');
+    if (copyButton) copyButton.hidden = !recoveryId;
+    if (regenerateButton) regenerateButton.hidden = !recoveryId || Boolean(profile?.sharedFolderSync?.enabled);
+    const historyValue = document.getElementById('backupRecoveryIdHistoryValue');
+    const history = Array.isArray(profile?.backupRecoveryIdHistory)
+      ? profile.backupRecoveryIdHistory.filter(Boolean)
+      : [];
+    if (historyValue) {
+      historyValue.hidden = history.length === 0;
+      historyValue.textContent = history.length
+        ? `Previous Recovery ID${history.length === 1 ? '' : 's'} retained for old backups: ${history.join(', ')}`
+        : '';
+    }
     const searchInput = document.getElementById('backupRecoverySearchInput');
-    if (searchInput && !searchInput.value && recoveryId) searchInput.value = recoveryId;
+    if (searchInput) {
+      if (recoveryId) {
+        searchInput.value = recoveryId;
+        searchInput.dataset.activeRecoveryId = recoveryId;
+      } else if (searchInput.dataset.activeRecoveryId) {
+        searchInput.value = '';
+        delete searchInput.dataset.activeRecoveryId;
+      }
+    }
+  }
+
+  function formatDiscoveredDate(value) {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? new Date(parsed).toLocaleString() : 'Date unavailable';
+  }
+
+  async function useDiscoveredProfile(index) {
+    const item = discoveredProfiles[index];
+    if (!item) return;
+    const input = document.getElementById('backupRecoverySearchInput');
+    if (input) input.value = item.recoveryId;
+    if (item.syncAvailable && !activeProfile()?.backupRecoveryId) {
+      await globalScope.SharedFolderSync.connectExisting({
+        recoveryId: item.recoveryId,
+        folderPath: item.folderPath
+      });
+      return;
+    }
+    if (item.backupAvailable) {
+      clearResult();
+      setStatus('Opening the newest validated OneDrive backup.');
+      try {
+        const result = await globalScope.electronAPI.scanKnownBackupFolder(item.recoveryId, item.folderPath);
+        if (result.found) showDiscoveredBackup(result);
+        else setStatus('The detected backup is no longer available. Refresh the list.', 'error');
+      } catch (error) {
+        setStatus(error.message || 'The detected backup could not be opened.', 'error');
+      }
+      return;
+    }
+    setStatus('This synchronized profile can be connected from a new local profile with an empty Recovery ID.', 'success');
+  }
+
+  function renderDiscoveredProfiles(result) {
+    const list = document.getElementById('oneDriveBackupDiscoveryList');
+    if (!list) return;
+    discoveredProfiles = Array.isArray(result?.profiles) ? result.profiles : [];
+    if (!result?.roots?.length) {
+      list.innerHTML = '<div class="backup-found__empty">OneDrive was not detected on this PC. Start OneDrive, then choose Refresh.</div>';
+      return;
+    }
+    if (!discoveredProfiles.length) {
+      list.innerHTML = '<div class="backup-found__empty">No valid E-Class Record profiles were found in the available OneDrive folders.</div>';
+      return;
+    }
+    const currentId = globalScope.BackupRecoveryId.normalizeBackupRecoveryId(activeProfile()?.backupRecoveryId);
+    list.innerHTML = discoveredProfiles.map((item, index) => {
+      const name = item.profileNameHint || (item.syncAvailable ? 'Synchronized E-Class Record profile' : 'E-Class Record backup');
+      const type = item.syncAvailable && item.backupAvailable
+        ? 'Backup and multi-PC sync'
+        : item.syncAvailable
+          ? 'Multi-PC sync'
+          : 'Backup';
+      const isCurrent = currentId === item.recoveryId;
+      const action = isCurrent ? 'Current Profile' : item.syncAvailable && !currentId ? 'Connect' : 'View Backup';
+      return `
+        <div class="backup-found__item">
+          <div class="backup-found__content">
+            <strong>${globalScope.esc(name)}</strong>
+            <code>${globalScope.esc(item.recoveryId)}</code>
+            <span>${globalScope.esc(type)} &middot; ${globalScope.esc(formatDiscoveredDate(item.lastBackupAt))}</span>
+            <small>${globalScope.esc(item.folderPath)}</small>
+          </div>
+          <button class="btn ${isCurrent ? 'btn-ghost' : 'btn-primary'} btn-sm" type="button" data-discovered-index="${index}" ${isCurrent ? 'disabled' : ''}>${action}</button>
+        </div>
+      `;
+    }).join('');
+    list.querySelectorAll('[data-discovered-index]').forEach(button => {
+      button.addEventListener('click', () => useDiscoveredProfile(Number(button.dataset.discoveredIndex)));
+    });
+  }
+
+  async function discoverOneDriveBackups(force = false) {
+    const list = document.getElementById('oneDriveBackupDiscoveryList');
+    if (!list || (discoveryLoaded && !force)) return;
+    discoveryLoaded = true;
+    list.innerHTML = '<div class="backup-found__empty">Checking OneDrive for valid E-Class Record profiles…</div>';
+    const refreshButton = document.getElementById('btnRefreshOneDriveBackups');
+    if (refreshButton) refreshButton.disabled = true;
+    try {
+      const result = await globalScope.electronAPI.discoverOneDriveBackups();
+      renderDiscoveredProfiles(result);
+      if (result.limited) setStatus('OneDrive discovery reached its safety limit. Use manual backup search if a profile is missing.');
+    } catch (error) {
+      discoveryLoaded = false;
+      list.innerHTML = `<div class="backup-found__empty u-text-danger">${globalScope.esc(error.message || 'OneDrive profiles could not be checked.')}</div>`;
+    } finally {
+      if (refreshButton) refreshButton.disabled = false;
+    }
   }
 
   async function copyText(value) {
@@ -69,26 +183,15 @@
       globalScope.toast('No active profile is available.', 'error');
       return;
     }
-    globalScope.confirmModal(
-      'Regenerate Backup Recovery ID',
-      'A new ID will be used for future backups. Existing backups will not be deleted, but the old ID will still be needed to find them.',
-      () => globalScope.promptPinVerification(async () => {
-        const previousId = profile.backupRecoveryId;
-        try {
-          profile.backupRecoveryId = globalScope.BackupRecoveryId.generateBackupRecoveryId();
-          if (!await globalScope.saveDatabase()) throw new Error('The new Recovery ID could not be saved.');
-          clearResult();
-          const searchInput = document.getElementById('backupRecoverySearchInput');
-          if (searchInput) searchInput.value = profile.backupRecoveryId;
-          refreshSettings();
-          globalScope.toast('A new Backup Recovery ID is now active.', 'success');
-        } catch (error) {
-          profile.backupRecoveryId = previousId;
-          refreshSettings();
-          globalScope.toast(error.message || 'The Recovery ID was not changed.', 'error');
-        }
-      })
-    );
+    if (!profile.backupRecoveryId) {
+      globalScope.toast('Set up OneDrive Sync to generate a Recovery ID.', 'info');
+      return;
+    }
+    if (profile.sharedFolderSync?.enabled) {
+      globalScope.toast('Disable synchronization on this PC before starting a new sync identity.', 'warning');
+      return;
+    }
+    globalScope.SharedFolderSync?.startNewIdentity?.();
   }
 
   function showDiscoveredBackup(result) {
@@ -214,6 +317,7 @@
 
   function initBackupRecovery() {
     refreshSettings();
+    discoverOneDriveBackups();
     const searchInput = document.getElementById('backupRecoverySearchInput');
     searchInput?.addEventListener('change', () => {
       const normalized = globalScope.BackupRecoveryId.normalizeBackupRecoveryId(searchInput.value);
@@ -240,6 +344,8 @@
     refreshSettings,
     copyRecoveryId,
     regenerateRecoveryId,
+    discoverOneDriveBackups,
+    useDiscoveredProfile,
     scanForBackup,
     restoreSelectedBackup,
     initBackupRecovery

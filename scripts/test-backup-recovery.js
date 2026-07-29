@@ -22,7 +22,7 @@ function stableStringify(value) {
   return JSON.stringify(normalize(value));
 }
 
-function loadFileIo(appDataPath) {
+function loadFileIo(appDataPath, sharedSyncStub = {}) {
   const fileIoModule = { exports: {} };
   const context = {
     module: fileIoModule,
@@ -34,7 +34,13 @@ function loadFileIo(appDataPath) {
     require(name) {
       if (name === 'electron') return { app: { getPath: () => appDataPath, getVersion: () => '1.6.8-test' } };
       if (name === '../renderer/js/backup-recovery-id') return RecoveryId;
-      if (name === './shared-folder-sync') return { getDeviceInfo: () => ({ deviceId: '11111111-1111-4111-a111-111111111111' }) };
+      if (name === './shared-folder-sync') return {
+        getDeviceInfo: () => ({ deviceId: '11111111-1111-4111-a111-111111111111' }),
+        backupPaths: () => null,
+        detectOneDriveRoots: () => [],
+        verifyEnvelope: () => false,
+        ...sharedSyncStub
+      };
       return require(name);
     }
   };
@@ -76,11 +82,30 @@ function resignEnvelope(envelope) {
   vm.runInContext(fs.readFileSync(path.join(projectRoot, 'src/renderer/js/database.js'), 'utf8'), databaseContext);
   const legacyProfile = { id: 'legacy-profile', data: { assignments: [] } };
   databaseContext.normalizeProfileRecord(legacyProfile);
-  const stableRecoveryId = legacyProfile.backupRecoveryId;
+  assert.strictEqual(legacyProfile.backupRecoveryId, '', 'new and offline profiles must keep an empty Recovery ID');
   databaseContext.normalizeProfileRecord(legacyProfile);
-  assert.strictEqual(legacyProfile.backupRecoveryId, stableRecoveryId, 'normalization must not replace an existing Recovery ID');
+  assert.strictEqual(legacyProfile.backupRecoveryId, '', 'normalization must not generate an ID');
+  const stableRecoveryId = RecoveryId.generateBackupRecoveryId();
+  const migratedUnused = databaseContext.normalizeRootDatabase({
+    version: 6,
+    activeProfileId: 'unused',
+    profiles: [{ id: 'unused', backupRecoveryId: stableRecoveryId }]
+  });
+  assert.strictEqual(migratedUnused.version, 7);
+  assert.strictEqual(migratedUnused.profiles[0].backupRecoveryId, '');
+  assert.deepStrictEqual(Array.from(migratedUnused.profiles[0].backupRecoveryIdHistory), [stableRecoveryId]);
+  const migratedUsed = databaseContext.normalizeRootDatabase({
+    version: 6,
+    activeProfileId: 'used',
+    profiles: [{
+      id: 'used',
+      backupRecoveryId: stableRecoveryId,
+      secondaryBackupPath: 'C:\\OneDrive\\E-Class Record'
+    }]
+  });
+  assert.strictEqual(migratedUsed.profiles[0].backupRecoveryId, stableRecoveryId, 'configured backup identities must be preserved');
   const duplicateRoot = databaseContext.normalizeRootDatabase({
-    version: 5,
+    version: 7,
     activeProfileId: 'one',
     profiles: [
       { id: 'one', backupRecoveryId: stableRecoveryId },
@@ -179,10 +204,56 @@ function resignEnvelope(envelope) {
     fileIO.saveDatabase(root);
     const firstFile = path.join(backupFolder, `eclass-record-backup-${firstId}.json`);
     assert.strictEqual(fs.existsSync(firstFile), true);
+    const firstRestorePoint = fileIO.createLocalRestorePoint('shared-sync');
+    const secondRestorePoint = fileIO.createLocalRestorePoint('shared-sync');
+    const localRestoreFolder = path.join(tempRoot, 'EClassRecordPortable', 'backups');
+    assert.strictEqual(firstRestorePoint.success, true);
+    assert.strictEqual(secondRestorePoint.success, true);
+    assert.notStrictEqual(firstRestorePoint.filename, secondRestorePoint.filename, 'same-day sync operations must retain separate restore points');
+    assert.deepStrictEqual(
+      JSON.parse(fs.readFileSync(path.join(localRestoreFolder, firstRestorePoint.filename), 'utf8')),
+      root,
+      'the pre-sync restore point must contain the complete validated local root database'
+    );
     root.profiles[0].backupRecoveryId = secondId;
     fileIO.saveDatabase(root);
     assert.strictEqual(fs.existsSync(firstFile), true, 'regeneration must not delete backups created with the old ID');
     assert.strictEqual(fs.existsSync(path.join(backupFolder, `eclass-record-backup-${secondId}.json`)), true);
+
+    const organizedRoot = path.join(tempRoot, 'OneDrive', 'Organized');
+    const organizedBackupDir = path.join(organizedRoot, 'E-Class Record', secondId, 'Backup');
+    const organizedRestoreDir = path.join(organizedRoot, 'E-Class Record', secondId, 'Restore Points', '11111111-1111-4111-a111-111111111111');
+    const organizedFileIO = loadFileIo(path.join(tempRoot, 'organized-app-data'), {
+      detectOneDriveRoots: () => [path.join(tempRoot, 'OneDrive')],
+      backupPaths: () => ({
+        layoutVersion: 2,
+        backupDir: organizedBackupDir,
+        restorePointDir: organizedRestoreDir
+      })
+    });
+    const organizedRootDatabase = {
+      version: 7,
+      activeProfileId: 'organized-profile',
+      profiles: [{
+        id: 'organized-profile',
+        name: 'Organized Teacher',
+        pinEnabled: false,
+        backupRecoveryId: secondId,
+        secondaryBackupPath: organizedRoot,
+        sharedFolderSync: { enabled: true },
+        data: profileData
+      }]
+    };
+    organizedFileIO.saveDatabase(organizedRootDatabase);
+    const latestDeviceBackup = path.join(organizedBackupDir, 'latest-11111111-1111-4111-a111-111111111111.json');
+    assert.strictEqual(fs.existsSync(latestDeviceBackup), true);
+    assert.strictEqual(fs.readdirSync(organizedRestoreDir).length, 1);
+    assert.strictEqual(organizedFileIO.scanBackupDirectory(organizedRoot, secondId).matchCount, 2);
+    const automaticallyDiscovered = organizedFileIO.discoverOneDriveBackups();
+    const organizedDiscovery = automaticallyDiscovered.profiles.find(item => item.recoveryId === secondId);
+    assert(organizedDiscovery);
+    assert.strictEqual(organizedDiscovery.profileNameHint, 'Organized Teacher');
+    assert.strictEqual(organizedDiscovery.backupAvailable, true);
 
     const AdvisoryBackup = require('../src/renderer/js/advisory-backup');
     global.AdvisoryData = require('../src/renderer/js/advisory-data');
@@ -195,8 +266,12 @@ function resignEnvelope(envelope) {
     assert(mainSource.includes("ipcMain.handle('backup:select-and-scan'"));
     assert(mainSource.includes("ipcMain.handle('backup:read-discovered'"));
     assert(preloadSource.includes('selectAndScanBackupFolder'));
+    assert(preloadSource.includes('createDatabaseRestorePoint'));
+    assert(preloadSource.includes('discoverOneDriveBackups'));
+    assert(mainSource.includes("ipcMain.handle('backup:discover-onedrive'"));
     assert(htmlSource.includes('id="backupRecoveryIdValue"'));
     assert(htmlSource.includes('id="backupRecoverySearchInput"'));
+    assert(htmlSource.includes('id="oneDriveBackupDiscoveryList"'));
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

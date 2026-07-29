@@ -216,7 +216,11 @@ function printRestoreInstructions(restoreDir) {
 }
 
 function main() {
-  const commitMessage = process.argv.slice(2).join(' ').trim();
+  const args = process.argv.slice(2);
+  const restoreOnlyIndex = args.indexOf('--restore-only');
+  const restoreOnly = restoreOnlyIndex !== -1;
+  if (restoreOnly) args.splice(restoreOnlyIndex, 1);
+  const commitMessage = args.join(' ').trim();
   if (!commitMessage) {
     console.error('Commit message is required.');
     console.error('Example: npm run safe-commit -- "release v1.4.6 patch update"');
@@ -235,6 +239,14 @@ function main() {
 
   const restoreDir = createRestorePoint(commitMessage);
   printRestoreInstructions(restoreDir);
+  if (restoreOnly) {
+    writeFile(
+      path.join(restoreDir, 'staged-files-before-commit.txt'),
+      'Restore-only checkpoint. No files were staged, committed, or pushed.\n'
+    );
+    console.log('Restore-only checkpoint completed. No files were staged, committed, or pushed.');
+    return;
+  }
 
   const stagedFiles = stageAllowlistedFiles();
   writeFile(path.join(restoreDir, 'staged-files-before-commit.txt'), `${stagedFiles.join('\n')}\n`);

@@ -102,14 +102,42 @@ function verifyBackupEnvelopeIntegrity(envelope) {
   return expectedBuffer.length === actualBuffer.length && crypto.timingSafeEqual(expectedBuffer, actualBuffer);
 }
 
-function backupFilesInDirectory(baseDir) {
-  const directories = [baseDir];
-  const rollingDir = path.join(baseDir, 'backups');
-  try {
-    const rollingStat = fs.lstatSync(rollingDir);
-    if (rollingStat.isDirectory() && !rollingStat.isSymbolicLink()) directories.push(rollingDir);
-  } catch (_error) {
-    // The rolling backup folder is optional.
+function backupFilesInDirectory(baseDir, recoveryId = '') {
+  const directories = [];
+  const pending = [{ directory: path.resolve(baseDir), depth: 0 }];
+  const profileFolderName = BackupRecoveryId.normalizeBackupRecoveryId(recoveryId);
+  const maximumDepth = profileFolderName ? 6 : 2;
+  while (pending.length && directories.length < 200) {
+    const current = pending.shift();
+    let stat;
+    try {
+      stat = fs.lstatSync(current.directory);
+    } catch (_error) {
+      continue;
+    }
+    if (!stat.isDirectory() || stat.isSymbolicLink()) continue;
+    directories.push(current.directory);
+    if (current.depth >= maximumDepth) continue;
+    let children = [];
+    try {
+      children = fs.readdirSync(current.directory, { withFileTypes: true });
+    } catch (_error) {
+      continue;
+    }
+    for (const child of children) {
+      if (!child.isDirectory()) continue;
+      if (current.depth === 0 && profileFolderName) {
+        const allowedTopLevel = new Set([
+          'backups',
+          'backup',
+          'restore points',
+          'e-class record',
+          profileFolderName.toLowerCase()
+        ]);
+        if (!allowedTopLevel.has(child.name.toLowerCase())) continue;
+      }
+      pending.push({ directory: path.join(current.directory, child.name), depth: current.depth + 1 });
+    }
   }
   const files = [];
   for (const directory of directories) {
@@ -120,7 +148,9 @@ function backupFilesInDirectory(baseDir) {
       continue;
     }
     for (const entry of entries) {
-      if (entry.isFile() && entry.name.toLowerCase().endsWith('.json')) files.push(path.join(directory, entry.name));
+      if (entry.isFile() && entry.name.toLowerCase().endsWith('.json') && files.length < 2000) {
+        files.push(path.join(directory, entry.name));
+      }
     }
   }
   return files;
@@ -158,7 +188,7 @@ function scanBackupDirectory(baseDir, expectedRecoveryId) {
   if (!recoveryId) throw new Error('Enter a valid Backup Recovery ID.');
   const matches = [];
   let invalidMatchingFiles = 0;
-  for (const filePath of backupFilesInDirectory(baseDir)) {
+  for (const filePath of backupFilesInDirectory(baseDir, recoveryId)) {
     try {
       const stat = fs.statSync(filePath);
       if (!stat.isFile() || stat.size > 100 * 1024 * 1024) continue;
@@ -247,6 +277,149 @@ function createRollingBackup(payload, baseDir, limit = 30, prefix = 'backup') {
   }
 }
 
+function selectedOneDriveFolderForFile(oneDriveRoot, filePath) {
+  const parts = path.relative(oneDriveRoot, filePath).split(path.sep);
+  const canonicalIndex = parts.findIndex(part => part.toLowerCase() === 'e-class record');
+  if (canonicalIndex > 0) return path.join(oneDriveRoot, ...parts.slice(0, canonicalIndex));
+  const legacySyncIndex = parts.findIndex(part => part.toLowerCase() === 'eclass-record-sync');
+  if (legacySyncIndex > 0) return path.join(oneDriveRoot, ...parts.slice(0, legacySyncIndex));
+  const directory = path.dirname(filePath);
+  return path.basename(directory).toLowerCase() === 'backups' ? path.dirname(directory) : directory;
+}
+
+function discoverOneDriveBackups() {
+  const roots = sharedFolderSync.detectOneDriveRoots();
+  const found = new Map();
+  let scannedDirectories = 0;
+  let scannedFiles = 0;
+
+  for (const oneDriveRoot of roots) {
+    const pending = [{ directory: oneDriveRoot, depth: 0 }];
+    while (pending.length && scannedDirectories < 3000 && scannedFiles < 5000) {
+      const current = pending.shift();
+      let entries = [];
+      try {
+        const stat = fs.lstatSync(current.directory);
+        if (!stat.isDirectory() || stat.isSymbolicLink()) continue;
+        entries = fs.readdirSync(current.directory, { withFileTypes: true });
+      } catch (_error) {
+        continue;
+      }
+      scannedDirectories += 1;
+      for (const entry of entries) {
+        const entryPath = path.join(current.directory, entry.name);
+        if (entry.isDirectory()) {
+          if (current.depth < 7 && !entry.name.startsWith('.')) {
+            pending.push({ directory: entryPath, depth: current.depth + 1 });
+          }
+          continue;
+        }
+        if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.json')) continue;
+        const lowerName = entry.name.toLowerCase();
+        const inSyncDirectory = ['heads', 'bases'].includes(path.basename(current.directory).toLowerCase());
+        if (!inSyncDirectory && !/(backup|restore|latest)/.test(lowerName)) continue;
+        scannedFiles += 1;
+        try {
+          const stat = fs.statSync(entryPath);
+          if (!stat.isFile() || stat.size > 100 * 1024 * 1024) continue;
+          const parsed = JSON.parse(fs.readFileSync(entryPath, 'utf8'));
+          const recoveryId = BackupRecoveryId.normalizeBackupRecoveryId(parsed.backupRecoveryId);
+          if (!recoveryId) continue;
+          const existing = found.get(recoveryId) || {
+            recoveryId,
+            profileNameHint: '',
+            lastBackupAt: '',
+            protection: '',
+            folderPath: selectedOneDriveFolderForFile(oneDriveRoot, entryPath),
+            backupAvailable: false,
+            syncAvailable: false
+          };
+          if (verifyBackupEnvelopeIntegrity(parsed)) {
+            existing.backupAvailable = true;
+            existing.profileNameHint = String(parsed.profileNameHint || existing.profileNameHint || '').slice(0, 120);
+            existing.protection = parsed.protection;
+            if (!existing.lastBackupAt || Date.parse(parsed.createdAt) > Date.parse(existing.lastBackupAt)) {
+              existing.lastBackupAt = parsed.createdAt;
+              existing.folderPath = selectedOneDriveFolderForFile(oneDriveRoot, entryPath);
+            }
+          } else if (inSyncDirectory && sharedFolderSync.verifyEnvelope(parsed, recoveryId)) {
+            existing.syncAvailable = true;
+            if (!existing.lastBackupAt || Date.parse(parsed.createdAt) > Date.parse(existing.lastBackupAt)) {
+              existing.lastBackupAt = parsed.createdAt;
+              existing.folderPath = selectedOneDriveFolderForFile(oneDriveRoot, entryPath);
+            }
+          } else {
+            continue;
+          }
+          found.set(recoveryId, existing);
+        } catch (_error) {
+          // Damaged, unavailable, and unrelated files are never listed.
+        }
+      }
+    }
+  }
+
+  return {
+    roots,
+    profiles: Array.from(found.values()).sort((left, right) => (
+      Date.parse(right.lastBackupAt || 0) - Date.parse(left.lastBackupAt || 0)
+    )),
+    limited: scannedDirectories >= 3000 || scannedFiles >= 5000
+  };
+}
+
+function createRestorePointBackup(payload, restorePointDir, limit = 30, prefix = 'restore') {
+  try {
+    if (!restorePointDir) return;
+    fs.mkdirSync(restorePointDir, { recursive: true });
+    const date = new Date().toISOString().slice(0, 10);
+    const targetFile = path.join(restorePointDir, `${prefix}-${date}.json`);
+    writeJsonAtomically(targetFile, payload);
+    const files = fs.readdirSync(restorePointDir, { withFileTypes: true })
+      .filter(entry => entry.isFile() && entry.name.startsWith(`${prefix}-`) && entry.name.endsWith('.json'))
+      .map(entry => entry.name)
+      .sort();
+    for (const oldName of files.slice(0, Math.max(0, files.length - Math.max(1, Number(limit) || 30)))) {
+      fs.unlinkSync(path.join(restorePointDir, oldName));
+    }
+  } catch (error) {
+    console.error('Failed to create organized restore point:', error);
+  }
+}
+
+/**
+ * Creates a unique, immutable local restore point before an operation that can
+ * replace many records at once. Unlike daily rolling backups, multiple sync
+ * operations on the same day retain separate recovery snapshots.
+ */
+function createLocalRestorePoint(reason = 'shared-sync', limit = 50) {
+  ensureDataFolder();
+  if (!fs.existsSync(dbPath)) throw new Error('The local database is unavailable for a restore point.');
+  const payload = fs.readFileSync(dbPath, 'utf8');
+  JSON.parse(payload);
+  const backupFolder = path.join(dbDir, 'backups');
+  fs.mkdirSync(backupFolder, { recursive: true });
+  const safeReason = sanitizeFilename(reason || 'restore').toLowerCase() || 'restore';
+  const createdAt = new Date().toISOString();
+  const stamp = createdAt.replace(/[:.]/g, '-');
+  const unique = crypto.randomBytes(4).toString('hex');
+  const filename = `${safeReason}-restore-point-${stamp}-${unique}.json`;
+  writeJsonAtomically(path.join(backupFolder, filename), payload);
+
+  const matching = fs.readdirSync(backupFolder, { withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name.startsWith(`${safeReason}-restore-point-`) && entry.name.endsWith('.json'))
+    .map(entry => ({
+      name: entry.name,
+      filePath: path.join(backupFolder, entry.name),
+      modifiedAt: fs.statSync(path.join(backupFolder, entry.name)).mtimeMs
+    }))
+    .sort((left, right) => right.modifiedAt - left.modifiedAt);
+  for (const old of matching.slice(Math.max(1, Number(limit) || 50))) {
+    fs.unlinkSync(old.filePath);
+  }
+  return { success: true, createdAt, filename };
+}
+
 /**
  * Saves the database to disk.
  * @param {object|string} data The database contents.
@@ -279,21 +452,27 @@ function saveDatabase(data) {
       const activeProfile = parsed.profiles && parsed.profiles.find(p => p.id === parsed.activeProfileId);
       if (activeProfile && activeProfile.secondaryBackupPath) {
         const backupRecoveryId = BackupRecoveryId.normalizeBackupRecoveryId(activeProfile.backupRecoveryId);
-        const deviceSuffix = activeProfile.sharedFolderSync?.enabled
-          ? `-${sharedFolderSync.getDeviceInfo().deviceId.toLowerCase()}`
-          : '';
+        const deviceId = sharedFolderSync.getDeviceInfo().deviceId.toLowerCase();
+        const deviceSuffix = activeProfile.sharedFolderSync?.enabled ? `-${deviceId}` : '';
         const backupFileKey = backupRecoveryId
           ? `${backupRecoveryId}${deviceSuffix}`
           : sanitizeFilename(activeProfile.name);
-        const secondaryFile = path.join(activeProfile.secondaryBackupPath, `eclass-record-backup-${backupFileKey}.json`);
-        
+
         // Use the same versioned/checksummed envelope as manual backups.
         // Older raw secondary backups remain supported by the renderer importer.
         const profilePayload = JSON.stringify(createSecondaryBackupEnvelope(activeProfile), null, 2);
-        writeJsonAtomically(secondaryFile, profilePayload);
-
-        // Secondary daily rolling backup (rolling limit of 30 days)
-        createRollingBackup(profilePayload, activeProfile.secondaryBackupPath, 30, `backup-${backupFileKey}`);
+        const organized = backupRecoveryId && activeProfile.sharedFolderSync?.enabled
+          ? sharedFolderSync.backupPaths(backupRecoveryId)
+          : null;
+        if (organized?.layoutVersion === 2) {
+          fs.mkdirSync(organized.backupDir, { recursive: true });
+          writeJsonAtomically(path.join(organized.backupDir, `latest-${deviceId}.json`), profilePayload);
+          createRestorePointBackup(profilePayload, organized.restorePointDir, 30, `restore-${deviceId}`);
+        } else {
+          const secondaryFile = path.join(activeProfile.secondaryBackupPath, `eclass-record-backup-${backupFileKey}.json`);
+          writeJsonAtomically(secondaryFile, profilePayload);
+          createRollingBackup(profilePayload, activeProfile.secondaryBackupPath, 30, `backup-${backupFileKey}`);
+        }
       }
     } catch (secError) {
       console.error('Secondary auto-backup failed (non-fatal):', secError);
@@ -334,8 +513,10 @@ module.exports = {
   readFile,
   writeFile,
   createSecondaryBackupEnvelope,
+  createLocalRestorePoint,
   writeJsonAtomically,
   verifyBackupEnvelopeIntegrity,
   scanBackupDirectory,
+  discoverOneDriveBackups,
   readValidDiscoveredBackup
 };

@@ -644,65 +644,63 @@
         </div>
 
         <!-- Auto-Backup Folder Card -->
-        <div class="card">
-            <h2 class="card-title">Shared Backup Folder</h2>
-          <div class="settings-row">
-            <div class="settings-row__left">
-              <div class="settings-row__title">Backup Directory Path</div>
-              <div class="settings-row__desc" id="secondaryBackupPathDesc">None configured. Select a directory (like your OneDrive or Google Drive folder) to save duplicate database copies and daily rolling backups (up to 30 days) in both directories.</div>
+        <div class="card backup-sync-card">
+          <h2 class="card-title">OneDrive Backup &amp; Sync</h2>
+          <p class="settings-row__desc">Create an ID on your main PC, or paste the ID from another PC to connect the same profile.</p>
+
+          <div class="backup-sync-primary">
+            <label class="field-label" for="backupRecoverySearchInput">Backup Recovery ID</label>
+            <div class="backup-discovery__controls">
+              <input id="backupRecoverySearchInput" class="field-input backup-recovery-input" type="text" autocomplete="off" spellcheck="false" placeholder="No Backup Recovery ID" aria-label="Backup Recovery ID" />
+              <button id="btnSharedSyncConnect" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.connectExisting()">Connect Existing ID</button>
+              <button id="btnSharedSyncToggle" class="btn btn-primary btn-sm" type="button" onclick="SharedFolderSync.toggleSync()">Create New ID</button>
+              <button id="btnCopyBackupRecoveryId" class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.copyRecoveryId()" title="Copy Backup Recovery ID">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy
+              </button>
             </div>
-            <div class="action-cluster">
-              <button id="btnClearBackupFolder" class="btn btn-ghost btn-sm" onclick="clearSecondaryBackupFolder()" style="display:none">Clear</button>
-              <button class="btn btn-sm" onclick="selectSecondaryBackupFolder()">Select Folder</button>
+            <code id="backupRecoveryIdValue" class="backup-recovery-id" hidden>Not generated &mdash; local profile only</code>
+            <div id="sharedSyncSettingsStatus" class="settings-row__desc">No OneDrive backup configured. This profile is saved locally.</div>
+            <div id="backupDiscoveryStatus" class="settings-row__desc" aria-live="polite"></div>
+            <span id="backupRecoveryIdHistoryValue" class="backup-recovery-note" hidden></span>
+          </div>
+
+          <div class="backup-found section-divider">
+            <div class="backup-found__heading">
+              <div>
+                <div class="settings-row__title">Profiles Found in OneDrive</div>
+                <div class="settings-row__desc">Valid E-Class Record backups and synchronized profiles detected on this PC.</div>
+              </div>
+              <button id="btnRefreshOneDriveBackups" class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.discoverOneDriveBackups(true)">Refresh</button>
+            </div>
+            <div id="oneDriveBackupDiscoveryList" class="backup-found__list">
+              <div class="settings-row__desc">Checking OneDrive for profiles&hellip;</div>
             </div>
           </div>
-          <div class="settings-row section-divider">
-            <div class="settings-row__left">
-              <div class="settings-row__title">Multi-PC Shared Folder Sync</div>
-              <div id="sharedSyncSettingsStatus" class="settings-row__desc">Sync is off. Your records still save locally and ordinary backups continue to work.</div>
-              <div id="sharedSyncSettingsDetails" class="shared-sync-details" hidden></div>
-            </div>
-            <div class="action-cluster">
+
+          <details class="backup-sync-advanced section-divider">
+            <summary>Advanced backup and device settings</summary>
+            <div id="sharedSyncSettingsDetails" class="shared-sync-details" hidden></div>
+            <div id="secondaryBackupPathDesc" class="settings-row__desc">Local AppData backups remain active.</div>
+            <div class="action-cluster u-mt-3">
               <button id="btnSharedSyncCheck" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.checkNow()" hidden>Check Now</button>
               <button id="btnSharedSyncReview" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.reviewPending()" hidden>Review Changes</button>
               <button id="btnSharedSyncDevice" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.renameDevice()" hidden>Rename Device</button>
-              <button id="btnSharedSyncToggle" class="btn btn-sm" type="button" onclick="SharedFolderSync.toggleSync()">Enable Sync</button>
+              <button id="btnRegenerateBackupRecoveryId" class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.regenerateRecoveryId()">Start New Identity</button>
+              <button id="btnSharedSyncDisableAdvanced" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.toggleSync()" hidden>Disconnect This PC</button>
+              <button id="btnScanBackupFolder" class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.scanForBackup()">Find Backup Manually</button>
+              <button id="btnClearBackupFolder" class="btn btn-ghost btn-sm" onclick="clearSecondaryBackupFolder()" style="display:none">Clear Local Folder</button>
+              <button class="btn btn-ghost btn-sm" onclick="selectSecondaryBackupFolder()">Choose Local Backup Folder</button>
             </div>
-          </div>
-          <div class="settings-row section-divider">
-            <div class="settings-row__left">
-              <div class="settings-row__title">Your Backup Recovery ID</div>
-              <div class="settings-row__desc">
-                <code id="backupRecoveryIdValue" class="backup-recovery-id">Preparing ID&hellip;</code>
-                <span class="backup-recovery-note">Use this ID to find your backups on another PC. It does not replace your PIN.</span>
-              </div>
-            </div>
-            <div class="action-cluster">
-              <button class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.copyRecoveryId()" title="Copy Backup Recovery ID">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                Copy
-              </button>
-              <button class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.regenerateRecoveryId()">Regenerate</button>
-            </div>
-          </div>
-          <div class="backup-discovery section-divider">
-            <div>
-              <div class="settings-row__title">Restore From a Shared Backup Folder</div>
-              <div class="settings-row__desc">Enter the Backup Recovery ID, then choose the OneDrive, Google Drive, Dropbox, network, removable, or local folder containing the backup.</div>
-            </div>
-            <div class="backup-discovery__controls">
-              <input id="backupRecoverySearchInput" class="field-input backup-recovery-input" type="text" autocomplete="off" spellcheck="false" placeholder="ECR-XXXX-XXXX-XXXX-XXXX-XXXX" aria-label="Backup Recovery ID to find" />
-              <button id="btnScanBackupFolder" class="btn btn-sm" type="button" onclick="BackupRecovery.scanForBackup()">Choose Folder &amp; Find Backup</button>
-            </div>
-            <div id="backupDiscoveryStatus" class="settings-row__desc" aria-live="polite"></div>
-            <div id="backupDiscoveryResult" class="backup-discovery__result" hidden>
-              <dl class="backup-discovery__metadata">
-                <div><dt>Profile</dt><dd id="backupDiscoveryProfile">Unknown profile</dd></div>
-                <div><dt>Saved</dt><dd id="backupDiscoveryCreatedAt"></dd></div>
-                <div><dt>Protection</dt><dd id="backupDiscoveryProtection"></dd></div>
-              </dl>
-              <button class="btn btn-primary btn-sm" type="button" onclick="BackupRecovery.restoreSelectedBackup()">Restore This Backup</button>
-            </div>
+          </details>
+
+          <div id="backupDiscoveryResult" class="backup-discovery__result" hidden>
+            <dl class="backup-discovery__metadata">
+              <div><dt>Profile</dt><dd id="backupDiscoveryProfile">Unknown profile</dd></div>
+              <div><dt>Saved</dt><dd id="backupDiscoveryCreatedAt"></dd></div>
+              <div><dt>Protection</dt><dd id="backupDiscoveryProtection"></dd></div>
+            </dl>
+            <button class="btn btn-primary btn-sm" type="button" onclick="BackupRecovery.restoreSelectedBackup()">Restore This Backup</button>
           </div>
         </div>
 
@@ -1893,7 +1891,7 @@
           console.log('Mock saveDatabase:', data);
           return true;
         },
-        getVersion: async () => '1.7.0-mock',
+        getVersion: async () => '1.7.2-mock',
         getPerformanceProfile: async () => ({
           totalMemoryBytes: 8 * 1024 ** 3,
           freeMemoryBytes: 4 * 1024 ** 3,

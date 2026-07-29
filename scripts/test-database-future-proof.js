@@ -235,7 +235,7 @@ function renderQrPixels(payload) {
   const mainSource = fs.readFileSync(path.join(__dirname, '../src/main/main.js'), 'utf8');
   const preloadSource = fs.readFileSync(path.join(__dirname, '../src/main/preload.js'), 'utf8');
   assert(databaseSource.includes('const DB_VERSION = 7;'));
-  assert(databaseSource.includes('const ROOT_DB_VERSION = 6;'));
+  assert(databaseSource.includes('const ROOT_DB_VERSION = 7;'));
   assert(databaseSource.indexOf('verifyRootDatabaseIntegrity(localData)') < databaseSource.indexOf('normalizeRootDatabase(localData)'));
   assert(databaseSource.includes('cannot be safely overwritten by this version'));
   assert(databaseSource.includes("!p.pinHash.startsWith('pbkdf2-sha256$')"), 'legacy PIN hashes must be upgraded after a verified unlock and save');

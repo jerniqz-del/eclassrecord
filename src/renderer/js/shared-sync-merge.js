@@ -130,7 +130,79 @@
     return { merged: merged === MISSING ? undefined : merged, conflicts, automaticChanges };
   }
 
-  const api = { mergeThreeWay };
+  /**
+   * Combines two snapshots that do not yet share revision ancestry.
+   *
+   * Missing values are preserved from whichever PC has them, because absence
+   * cannot safely be interpreted as an intentional deletion without a base.
+   * Different values at the same path remain explicit user conflicts.
+   */
+  function mergeTwoWayConservative(localValue, remoteValue, resolutions = {}) {
+    const conflicts = [];
+    let automaticChanges = 0;
+
+    function conflict(local, remote, path, kind = 'different-values') {
+      const key = pointer(path);
+      const choice = resolutions[key];
+      conflicts.push({
+        path: key,
+        kind,
+        base: undefined,
+        local: local === MISSING ? undefined : clone(local),
+        remote: remote === MISSING ? undefined : clone(remote)
+      });
+      return clone(choice === 'remote' ? remote : local);
+    }
+
+    function merge(local, remote, path) {
+      if (equal(local, remote)) return clone(local);
+      if (local === MISSING) {
+        automaticChanges += 1;
+        return clone(remote);
+      }
+      if (remote === MISSING) return clone(local);
+
+      if (keyedArray([local, remote])) {
+        const localMap = mapById(local);
+        const remoteMap = mapById(remote);
+        const output = [];
+        for (const id of orderedIds(MISSING, local, remote)) {
+          const merged = merge(
+            localMap.has(id) ? localMap.get(id) : MISSING,
+            remoteMap.has(id) ? remoteMap.get(id) : MISSING,
+            path.concat(`@id=${id}`)
+          );
+          if (merged !== MISSING) output.push(merged);
+        }
+        return output;
+      }
+
+      if (isPlainObject(local) && isPlainObject(remote)) {
+        const output = {};
+        const keys = new Set([...Object.keys(local), ...Object.keys(remote)]);
+        for (const key of keys) {
+          const merged = merge(
+            Object.prototype.hasOwnProperty.call(local, key) ? local[key] : MISSING,
+            Object.prototype.hasOwnProperty.call(remote, key) ? remote[key] : MISSING,
+            path.concat(key)
+          );
+          if (merged !== MISSING) output[key] = merged;
+        }
+        return output;
+      }
+
+      return conflict(local, remote, path, 'no-common-base');
+    }
+
+    const merged = merge(
+      localValue === undefined ? MISSING : localValue,
+      remoteValue === undefined ? MISSING : remoteValue,
+      []
+    );
+    return { merged: merged === MISSING ? undefined : merged, conflicts, automaticChanges };
+  }
+
+  const api = { mergeThreeWay, mergeTwoWayConservative };
   globalScope.SharedSyncMerge = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

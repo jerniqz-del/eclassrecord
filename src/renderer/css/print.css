@@ -450,7 +450,11 @@
 /* SF2 export prepares an exact preview clone in #attendanceSf2ReportPrint.
    Override the general grading-sheet print rules only for this export mode. */
 @media print {
-  @page { size: A4 landscape; margin: 10mm; }
+  @page attendance-sf2 { size: A4 landscape; margin: 10mm; }
+
+  body.support-print-mode.support-print-attendance.sf2-export-print-mode {
+    page: attendance-sf2;
+  }
 
   body.advisory-report-print-mode > *:not(#advisoryGradeReportPrint) {
     display: none !important;
@@ -481,22 +485,41 @@
   body.advisory-report-print-mode .advisory-report__table thead { display: table-header-group; }
   body.advisory-report-print-mode .advisory-report__table tr { break-inside: avoid; page-break-inside: avoid; }
 
-  body.support-print-mode.support-print-attendance {
+  /* The standard Attendance Print button prints the visible log. It shares the
+     support-print classes with SF2, but does not use the hidden SF2 clone. */
+  body.support-print-mode.support-print-attendance:not(.sf2-export-print-mode) .view-section[data-view="record"] {
+    display: none !important;
+  }
+
+  body.support-print-mode.support-print-attendance:not(.sf2-export-print-mode) .view-section[data-view="attendance"],
+  body.support-print-mode.support-print-attendance:not(.sf2-export-print-mode) #attendanceTrackerView,
+  body.support-print-mode.support-print-attendance:not(.sf2-export-print-mode) #attendanceTrackerContent,
+  body.support-print-mode.support-print-attendance:not(.sf2-export-print-mode) #attendanceReportPrintable {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  body.support-print-mode.support-print-attendance.sf2-export-print-mode {
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
   }
 
-  body.support-print-mode.support-print-attendance > *:not(#attendanceSf2ReportPrint) {
+  body.support-print-mode.support-print-attendance.sf2-export-print-mode > *:not(#attendanceSf2ReportPrint) {
     display: none !important;
   }
 
-  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint,
-  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint * {
+  body.support-print-mode.support-print-attendance.sf2-export-print-mode #attendanceSf2ReportPrint,
+  body.support-print-mode.support-print-attendance.sf2-export-print-mode #attendanceSf2ReportPrint * {
     visibility: visible !important;
   }
 
-  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint {
+  body.support-print-mode.support-print-attendance.sf2-export-print-mode #attendanceSf2ReportPrint {
     display: block !important;
     position: static !important;
     inset: auto !important;
@@ -509,7 +532,7 @@
     background: #fff !important;
   }
 
-  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint .sf2-preview-sheet {
+  body.support-print-mode.support-print-attendance.sf2-export-print-mode #attendanceSf2ReportPrint .sf2-preview-sheet {
     width: 100% !important;
     min-width: 0 !important;
     max-width: none !important;
@@ -519,16 +542,16 @@
     page-break-inside: auto;
   }
 
-  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint .sf2-table {
+  body.support-print-mode.support-print-attendance.sf2-export-print-mode #attendanceSf2ReportPrint .sf2-table {
     width: 100% !important;
     table-layout: fixed !important;
   }
 
-  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint .sf2-table thead {
+  body.support-print-mode.support-print-attendance.sf2-export-print-mode #attendanceSf2ReportPrint .sf2-table thead {
     display: table-header-group;
   }
 
-  body.support-print-mode.support-print-attendance #attendanceSf2ReportPrint .sf2-table tr {
+  body.support-print-mode.support-print-attendance.sf2-export-print-mode #attendanceSf2ReportPrint .sf2-table tr {
     break-inside: avoid;
     page-break-inside: avoid;
   }

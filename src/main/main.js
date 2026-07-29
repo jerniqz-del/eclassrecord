@@ -1017,6 +1017,65 @@ ipcMain.handle('shared-sync:configure-folder', async (_event, backupRecoveryId) 
   return { canceled: false, ...state };
 });
 
+function exposeBackupScan(scan) {
+  if (!scan.latest) {
+    return {
+      canceled: false,
+      found: false,
+      invalidMatchingFiles: scan.invalidMatchingFiles
+    };
+  }
+  const handle = crypto.randomUUID();
+  if (discoveredBackupHandles.size >= 100) {
+    const oldestHandle = discoveredBackupHandles.keys().next().value;
+    discoveredBackupHandles.delete(oldestHandle);
+  }
+  discoveredBackupHandles.set(handle, {
+    filePath: scan.latest.filePath,
+    backupRecoveryId: scan.latest.backupRecoveryId,
+    createdAt: Date.now()
+  });
+  const { filePath: _filePath, ...metadata } = scan.latest;
+  return {
+    canceled: false,
+    found: true,
+    handle,
+    metadata,
+    matchCount: scan.matchCount,
+    invalidMatchingFiles: scan.invalidMatchingFiles
+  };
+}
+
+ipcMain.handle('backup:discover-onedrive', async () => {
+  return fileIO.discoverOneDriveBackups();
+});
+
+ipcMain.handle('backup:scan-known-folder', async (_event, backupRecoveryId, folderPath) => {
+  const validation = sharedFolderSync.validateOneDriveFolder(folderPath);
+  pruneDiscoveredBackupHandles();
+  return exposeBackupScan(fileIO.scanBackupDirectory(validation.folderPath, backupRecoveryId));
+});
+
+ipcMain.handle('shared-sync:select-onedrive-folder', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select a Folder Inside OneDrive',
+    properties: ['openDirectory', 'createDirectory']
+  });
+  if (result.canceled || result.filePaths.length === 0) return { canceled: true };
+  const validation = sharedFolderSync.validateOneDriveFolder(result.filePaths[0]);
+  return { canceled: false, ...validation };
+});
+
+ipcMain.handle('shared-sync:configure-selected-folder', async (_event, backupRecoveryId, folderPath) => {
+  const state = sharedFolderSync.configureFolder(backupRecoveryId, folderPath);
+  watchSharedSyncFolder(backupRecoveryId);
+  return { canceled: false, ...state };
+});
+
+ipcMain.handle('shared-sync:inspect-selected-folder', async (_event, backupRecoveryId, folderPath) => {
+  return sharedFolderSync.inspectFolder(backupRecoveryId, folderPath);
+});
+
 ipcMain.handle('shared-sync:disable', async (_event, backupRecoveryId) => {
   unwatchSharedSyncFolder(backupRecoveryId);
   return sharedFolderSync.disableFolder(backupRecoveryId);
@@ -1032,6 +1091,14 @@ ipcMain.handle('shared-sync:write-base', async (_event, backupRecoveryId, envelo
 
 ipcMain.handle('shared-sync:scan', async (_event, backupRecoveryId) => {
   return sharedFolderSync.scan(backupRecoveryId);
+});
+
+ipcMain.handle('shared-sync:create-restore-point', async () => {
+  return fileIO.createLocalRestorePoint('shared-sync');
+});
+
+ipcMain.handle('database:create-restore-point', async (_event, reason) => {
+  return fileIO.createLocalRestorePoint(String(reason || 'database-migration').slice(0, 80));
 });
 
 ipcMain.handle('shared-sync:read', async (_event, handle) => {
@@ -1143,7 +1210,12 @@ ipcMain.handle('dialog:export-excel-template', async (_event, payload) => {
 });
 
 ipcMain.handle('dialog:export-pdf', async (_event, options) => {
-  const { size, landscape, filename, metadata, includeHeader = true } = options || {};
+  const { size, landscape, filename, metadata } = options || {};
+  const isSelfContainedSf2Report = /^School Form 2 \(SF2\)\b/i.test(String(metadata?.title || '').trim());
+  // SF2 already renders its complete official heading and class metadata inside
+  // the document. Keep the shared app header enabled for older callers, while
+  // automatically suppressing it for SF2 exports that predate includeHeader.
+  const includeHeader = options?.includeHeader ?? !isSelfContainedSf2Report;
   const isTestArtifact = isMockTestArtifact(options, metadata);
   const exportFilename = mockSafeFilename(filename || 'Class-Record.pdf', options, metadata);
   const testNoticeHtml = isTestArtifact

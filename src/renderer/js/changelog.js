@@ -1,14 +1,13 @@
-// Bundled changelog for v1.7.0
+// Bundled changelog for v1.7.2
 const APP_CHANGELOG = {
-  version: '1.7.0',
-  releaseDate: '2026-07-28',
+  version: '1.7.2',
+  releaseDate: '2026-07-29',
   points: [
-    'Added Teacher Tools with Group Randomizer, suspenseful no-repeat Name Picker roulette, Grade Simulator, and three fully offline games.',
-    'Added synchronized Active Class selectors to all class-based teacher tools using the same workflow as the Grading Sheet.',
-    'Added a compact, scrollbar-free grade simulation matrix with live calculated results, explicit PIN-confirmed apply, stale-score protection, and reversible history.',
-    'Added Backup Recovery IDs for finding the newest matching encrypted backup from another PC or shared folder.',
-    'Added encrypted Shared Folder Sync with visible status, per-device revisions, automatic non-conflicting merges, and conflict review.',
-    'Kept randomizer, picker, and game state outside profile databases while including compact simulator rollback history in encrypted backups and sync.',
-    'Preserved local Auto-save as the primary save path while shared-folder updates run as a separate delayed layer.'
+    'Streamlined OneDrive Backup & Sync into one Recovery ID workflow for creating a new identity or connecting another PC.',
+    'Added automatic, integrity-validated OneDrive profile discovery with direct Connect and View Backup actions.',
+    'New local profiles now keep an empty Recovery ID until OneDrive backup or multi-PC synchronization is intentionally configured.',
+    'Added organized per-device backups, separate restore points, safe first-join merging, and scan-before-write synchronization.',
+    'Preserved existing Recovery IDs and legacy backup layouts while safely migrating unused IDs into recoverable history.',
+    'Fixed Attendance PDF preview layout and blank Microsoft Print to PDF output.'
   ]
 };

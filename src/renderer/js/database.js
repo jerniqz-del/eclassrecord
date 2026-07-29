@@ -6,7 +6,7 @@
  */
 
 const DB_VERSION = 7;
-const ROOT_DB_VERSION = 6;
+const ROOT_DB_VERSION = 7;
 
 function timestampNow() {
   return new Date().toISOString();
@@ -31,7 +31,12 @@ function normalizeProfileRecord(profile) {
   if (profile.pinEnabled === undefined) profile.pinEnabled = false;
   if (profile.secondaryBackupPath === undefined) profile.secondaryBackupPath = '';
   const normalizedRecoveryId = BackupRecoveryId.normalizeBackupRecoveryId(profile.backupRecoveryId);
-  profile.backupRecoveryId = normalizedRecoveryId || BackupRecoveryId.generateBackupRecoveryId();
+  profile.backupRecoveryId = normalizedRecoveryId || '';
+  profile.backupRecoveryIdHistory = Array.from(new Set(
+    (Array.isArray(profile.backupRecoveryIdHistory) ? profile.backupRecoveryIdHistory : [])
+      .map(value => BackupRecoveryId.normalizeBackupRecoveryId(value))
+      .filter(Boolean)
+  )).filter(value => value !== profile.backupRecoveryId);
   if (!profile.sharedFolderSync || typeof profile.sharedFolderSync !== 'object') {
     profile.sharedFolderSync = {
       enabled: false,
@@ -53,6 +58,37 @@ function normalizeProfileRecord(profile) {
   return profile;
 }
 
+function profileHasRecoveryIdUsage(profile) {
+  const sync = profile?.sharedFolderSync || {};
+  return Boolean(
+    String(profile?.secondaryBackupPath || '').trim()
+    || String(profile?.data?.secondaryBackupPath || '').trim()
+    || String(profile?.data?.sharedSyncKey || '').trim()
+    || sync.enabled
+    || sync.baseRevisionId
+    || sync.ownRevisionId
+    || (Array.isArray(sync.integratedRevisionIds) && sync.integratedRevisionIds.length)
+    || sync.lastPublishedDigest
+    || sync.lastFolderWriteAt
+  );
+}
+
+function migrateUnusedRecoveryIds(root, sourceVersion) {
+  if (Number(sourceVersion) >= 7 || !Array.isArray(root?.profiles)) return false;
+  let changed = false;
+  for (const profile of root.profiles) {
+    const recoveryId = BackupRecoveryId.normalizeBackupRecoveryId(profile.backupRecoveryId);
+    if (!recoveryId || profileHasRecoveryIdUsage(profile)) continue;
+    profile.backupRecoveryIdHistory = Array.from(new Set([
+      ...(Array.isArray(profile.backupRecoveryIdHistory) ? profile.backupRecoveryIdHistory : []),
+      recoveryId
+    ]));
+    profile.backupRecoveryId = '';
+    changed = true;
+  }
+  return changed;
+}
+
 function rootIntegrityPayload(root) {
   const payload = JSON.parse(JSON.stringify(root || {}));
   delete payload.integrity;
@@ -72,11 +108,14 @@ async function updateRootDatabaseIntegrity(root) {
 
 function normalizeRootDatabase(root) {
   const nextRoot = root && typeof root === 'object' ? root : createEmptyRootDatabase();
+  const sourceVersion = Number(nextRoot.version) || 0;
   nextRoot.version = normalizeVersion(nextRoot.version, ROOT_DB_VERSION);
   if (!Array.isArray(nextRoot.profiles)) nextRoot.profiles = [];
   nextRoot.profiles = nextRoot.profiles.map(normalizeProfileRecord).filter(Boolean);
+  migrateUnusedRecoveryIds(nextRoot, sourceVersion);
   const recoveryIds = new Set();
   for (const profile of nextRoot.profiles) {
+    if (!profile.backupRecoveryId) continue;
     while (recoveryIds.has(profile.backupRecoveryId)) {
       profile.backupRecoveryId = BackupRecoveryId.generateBackupRecoveryId();
     }
@@ -144,6 +183,18 @@ function replaceRootDatabase(nextRoot) {
 
 function getCurrentProfilePin() {
   return currentProfilePin;
+}
+
+async function replaceActiveProfilePin(nextPin) {
+  const pin = String(nextPin || '');
+  if (!/^\d{6}$/.test(pin)) throw new Error('A valid six-digit profile PIN is required.');
+  const profile = dbRoot.profiles.find(item => item.id === dbRoot.activeProfileId);
+  if (!profile) throw new Error('No active profile is available.');
+  profile.pinEnabled = true;
+  profile.salt = generateSalt();
+  profile.pinHash = await hashPin(pin, profile.salt);
+  currentProfilePin = pin;
+  return true;
 }
 
 function getRootIntegrityStatus() {
@@ -265,7 +316,24 @@ async function loadDatabase() {
             ? 'The database uses an unsupported integrity format. No data was loaded or changed.'
             : 'The database integrity check failed. No data was loaded or changed. Restore a known-good backup.');
         }
+        const sourceRootVersion = Number(localData.version) || 0;
+        const needsRootMigration = sourceRootVersion < 7;
+        const clearsUnusedRecoveryId = needsRootMigration
+          && localData.profiles.some(profile => {
+            const recoveryId = BackupRecoveryId.normalizeBackupRecoveryId(profile?.backupRecoveryId);
+            return recoveryId && !profileHasRecoveryIdUsage(profile);
+          });
+        if (needsRootMigration && typeof window.electronAPI.createDatabaseRestorePoint === 'function') {
+          await window.electronAPI.createDatabaseRestorePoint(
+            clearsUnusedRecoveryId ? 'recovery-id-migration' : 'database-v7-migration'
+          );
+        }
         dbRoot = normalizeRootDatabase(localData);
+        if (needsRootMigration) {
+          await updateRootDatabaseIntegrity(dbRoot);
+          const migrated = await window.electronAPI.saveDatabase(dbRoot);
+          if (!migrated) throw new Error('The database version 7 migration could not be saved.');
+        }
       } else if (localData.assignments || localData.teacherName) {
         // This is a legacy database (version 2)
         // Store legacy data for migration
