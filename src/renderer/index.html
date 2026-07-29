@@ -58,7 +58,10 @@
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
         </svg>
-        <span class="sidebar__brand-text">E-Class Record App</span>
+        <span class="sidebar__brand-copy">
+          <span class="sidebar__brand-text">E-Class Record App</span>
+          <span id="sidebarUserName" class="sidebar__user-name">User</span>
+        </span>
       </div>
 
       <div class="sidebar__body">
@@ -1891,7 +1894,7 @@
           console.log('Mock saveDatabase:', data);
           return true;
         },
-        getVersion: async () => '1.7.2-mock',
+        getVersion: async () => '1.7.3-mock',
         getPerformanceProfile: async () => ({
           totalMemoryBytes: 8 * 1024 ** 3,
           freeMemoryBytes: 4 * 1024 ** 3,
@@ -1962,6 +1965,7 @@
   <script src="js/attendance-excused.js"></script>
   <script src="js/app.js"></script>
   <script src="js/teacher-tools.js"></script>
+  <script src="js/sidebar-profile.js"></script>
   <script src="js/special-program.js"></script>
   <script src="js/pin-recovery.js"></script>
   <script src="js/backup-recovery.js"></script>

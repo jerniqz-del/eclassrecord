@@ -2,7 +2,7 @@
 
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
-Current app version: 1.7.2
+Current app version: 1.7.3
 Last reviewed: 2026-07-29
 
 ## 1. Project Foundation
@@ -243,6 +243,7 @@ Adjusted patches:
 | v1.6.8 | Added automatic daily online update checks, optional background downloads, update progress reporting, a save-protected restart-and-apply workflow, a device-local Low-Spec Mode, expandable Advisory term averages, and an exact unrounded decimal Grade Record view. | Tested release checkpoint for safer automatic updates, improved responsiveness on older PCs, and clearer Advisory grade review without changing stored grade values or backup compatibility. |
 | v1.7.0 | Added Backup Recovery IDs, encrypted Shared Folder Sync with conflict-aware merging, and Teacher Tools with synchronized class selectors, grouping, name selection, reversible grade simulation, and sandboxed offline games. | Minor-version checkpoint for cross-PC recovery and teacher utilities while preserving local Auto-save, encryption, atomic database writes, and backward-compatible backups. |
 | v1.7.2 | Streamlined OneDrive backup onboarding, empty-by-default Recovery IDs, automatic validated profile discovery, organized per-device backups and restore points, safe multi-PC joining, and Attendance PDF/printing fixes. | Patch release focused on database integrity, backward compatibility, and a simpler teacher-facing backup workflow. |
+| v1.7.3 | Added Performance Checklist workflows with reusable criteria, session history, guarded score publication and reversal, plus a responsive sidebar with the active teacher profile name. | Patch release for faster classroom evidence tracking and clearer profile identification while preserving grading, backup, and sync compatibility. |
 
 ## Current Follow-Up Checks
 

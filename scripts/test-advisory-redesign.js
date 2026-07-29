@@ -164,6 +164,17 @@ assert(dashboard.includes('subjectWatermarkMarkup'));
 assert(dashboard.includes('subjectCardIconMarkup'));
 ['language', 'reading-literacy', 'makabansa', 'mathematics', 'gmrc', 'araling-panlipunan', 'english', 'filipino', 'science', 'mapeh', 'epp-tle'].forEach(key => assert(dashboard.includes(key)));
 const html = fs.readFileSync(path.join(root, 'src/renderer/index.html'), 'utf8');
+const layoutCss = fs.readFileSync(path.join(root, 'src/renderer/css/layout.css'), 'utf8');
+const designTokensCss = fs.readFileSync(path.join(root, 'src/renderer/css/design-tokens.css'), 'utf8');
+const sidebarProfileSource = fs.readFileSync(path.join(root, 'src/renderer/js/sidebar-profile.js'), 'utf8');
+assert(html.includes('id="sidebarUserName"'), 'the sidebar must display the active teacher profile name');
+assert(html.includes('js/sidebar-profile.js'), 'the sidebar profile updater must load with the renderer');
+assert(designTokensCss.includes('--sidebar-scale:'), 'the sidebar must expose a responsive typography scale');
+assert(designTokensCss.includes('--sidebar-width:  clamp('), 'the default sidebar width must respond to the viewport');
+assert(layoutCss.includes('.sidebar__user-name'), 'the teacher profile label must have dedicated overflow-safe styling');
+assert(layoutCss.includes('--font-size-base: calc((0.8125rem * var(--sidebar-scale)) / var(--zoom-ratio));'), 'sidebar typography must account for app zoom');
+assert(sidebarProfileSource.includes('getActiveProfileDatabase'), 'the sidebar label must read the active profile database');
+assert(sidebarProfileSource.includes('label.textContent = name;'), 'the sidebar label must render the resolved teacher name as text');
 [
   'src/renderer/js/changelog.js',
   'docs/implementation-history.md',

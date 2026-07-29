@@ -1,13 +1,13 @@
-// Bundled changelog for v1.7.2
+// Bundled changelog for v1.7.3
 const APP_CHANGELOG = {
-  version: '1.7.2',
+  version: '1.7.3',
   releaseDate: '2026-07-29',
   points: [
-    'Streamlined OneDrive Backup & Sync into one Recovery ID workflow for creating a new identity or connecting another PC.',
-    'Added automatic, integrity-validated OneDrive profile discovery with direct Connect and View Backup actions.',
-    'New local profiles now keep an empty Recovery ID until OneDrive backup or multi-PC synchronization is intentionally configured.',
-    'Added organized per-device backups, separate restore points, safe first-join merging, and scan-before-write synchronization.',
-    'Preserved existing Recovery IDs and legacy backup layouts while safely migrating unused IDs into recoverable history.',
-    'Fixed Attendance PDF preview layout and blank Microsoft Print to PDF output.'
+    'Added Performance Checklist workflows for recording recurring classroom evidence by class and term.',
+    'Added check-mark and numeric criteria, reusable templates, session history, and controlled publication to Written Work or Performance Task scores.',
+    'Added reversal safeguards so published checklist contributions can be reviewed and safely removed without overwriting later score changes.',
+    'Made the sidebar width and typography respond more naturally to window size and app zoom.',
+    'Added the active teacher profile name below the app title in the sidebar, with live updates when the profile changes.',
+    'Preserved existing databases, backups, Recovery IDs, shared-folder synchronization, attendance records, and grading calculations.'
   ]
 };

@@ -165,7 +165,8 @@
 
   /* ── Layout ──────────────────────────────────────────── */
   --header-height:  56px;
-  --sidebar-width:  262px;
+  --sidebar-scale:  clamp(0.9, calc(100vw / 1366), 1.25);
+  --sidebar-width:  clamp(220px, 19.2vw, 320px);
 
   /* ── Z-index ─────────────────────────────────────────── */
   --z-base:     1;
