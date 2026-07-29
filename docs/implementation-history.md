@@ -2,7 +2,7 @@
 
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
-Current app version: 1.7.3
+Current app version: 1.8.0
 Last reviewed: 2026-07-29
 
 ## 1. Project Foundation
@@ -244,6 +244,7 @@ Adjusted patches:
 | v1.7.0 | Added Backup Recovery IDs, encrypted Shared Folder Sync with conflict-aware merging, and Teacher Tools with synchronized class selectors, grouping, name selection, reversible grade simulation, and sandboxed offline games. | Minor-version checkpoint for cross-PC recovery and teacher utilities while preserving local Auto-save, encryption, atomic database writes, and backward-compatible backups. |
 | v1.7.2 | Streamlined OneDrive backup onboarding, empty-by-default Recovery IDs, automatic validated profile discovery, organized per-device backups and restore points, safe multi-PC joining, and Attendance PDF/printing fixes. | Patch release focused on database integrity, backward compatibility, and a simpler teacher-facing backup workflow. |
 | v1.7.3 | Added Performance Checklist workflows with reusable criteria, session history, guarded score publication and reversal, plus a responsive sidebar with the active teacher profile name. | Patch release for faster classroom evidence tracking and clearer profile identification while preserving grading, backup, and sync compatibility. |
+| v1.8.0 | Added 50 male and 50 female locally bundled learner avatars with stable automatic assignment and manual selection; animated avatar movement between temporary randomized groups; synchronized avatar/name roulettes with selection confetti; distinct random color schemes for generated groups; and repeatable activity occurrences for Recitations, Notebooks, Assignments, and custom evidence, each with independent dates, HPS, visible table columns, ranked official-assessment targets, additive score posting, HPS-overflow protection, numerical minus/plus entry controls, and PIN-verified locking and unpublication after publishing. | Feature release that improves learner recognition without photos or biometric data, makes randomization more visually engaging while respecting reduced-motion preferences, preserves legacy combined checklist sessions, and makes recurring term activities explicit, independently publishable, locked against post-publication edits, and safely reversible before further editing. |
 
 ## Current Follow-Up Checks
 

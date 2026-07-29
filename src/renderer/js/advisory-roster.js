@@ -250,6 +250,7 @@
     body.innerHTML = roster.length ? roster.map((learner, index) => `
       <tr>
         <td>${index + 1}</td>
+        <td class="roster-avatar-cell">${globalScope.LearnerAvatars ? globalScope.LearnerAvatars.renderLearner(learner, { size: 'sm' }) : ''}</td>
         <td class="advisory-roster__lrn">${escHtml(learner.lrn || '—')}</td>
         <td><strong>${escHtml(displayName(learner))}</strong></td>
         <td>${escHtml(learner.sex || '—')}</td>
@@ -260,7 +261,7 @@
           <button class="btn btn-ghost btn-sm" type="button" data-edit-advisory-learner="${escHtml(learner.id)}">Edit</button>
           <button class="btn btn-danger btn-sm" type="button" data-remove-advisory-learner="${escHtml(learner.id)}">Remove</button>
         </td>
-      </tr>`).join('') : '<tr><td colspan="8"><div class="advisory-roster__empty">No learners yet. Import an existing roster, add learners manually, paste a list, or upload a supported SF1 file.</div></td></tr>';
+      </tr>`).join('') : '<tr><td colspan="9"><div class="advisory-roster__empty">No learners yet. Import an existing roster, add learners manually, paste a list, or upload a supported SF1 file.</div></td></tr>';
     body.querySelectorAll('[data-edit-advisory-learner]').forEach(button => button.addEventListener('click', () => showLearnerForm(button.dataset.editAdvisoryLearner)));
     body.querySelectorAll('[data-remove-advisory-learner]').forEach(button => button.addEventListener('click', () => removeLearner(button.dataset.removeAdvisoryLearner)));
   }
@@ -287,7 +288,7 @@
             <span class="advisory-workspace__count" data-advisory-manager-roster-count></span>
           </div>
           <div class="advisory-workspace__body">
-            <div class="advisory-roster-table-wrap"><table class="advisory-roster-table"><thead><tr><th>#</th><th>LRN</th><th>Official Name</th><th>Sex</th><th>Birthdate</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody data-advisory-manager-roster-body></tbody></table></div>
+            <div class="advisory-roster-table-wrap"><table class="advisory-roster-table"><thead><tr><th>#</th><th>Avatar</th><th>LRN</th><th>Official Name</th><th>Sex</th><th>Birthdate</th><th>Status</th><th>Source</th><th>Actions</th></tr></thead><tbody data-advisory-manager-roster-body></tbody></table></div>
           </div>
         </div>`;
       document.body.appendChild(overlay);

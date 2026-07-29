@@ -160,12 +160,16 @@ function fixture() {
     }
   };
   const tools = core.normalize(database);
-  assert.strictEqual(tools.schemaVersion, 3);
+  assert.strictEqual(tools.schemaVersion, 4);
   assert.deepStrictEqual(tools.performanceChecklists, []);
   assert.deepStrictEqual(tools.performanceChecklistHistory, []);
   assert.deepStrictEqual(tools.performanceChecklistEntryHistory, []);
   assert.deepStrictEqual(tools.performanceChecklistTemplates, []);
   assert.deepStrictEqual(tools.futureChecklistField, { preserved: true });
+  assert(
+    core.defaultChecklistCriteria().every(item => item.scoringMode === 'NUMERIC'),
+    'standard Recitation, Notebook, and Assignment criteria must default to numerical scoring'
+  );
 
   const checklist = core.createPerformanceChecklist(assignment, '1', {
     title: 'Term 1 Participation',
@@ -197,6 +201,19 @@ function fixture() {
   const recitation = checklist.criteria.find(item => item.label === 'Recitation');
   const notebook = checklist.criteria.find(item => item.label === 'Notebook');
   const assignmentCriterion = checklist.criteria.find(item => item.label === 'Assignment');
+  assert.strictEqual(recitation.scoringMode, 'NUMERIC');
+  assert.strictEqual(notebook.scoringMode, 'NUMERIC');
+  assert.strictEqual(assignmentCriterion.scoringMode, 'NUMERIC');
+  const renamedRecitation = core.createChecklistCriterion({
+    ...recitation,
+    label: 'Oral Recitation',
+    scoringMode: 'CHECK'
+  });
+  assert.strictEqual(
+    renamedRecitation.scoringMode,
+    'NUMERIC',
+    'renaming a standard activity type must not remove its numerical-only rule'
+  );
   const firstSession = checklist.sessions[0];
   core.setChecklistEntry(checklist, assignment, firstSession.id, 'm1', recitation.id, 2);
   core.setChecklistEntry(checklist, assignment, firstSession.id, 'f1', recitation.id, 2);
@@ -271,6 +288,350 @@ function fixture() {
   assert.strictEqual(normalized.performanceChecklists.length, 1);
   assert.strictEqual(normalized.performanceChecklists[0].sessions.length, 2);
   assert.strictEqual(normalized.performanceChecklistHistory.length, 1);
+}
+
+{
+  const assignment = fixture();
+  assignment.assessments.push(
+    {
+      id: 'ww-recitation-1',
+      title: 'Recitation 1',
+      component: 'WW',
+      term: '1',
+      maxScore: 20
+    },
+    {
+      id: 'ww-recitation-2',
+      title: 'Recitation 2',
+      component: 'WW',
+      term: '1',
+      maxScore: 20
+    },
+    {
+      id: 'ww-empty-setup',
+      title: 'Written Work 4',
+      component: 'WW',
+      term: '1',
+      maxScore: ''
+    },
+    {
+      id: 'ww-overflow',
+      title: 'Written Work 5',
+      component: 'WW',
+      term: '1',
+      maxScore: 5
+    }
+  );
+  assignment.scores['m1|ww-overflow'] = 3;
+  const database = { version: 7, assignments: [assignment] };
+  const tools = core.normalize(database);
+  const checklist = core.createPerformanceChecklist(assignment, '1', {
+    title: 'Recurring Activities',
+    activityMode: true,
+    activityTitle: 'Recitation 1',
+    criteria: [{
+      label: 'Recitation',
+      destinationComponent: 'WW',
+      scoringMode: 'NUMERIC',
+      maxPointsPerSession: 20
+    }, {
+      label: 'Notebook',
+      destinationComponent: 'TRACKING',
+      scoringMode: 'CHECK',
+      pointsPerCheck: 1,
+      maxPointsPerSession: 1
+    }]
+  });
+  tools.performanceChecklists.push(checklist);
+  const recitation = checklist.criteria.find(item => item.label === 'Recitation');
+  const notebook = checklist.criteria.find(item => item.label === 'Notebook');
+  const firstActivity = checklist.sessions[0];
+  const secondActivity = core.addChecklistActivity(checklist, {
+    criterionId: recitation.id,
+    title: 'Recitation 2',
+    date: '2026-08-03',
+    destinationComponent: 'WW',
+    scoringMode: 'NUMERIC',
+    maxPoints: 20
+  });
+  const notebookActivity = core.addChecklistActivity(checklist, {
+    criterionId: notebook.id,
+    title: 'Notebook 1',
+    date: '2026-08-04',
+    destinationComponent: 'TRACKING',
+    scoringMode: 'CHECK',
+    pointsPerCheck: 1,
+    maxPoints: 1
+  });
+  assert.strictEqual(checklist.sessions.length, 3);
+  assert.strictEqual(secondActivity.activity.sequence, 2);
+  assert.strictEqual(notebookActivity.activity.sequence, 1);
+  assert.strictEqual(notebook.scoringMode, 'NUMERIC');
+  assert.strictEqual(notebookActivity.activity.scoringMode, 'NUMERIC');
+  assert.deepStrictEqual(
+    core.checklistTableColumns(checklist).map(column => column.title),
+    ['Recitation 1', 'Recitation 2', 'Notebook 1'],
+    'every added activity must receive its own Performance Checklist table column'
+  );
+  assert.deepStrictEqual(
+    core.checklistSessionCriteria(checklist, secondActivity).map(item => item.label),
+    ['Recitation']
+  );
+  core.setChecklistEntry(checklist, assignment, firstActivity.id, 'm1', recitation.id, 4);
+  core.setChecklistEntry(checklist, assignment, secondActivity.id, 'm1', recitation.id, 6);
+  core.setChecklistEntry(checklist, assignment, notebookActivity.id, 'm1', notebook.id, 1);
+  assert.throws(
+    () => core.setChecklistEntry(checklist, assignment, secondActivity.id, 'm1', notebook.id, 1),
+    /does not accept/
+  );
+  const totals = core.checklistLearnerTotals(checklist, assignment);
+  assert.strictEqual(totals.m1.WW, 10, 'multiple Recitation activities must accumulate independently');
+  assert.strictEqual(totals.m1.TRACKING, 1);
+  const suggestions = core.checklistActivityTargetSuggestions(
+    checklist,
+    assignment,
+    firstActivity.activity.id
+  );
+  assert.strictEqual(suggestions[0].assessmentId, 'ww-recitation-1');
+  assert.strictEqual(suggestions[0].recommended, true);
+  assert.strictEqual(suggestions[0].empty, true);
+  assert.strictEqual(suggestions[0].exactHps, true);
+  assert.strictEqual(
+    suggestions.find(item => item.assessmentId === 'ww-empty-setup').requiresSetup,
+    true
+  );
+  assert.deepStrictEqual(
+    suggestions.find(item => item.assessmentId === 'ww-overflow').overflowLearnerIds,
+    ['m1']
+  );
+  assert.throws(
+    () => core.updateChecklistActivity(checklist, secondActivity.activity.id, { maxPoints: 5 }),
+    /Reduce existing learner scores/
+  );
+  core.updateChecklistActivity(checklist, secondActivity.activity.id, {
+    title: 'Oral Recitation 2',
+    maxPoints: 20
+  });
+  assert.strictEqual(secondActivity.activity.title, 'Oral Recitation 2');
+
+  const occupiedTargetPlan = core.planChecklistActivityPublication(
+    checklist,
+    assignment,
+    firstActivity.activity.id,
+    'ww-1'
+  );
+  assert.strictEqual(occupiedTargetPlan.changes.length, 1);
+  assert.strictEqual(occupiedTargetPlan.blocked.length, 0);
+  assert.deepStrictEqual(occupiedTargetPlan.changes[0].before, { present: true, value: 10 });
+  assert.deepStrictEqual(occupiedTargetPlan.changes[0].after, { present: true, value: 14 });
+  const occupiedPublication = core.applyChecklistActivityPublication(
+    checklist,
+    assignment,
+    occupiedTargetPlan
+  );
+  assert.strictEqual(assignment.scores['m1|ww-1'], 14);
+  assert.strictEqual(
+    core.planChecklistPublicationRevert(occupiedPublication, checklist, assignment).canRevert,
+    true
+  );
+  core.revertChecklistPublication(occupiedPublication, checklist, assignment);
+  assert.strictEqual(assignment.scores['m1|ww-1'], 10);
+
+  const setupPlan = core.planChecklistActivityPublication(
+    checklist,
+    assignment,
+    firstActivity.activity.id,
+    'ww-empty-setup'
+  );
+  assert.deepStrictEqual(setupPlan.assessmentBefore, {
+    title: 'Written Work 4',
+    maxScore: ''
+  });
+  assert.deepStrictEqual(setupPlan.assessmentAfter, {
+    title: 'Recitation 1',
+    maxScore: 20
+  });
+  const setupPublication = core.applyChecklistActivityPublication(
+    checklist,
+    assignment,
+    setupPlan
+  );
+  const preparedAssessment = assignment.assessments.find(item => item.id === 'ww-empty-setup');
+  assert.strictEqual(preparedAssessment.title, 'Recitation 1');
+  assert.strictEqual(preparedAssessment.maxScore, 20);
+  assert.strictEqual(assignment.scores['m1|ww-empty-setup'], 4);
+  preparedAssessment.maxScore = 25;
+  assert.strictEqual(
+    core.planChecklistPublicationRevert(setupPublication, checklist, assignment).canRevert,
+    false,
+    'later assessment HPS edits must block automatic publication reversal'
+  );
+  preparedAssessment.maxScore = 20;
+  core.revertChecklistPublication(setupPublication, checklist, assignment);
+  assert.strictEqual(preparedAssessment.title, 'Written Work 4');
+  assert.strictEqual(preparedAssessment.maxScore, '');
+  assert.strictEqual(assignment.scores['m1|ww-empty-setup'], undefined);
+
+  const overflowPlan = core.planChecklistActivityPublication(
+    checklist,
+    assignment,
+    firstActivity.activity.id,
+    'ww-overflow'
+  );
+  assert.strictEqual(overflowPlan.canApply, false);
+  assert.strictEqual(overflowPlan.blocked[0].reason, 'score-exceeds-hps');
+  assert.strictEqual(overflowPlan.blocked[0].projected, 7);
+  assert.throws(
+    () => core.applyChecklistActivityPublication(checklist, assignment, overflowPlan),
+    /would exceed HPS/
+  );
+  const firstPlan = core.planChecklistActivityPublication(
+    checklist,
+    assignment,
+    firstActivity.activity.id,
+    'ww-recitation-1'
+  );
+  assert.strictEqual(firstPlan.changes.length, 1);
+  const firstPublication = core.applyChecklistActivityPublication(checklist, assignment, firstPlan);
+  tools.performanceChecklistHistory.unshift(firstPublication);
+  assert.strictEqual(assignment.scores['m1|ww-recitation-1'], 4);
+  assert.strictEqual(core.isChecklistActivityPublished(firstActivity), true);
+  assert.strictEqual(
+    core.planChecklistActivityPublication(
+      checklist,
+      assignment,
+      firstActivity.activity.id,
+      'ww-recitation-1'
+    ).changes.length,
+    0,
+    'an activity must not publish the same points twice'
+  );
+  assert.throws(
+    () => core.planChecklistActivityPublication(
+      checklist,
+      assignment,
+      secondActivity.activity.id,
+      'ww-recitation-1'
+    ),
+    /already linked to another checklist activity/
+  );
+  assert.throws(
+    () => core.setChecklistEntry(checklist, assignment, firstActivity.id, 'm1', recitation.id, 5),
+    /Published activities are locked/
+  );
+  assert.throws(
+    () => core.updateChecklistActivity(checklist, firstActivity.activity.id, {
+      title: 'Changed after publication'
+    }),
+    /Published activities are locked/
+  );
+  const lockedEntryUndo = {
+    id: 'locked-entry-undo',
+    checklistId: checklist.id,
+    assignmentId: assignment.id,
+    operation: 'entry',
+    label: 'Pre-publication entry',
+    appliedAt: '2026-08-01T00:00:00.000Z',
+    changes: [{
+      sessionId: firstActivity.id,
+      learnerId: 'm1',
+      criterionId: recitation.id,
+      before: null,
+      after: core.clone(core.checklistEntry(checklist, firstActivity.id, 'm1', recitation.id))
+    }],
+    status: 'applied',
+    revertedAt: ''
+  };
+  assert.throws(
+    () => core.undoChecklistEntryTransaction(lockedEntryUndo, checklist),
+    /Published activities are locked/
+  );
+  const unlockPlan = core.planChecklistActivityUnlock(
+    tools.performanceChecklistHistory,
+    checklist,
+    assignment,
+    firstActivity.activity.id
+  );
+  assert.strictEqual(unlockPlan.canUnlock, true);
+  assert.strictEqual(unlockPlan.publications, 1);
+  assert.strictEqual(unlockPlan.restoredScores, 1);
+  const unlocked = core.unlockChecklistActivity(
+    tools.performanceChecklistHistory,
+    checklist,
+    assignment,
+    firstActivity.activity.id
+  );
+  assert.strictEqual(unlocked.restoredScores, 1);
+  assert.strictEqual(firstPublication.status, 'reverted');
+  assert.strictEqual(assignment.scores['m1|ww-recitation-1'], undefined);
+  assert.strictEqual(core.isChecklistActivityPublished(firstActivity), false);
+  assert.strictEqual(
+    core.checklistEntry(checklist, firstActivity.id, 'm1', recitation.id).points,
+    4,
+    'unlocking must preserve checklist points while unpublishing them'
+  );
+  core.setChecklistEntry(checklist, assignment, firstActivity.id, 'm1', recitation.id, 5);
+  core.setChecklistEntry(checklist, assignment, firstActivity.id, 'm1', recitation.id, 4);
+
+  const secondPlan = core.planChecklistActivityPublication(
+    checklist,
+    assignment,
+    secondActivity.activity.id,
+    'ww-recitation-2'
+  );
+  const secondPublication = core.applyChecklistActivityPublication(
+    checklist,
+    assignment,
+    secondPlan
+  );
+  tools.performanceChecklistHistory.unshift(secondPublication);
+  assert.strictEqual(assignment.scores['m1|ww-recitation-2'], 6);
+  assert.strictEqual(core.hasPublishedChecklistContributions(checklist), true);
+  assert.throws(
+    () => core.updateChecklistActivity(checklist, secondActivity.activity.id, {
+      destinationComponent: 'PT',
+      maxPoints: 20
+    }),
+    /Published activities are locked/
+  );
+  assignment.scores['m1|ww-recitation-2'] = 7;
+  const conflictingUnlock = core.planChecklistActivityUnlock(
+    tools.performanceChecklistHistory,
+    checklist,
+    assignment,
+    secondActivity.activity.id
+  );
+  assert.strictEqual(conflictingUnlock.canUnlock, false);
+  assert.match(conflictingUnlock.error, /changed after publication|newer data/i);
+  assignment.scores['m1|ww-recitation-2'] = 6;
+  assert.strictEqual(assignment.scores['m1|ww-recitation-1'], undefined);
+  assert.strictEqual(assignment.scores['m1|ww-recitation-2'], 6);
+  assert.strictEqual(
+    secondActivity.activity.publicationTarget.assessmentId,
+    'ww-recitation-2',
+    'reverting one activity must preserve publications from other activities'
+  );
+
+  notebook.scoringMode = 'CHECK';
+  notebookActivity.activity.scoringMode = 'CHECK';
+  const normalized = core.normalize(database);
+  const normalizedChecklist = normalized.performanceChecklists[0];
+  assert.strictEqual(normalizedChecklist.sessions[0].activity.title, 'Recitation 1');
+  assert.strictEqual(normalizedChecklist.sessions[1].activity.title, 'Oral Recitation 2');
+  assert.strictEqual(
+    normalizedChecklist.sessions[1].activity.publicationTarget.assessmentId,
+    'ww-recitation-2'
+  );
+  assert.strictEqual(
+    normalizedChecklist.criteria.find(item => item.label === 'Notebook').scoringMode,
+    'NUMERIC',
+    'older standard checklist criteria must migrate from check mark to numerical scoring'
+  );
+  assert.strictEqual(
+    normalizedChecklist.sessions.find(item => item.title === 'Notebook 1').activity.scoringMode,
+    'NUMERIC',
+    'older standard activities must migrate from check mark to numerical scoring'
+  );
 }
 
 {
@@ -354,7 +715,7 @@ function fixture() {
 
   tools.performanceChecklistEntryHistory.unshift(transferredClear, noteRecord, bulkRecord);
   const normalized = core.normalize(database);
-  assert.strictEqual(normalized.schemaVersion, 3);
+  assert.strictEqual(normalized.schemaVersion, 4);
   assert.strictEqual(normalized.performanceChecklistTemplates.length, 1);
   assert.strictEqual(normalized.performanceChecklistEntryHistory.length, 3);
 }
@@ -381,6 +742,16 @@ function fixture() {
   assert(ui.includes('globalScope.selectAssignment(assignmentId)'));
   assert(ui.includes('globalScope.selectAssignment = selectAssignmentFromElsewhere'));
   assert(ui.includes('resetTemporaryClassState()'));
+  assert(ui.includes('const GROUP_COLOR_SCHEMES = Object.freeze(['));
+  assert(ui.includes('core.shuffle(GROUP_COLOR_SCHEMES)'));
+  assert(ui.includes('groupState.colors = randomGroupColors(finalGroups.length)'));
+  assert(ui.includes('data-group-color="${esc(color.name)}"'));
+  assert(ui.includes('group-result__swatch'));
+  assert(ui.includes('teacher-tools-print-group'));
+  assert(toolsCss.includes('--group-accent'));
+  assert(toolsCss.includes('.group-result__swatch'));
+  assert(toolsCss.includes('.teacher-tools-print-group'));
+  assert(toolsCss.includes('print-color-adjust: exact'));
   assert(ui.includes('globalScope.computeTerm(session.draft'));
   assert(ui.includes('Set HPS in the Grading Sheet first'));
   assert(ui.includes('HPS not set'));
@@ -396,13 +767,55 @@ function fixture() {
   assert(ui.includes("matchMedia?.('(prefers-reduced-motion: reduce)')"));
   assert(ui.includes('aria-busy="${pickerState.spinning'));
   assert(ui.includes("onDeactivate: cancelPickerAnimation"));
+  assert(ui.includes("onDeactivate: cancelGroupAnimation"));
+  assert(ui.includes('function renderGroupArrangement(groups, options = {})'));
+  assert(ui.includes('data-group-learner-id="${esc(learner.id)}"'));
+  assert(ui.includes("const delays = [100, 115, 135, 160, 200, 250, 320, 410]"));
+  assert(ui.includes('Learners are moving between groups...'));
+  assert(ui.includes('function animatePickerLearner(learner)'));
+  assert(ui.includes('id="namePickerRouletteAvatar"'));
+  assert(ui.includes('function launchSelectionConfetti(anchor)'));
+  assert(toolsCss.includes('.group-results--randomizing'));
+  assert(toolsCss.includes('@keyframes group-avatar-mix'));
+  assert(toolsCss.includes('.teacher-tools-confetti'));
+  assert(toolsCss.includes('@keyframes teacher-tools-confetti-burst'));
   assert(ui.includes("id: 'checklist'"));
   assert(ui.includes("label: 'Performance Checklist'"));
   assert(ui.includes('Mini Name Picker'));
   assert(ui.includes('Use Standard Checklist'));
-  assert(ui.includes('Start Today’s Session'));
+  assert(ui.includes('Add Activity'));
+  assert(ui.includes('Add Performance Activity'));
+  assert(ui.includes('Edit Performance Activity'));
+  assert(ui.includes('Unlock Published Activity'));
+  assert(ui.includes('Verify PIN and Unlock'));
+  assert(ui.includes('reviewChecklistActivityUnlock'));
+  assert(ui.includes('core.planChecklistActivityUnlock'));
+  assert(ui.includes('core.unlockChecklistActivity'));
+  assert(ui.includes('Published · Locked'));
+  assert(ui.includes('adjustChecklistEntry'));
+  assert(ui.includes('checklist-stepper-button'));
+  assert(ui.includes('Subtract 1 point'));
+  assert(ui.includes('Add 1 point'));
+  assert(ui.includes('Highest Possible Score'));
+  assert(ui.includes('No graded activity yet'));
+  assert(ui.includes('Edit Active Activity'));
+  assert(ui.includes('The app prioritizes empty assessments and identifies targets that have enough HPS capacity.'));
+  const addActivityHandler = ui.match(
+    /function openAddChecklistActivity\(\) \{([\s\S]*?)\n  \}\n\n  function openEditChecklistActivity/
+  )?.[1] || '';
+  assert(
+    addActivityHandler.includes('checklist.criteria.filter(item => item.active)'),
+    'Add Activity must load all active activity types before a session exists'
+  );
+  assert(
+    !addActivityHandler.includes('checklistSessionCriteria(checklist, session)'),
+    'Add Activity must not reference an undefined activity session'
+  );
   assert(ui.includes('Bulk Mark'));
   assert(ui.includes('Undo Last Entry'));
+  assert(ui.includes('checklist-toolbar-action--bulk'));
+  assert(ui.includes('checklist-toolbar-action--picker'));
+  assert(ui.includes('checklist-toolbar-action--more'));
   assert(ui.includes('Show Me How It Works'));
   assert(ui.includes('Performance Checklist Tutorial'));
   assert(ui.includes('This tutorial is read-only'));
@@ -416,17 +829,65 @@ function fixture() {
   assert(ui.includes('Clear Current Session'));
   assert(ui.includes('Clear All Term Sessions'));
   assert(ui.includes('Reset Mini Name Picker Only'));
+  assert(ui.includes('let checklistPickerAnimationTimer = null'));
+  assert(ui.includes('function cancelChecklistPickerAnimation()'));
+  assert(ui.includes('function animateChecklistPickerLearner(learner)'));
+  assert(ui.includes("const totalSteps = 27"));
+  assert(ui.includes("checklistPickerAnimationTimer = setTimeout(tick, 45)"));
+  assert(ui.includes("id=\"checklistPickerRouletteName\""));
+  assert(ui.includes("id=\"checklistPickerRouletteAvatar\""));
+  assert(ui.includes("checklistState.spinning ? 'Picking...'"));
+  assert(ui.includes('Slowly narrowing down the draw...'));
   assert(ui.includes('createDatabaseRestorePoint'));
   assert(ui.includes('core.applyChecklistEntryTransaction'));
   assert(ui.includes('data-contribution-target="${component}"'));
   assert(ui.includes('data-review-contribution="${component}"'));
+  assert(ui.includes('data-activity-target="${esc(activity.activityId)}"'));
+  assert(ui.includes('core.checklistActivityTargetSuggestions'));
+  assert(ui.includes('Recommended - empty with matching HPS'));
+  assert(ui.includes('HPS warning'));
+  assert(ui.includes('would place ${item.overflowLearnerIds.length}'));
+  assert(ui.includes('const saveTargetWithFeedback = async'));
+  assert(ui.includes("button.textContent = 'Saving...'"));
+  assert(ui.includes("button.textContent = 'Saved'"));
+  assert(ui.includes('Target saved - review changes to publish'));
+  assert(ui.includes('Unsaved target selected'));
+  const saveActivityTargetHandler = ui.match(
+    /async function saveChecklistActivityTarget\([\s\S]*?async function saveChecklistContributionTarget/
+  )?.[0] || '';
+  assert(saveActivityTargetHandler.includes("const criterionId = savedSession.activity.criterionId || ''"));
+  assert(saveActivityTargetHandler.includes('The selected target could not be verified after saving.'));
+  assert(ui.includes("modal.overlay.classList.add('checklist-publication-preview-overlay')"));
+  assert(ui.includes("classList.add('checklist-publication-preview-modal')"));
+  assert(ui.includes('core.checklistTableColumns(checklist)'));
+  assert(ui.includes('data-checklist-activity-column="${esc(column.sessionId)}"'));
+  assert(ui.includes("this,'${esc(session.id)}'"));
+  assert(ui.includes('core.planChecklistActivityPublication'));
+  assert(ui.includes('core.applyChecklistActivityPublication'));
   assert(ui.includes('Print Summary'));
   assert(ui.includes('Export CSV'));
   assert(ui.includes('electronAPI?.exportCsv'));
   assert(ui.includes('core.applyChecklistPublication'));
   assert(ui.includes('Blank official scores are excluded'));
   assert(toolsCss.includes('.checklist-table'));
+  assert(toolsCss.includes('.checklist-toolbar-action--bulk'));
+  assert(toolsCss.includes('.checklist-toolbar-action--picker'));
+  assert(toolsCss.includes('.checklist-toolbar-action--more'));
   assert(toolsCss.includes('.checklist-picker'));
+  assert(toolsCss.includes('.checklist-picker__stage.is-spinning'));
+  assert(toolsCss.includes('.checklist-picker__name.is-ticking'));
+  assert(toolsCss.includes('.checklist-picker__name.is-revealed'));
+  assert(toolsCss.includes('.checklist-activity-form'));
+  assert(toolsCss.includes('.checklist-activity-column.is-active'));
+  assert(toolsCss.includes('.checklist-activity-column.is-published'));
+  assert(toolsCss.includes('.checklist-published-badge'));
+  assert(toolsCss.includes('.checklist-stepper-button'));
+  assert(toolsCss.includes('.checklist-session-lock'));
+  assert(toolsCss.includes('.checklist-criteria-modal'));
+  assert(toolsCss.includes('.checklist-publication-preview-modal .modal__body'));
+  assert(toolsCss.includes('body.admin-test-mode .checklist-publication-preview-overlay'));
+  assert(toolsCss.includes('.checklist-contribution-steps'));
+  assert(toolsCss.includes('.checklist-target-recommendation'));
   assert(toolsCss.includes('.checklist-tutorial'));
   assert(ui.includes('if (!await globalScope.saveDatabase())'));
   assert(database.includes('const DB_VERSION = 7;'));
@@ -447,4 +908,4 @@ function fixture() {
   assert(html.includes('sandbox="allow-scripts"') || ui.includes('sandbox="allow-scripts"'));
 }
 
-console.log('Teacher Tools class selection, randomization, simulation isolation, reversible history, and game sandbox tests passed.');
+console.log('Teacher Tools class selection, recurring activities, simulation isolation, reversible history, and game sandbox tests passed.');

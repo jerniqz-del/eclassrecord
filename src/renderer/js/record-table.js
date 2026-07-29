@@ -507,7 +507,7 @@ function renderRecordTable() {
     
     html += `<tr class="${isRowTO ? 'row-transferred-out' : ''} ${isRowTI ? 'row-transferred-in' : ''}" style="${isRowTO ? 'opacity: 0.6; background: rgba(255, 193, 7, 0.03);' : ''} ${isRowTI ? 'background: rgba(46, 125, 50, 0.02);' : ''}">
       <td class="c-no">${r + 1}</td>
-      <td class="c-learner learner-cell" title="${esc(learnerDisplayName(learner))}">${esc(learnerDisplayName(learner))}</td>
+      <td class="c-learner learner-cell" title="${esc(learnerDisplayName(learner))}"><span class="learner-avatar-name">${globalThis.LearnerAvatars ? LearnerAvatars.renderLearner(learner, { size: 'xs' }) : ''}<span>${esc(learnerDisplayName(learner))}</span></span></td>
       <td class="c-sex">${esc(learner.sex)}</td>`;
       
     for (let j = 0; j < items.length; j++) {
@@ -840,7 +840,7 @@ function renderFinalOnly() {
 
     html += `<tr>
       <td>${r + 1}</td>
-      <td class="summary-learner-cell">${esc(learnerDisplayName(learner))}</td>
+      <td class="summary-learner-cell"><span class="learner-avatar-name">${globalThis.LearnerAvatars ? LearnerAvatars.renderLearner(learner, { size: 'xs' }) : ''}<span>${esc(learnerDisplayName(learner))}</span></span></td>
       ${summaryTermCells(termResults[0], weights, a.policy, 1, a)}
       ${summaryTermCells(termResults[1], weights, a.policy, 2, a)}
       ${summaryTermCells(termResults[2], weights, a.policy, 3, a)}
@@ -911,7 +911,7 @@ function renderConsolidatedMapehTable(a) {
 
     html += `<tr>
       <td class="c-no">${r + 1}</td>
-      <td class="c-learner learner-cell" title="${esc(learnerDisplayName(learner))}">${esc(learnerDisplayName(learner))}</td>
+      <td class="c-learner learner-cell" title="${esc(learnerDisplayName(learner))}"><span class="learner-avatar-name">${globalThis.LearnerAvatars ? LearnerAvatars.renderLearner(learner, { size: 'xs' }) : ''}<span>${esc(learnerDisplayName(learner))}</span></span></td>
       <td class="c-sex">${esc(learner.sex)}</td>
       <td class="c-grade">${blankNull(formatGradeForDisplay(gMusic, a.policy))}</td>
       <td class="c-grade">${blankNull(formatGradeForDisplay(gPE, a.policy))}</td>
@@ -1058,7 +1058,7 @@ function renderConsolidatedMapehSummary(a) {
 
     html += `<tr>
       <td>${r + 1}</td>
-      <td class="summary-learner-cell">${esc(learnerDisplayName(learner))}</td>
+      <td class="summary-learner-cell"><span class="learner-avatar-name">${globalThis.LearnerAvatars ? LearnerAvatars.renderLearner(learner, { size: 'xs' }) : ''}<span>${esc(learnerDisplayName(learner))}</span></span></td>
       <td class="summary-final-cell">${mfDisplay}</td>
       <td class="summary-final-cell">${pfDisplay}</td>
       <td class="summary-term-cell summary-term-1 summary-term-grade">${t1Display}</td>

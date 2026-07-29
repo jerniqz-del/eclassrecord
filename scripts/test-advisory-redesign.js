@@ -181,7 +181,8 @@ assert(sidebarProfileSource.includes('label.textContent = name;'), 'the sidebar 
   'docs/release-notes-v1.4.0.md',
   'docs/release-notes-v1.4.5.md',
   'docs/release-notes-v1.4.6.md',
-  'docs/release-notes-v1.5.0.md'
+  'docs/release-notes-v1.5.0.md',
+  'docs/release-notes-v1.8.0.md'
 ].forEach(relativePath => {
   const publicNotes = fs.readFileSync(path.join(root, relativePath), 'utf8');
   assert(!/\badmin(?:istration|istrator)?\b|mock(?:\s+data|\s+workspace|\s+profile)?|test mode|fictional learners/i.test(publicNotes), `${relativePath} must not expose internal testing or privileged-control details`);

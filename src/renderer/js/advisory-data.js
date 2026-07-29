@@ -88,6 +88,8 @@
       middleName: cleanString(item.middleName),
       extensionName: cleanString(item.extensionName),
       sex: cleanString(item.sex).toUpperCase(),
+      avatarPresetId: cleanString(item.avatarPresetId),
+      avatarAssignment: item.avatarAssignment === 'manual' ? 'manual' : 'auto',
       birthdate: typeof globalScope.normalizeLearnerBirthdate === 'function'
         ? globalScope.normalizeLearnerBirthdate(item.birthdate ?? item.birthDate ?? item.dateOfBirth)
         : cleanString(item.birthdate),

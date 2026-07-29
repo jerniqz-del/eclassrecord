@@ -7,8 +7,11 @@ A premium, modern offline desktop application designed for Filipino teachers to 
 - **Standard DepEd Grading Rules**: Verification engine supporting DO 015 s.2026 (Transition & Zero-Based modes), DO 8 s.2015 (Legacy mode), and Key Stage 2 Trimester sheets.
 - **Senior High Teaching Loads**: Grades 11–12 class setup with strengthened-SHS Core, Academic Elective, Sports/Arts, Field Experience, Research/Design, TechPro, and Work Immersion grading presets.
 - **Roster Management**: Roster uploads from LIS school records via native SF1 spreadsheet importer (`.xlsx`, `.xls`, `.csv`, `.txt` parsed using `xlsx` library) and direct CSV rosters paste.
+- **Learner Avatars**: 50 locally bundled male and 50 female human avatar presets are assigned automatically from learner sex, remain stable across classes and backups, and can be changed manually without storing learner photos.
 - **Dense Score Grid**: Smooth score matrix with inline Arrow/Enter key navigation and HPS (Highest Possible Score) adjustment rows.
-- **Performance Checklist**: Streamlined per-class, per-term evidence tracking with Quick Start templates, today-aware sessions, search and missing-entry filters, Bulk Mark, notes, safe undo/reset, a mini Name Picker, and reviewed, PIN-confirmed publication to existing WW or PT assessments.
+- **Group Randomizer**: Securely randomized complete or sex-balanced groups with animated learner movement before the final grouping settles, distinct per-group color schemes, copy support, and color-marked print output.
+- **Name Picker**: A no-repeat learner roulette that shuffles names and avatars together, gradually slows to the final selection, and celebrates the selected learner with brief confetti.
+- **Performance Checklist**: Repeatable numerical Recitation, Notebook, Assignment, and custom activity columns with independent dates, HPS-aware minus/plus controls, Bulk Mark, notes, safe undo/reset, a mini Name Picker, and reviewed, PIN-confirmed addition to compatible WW or PT scores with empty-target recommendations, HPS-overflow blocking, and locked published activities that can only be safely unpublished and edited after PIN verification.
 - **Final Grades Summary**: Auto-computed averages across terms with remarked pass/fail color-coded badges.
 - **Advisory Class Consolidation**: A fixed adviser dashboard with official roster management, subject completion tracking, and audited offline Grade Transfer File import/export.
 - **Native File Dialogs**: Backup and recovery in JSON backups, and grades reports exporting in standard CSV files.

@@ -149,9 +149,27 @@ function createWindow() {
       try {
         const result = await mainWindow.webContents.executeJavaScript(`(async () => {
           try {
-          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage', 'PinRecovery', 'BackupRecovery', 'SharedSyncCrypto', 'SharedSyncMerge', 'SharedFolderSync', 'TeacherToolsCore', 'ToolsData', 'GradeSimulator', 'TeacherTools', 'AdminTestMode', 'UsageAnalytics', 'UpdateManager', 'PerformanceMode'];
+          const required = ['AdvisoryData', 'AdvisoryDashboard', 'AdvisoryRoster', 'AdvisoryGradeTransfer', 'AdvisoryBackup', 'AdvisoryReset', 'AdvisoryPage', 'PinRecovery', 'BackupRecovery', 'SharedSyncCrypto', 'SharedSyncMerge', 'SharedFolderSync', 'LearnerAvatars', 'TeacherToolsCore', 'ToolsData', 'GradeSimulator', 'PerformanceChecklist', 'TeacherTools', 'AdminTestMode', 'UsageAnalytics', 'UpdateManager', 'PerformanceMode'];
           const missing = required.filter(name => !globalThis[name]);
           if (missing.length) throw new Error('Missing renderer modules: ' + missing.join(', '));
+          if (LearnerAvatars.MALE_IDS.length !== 50 || LearnerAvatars.FEMALE_IDS.length !== 50) {
+            throw new Error('The learner avatar library must contain 50 male and 50 female presets.');
+          }
+          const smokeAvatarLearners = Array.from({ length: 12 }, (_, index) => ({
+            id: 'avatar-learner-' + index,
+            lrn: String(100000000000 + index),
+            sex: index < 6 ? 'M' : 'F'
+          }));
+          LearnerAvatars.assignRoster(smokeAvatarLearners);
+          const maleAvatarIds = smokeAvatarLearners.slice(0, 6).map(item => item.avatarPresetId);
+          const femaleAvatarIds = smokeAvatarLearners.slice(6).map(item => item.avatarPresetId);
+          if (new Set(maleAvatarIds).size !== 6
+            || new Set(femaleAvatarIds).size !== 6
+            || maleAvatarIds.some(id => LearnerAvatars.categoryForId(id) !== 'M')
+            || femaleAvatarIds.some(id => LearnerAvatars.categoryForId(id) !== 'F')
+            || !LearnerAvatars.renderLearner(smokeAvatarLearners[0], { size: 'sm' }).includes('<svg')) {
+            throw new Error('Learner avatar automatic assignment or rendering failed.');
+          }
           if (!document.getElementById('navTools') || !document.querySelector('[data-view="tools"]')) {
             throw new Error('Teacher Tools navigation or workspace was not rendered.');
           }
@@ -180,6 +198,52 @@ function createWindow() {
           GradeSimulator.setScore(smokeSession, 'learner-1', 'assessment-1', 15);
           if (smokeAssignment.scores['learner-1|assessment-1'] !== 10 || smokeSession.draft.scores['learner-1|assessment-1'] !== 15) {
             throw new Error('Grade Simulator preview was not isolated from official scores.');
+          }
+          const smokeChecklistAssignment = {
+            id: 'checklist-smoke-assignment',
+            schoolYear: '2099-2100',
+            learners: [{ id: 'learner-1' }],
+            assessments: [],
+            scores: {}
+          };
+          const smokeChecklist = PerformanceChecklist.create(smokeChecklistAssignment, '1', {
+            activityMode: true,
+            criteria: [{
+              label: 'Recitation',
+              destinationComponent: 'TRACKING',
+              scoringMode: 'NUMERIC',
+              maxPointsPerSession: 10
+            }]
+          });
+          const secondSmokeActivity = PerformanceChecklist.addActivity(smokeChecklist, {
+            criterionId: smokeChecklist.criteria[0].id,
+            title: 'Recitation 2',
+            maxPoints: 10
+          });
+          PerformanceChecklist.setEntry(
+            smokeChecklist,
+            smokeChecklistAssignment,
+            smokeChecklist.sessions[0].id,
+            'learner-1',
+            smokeChecklist.criteria[0].id,
+            4
+          );
+          PerformanceChecklist.setEntry(
+            smokeChecklist,
+            smokeChecklistAssignment,
+            secondSmokeActivity.id,
+            'learner-1',
+            smokeChecklist.criteria[0].id,
+            6
+          );
+          if (PerformanceChecklist.totals(smokeChecklist, smokeChecklistAssignment)['learner-1'].TRACKING !== 10) {
+            throw new Error('Recurring Performance Checklist activities did not remain independent.');
+          }
+          const smokeActivityColumns = PerformanceChecklist.tableColumns(smokeChecklist);
+          if (smokeActivityColumns.length !== 2
+            || smokeActivityColumns[0].title !== 'Recitation 1'
+            || smokeActivityColumns[1].title !== 'Recitation 2') {
+            throw new Error('Added Performance Checklist activities did not receive visible table columns.');
           }
           TeacherTools.activate('groups');
           const toolsClassSelect = document.getElementById('groupRandomizerClassSelect');
@@ -575,17 +639,291 @@ function createWindow() {
           if (!rouletteAssignment) throw new Error('The mock workspace did not provide a class for the Name Picker roulette test.');
           mockProfile.currentAssignmentId = rouletteAssignment.id;
           setView('tools');
+          TeacherTools.activate('groups');
+          TeacherTools.randomizeGroups();
+          await new Promise(resolve => setTimeout(resolve, 120));
+          if (!document.querySelector('.group-results--randomizing')
+            || !document.querySelector('.group-randomizer-status')
+            || !document.querySelector('.tool-control-strip__actions .btn-primary')?.disabled) {
+            throw new Error('Group Randomizer did not enter its learner movement animation.');
+          }
+          await new Promise(resolve => setTimeout(resolve, 2300));
+          const settledGroupLearners = Array.from(document.querySelectorAll('[data-group-learner-id]'))
+            .map(element => element.dataset.groupLearnerId);
+          if (document.querySelector('.group-results--randomizing')
+            || settledGroupLearners.length !== TeacherToolsCore.activeLearners(rouletteAssignment).length
+            || new Set(settledGroupLearners).size !== settledGroupLearners.length) {
+            throw new Error('Group Randomizer did not settle into a complete unique final grouping.');
+          }
           TeacherTools.activate('picker');
           TeacherTools.pickName();
           await new Promise(resolve => setTimeout(resolve, 90));
           if (!document.querySelector('.name-picker-stage.is-spinning')) throw new Error('Name Picker roulette did not enter its spinning state.');
+          if (!document.querySelector('#namePickerRouletteAvatar .learner-avatar')) throw new Error('Name Picker roulette did not shuffle an avatar with the learner name.');
           const rouletteButtons = Array.from(document.querySelectorAll('.name-picker-stage__actions button'));
           if (!rouletteButtons.length || rouletteButtons.some(button => !button.disabled)) throw new Error('Name Picker controls remained active while the roulette was spinning.');
-          await new Promise(resolve => setTimeout(resolve, 3400));
+          for (let attempt = 0; attempt < 70; attempt++) {
+            const pickerName = document.getElementById('namePickerRouletteName');
+            const pickerAvatar = document.getElementById('namePickerRouletteAvatar');
+            if (pickerName
+              && pickerName.textContent.trim() !== 'Ready to pick'
+              && pickerAvatar?.classList.contains('is-revealed')
+              && pickerAvatar.querySelector('.learner-avatar')
+              && !document.querySelector('.name-picker-stage.is-spinning')
+              && document.querySelector('.teacher-tools-confetti')) {
+              break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
           const rouletteName = document.getElementById('namePickerRouletteName');
-          if (!rouletteName || rouletteName.textContent.trim() === 'Ready to pick' || document.querySelector('.name-picker-stage.is-spinning')) {
+          const rouletteAvatar = document.getElementById('namePickerRouletteAvatar');
+          if (!rouletteName
+            || rouletteName.textContent.trim() === 'Ready to pick'
+            || document.querySelector('.name-picker-stage.is-spinning')
+            || !rouletteAvatar?.classList.contains('is-revealed')
+            || !rouletteAvatar.querySelector('.learner-avatar')
+            || !document.querySelector('.teacher-tools-confetti')) {
             throw new Error('Name Picker roulette did not settle on a learner.');
           }
+          const mockTools = TeacherToolsCore.normalize(mockProfile);
+          const checklistTerm = String(mockProfile.currentTerm || '1');
+          const checklistMapePart = typeof isMapehSubject === 'function' && isMapehSubject(rouletteAssignment.subject)
+            ? 'music_arts'
+            : '';
+          let renderedChecklist = mockTools.performanceChecklists.find(item =>
+            item.assignmentId === rouletteAssignment.id
+            && item.term === checklistTerm
+            && String(item.mapePart || '') === checklistMapePart
+            && item.status === 'active'
+          );
+          if (!renderedChecklist) {
+            renderedChecklist = PerformanceChecklist.create(rouletteAssignment, checklistTerm, {
+              activityMode: true,
+              activityTitle: 'Smoke Activity 1',
+              mapePart: checklistMapePart
+            });
+            mockTools.performanceChecklists.push(renderedChecklist);
+          }
+          PerformanceChecklist.addActivity(renderedChecklist, {
+            criterionId: renderedChecklist.criteria[0].id,
+            title: 'Smoke Added Activity',
+            date: '2099-08-02'
+          });
+          renderedChecklist.sessions.forEach(session => {
+            if (session.activity) session.activity.destinationComponent = 'TRACKING';
+          });
+          TeacherTools.activate('checklist');
+          await new Promise(resolve => setTimeout(resolve, 80));
+          const renderedActivityTitles = Array.from(document.querySelectorAll('.checklist-activity-column > span'))
+            .map(element => element.textContent.trim());
+          if (!renderedActivityTitles.includes('Smoke Added Activity')) {
+            throw new Error('An added activity was not reflected in the Performance Checklist table.');
+          }
+          const checklistToolbar = document.querySelector('.checklist-tool .simulator-toolbar');
+          const checklistToolbarActions = checklistToolbar?.querySelector('.simulator-toolbar__actions');
+          const checklistActionButtons = Array.from(checklistToolbarActions?.querySelectorAll('.checklist-toolbar-action') || []);
+          const checklistSupportStyles = ['--bulk', '--picker', '--more'].map(suffix => {
+            const button = checklistToolbarActions?.querySelector('.checklist-toolbar-action' + suffix);
+            const style = button ? getComputedStyle(button) : null;
+            return {
+              found: Boolean(button),
+              backgroundImage: style?.backgroundImage || 'none',
+              color: style?.color || ''
+            };
+          });
+          const distinctChecklistBackgrounds = new Set(checklistSupportStyles.map(item => item.backgroundImage));
+          if (!checklistToolbar
+            || !checklistToolbarActions
+            || checklistActionButtons.length !== 5
+            || checklistSupportStyles.some(item => !item.found || item.backgroundImage === 'none')
+            || distinctChecklistBackgrounds.size !== 3
+            || checklistActionButtons.some(button => button.scrollWidth > button.clientWidth + 1)
+            || checklistToolbarActions.getBoundingClientRect().right > checklistToolbar.getBoundingClientRect().right + 1) {
+            throw new Error('Performance Checklist toolbar actions did not receive distinct, contained color treatments.');
+          }
+          TeacherTools.openChecklistPicker();
+          await new Promise(resolve => setTimeout(resolve, 40));
+          const miniPickerStage = document.querySelector('.checklist-picker__stage');
+          const miniPickerButton = document.querySelector('.checklist-picker__actions .btn-primary');
+          if (!miniPickerStage || !miniPickerButton) {
+            throw new Error('The Performance Checklist mini picker did not open.');
+          }
+          miniPickerButton.click();
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const spinningMiniPickerStage = document.querySelector('.checklist-picker__stage');
+          const spinningMiniPickerButton = document.querySelector('.checklist-picker__actions .btn-primary');
+          const spinningMiniPickerName = document.getElementById('checklistPickerRouletteName');
+          if (!spinningMiniPickerStage?.classList.contains('is-spinning')
+            || spinningMiniPickerButton?.textContent.trim() !== 'Picking...'
+            || spinningMiniPickerName?.getAttribute('aria-busy') !== 'true') {
+            throw new Error('The Performance Checklist mini picker did not enter its suspense animation.');
+          }
+          for (let attempt = 0; attempt < 70; attempt++) {
+            const pickerName = document.getElementById('checklistPickerRouletteName');
+            const pickerStage = document.querySelector('.checklist-picker__stage');
+            if (pickerName
+              && pickerName.textContent.trim() !== 'Ready to pick'
+              && pickerName.classList.contains('is-revealed')
+              && !pickerStage?.classList.contains('is-spinning')) {
+              break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          const revealedMiniPickerName = document.getElementById('checklistPickerRouletteName');
+          const finalMiniPickerStage = document.querySelector('.checklist-picker__stage');
+          const finalMiniPickerStatus = document.querySelector('.checklist-picker__status')?.textContent || '';
+          if (!revealedMiniPickerName
+            || revealedMiniPickerName.textContent.trim() === 'Ready to pick'
+            || !revealedMiniPickerName.classList.contains('is-revealed')
+            || !document.querySelector('#checklistPickerRouletteAvatar.is-revealed .learner-avatar')
+            || finalMiniPickerStage?.classList.contains('is-spinning')
+            || !finalMiniPickerStatus.includes('remaining in this draw cycle')
+            || !document.querySelector('.teacher-tools-confetti')) {
+            throw new Error('The Performance Checklist mini picker did not finish with a selected learner reveal: '
+              + JSON.stringify({
+                name: revealedMiniPickerName?.textContent?.trim() || '',
+                revealed: Boolean(revealedMiniPickerName?.classList.contains('is-revealed')),
+                spinning: Boolean(finalMiniPickerStage?.classList.contains('is-spinning')),
+                status: finalMiniPickerStatus.trim()
+              }));
+          }
+          document.querySelector('.checklist-picker')?.closest('.modal')?.querySelector('[data-close]')?.click();
+          TeacherTools.openChecklistCriteria();
+          await new Promise(resolve => setTimeout(resolve, 40));
+          const criteriaModal = document.querySelector('.checklist-criteria-modal');
+          const criteriaBody = criteriaModal?.querySelector('.modal__body');
+          const criteriaRow = criteriaModal?.querySelector('.checklist-settings-row');
+          if (!criteriaModal || !criteriaBody || !criteriaRow
+            || criteriaRow.getBoundingClientRect().right > criteriaBody.getBoundingClientRect().right + 1
+            || criteriaRow.scrollWidth > criteriaBody.clientWidth + 1) {
+            throw new Error('Manage Checklist Criteria still overflows its modal.');
+          }
+          criteriaModal.querySelector('[data-cancel]')?.click();
+          TeacherTools.openGradeContributionDashboard();
+          await new Promise(resolve => setTimeout(resolve, 40));
+          const contributionGuide = document.querySelector('.checklist-contribution-guide');
+          if (!contributionGuide
+            || contributionGuide.querySelectorAll('.checklist-contribution-steps li').length !== 4
+            || !document.querySelector('[data-edit-graded-activity]')
+            || !document.querySelector('[data-add-graded-activity]')) {
+            throw new Error('Tracking Only grade contributions did not provide the guided setup actions.');
+          }
+          contributionGuide.closest('.modal')?.querySelector('[data-close]')?.click();
+          const currentSmokeChecklist = TeacherToolsCore.normalize(mockProfile).performanceChecklists
+            .find(item => item.id === renderedChecklist.id);
+          const gradedSmokeSession = currentSmokeChecklist.sessions
+            .find(item => item.title === 'Smoke Added Activity');
+          gradedSmokeSession.activity.destinationComponent = 'WW';
+          const gradedSmokeLearner = TeacherToolsCore.activeLearners(rouletteAssignment)[0];
+          const smokeTargetMax = gradedSmokeSession.activity.maxPoints;
+          rouletteAssignment.assessments.push(
+            {
+              id: 'smoke-empty-checklist-target',
+              title: 'Smoke Empty WW',
+              component: 'WW',
+              term: checklistTerm,
+              maxScore: smokeTargetMax,
+              ...(checklistMapePart ? { mapePart: checklistMapePart } : {})
+            },
+            {
+              id: 'smoke-overflow-checklist-target',
+              title: 'Smoke Full WW',
+              component: 'WW',
+              term: checklistTerm,
+              maxScore: smokeTargetMax,
+              ...(checklistMapePart ? { mapePart: checklistMapePart } : {})
+            }
+          );
+          rouletteAssignment.scores[gradedSmokeLearner.id + '|smoke-overflow-checklist-target'] = smokeTargetMax;
+          PerformanceChecklist.setEntry(
+            currentSmokeChecklist,
+            rouletteAssignment,
+            gradedSmokeSession.id,
+            gradedSmokeLearner.id,
+            gradedSmokeSession.activity.criterionId,
+            smokeTargetMax
+          );
+          TeacherTools.activate('checklist');
+          TeacherTools.openGradeContributionDashboard();
+          await new Promise(resolve => setTimeout(resolve, 40));
+          const recommendationText = document.querySelector('.checklist-target-recommendation')?.textContent || '';
+          const overflowText = Array.from(document.querySelectorAll('.checklist-warning'))
+            .map(element => element.textContent)
+            .join(' ');
+          const overflowOption = document.querySelector('option[value="smoke-overflow-checklist-target"]');
+          if (!recommendationText.includes('Smoke Empty WW')
+            || !overflowText.includes('Smoke Full WW')
+            || !overflowText.includes('above HPS')
+            || !overflowOption?.disabled) {
+            throw new Error('Grade contribution target recommendations did not prioritize empty assessments and block HPS overflow: '
+              + JSON.stringify({
+                recommendationText,
+                overflowText,
+                overflowOptionDisabled: Boolean(overflowOption?.disabled)
+              }));
+          }
+          const saveActivityButton = document.querySelector('[data-save-activity="' + gradedSmokeSession.activity.id + '"]');
+          if (!saveActivityButton || saveActivityButton.disabled) {
+            throw new Error('The recommended checklist activity target could not be saved.');
+          }
+          saveActivityButton.click();
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const savedActivityState = saveActivityButton.closest('.checklist-contribution-card')
+            ?.querySelector('.checklist-contribution-card__state')?.textContent || '';
+          const saveCriterionErrorToast = Array.from(document.querySelectorAll('.toast'))
+            .some(element => element.textContent.includes('criterionId is not defined'));
+          const savedSmokeChecklist = TeacherToolsCore.normalize(getActiveProfileDatabase()).performanceChecklists
+            .find(item => item.id === renderedChecklist.id);
+          const savedSmokeSession = savedSmokeChecklist?.sessions
+            .find(item => item.id === gradedSmokeSession.id);
+          const savedSmokeTargetId = savedSmokeSession?.activity?.publicationTarget?.assessmentId || '';
+          if (saveCriterionErrorToast
+            || saveActivityButton.textContent.trim() !== 'Saved'
+            || !savedActivityState.includes('Target saved')
+            || savedSmokeTargetId !== 'smoke-empty-checklist-target'
+            || !document.body.contains(saveActivityButton)) {
+            throw new Error('Saving a checklist activity target did not provide durable confirmation: '
+              + JSON.stringify({
+                criterionErrorToast: saveCriterionErrorToast,
+                buttonText: saveActivityButton.textContent.trim(),
+                savedActivityState,
+                targetId: savedSmokeTargetId,
+                dialogRemainedOpen: document.body.contains(saveActivityButton)
+              }));
+          }
+          const reviewActivityButton = document.querySelector('[data-review-activity="' + gradedSmokeSession.activity.id + '"]');
+          if (!reviewActivityButton || reviewActivityButton.disabled) {
+            throw new Error('The recommended checklist activity target could not be reviewed.');
+          }
+          reviewActivityButton.click();
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const publicationModal = document.querySelector('.checklist-publication-preview-modal');
+          const publicationBody = publicationModal?.querySelector('.modal__body');
+          const publicationActions = publicationModal?.querySelector('.modal__actions');
+          const publicationRect = publicationModal?.getBoundingClientRect();
+          const publicationActionsRect = publicationActions?.getBoundingClientRect();
+          const publicationBodyStyle = publicationBody ? getComputedStyle(publicationBody) : null;
+          const criterionErrorToast = Array.from(document.querySelectorAll('.toast'))
+            .some(element => element.textContent.includes('criterionId is not defined'));
+          if (!publicationModal
+            || !publicationBody
+            || !publicationActions
+            || criterionErrorToast
+            || publicationRect.top < 42
+            || publicationRect.bottom > window.innerHeight - 54
+            || publicationActionsRect.bottom > publicationRect.bottom + 1
+            || publicationBodyStyle.overflowY !== 'auto') {
+            throw new Error('Checklist publication preview was not scroll-safe or activity target saving failed: '
+              + JSON.stringify({
+                criterionErrorToast,
+                modalTop: publicationRect?.top,
+                modalBottom: publicationRect?.bottom,
+                viewportHeight: window.innerHeight,
+                actionsBottom: publicationActionsRect?.bottom,
+                bodyOverflowY: publicationBodyStyle?.overflowY
+              }));
+          }
+          publicationModal.querySelector('[data-cancel]')?.click();
           TeacherTools.activate('simulator');
           await new Promise(resolve => setTimeout(resolve, 80));
           const simulatorWrap = document.querySelector('.simulator-table-wrap');
@@ -615,7 +953,7 @@ function createWindow() {
           if (restoredNavigation.currentView !== realNavigation.currentView || restoredNavigation.recordTab !== realNavigation.recordTab) throw new Error('Exiting test mode did not restore the previous view and term.');
           if (document.getElementById('adminTestModeBanner')) throw new Error('The Admin Test Mode banner remained after exit.');
 
-          return { modules: required.length, teacherTools: true, namePickerRoulette: true, compactGradeSimulator: true, simulatorZoomLevels, usageAnalytics: true, backupRecovery: true, sharedFolderSync: true, adminTestWorkspace: true, adminTestLifecycle: true, adminSaveSuppression: true, adminShortcut: true, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectWatermark: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, qrRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
+          return { modules: required.length, learnerAvatars: true, teacherTools: true, animatedGroupRandomizer: true, recurringChecklistActivities: true, namePickerRoulette: true, avatarRoulette: true, selectionConfetti: true, checklistMiniPickerRoulette: true, compactGradeSimulator: true, simulatorZoomLevels, usageAnalytics: true, backupRecovery: true, sharedFolderSync: true, adminTestWorkspace: true, adminTestLifecycle: true, adminSaveSuppression: true, adminShortcut: true, setupClick: true, dynamicSidebar: true, dedicatedPage: true, setupAutofill: true, automaticSubjects: true, splitMapeh: true, mapehAverage: true, gradeTabs: true, inlineRoster: true, inlineSettings: true, subjectWidths: true, subjectBorders: true, advisoryActionColors: true, frozenLearnerColumn: true, subjectExpansion: true, subjectSorting: true, simpleSourceAssignment: true, automaticFileIdentification: true, exportClick: true, rosterImportReview: true, finalGrades: true, resetChoices: true, modalLayering: true, subjectWatermark: true, districtPersistence: true, integrityCheck: true, backupRestore: true, databaseChecksum: true, pinRecovery: true, qrRecovery: true, versionedBackup: true, offline: ${isOfflineSmokeTest} };
           } catch (error) {
             return { __error: String(error?.stack || error?.message || error) };
           }

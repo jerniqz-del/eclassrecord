@@ -292,6 +292,9 @@ function normalizeDatabase() {
     normalizeAssessmentComponents(a);
     ensureTemplateAssessments(a);
   }
+  if (typeof LearnerAvatars !== 'undefined') {
+    LearnerAvatars.assignDatabase(db);
+  }
 }
 
 function nextDashboardOrderForYear(schoolYear) {

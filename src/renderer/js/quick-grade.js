@@ -206,7 +206,7 @@ function renderQuickGradeRoster() {
     item.onclick = () => quickGradeJumpToLearner(index);
     
     item.innerHTML = `
-      <span class="quick-grade-roster-item__name">${index + 1}. ${esc(displayName)}</span>
+      <span class="quick-grade-roster-item__identity">${globalThis.LearnerAvatars ? LearnerAvatars.renderLearner(learner, { size: 'xs' }) : ''}<span class="quick-grade-roster-item__name">${index + 1}. ${esc(displayName)}</span></span>
       <span class="quick-grade-roster-item__score">${hasScore ? esc(score) : '—'}</span>
     `;
     rosterList.appendChild(item);
@@ -233,6 +233,12 @@ function updateQuickGradeActiveLearner() {
   const learner = a.learners[quickGradeLearnerIndex];
   if (!learner) return;
   
+  const avatarEl = document.getElementById('quickGradeLearnerAvatar');
+  if (avatarEl) {
+    avatarEl.innerHTML = globalThis.LearnerAvatars
+      ? LearnerAvatars.renderLearner(learner, { size: 'xl' })
+      : '';
+  }
   const nameEl = document.getElementById('quickGradeLearnerName');
   if (nameEl) nameEl.textContent = learnerDisplayName(learner);
   

@@ -1144,7 +1144,9 @@ async function exportLearnerTransferFile(learnerId) {
       firstName: learner.firstName,
       middleName: learner.middleName || '',
       sex: learner.sex,
-      birthdate: normalizeLearnerBirthdate(learner.birthdate)
+      birthdate: normalizeLearnerBirthdate(learner.birthdate),
+      avatarPresetId: learner.avatarPresetId || '',
+      avatarAssignment: learner.avatarAssignment === 'manual' ? 'manual' : 'auto'
     },
     completedTermGrades: compGrades
   };
@@ -1247,6 +1249,8 @@ async function importLearnerTransferFile() {
       middleName: l.middleName || '',
       sex: normalizeSex(l.sex || ''),
       birthdate: normalizeLearnerBirthdate(l.birthdate),
+      avatarPresetId: l.avatarPresetId || '',
+      avatarAssignment: l.avatarAssignment === 'manual' ? 'manual' : 'auto',
       transferredInGrades: payload.completedTermGrades || {}
     };
     newLearner.displayName = formatLearnerName(newLearner.lastName, newLearner.firstName, newLearner.middleName);
@@ -1395,6 +1399,8 @@ function showDirectClassCopyModal() {
       middleName: sourceLearner.middleName || '',
       sex: sourceLearner.sex,
       birthdate: normalizeLearnerBirthdate(sourceLearner.birthdate),
+      avatarPresetId: sourceLearner.avatarPresetId || '',
+      avatarAssignment: sourceLearner.avatarAssignment === 'manual' ? 'manual' : 'auto',
       transferredInGrades: compGrades
     };
     targetLearner.displayName = formatLearnerName(targetLearner.lastName, targetLearner.firstName, targetLearner.middleName);
@@ -1579,7 +1585,9 @@ function performRosterImport(sourceAsg, mode) {
       firstName: sourceLearner.firstName,
       middleName: sourceLearner.middleName || '',
       sex: sourceLearner.sex || '',
-      birthdate: normalizeLearnerBirthdate(sourceLearner.birthdate)
+      birthdate: normalizeLearnerBirthdate(sourceLearner.birthdate),
+      avatarPresetId: sourceLearner.avatarPresetId || '',
+      avatarAssignment: sourceLearner.avatarAssignment === 'manual' ? 'manual' : 'auto'
     };
     clonedLearner.displayName = formatLearnerName(clonedLearner.lastName, clonedLearner.firstName, clonedLearner.middleName);
 

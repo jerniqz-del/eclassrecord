@@ -8,14 +8,24 @@
   const registry = new Map();
   let initialized = false;
   let activeToolId = 'groups';
-  let groupState = { assignmentId: '', mode: 'random', groupCount: 2, groups: [] };
+  let groupState = {
+    assignmentId: '',
+    mode: 'random',
+    groupCount: 2,
+    groups: [],
+    colors: [],
+    animating: false
+  };
+  let groupAnimationTimer = null;
+  let groupAnimationToken = 0;
   let pickerState = {
     assignmentId: '',
     rosterSignature: '',
     picker: null,
     selected: null,
     spinning: false,
-    rouletteName: ''
+    rouletteName: '',
+    rouletteLearner: null
   };
   let pickerAnimationTimer = null;
   let pickerAnimationToken = 0;
@@ -32,9 +42,14 @@
     pickerFilter: 'all',
     rosterSignature: '',
     picker: null,
-    selected: null
+    selected: null,
+    spinning: false,
+    rouletteName: '',
+    rouletteLearner: null
   };
   let checklistPickerModal = null;
+  let checklistPickerAnimationTimer = null;
+  let checklistPickerAnimationToken = 0;
   let activeGameId = 'sudoku';
   let gameFrame = null;
   let baseSetView = null;
@@ -48,6 +63,33 @@
     checklist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 5h10"></path><path d="M9 12h10"></path><path d="M9 19h10"></path><path d="m3 5 1.5 1.5L7 4"></path><path d="m3 12 1.5 1.5L7 11"></path><path d="m3 19 1.5 1.5L7 18"></path></svg>',
     games: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>'
   };
+
+  const GROUP_COLOR_SCHEMES = Object.freeze([
+    { name: 'Blue', accent: '#2563eb' },
+    { name: 'Emerald', accent: '#059669' },
+    { name: 'Amber', accent: '#d97706' },
+    { name: 'Rose', accent: '#e11d48' },
+    { name: 'Violet', accent: '#7c3aed' },
+    { name: 'Cyan', accent: '#0891b2' },
+    { name: 'Lime', accent: '#4d7c0f' },
+    { name: 'Orange', accent: '#c2410c' },
+    { name: 'Indigo', accent: '#4f46e5' },
+    { name: 'Teal', accent: '#0f766e' },
+    { name: 'Pink', accent: '#be185d' },
+    { name: 'Red', accent: '#b91c1c' },
+    { name: 'Sky', accent: '#0369a1' },
+    { name: 'Green', accent: '#15803d' },
+    { name: 'Gold', accent: '#a16207' },
+    { name: 'Fuchsia', accent: '#a21caf' },
+    { name: 'Purple', accent: '#6d28d9' },
+    { name: 'Turquoise', accent: '#0e7490' },
+    { name: 'Olive', accent: '#3f6212' },
+    { name: 'Coral', accent: '#c2415d' }
+  ]);
+
+  function randomGroupColors(count) {
+    return core.shuffle(GROUP_COLOR_SCHEMES).slice(0, Math.max(0, Number(count) || 0));
+  }
 
   function profileDb() {
     return globalScope.getActiveProfileDatabase?.();
@@ -94,6 +136,44 @@
       .filter(Boolean).join(' ').trim() || 'Unnamed learner';
   }
 
+  function learnerAvatar(learner, size = 'xs') {
+    return learner && globalScope.LearnerAvatars
+      ? globalScope.LearnerAvatars.renderLearner(learner, { size })
+      : '';
+  }
+
+  function visualRandom(maximum) {
+    return maximum > 0 ? core.secureRandomInt(maximum) : 0;
+  }
+
+  function launchSelectionConfetti(anchor) {
+    if (globalScope.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const target = typeof anchor === 'string' ? document.querySelector(anchor) : anchor;
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    const layer = document.createElement('div');
+    layer.className = 'teacher-tools-confetti';
+    layer.style.left = `${rect.left + (rect.width / 2)}px`;
+    layer.style.top = `${rect.top + (rect.height / 2)}px`;
+    const colors = ['#06b6d4', '#2563eb', '#16a34a', '#eab308', '#ef4444', '#db2777', '#7c3aed'];
+    for (let index = 0; index < 34; index++) {
+      const piece = document.createElement('i');
+      const x = visualRandom(281) - 140;
+      const rotation = visualRandom(721) - 360;
+      piece.style.setProperty('--confetti-x', `${x}px`);
+      piece.style.setProperty('--confetti-mid-x', `${Math.round(x * 0.48)}px`);
+      piece.style.setProperty('--confetti-y', `${140 + visualRandom(151)}px`);
+      piece.style.setProperty('--confetti-rotation', `${rotation}deg`);
+      piece.style.setProperty('--confetti-mid-rotation', `${Math.round(rotation * 0.45)}deg`);
+      piece.style.setProperty('--confetti-delay', `${visualRandom(130)}ms`);
+      piece.style.setProperty('--confetti-color', colors[visualRandom(colors.length)]);
+      piece.dataset.shape = String(index % 3);
+      layer.appendChild(piece);
+    }
+    document.body.appendChild(layer);
+    setTimeout(() => layer.remove(), 1700);
+  }
+
   function classPicker(id, title) {
     return `<div class="record-class-selector u-mb-0">
       <span class="record-class-label">Active Class:</span>
@@ -134,15 +214,25 @@
   }
 
   function resetTemporaryClassState() {
+    cancelGroupAnimation();
     cancelPickerAnimation();
-    groupState = { assignmentId: '', mode: groupState.mode, groupCount: 2, groups: [] };
+    cancelChecklistPickerAnimation();
+    groupState = {
+      assignmentId: '',
+      mode: groupState.mode,
+      groupCount: 2,
+      groups: [],
+      colors: [],
+      animating: false
+    };
     pickerState = {
       assignmentId: '',
       rosterSignature: '',
       picker: null,
       selected: null,
       spinning: false,
-      rouletteName: ''
+      rouletteName: '',
+      rouletteLearner: null
     };
     simulatorState = { assignmentId: '', term: simulatorState.term, session: null };
     checklistPickerModal?.remove();
@@ -159,7 +249,10 @@
       pickerFilter: 'all',
       rosterSignature: '',
       picker: null,
-      selected: null
+      selected: null,
+      spinning: false,
+      rouletteName: '',
+      rouletteLearner: null
     };
   }
 
@@ -229,11 +322,63 @@
     return `<div class="teacher-tool__empty"><div>${esc(message)}</div></div>`;
   }
 
+  function cancelGroupAnimation() {
+    if (groupAnimationTimer) {
+      clearTimeout(groupAnimationTimer);
+      groupAnimationTimer = null;
+    }
+    groupAnimationToken++;
+    if (groupState.animating) {
+      groupState.groups = [];
+      groupState.colors = [];
+    }
+    groupState.animating = false;
+  }
+
+  function groupLearnerPositions() {
+    const positions = new Map();
+    document.querySelectorAll('[data-group-learner-id]').forEach(element => {
+      positions.set(element.dataset.groupLearnerId, element.getBoundingClientRect());
+    });
+    return positions;
+  }
+
+  function renderGroupArrangement(groups, options = {}) {
+    const previous = groupLearnerPositions();
+    groupState.groups = groups;
+    refresh();
+    if (globalScope.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    globalScope.requestAnimationFrame?.(() => {
+      document.querySelectorAll('[data-group-learner-id]').forEach(element => {
+        const before = previous.get(element.dataset.groupLearnerId);
+        if (!before || typeof element.animate !== 'function') return;
+        const after = element.getBoundingClientRect();
+        const deltaX = before.left - after.left;
+        const deltaY = before.top - after.top;
+        element.animate([
+          { transform: `translate(${deltaX}px, ${deltaY}px) scale(0.92)`, opacity: 0.55 },
+          { transform: 'translate(0, 0) scale(1)', opacity: 1 }
+        ], {
+          duration: options.duration || 260,
+          easing: options.settled ? 'cubic-bezier(.2,.8,.2,1)' : 'cubic-bezier(.4,0,.2,1)'
+        });
+        if (options.settled) element.classList.add('is-settled');
+      });
+    });
+  }
+
   function renderGroupRandomizer(container) {
     const assignment = activeAssignment();
     const learners = core.activeLearners(assignment);
     if (groupState.assignmentId !== assignment?.id) {
-      groupState = { assignmentId: assignment?.id || '', mode: groupState.mode, groupCount: 2, groups: [] };
+      groupState = {
+        assignmentId: assignment?.id || '',
+        mode: groupState.mode,
+        groupCount: 2,
+        groups: [],
+        colors: [],
+        animating: false
+      };
     }
     const maximum = Math.min(20, learners.length);
     if (groupState.groupCount > maximum) groupState.groupCount = Math.max(2, maximum);
@@ -245,61 +390,100 @@
           <div class="tool-stat"><strong>${learners.length}</strong> eligible learners</div>
           <div class="field">
             <label class="field-label" for="groupRandomizerCount">Number of groups</label>
-            <input id="groupRandomizerCount" class="field-input" type="number" min="2" max="${maximum}" value="${groupState.groupCount}" ${maximum < 2 ? 'disabled' : ''} onchange="TeacherTools.setGroupCount(this.value)">
+            <input id="groupRandomizerCount" class="field-input" type="number" min="2" max="${maximum}" value="${groupState.groupCount}" ${maximum < 2 || groupState.animating ? 'disabled' : ''} onchange="TeacherTools.setGroupCount(this.value)">
           </div>
           <div class="field">
             <span class="field-label">Grouping mode</span>
             <div class="tool-segmented" aria-label="Grouping mode">
-              <button type="button" aria-pressed="${groupState.mode === 'random'}" onclick="TeacherTools.setGroupMode('random')">Complete Random</button>
-              <button type="button" aria-pressed="${groupState.mode === 'balanced'}" onclick="TeacherTools.setGroupMode('balanced')">Balance by Sex</button>
+              <button type="button" aria-pressed="${groupState.mode === 'random'}" onclick="TeacherTools.setGroupMode('random')" ${groupState.animating ? 'disabled' : ''}>Complete Random</button>
+              <button type="button" aria-pressed="${groupState.mode === 'balanced'}" onclick="TeacherTools.setGroupMode('balanced')" ${groupState.animating ? 'disabled' : ''}>Balance by Sex</button>
             </div>
           </div>
           <div class="tool-control-strip__actions">
-            <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.randomizeGroups()" ${maximum < 2 ? 'disabled' : ''}>${groupState.groups.length ? 'Randomize Again' : 'Randomize'}</button>
-            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.copyGroups()" ${groupState.groups.length ? '' : 'disabled'} title="Copy group lists">Copy</button>
-            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.printGroups()" ${groupState.groups.length ? '' : 'disabled'} title="Print group lists">Print</button>
+            <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.randomizeGroups()" ${maximum < 2 || groupState.animating ? 'disabled' : ''}>${groupState.animating ? 'Randomizing...' : (groupState.groups.length ? 'Randomize Again' : 'Randomize')}</button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.copyGroups()" ${groupState.groups.length && !groupState.animating ? '' : 'disabled'} title="Copy group lists">Copy</button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.printGroups()" ${groupState.groups.length && !groupState.animating ? '' : 'disabled'} title="Print group lists">Print</button>
           </div>
         </div>
-        ${groupState.groups.length ? renderGroupResults(groupState.groups) : emptyTool(maximum < 2 ? 'Add at least two active learners to create groups.' : 'Choose the number of groups and randomize the class.')}`
+        ${groupState.animating ? '<div class="group-randomizer-status" role="status">Learners are moving between groups...</div>' : ''}
+        ${groupState.groups.length ? renderGroupResults(groupState.groups, groupState.colors, groupState.animating) : emptyTool(maximum < 2 ? 'Add at least two active learners to create groups.' : 'Choose the number of groups and randomize the class.')}`
         : emptyTool('Create a teaching load before using Group Randomizer.')}
       </div>
     </div>`;
     populateClassPickers();
   }
 
-  function renderGroupResults(groups) {
-    return `<div class="group-results">${groups.map((members, index) => {
+  function renderGroupResults(groups, colors, animating = false) {
+    return `<div class="group-results${animating ? ' group-results--randomizing' : ''}">${groups.map((members, index) => {
       const male = members.filter(item => ['M', 'MALE'].includes(String(item.sex || '').toUpperCase())).length;
       const female = members.filter(item => ['F', 'FEMALE'].includes(String(item.sex || '').toUpperCase())).length;
       const unspecified = members.length - male - female;
-      return `<section class="group-result">
+      const color = colors[index] || GROUP_COLOR_SCHEMES[index % GROUP_COLOR_SCHEMES.length];
+      return `<section class="group-result" style="--group-accent:${esc(color.accent)}" data-group-color="${esc(color.name)}">
         <header class="group-result__header">
-          <div><h2 class="group-result__title">Group ${index + 1}</h2><span class="group-result__sex">M ${male} · F ${female}${unspecified ? ` · Unspecified ${unspecified}` : ''}</span></div>
+          <div><h2 class="group-result__title"><span class="group-result__swatch" title="${esc(`${color.name} group color`)}" aria-hidden="true"></span>Group ${index + 1}</h2><span class="group-result__sex">M ${male} · F ${female}${unspecified ? ` · Unspecified ${unspecified}` : ''}</span></div>
           <span class="group-result__count">${members.length}</span>
         </header>
-        <ol class="group-result__list">${members.map(learner => `<li>${esc(learnerName(learner))}</li>`).join('')}</ol>
+        <ol class="group-result__list">${members.map(learner => `<li data-group-learner-id="${esc(learner.id)}"><span class="group-result__learner">${learnerAvatar(learner)}<span>${esc(learnerName(learner))}</span></span></li>`).join('')}</ol>
       </section>`;
     }).join('')}</div>`;
   }
 
   function setGroupCount(value) {
+    cancelGroupAnimation();
     groupState.groupCount = Number(value);
     groupState.groups = [];
+    groupState.colors = [];
     refresh();
   }
 
   function setGroupMode(mode) {
+    cancelGroupAnimation();
     groupState.mode = mode === 'balanced' ? 'balanced' : 'random';
     groupState.groups = [];
+    groupState.colors = [];
     refresh();
   }
 
   function runGroupRandomizer() {
     try {
       const learners = core.activeLearners(activeAssignment());
-      groupState.groups = core.randomizeGroups(learners, groupState.groupCount, groupState.mode);
-      refresh();
+      cancelGroupAnimation();
+      const finalGroups = core.randomizeGroups(learners, groupState.groupCount, groupState.mode);
+      groupState.colors = randomGroupColors(finalGroups.length);
+      if (learners.length < 2 || globalScope.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        groupState.groups = finalGroups;
+        refresh();
+        return;
+      }
+
+      const token = ++groupAnimationToken;
+      const delays = [100, 115, 135, 160, 200, 250, 320, 410];
+      let step = 0;
+      groupState.animating = true;
+      renderGroupArrangement(
+        core.randomizeGroups(learners, groupState.groupCount, 'random'),
+        { duration: 180 }
+      );
+
+      const shuffleStep = () => {
+        if (token !== groupAnimationToken || !groupState.animating) return;
+        if (step >= delays.length) {
+          groupAnimationTimer = null;
+          groupState.animating = false;
+          renderGroupArrangement(finalGroups, { duration: 540, settled: true });
+          return;
+        }
+        renderGroupArrangement(
+          core.randomizeGroups(learners, groupState.groupCount, 'random'),
+          { duration: Math.min(360, delays[step] + 120) }
+        );
+        groupAnimationTimer = setTimeout(shuffleStep, delays[step]);
+        step++;
+      };
+      groupAnimationTimer = setTimeout(shuffleStep, delays[0]);
     } catch (error) {
+      cancelGroupAnimation();
       globalScope.toast(error.message, 'warning');
     }
   }
@@ -316,7 +500,7 @@
   }
 
   async function copyGroups() {
-    if (!groupState.groups.length) return;
+    if (!groupState.groups.length || groupState.animating) return;
     try {
       await navigator.clipboard.writeText(groupText());
       globalScope.toast('Group lists copied.', 'success');
@@ -326,12 +510,16 @@
   }
 
   function printGroups() {
-    if (!groupState.groups.length) return;
+    if (!groupState.groups.length || groupState.animating) return;
     const sheet = document.getElementById('teacherToolsPrintSheet');
     const assignment = activeAssignment();
-    sheet.innerHTML = `<h1>${esc(assignmentLabel(assignment))}</h1>${groupState.groups.map((members, index) =>
-      `<h2>Group ${index + 1}</h2><ol>${members.map(learner => `<li>${esc(learnerName(learner))}</li>`).join('')}</ol>`
-    ).join('')}`;
+    sheet.innerHTML = `<h1>${esc(assignmentLabel(assignment))}</h1>${groupState.groups.map((members, index) => {
+      const color = groupState.colors[index] || GROUP_COLOR_SCHEMES[index % GROUP_COLOR_SCHEMES.length];
+      return `<section class="teacher-tools-print-group" style="--group-accent:${esc(color.accent)}">
+        <h2>Group ${index + 1}</h2>
+        <ol>${members.map(learner => `<li>${esc(learnerName(learner))}</li>`).join('')}</ol>
+      </section>`;
+    }).join('')}`;
     document.body.classList.add('teacher-tools-printing');
     window.print();
     setTimeout(() => {
@@ -351,7 +539,8 @@
         picker: core.createNamePicker(learners),
         selected: null,
         spinning: false,
-        rouletteName: ''
+        rouletteName: '',
+        rouletteLearner: null
       };
     }
     return learners;
@@ -365,15 +554,21 @@
     pickerAnimationToken++;
     pickerState.spinning = false;
     pickerState.rouletteName = '';
+    pickerState.rouletteLearner = null;
   }
 
-  function animatePickerName(name) {
+  function animatePickerLearner(learner) {
     const nameElement = document.getElementById('namePickerRouletteName');
-    if (!nameElement) return false;
-    nameElement.textContent = name;
+    const avatarElement = document.getElementById('namePickerRouletteAvatar');
+    if (!nameElement || !avatarElement || !learner) return false;
+    nameElement.textContent = learnerName(learner);
+    avatarElement.innerHTML = learnerAvatar(learner, 'xl');
     nameElement.classList.remove('is-ticking');
+    avatarElement.classList.remove('is-ticking');
     void nameElement.offsetWidth;
+    void avatarElement.offsetWidth;
     nameElement.classList.add('is-ticking');
+    avatarElement.classList.add('is-ticking');
     return true;
   }
 
@@ -384,6 +579,7 @@
     const displayName = pickerState.spinning
       ? pickerState.rouletteName
       : (pickerState.selected ? learnerName(pickerState.selected) : 'Ready to pick');
+    const displayLearner = pickerState.spinning ? pickerState.rouletteLearner : pickerState.selected;
     const statusText = pickerState.spinning
       ? `${learners.length} eligible learners · roulette spinning`
       : `${learners.length} eligible learners · ${pickerState.selected ? status.remaining : learners.length} remaining`;
@@ -393,8 +589,11 @@
         ${assignment ? `<div class="name-picker-stage${pickerState.spinning ? ' is-spinning' : ''}">
           <div class="name-picker-stage__content">
             <div class="name-picker-stage__status" role="status">${esc(statusText)}</div>
-            <div id="namePickerRouletteName" class="name-picker-stage__name${pickerState.spinning ? ' is-spinning' : ''}"
-              aria-live="${pickerState.spinning ? 'off' : 'polite'}" aria-busy="${pickerState.spinning ? 'true' : 'false'}">${esc(displayName)}</div>
+            <div class="name-picker-stage__selection">
+              <div id="namePickerRouletteAvatar" class="name-picker-stage__avatar${displayLearner ? '' : ' is-empty'}">${learnerAvatar(displayLearner, 'xl')}</div>
+              <div id="namePickerRouletteName" class="name-picker-stage__name${pickerState.spinning ? ' is-spinning' : ''}"
+                aria-live="${pickerState.spinning ? 'off' : 'polite'}" aria-busy="${pickerState.spinning ? 'true' : 'false'}">${esc(displayName)}</div>
+            </div>
             <div class="name-picker-stage__actions">
               <button class="btn btn-primary btn-lg" type="button" onclick="TeacherTools.pickName()" ${learners.length && !pickerState.spinning ? '' : 'disabled'}>${pickerState.spinning ? 'Picking...' : (pickerState.selected ? 'Pick Another' : 'Pick a Learner')}</button>
               <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.resetPicker()" ${learners.length && !pickerState.spinning ? '' : 'disabled'}>Reset Draws</button>
@@ -415,6 +614,11 @@
     pickerState.selected = result.learner;
     if (!result.learner || learners.length < 2 || globalScope.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       refresh();
+      globalScope.requestAnimationFrame?.(() => {
+        document.getElementById('namePickerRouletteName')?.classList.add('is-revealed');
+        document.getElementById('namePickerRouletteAvatar')?.classList.add('is-revealed');
+        if (result.learner) launchSelectionConfetti('#namePickerRouletteAvatar');
+      });
       return;
     }
 
@@ -432,7 +636,8 @@
     };
 
     pickerState.spinning = true;
-    pickerState.rouletteName = learnerName(pickRouletteLearner());
+    pickerState.rouletteLearner = pickRouletteLearner();
+    pickerState.rouletteName = learnerName(pickerState.rouletteLearner);
     refresh();
 
     const tick = () => {
@@ -441,15 +646,19 @@
         pickerAnimationTimer = null;
         pickerState.spinning = false;
         pickerState.rouletteName = '';
+        pickerState.rouletteLearner = null;
         refresh();
         globalScope.requestAnimationFrame?.(() => {
           document.getElementById('namePickerRouletteName')?.classList.add('is-revealed');
+          document.getElementById('namePickerRouletteAvatar')?.classList.add('is-revealed');
+          launchSelectionConfetti('#namePickerRouletteAvatar');
         });
         return;
       }
       const candidate = pickRouletteLearner();
+      pickerState.rouletteLearner = candidate;
       pickerState.rouletteName = learnerName(candidate);
-      if (!animatePickerName(pickerState.rouletteName)) {
+      if (!animatePickerLearner(candidate)) {
         cancelPickerAnimation();
         return;
       }
@@ -541,7 +750,7 @@
       const simulatedNumeric = numericGrade(simulatedResult);
       const delta = officialNumeric === null || simulatedNumeric === null ? null : simulatedNumeric - officialNumeric;
       return `<tr>
-        <td class="simulator-learner-cell">${esc(learnerName(learner))}</td>
+        <td class="simulator-learner-cell"><span class="learner-avatar-name">${learnerAvatar(learner)}<span>${esc(learnerName(learner))}</span></span></td>
         <td class="simulator-scores-cell">
           <div class="simulator-score-grid">${assessments.map(assessment => {
           const key = `${learner.id}|${assessment.id}`;
@@ -853,9 +1062,15 @@
     if (!checklist) return null;
     let session = (checklist.sessions || []).find(item => item.id === checklistState.sessionId);
     if (!session) {
-      session = (checklist.sessions || [])
+      const sessions = (checklist.sessions || []).slice();
+      session = sessions
         .filter(item => item.date === checklistToday())
-        .sort((left, right) => String(right.updatedAt || '').localeCompare(String(left.updatedAt || '')))[0] || null;
+        .sort((left, right) => String(right.updatedAt || '').localeCompare(String(left.updatedAt || '')))[0]
+        || sessions.sort((left, right) =>
+          String(right.date || '').localeCompare(String(left.date || ''))
+          || String(right.updatedAt || '').localeCompare(String(left.updatedAt || ''))
+        )[0]
+        || null;
       checklistState.sessionId = session?.id || '';
     }
     return session;
@@ -889,24 +1104,40 @@
 
   function checklistEntryControl(checklist, session, learner, criterion) {
     const entry = core.checklistEntry(checklist, session.id, learner.id, criterion.id);
-    const disabled = !criterion.active;
-    const noteButton = criterion.allowNotes
-      ? `<button class="checklist-note-button${entry?.note ? ' has-note' : ''}" type="button" title="${entry ? 'Add or edit learner note' : 'Record an entry before adding a note'}" aria-label="${esc(`Note for ${learnerName(learner)}, ${criterion.label}`)}" onclick="TeacherTools.openChecklistEntryNote('${esc(learner.id)}','${esc(criterion.id)}')" ${entry ? '' : 'disabled'}>${entry?.note ? '●' : 'Note'}</button>`
+    const definition = core.checklistActivityDefinition(checklist, session) || criterion;
+    const published = core.isChecklistActivityPublished(session);
+    const disabled = !definition.active || published;
+    const currentPoints = Number(entry?.points || 0);
+    const maximum = Number(definition.maxPointsPerSession || 0);
+    const lockTitle = published
+      ? 'Published activity. Unlock it with your PIN before editing.'
       : '';
-    if (criterion.scoringMode === 'CHECK') {
-      return `<div class="checklist-entry-control"><label class="checklist-check" data-checklist-cell>
+    const noteButton = definition.allowNotes
+      ? `<button class="checklist-note-button${entry?.note ? ' has-note' : ''}" type="button" title="${esc(lockTitle || (entry ? 'Add or edit learner note' : 'Record an entry before adding a note'))}" aria-label="${esc(`Note for ${learnerName(learner)}, ${definition.title || criterion.label}`)}" onclick="TeacherTools.openChecklistEntryNote('${esc(learner.id)}','${esc(criterion.id)}','${esc(session.id)}')" ${entry && !published ? '' : 'disabled'}>${entry?.note ? '●' : 'Note'}</button>`
+      : '';
+    if (definition.scoringMode === 'CHECK') {
+      return `<div class="checklist-entry-control${published ? ' is-locked' : ''}" title="${esc(lockTitle)}"><label class="checklist-check" data-checklist-cell>
         <input type="checkbox" ${entry ? 'checked' : ''} ${disabled ? 'disabled' : ''}
-          aria-label="${esc(`${learnerName(learner)}, ${criterion.label}`)}"
+          aria-label="${esc(`${learnerName(learner)}, ${definition.title || criterion.label}`)}"
           onkeydown="TeacherTools.handleChecklistCellKey(event)"
-          onchange="TeacherTools.updateChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',this.checked ? '${esc(criterion.pointsPerCheck)}' : '',this)">
+          onchange="TeacherTools.updateChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',this.checked ? '${esc(definition.pointsPerCheck)}' : '',this,'${esc(session.id)}')">
         <span>${entry ? esc(entry.points) : ''}</span>
       </label>${noteButton}</div>`;
     }
-    return `<div class="checklist-entry-control"><input class="field-input checklist-points-input" type="number" min="0" max="${esc(criterion.maxPointsPerSession)}" step="any"
+    return `<div class="checklist-entry-control checklist-entry-stepper${published ? ' is-locked' : ''}" title="${esc(lockTitle)}">
+      <button class="checklist-stepper-button" type="button" title="Subtract 1 point" aria-label="${esc(`Subtract one point from ${learnerName(learner)}`)}"
+        onclick="TeacherTools.adjustChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',-1,'${esc(session.id)}')"
+        ${disabled || !entry || currentPoints <= 0 ? 'disabled' : ''}>&minus;</button>
+      <input class="field-input checklist-points-input" type="number" min="0" max="${esc(definition.maxPointsPerSession)}" step="any"
       value="${entry ? esc(entry.points) : ''}" ${disabled ? 'disabled' : ''}
-      aria-label="${esc(`${learnerName(learner)}, ${criterion.label}`)}"
+      aria-label="${esc(`${learnerName(learner)}, ${definition.title || criterion.label}`)}"
       onkeydown="TeacherTools.handleChecklistCellKey(event)"
-      onchange="TeacherTools.updateChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',this.value,this)">${noteButton}</div>`;
+      onchange="TeacherTools.updateChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',this.value,this,'${esc(session.id)}')">
+      <button class="checklist-stepper-button" type="button" title="Add 1 point" aria-label="${esc(`Add one point to ${learnerName(learner)}`)}"
+        onclick="TeacherTools.adjustChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',1,'${esc(session.id)}')"
+        ${disabled || currentPoints >= maximum ? 'disabled' : ''}>+</button>
+      ${noteButton}
+    </div>`;
   }
 
   function checklistStatus(checklist, assignment) {
@@ -915,15 +1146,42 @@
       0
     );
     if (!entryCount) return { label: 'No Entries', tone: 'neutral' };
-    const components = ['WW', 'PT'].filter(component =>
-      checklist.criteria.some(item => item.destinationComponent === component)
-    );
-    if (!components.length) return { label: 'Tracking Only', tone: 'neutral' };
     let missingTarget = false;
     let pending = false;
     let needsReview = false;
     let published = false;
-    components.forEach(component => {
+    const gradedActivities = (checklist.sessions || []).filter(session =>
+      ['WW', 'PT'].includes(session.activity?.destinationComponent)
+    );
+    gradedActivities.forEach(session => {
+      const target = session.activity.publicationTarget;
+      published = published || core.isChecklistActivityPublished(session);
+      if (!target?.assessmentId) {
+        missingTarget = true;
+        return;
+      }
+      try {
+        const plan = core.planChecklistActivityPublication(
+          checklist,
+          assignment,
+          session.activity.id || session.id,
+          target.assessmentId
+        );
+        pending = pending || plan.changes.length > 0;
+        needsReview = needsReview || plan.blocked.some(item =>
+          ['blank-score', 'score-changed-after-publication', 'score-exceeds-hps'].includes(item.reason)
+        );
+      } catch (error) {
+        needsReview = true;
+      }
+    });
+    const hasLegacySessions = (checklist.sessions || []).some(session => !session.activity);
+    const legacyComponents = hasLegacySessions
+      ? ['WW', 'PT'].filter(component =>
+        checklist.criteria.some(item => item.destinationComponent === component)
+      )
+      : [];
+    legacyComponents.forEach(component => {
       const target = checklist.publicationTargets?.[component];
       published = published || Object.values(target?.publishedContributions || {})
         .some(value => Number(value) > 0);
@@ -941,6 +1199,9 @@
         needsReview = true;
       }
     });
+    if (!gradedActivities.length && !legacyComponents.length) {
+      return { label: 'Tracking Only', tone: 'neutral' };
+    }
     if (needsReview) return { label: 'Needs Review', tone: 'warning' };
     if (missingTarget) return { label: 'Grade Setup Needed', tone: 'warning' };
     if (pending) return { label: published ? 'Unpublished Changes' : 'Ready to Publish', tone: 'primary' };
@@ -957,7 +1218,7 @@
         const assessment = (assignment.assessments || []).find(item => item.id === entry.assessmentId);
         return `<div class="simulator-history__item">
           <div class="simulator-history__meta">
-            <strong>${esc(checklistComponentLabel(entry.component))} · ${esc(assessment?.title || 'Assessment')} · ${entry.changes.length} learner${entry.changes.length === 1 ? '' : 's'}</strong>
+            <strong>${entry.activityTitle ? `${esc(entry.activityTitle)} · ` : ''}${esc(checklistComponentLabel(entry.component))} · ${esc(assessment?.title || 'Assessment')} · ${entry.changes.length} learner${entry.changes.length === 1 ? '' : 's'}</strong>
             <span>${esc(new Date(entry.appliedAt).toLocaleString())} · ${esc(entry.status)}</span>
           </div>
           <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.reviewChecklistPublicationRevert('${esc(entry.id)}')" ${entry.status === 'applied' ? '' : 'disabled'}>Revert</button>
@@ -997,6 +1258,7 @@
     const checklist = currentChecklist(assignment);
     const learners = core.activeLearners(assignment);
     const session = checklistSession(checklist);
+    const activityPublished = core.isChecklistActivityPublished(session);
 
     container.innerHTML = `<div class="teacher-tool checklist-tool">
       <div class="simulator-toolbar no-print">
@@ -1004,12 +1266,12 @@
         <div class="simulator-toolbar__actions">
           ${checklist ? `
             ${session
-              ? '<button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.openAddChecklistSession()">New Session</button>'
-              : '<button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.startTodayChecklistSession()">Start Today’s Session</button>'}
-            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.openChecklistBulkMark()" ${session ? '' : 'disabled'}>Bulk Mark</button>
-            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.openChecklistPicker()" ${session ? '' : 'disabled'}>Mini Name Picker</button>
-            <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.openGradeContributionDashboard()">Review Grade Contributions</button>
-            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.openChecklistMoreActions()">More Actions</button>` : ''}
+              ? '<button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.openAddChecklistActivity()">Add Activity</button>'
+              : '<button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.startTodayChecklistSession()">Start Today’s Session</button>'}
+            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--bulk" type="button" onclick="TeacherTools.openChecklistBulkMark()" title="${activityPublished ? 'Unlock the published activity before changing points.' : ''}" ${session && !activityPublished ? '' : 'disabled'}>Bulk Mark</button>
+            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--picker" type="button" onclick="TeacherTools.openChecklistPicker()" title="${activityPublished ? 'Unlock the published activity before changing points.' : ''}" ${session && !activityPublished ? '' : 'disabled'}>Mini Name Picker</button>
+            <button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.openGradeContributionDashboard()">Review Grade Contributions</button>
+            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--more" type="button" onclick="TeacherTools.openChecklistMoreActions()">More Actions</button>` : ''}
         </div>
       </div>
       <div class="teacher-tool__body">
@@ -1037,8 +1299,9 @@
           title: template?.name || 'Performance Checklist',
           mapePart: checklistState.mapePart,
           criteria: template ? core.checklistCriteriaFromTemplate(template) : core.defaultChecklistCriteria(),
+          activityMode: true,
           date: checklistToday(),
-          sessionTitle: 'Today'
+          activityTitle: `${template?.criteria?.[0]?.label || 'Recitation'} 1`
         });
         tools.performanceChecklists.push(created);
         return created;
@@ -1054,41 +1317,60 @@
 
   function renderChecklistWorkspace(checklist, assignment, learners, session) {
     const totals = core.checklistLearnerTotals(checklist, assignment);
-    const criteria = checklist.criteria || [];
+    const criteria = session ? core.checklistSessionCriteria(checklist, session) : [];
+    const tableColumns = core.checklistTableColumns(checklist);
     const status = checklistStatus(checklist, assignment);
     const gridCriteria = criteria.filter(item => item.active);
     if (!gridCriteria.some(item => item.id === checklistState.gridCriterionId)) {
       checklistState.gridCriterionId = gridCriteria[0]?.id || '';
     }
     const filterCriterion = checklistCriterion(checklist, checklistState.gridCriterionId);
+    const activityPublished = core.isChecklistActivityPublished(session);
     const entryHistory = core.normalize(profileDb()).performanceChecklistEntryHistory
       .find(item => item.checklistId === checklist.id && item.status === 'applied');
+    const activityOptions = checklist.sessions
+      .slice()
+      .sort((left, right) => String(right.date).localeCompare(String(left.date)))
+      .map(item => {
+        const activity = core.checklistActivityDefinition(checklist, item);
+        const detail = activity
+          ? `${checklistComponentLabel(activity.destinationComponent)} · HPS ${activity.maxPointsPerSession}`
+          : 'Legacy combined session';
+        return `<option value="${esc(item.id)}" ${item.id === session?.id ? 'selected' : ''}>${esc(item.title)} · ${esc(item.date)} · ${esc(detail)}</option>`;
+      }).join('');
     return `<div class="checklist-summary">
         <div>
           <div class="checklist-title-row">
             <h2 class="checklist-title">${esc(checklist.title)}</h2>
             <span class="checklist-status checklist-status--${esc(status.tone)}">${esc(status.label)}</span>
           </div>
-          <p class="text-muted text-sm">${criteria.length} criteria · ${checklist.sessions.length} session${checklist.sessions.length === 1 ? '' : 's'} · ${learners.length} active learners</p>
+          <p class="text-muted text-sm">${checklist.criteria.length} activity types · ${checklist.sessions.length} activit${checklist.sessions.length === 1 ? 'y' : 'ies'} · ${learners.length} active learners</p>
         </div>
         <div class="checklist-summary__actions no-print">
-          <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.undoLastChecklistEntryChange()" ${entryHistory ? '' : 'disabled'}>Undo Last Entry</button>
+          ${session?.activity
+            ? activityPublished
+              ? `<button class="btn btn-warning btn-sm" type="button" onclick="TeacherTools.reviewChecklistActivityUnlock('${esc(session.activity.id || session.id)}')">Unlock Activity</button>`
+              : '<button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.openEditChecklistActivity()">Edit Activity</button>'
+            : ''}
+          <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.undoLastChecklistEntryChange()" ${entryHistory && !activityPublished ? '' : 'disabled'}>Undo Last Entry</button>
         </div>
       </div>
       ${session ? `<div class="checklist-session-bar no-print">
         <label>
-          <span class="field-label">Active session</span>
+          <span class="field-label">Active activity</span>
           <select class="field-select" onchange="TeacherTools.changeChecklistSession(this.value)">
-            ${checklist.sessions.slice().sort((left, right) => String(right.date).localeCompare(String(left.date))).map(item => `<option value="${esc(item.id)}" ${item.id === session.id ? 'selected' : ''}>${item.date === checklistToday() ? 'Today' : esc(item.date)} · ${esc(item.title)}</option>`).join('')}
+            ${activityOptions}
           </select>
         </label>
-        <span class="checklist-save-state text-muted text-sm">Saved locally · official grades unchanged</span>
+        ${activityPublished
+          ? '<span class="checklist-session-lock"><strong>Published and locked</strong><span>Points are in the official grading sheet.</span></span>'
+          : '<span class="checklist-save-state text-muted text-sm">Saved locally · official grades unchanged</span>'}
       </div>` : `<div class="checklist-no-session">
-        <div><strong>No session for today</strong><span>Start today’s session or open a previous session without creating data automatically.</span></div>
+        <div><strong>No activity selected</strong><span>Add a Recitation, Notebook, Assignment, or custom activity for this term.</span></div>
         <div class="checklist-no-session__actions">
-          <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.startTodayChecklistSession()">Start Today’s Session</button>
+          <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.openAddChecklistActivity()">Add Activity</button>
           ${checklist.sessions.length ? `<select class="field-select" onchange="if(this.value) TeacherTools.changeChecklistSession(this.value)">
-            <option value="">Open Previous Session…</option>
+            <option value="">Open Existing Activity...</option>
             ${checklist.sessions.slice().sort((left, right) => String(right.date).localeCompare(String(left.date))).map(item => `<option value="${esc(item.id)}">${esc(item.date)} · ${esc(item.title)}</option>`).join('')}
           </select>` : ''}
         </div>
@@ -1108,10 +1390,14 @@
         <table class="checklist-table">
           <thead><tr>
             <th class="checklist-learner-column">Learner</th>
-            ${criteria.map(criterion => `<th title="${esc(checklistComponentLabel(criterion.destinationComponent))}">
-              <span>${esc(criterion.label)}</span>
-              <small>${esc(checklistComponentLabel(criterion.destinationComponent))}${criterion.active ? '' : ' · Archived'}</small>
-            </th>`).join('')}
+            ${tableColumns.map(column => {
+              const published = core.isChecklistActivityPublished(column.session);
+              return `<th class="checklist-activity-column${column.sessionId === session.id ? ' is-active' : ''}${published ? ' is-published' : ''}" data-checklist-activity-column="${esc(column.sessionId)}" title="${esc(`${column.title}, ${column.date}${published ? ', published and locked' : ''}`)}">
+                <span>${esc(column.title)}</span>
+                <small>${esc(column.date)} · ${esc(checklistComponentLabel(column.definition.destinationComponent))} · HPS ${esc(column.definition.maxPointsPerSession)}${column.definition.active ? '' : ' · Archived'}</small>
+                ${published ? '<span class="checklist-published-badge">Published · Locked</span>' : ''}
+              </th>`;
+            }).join('')}
             <th>WW Total</th><th>PT Total</th>
           </tr></thead>
           <tbody>${learners.map(learner => {
@@ -1119,14 +1405,14 @@
               ? core.checklistEntry(checklist, session.id, learner.id, filterCriterion.id)
               : null;
             return `<tr id="checklistLearner-${esc(learner.id)}" data-checklist-row data-name="${esc(learnerName(learner).toLowerCase())}" data-recorded="${filterEntry ? 'true' : 'false'}" class="${checklistState.selected?.id === learner.id ? 'is-picker-selected' : ''}">
-            <td class="checklist-learner-column">${esc(learnerName(learner))}</td>
-            ${criteria.map(criterion => `<td>${checklistEntryControl(checklist, session, learner, criterion)}</td>`).join('')}
+            <td class="checklist-learner-column"><span class="checklist-learner-identity">${learnerAvatar(learner)}<span>${esc(learnerName(learner))}</span></span></td>
+            ${tableColumns.map(column => `<td class="${column.sessionId === session.id ? 'is-active-activity' : ''}${core.isChecklistActivityPublished(column.session) ? ' is-published-activity' : ''}">${checklistEntryControl(checklist, column.session, learner, column.definition)}</td>`).join('')}
             <td class="checklist-total">${esc(totals[learner.id]?.WW || 0)}</td>
             <td class="checklist-total">${esc(totals[learner.id]?.PT || 0)}</td>
           </tr>`;
           }).join('')}</tbody>
         </table>
-      </div>` : emptyTool('Add an active criterion and checklist session to begin recording points.')}
+      </div>` : emptyTool('Add an activity to begin recording learner points.')}
       <div class="checklist-integrity-note">
         <strong>Grade integrity:</strong> Tracking Only entries never affect grades. WW and PT points require a target assessment, valid HPS, PIN verification, and a before-and-after review.
       </div>
@@ -1152,6 +1438,12 @@
   function changeChecklistSession(sessionId) {
     checklistState.sessionId = String(sessionId || '');
     checklistState.selected = null;
+    checklistState.picker = null;
+    checklistState.rosterSignature = '';
+    const checklist = currentChecklist();
+    const activity = core.checklistActivityDefinition(checklist, checklistState.sessionId);
+    checklistState.gridCriterionId = activity?.criterionId || '';
+    checklistState.selectedCriterionId = activity?.criterionId || '';
     refresh();
   }
 
@@ -1260,7 +1552,12 @@
     const checklist = currentChecklist();
     const session = checklistSession(checklist);
     if (!checklist || !session) return;
-    const activeCriteria = checklist.criteria.filter(item => item.active);
+    if (core.isChecklistActivityPublished(session)) {
+      globalScope.toast('Unlock this published activity with your PIN before changing learner points.', 'warning');
+      return;
+    }
+    const activeCriteria = core.checklistSessionCriteria(checklist, session)
+      .filter(item => item.active);
     if (!activeCriteria.length) return;
     const body = `<div class="checklist-add-grid">
       <label><span class="field-label">Criterion</span><select id="checklistBulkCriterion" class="field-select">
@@ -1465,7 +1762,7 @@
         .map(row => ({
           label: row.querySelector('[data-label]').value,
           destinationComponent: row.querySelector('[data-destination]').value,
-          scoringMode: 'CHECK',
+          scoringMode: 'NUMERIC',
           pointsPerCheck: row.querySelector('[data-points]').value,
           maxPointsPerSession: row.querySelector('[data-points]').value
         }));
@@ -1481,7 +1778,8 @@
           const checklist = core.createPerformanceChecklist(official, checklistState.term, {
             title,
             mapePart: checklistState.mapePart,
-            criteria
+            criteria,
+            activityMode: true
           });
           const tools = core.normalize(profileDb());
           tools.performanceChecklists.push(checklist);
@@ -1504,22 +1802,25 @@
     const body = `${locked ? '<div class="checklist-warning">Revert published checklist points before changing criterion scoring or destinations.</div>' : ''}
       <div class="checklist-settings-list">${checklist.criteria.map(criterion => `
         <div class="checklist-settings-row" data-criterion-row data-id="${esc(criterion.id)}">
-          <input class="field-input" data-label value="${esc(criterion.label)}" ${locked ? 'disabled' : ''}>
-          <select class="field-select" data-destination ${locked ? 'disabled' : ''}>
+          <label><span class="field-label">Activity type</span><input class="field-input" data-label value="${esc(criterion.label)}" ${locked ? 'disabled' : ''}></label>
+          <label><span class="field-label">Default destination</span><select class="field-select" data-destination ${locked ? 'disabled' : ''}>
             ${['TRACKING', 'WW', 'PT'].map(component => `<option value="${component}" ${criterion.destinationComponent === component ? 'selected' : ''}>${esc(checklistComponentLabel(component))}</option>`).join('')}
-          </select>
-          <select class="field-select" data-mode ${locked ? 'disabled' : ''}>
+          </select></label>
+          <label><span class="field-label">Default scoring</span><select class="field-select" data-mode ${locked || core.isStandardNumericalChecklistLabel(criterion) ? 'disabled' : ''} title="${core.isStandardNumericalChecklistLabel(criterion) ? 'Recitation, Notebook, and Assignment always use numerical scores.' : ''}">
             <option value="CHECK" ${criterion.scoringMode === 'CHECK' ? 'selected' : ''}>Check mark</option>
             <option value="NUMERIC" ${criterion.scoringMode === 'NUMERIC' ? 'selected' : ''}>Numeric</option>
-          </select>
-          <label><span class="field-label">Per session</span><input class="field-input" data-session-max type="number" min="0.01" step="any" value="${esc(criterion.maxPointsPerSession)}" ${locked ? 'disabled' : ''}></label>
+          </select></label>
+          <label><span class="field-label">Default HPS</span><input class="field-input" data-session-max type="number" min="0.01" step="any" value="${esc(criterion.maxPointsPerSession)}" ${locked ? 'disabled' : ''}></label>
           <label><span class="field-label">Term cap</span><input class="field-input" data-term-max type="number" min="0.01" step="any" value="${criterion.maxPointsPerTerm || ''}" placeholder="No cap" ${locked ? 'disabled' : ''}></label>
-          <label class="checklist-active-toggle"><input type="checkbox" data-notes ${criterion.allowNotes ? 'checked' : ''} ${locked ? 'disabled' : ''}> Notes</label>
-          <label class="checklist-active-toggle"><input type="checkbox" data-active ${criterion.active ? 'checked' : ''} ${locked ? 'disabled' : ''}> Active</label>
+          <div class="checklist-settings-toggles">
+            <label class="checklist-active-toggle"><input type="checkbox" data-notes ${criterion.allowNotes ? 'checked' : ''} ${locked ? 'disabled' : ''}> Notes</label>
+            <label class="checklist-active-toggle"><input type="checkbox" data-active ${criterion.active ? 'checked' : ''} ${locked ? 'disabled' : ''}> Active</label>
+          </div>
         </div>`).join('')}</div>`;
     const actions = `<button class="btn btn-cancel btn-sm" data-cancel>${locked ? 'Close' : 'Cancel'}</button>
       ${locked ? '' : '<button class="btn btn-ghost btn-sm" data-add>Add Criterion</button><button class="btn btn-primary btn-sm" data-save>Save Criteria</button>'}`;
     const modal = createModal('Manage Checklist Criteria', body, actions, true);
+    modal.overlay.querySelector('.modal')?.classList.add('checklist-criteria-modal');
     modal.overlay.querySelector('[data-cancel]').addEventListener('click', modal.close);
     modal.overlay.querySelector('[data-add]')?.addEventListener('click', () => {
       modal.close();
@@ -1584,6 +1885,17 @@
       body,
       '<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-add>Add Criterion</button>'
     );
+    const labelInput = modal.overlay.querySelector('#newChecklistCriterionLabel');
+    const modeSelect = modal.overlay.querySelector('#newChecklistCriterionMode');
+    const syncStandardMode = () => {
+      const standardNumerical = core.isStandardNumericalChecklistLabel(labelInput.value);
+      if (standardNumerical) modeSelect.value = 'NUMERIC';
+      modeSelect.disabled = standardNumerical;
+      modeSelect.title = standardNumerical
+        ? 'Recitation, Notebook, and Assignment always use numerical scores.'
+        : '';
+    };
+    labelInput.addEventListener('input', syncStandardMode);
     modal.overlay.querySelector('[data-cancel]').addEventListener('click', modal.close);
     modal.overlay.querySelector('[data-add]').addEventListener('click', async () => {
       try {
@@ -1646,6 +1958,233 @@
     });
   }
 
+  function openAddChecklistActivity() {
+    const checklist = currentChecklist();
+    if (!checklist) return;
+    const activeCriteria = checklist.criteria.filter(item => item.active);
+    if (!activeCriteria.length) {
+      globalScope.toast('Add an active activity type first.', 'warning');
+      return;
+    }
+    const today = checklistToday();
+    const nextTitle = criterion => {
+      const count = checklist.sessions.filter(session =>
+        session.activity?.criterionId === criterion.id
+      ).length;
+      return `${criterion.label} ${count + 1}`;
+    };
+    const body = `<div class="checklist-activity-form">
+      <label><span class="field-label">Activity type</span><select id="newChecklistActivityType" class="field-select">
+        ${activeCriteria.map(item => `<option value="${esc(item.id)}">${esc(item.label)}</option>`).join('')}
+      </select></label>
+      <label><span class="field-label">Activity title</span><input id="newChecklistActivityTitle" class="field-input"></label>
+      <label><span class="field-label">Date</span><input id="newChecklistActivityDate" class="field-input" type="date" value="${esc(today)}"></label>
+      <label><span class="field-label">Grade destination</span><select id="newChecklistActivityDestination" class="field-select">
+        <option value="TRACKING">Tracking Only</option>
+        <option value="WW">Written Work</option>
+        <option value="PT">Performance Task</option>
+      </select></label>
+      <label><span class="field-label">Scoring</span><select id="newChecklistActivityMode" class="field-select">
+        <option value="CHECK">Check mark</option>
+        <option value="NUMERIC">Numeric score</option>
+      </select></label>
+      <label><span class="field-label">Highest Possible Score</span><input id="newChecklistActivityHps" class="field-input" type="number" min="0.01" step="any"></label>
+      <label class="checklist-active-toggle"><input id="newChecklistActivityNotes" type="checkbox"> Allow learner notes</label>
+    </div>
+    <div class="checklist-integrity-note">Each activity is stored separately. Graded activities can add points only to a compatible assessment in the same term and component without exceeding HPS.</div>`;
+    const modal = createModal(
+      'Add Performance Activity',
+      body,
+      '<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-create>Create Activity</button>',
+      true
+    );
+    const typeSelect = modal.overlay.querySelector('#newChecklistActivityType');
+    const titleInput = modal.overlay.querySelector('#newChecklistActivityTitle');
+    const destinationSelect = modal.overlay.querySelector('#newChecklistActivityDestination');
+    const modeSelect = modal.overlay.querySelector('#newChecklistActivityMode');
+    const hpsInput = modal.overlay.querySelector('#newChecklistActivityHps');
+    const notesInput = modal.overlay.querySelector('#newChecklistActivityNotes');
+    const applyDefaults = () => {
+      const criterion = activeCriteria.find(item => item.id === typeSelect.value) || activeCriteria[0];
+      titleInput.value = nextTitle(criterion);
+      destinationSelect.value = criterion.destinationComponent;
+      const standardNumerical = core.isStandardNumericalChecklistLabel(criterion);
+      modeSelect.value = standardNumerical ? 'NUMERIC' : criterion.scoringMode;
+      modeSelect.disabled = standardNumerical;
+      modeSelect.title = standardNumerical
+        ? 'Recitation, Notebook, and Assignment activities always use numerical scores.'
+        : '';
+      hpsInput.value = criterion.maxPointsPerSession;
+      notesInput.checked = criterion.allowNotes;
+    };
+    applyDefaults();
+    typeSelect.addEventListener('change', applyDefaults);
+    modal.overlay.querySelector('[data-cancel]').addEventListener('click', modal.close);
+    modal.overlay.querySelector('[data-create]').addEventListener('click', async () => {
+      const maxPoints = Number(hpsInput.value);
+      const title = titleInput.value.trim();
+      const date = modal.overlay.querySelector('#newChecklistActivityDate').value;
+      if (!title || !date || !Number.isFinite(maxPoints) || maxPoints <= 0) {
+        globalScope.toast('Enter an activity title, date, and positive HPS.', 'warning');
+        return;
+      }
+      modal.close();
+      try {
+        const activitySession = await runTransaction(() => core.addChecklistActivity(
+          currentChecklist(),
+          {
+            criterionId: typeSelect.value,
+            title,
+            date,
+            destinationComponent: destinationSelect.value,
+            scoringMode: modeSelect.value,
+            pointsPerCheck: maxPoints,
+            maxPoints,
+            allowNotes: notesInput.checked
+          }
+        ));
+        checklistState.sessionId = activitySession.id;
+        checklistState.gridCriterionId = activitySession.activity.criterionId;
+        checklistState.selected = null;
+        checklistState.picker = null;
+        globalScope.setView('tools');
+        activate('checklist');
+        globalScope.toast(`${activitySession.title} created.`, 'success');
+      } catch (error) {
+        globalScope.toast(error.message || 'The activity could not be created.', 'error');
+      }
+    });
+  }
+
+  function openEditChecklistActivity() {
+    const checklist = currentChecklist();
+    const session = checklistSession(checklist);
+    const activity = core.checklistActivityDefinition(checklist, session);
+    if (!checklist || !session?.activity || !activity) return;
+    if (core.isChecklistActivityPublished(session)) {
+      reviewChecklistActivityUnlock(activity.activityId);
+      return;
+    }
+    const standardNumerical = core.isStandardNumericalChecklistLabel(activity);
+    const body = `<div class="checklist-activity-form">
+        <label><span class="field-label">Activity type</span><input class="field-input" value="${esc(activity.label)}" disabled></label>
+        <label><span class="field-label">Activity title</span><input id="editChecklistActivityTitle" class="field-input" value="${esc(activity.title)}"></label>
+        <label><span class="field-label">Date</span><input id="editChecklistActivityDate" class="field-input" type="date" value="${esc(session.date)}"></label>
+        <label><span class="field-label">Grade destination</span><select id="editChecklistActivityDestination" class="field-select">
+          ${['TRACKING', 'WW', 'PT'].map(component => `<option value="${component}" ${activity.destinationComponent === component ? 'selected' : ''}>${esc(checklistComponentLabel(component))}</option>`).join('')}
+        </select></label>
+        <label><span class="field-label">Scoring</span><select id="editChecklistActivityMode" class="field-select" ${standardNumerical ? 'disabled title="Recitation, Notebook, and Assignment activities always use numerical scores."' : ''}>
+          <option value="CHECK" ${activity.scoringMode === 'CHECK' ? 'selected' : ''}>Check mark</option>
+          <option value="NUMERIC" ${activity.scoringMode === 'NUMERIC' ? 'selected' : ''}>Numeric score</option>
+        </select></label>
+        <label><span class="field-label">Highest Possible Score</span><input id="editChecklistActivityHps" class="field-input" type="number" min="0.01" step="any" value="${esc(activity.maxPointsPerSession)}"></label>
+        <label class="checklist-active-toggle"><input id="editChecklistActivityNotes" type="checkbox" ${activity.allowNotes ? 'checked' : ''}> Allow learner notes</label>
+      </div>`;
+    const modal = createModal(
+      'Edit Performance Activity',
+      body,
+      '<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-save>Save Activity</button>',
+      true
+    );
+    modal.overlay.querySelector('[data-cancel]').addEventListener('click', modal.close);
+    modal.overlay.querySelector('[data-save]').addEventListener('click', async () => {
+      const title = modal.overlay.querySelector('#editChecklistActivityTitle').value.trim();
+      const date = modal.overlay.querySelector('#editChecklistActivityDate').value;
+      const maxPoints = Number(modal.overlay.querySelector('#editChecklistActivityHps').value);
+      if (!title || !date || !Number.isFinite(maxPoints) || maxPoints <= 0) {
+        globalScope.toast('Enter an activity title, date, and positive HPS.', 'warning');
+        return;
+      }
+      const options = {
+        title,
+        date,
+        destinationComponent: modal.overlay.querySelector('#editChecklistActivityDestination').value,
+        scoringMode: modal.overlay.querySelector('#editChecklistActivityMode').value,
+        pointsPerCheck: maxPoints,
+        maxPoints,
+        allowNotes: modal.overlay.querySelector('#editChecklistActivityNotes').checked
+      };
+      modal.close();
+      try {
+        await runTransaction(() => core.updateChecklistActivity(
+          currentChecklist(),
+          activity.activityId,
+          options
+        ));
+        globalScope.setView('tools');
+        activate('checklist');
+        globalScope.toast('Activity updated.', 'success');
+      } catch (error) {
+        globalScope.toast(error.message || 'The activity could not be updated.', 'warning');
+      }
+    });
+  }
+
+  function reviewChecklistActivityUnlock(activityId = '') {
+    const checklist = currentChecklist();
+    const assignment = activeAssignment();
+    const session = (checklist?.sessions || []).find(item =>
+      String(item.activity?.id || item.id) === String(activityId || '')
+    );
+    if (!checklist || !assignment || !session?.activity) return;
+    const tools = core.normalize(profileDb());
+    const plan = core.planChecklistActivityUnlock(
+      tools.performanceChecklistHistory,
+      checklist,
+      assignment,
+      activityId
+    );
+    if (!plan.canUnlock) {
+      globalScope.toast(plan.error || 'This published activity cannot be unlocked safely.', 'warning');
+      return;
+    }
+    const activityTitle = session.activity.title || session.title;
+    const body = `<div class="checklist-warning">
+        <strong>${esc(activityTitle)} will become unpublished.</strong>
+        <p>The app will restore ${esc(plan.restoredScores)} official score change${plan.restoredScores === 1 ? '' : 's'} from ${esc(plan.publications)} publication${plan.publications === 1 ? '' : 's'} before unlocking the activity.</p>
+      </div>
+      <ul>
+        <li>The recorded checklist points will stay in this activity.</li>
+        <li>Those points will no longer be included in the official grading sheet.</li>
+        <li>You can edit the full activity and publish it again after reviewing the changes.</li>
+      </ul>
+      <p class="text-muted text-sm">PIN verification is required because this changes official grades.</p>`;
+    const modal = createModal(
+      'Unlock Published Activity',
+      body,
+      '<button class="btn btn-cancel btn-sm" data-cancel>Stay Locked</button><button class="btn btn-primary btn-sm" data-unlock>Verify PIN and Unlock</button>'
+    );
+    modal.overlay.querySelector('[data-cancel]').addEventListener('click', modal.close);
+    modal.overlay.querySelector('[data-unlock]').addEventListener('click', () => {
+      modal.close();
+      withPinVerification(async () => {
+        const result = await runTransaction(() => {
+          const currentChecklistValue = currentChecklist();
+          const currentAssignmentValue = activeAssignment();
+          const currentTools = core.normalize(profileDb());
+          if (!currentChecklistValue
+            || currentChecklistValue.id !== checklist.id
+            || currentAssignmentValue?.id !== assignment.id) {
+            throw new Error('The active class or checklist changed. Reopen the unlock review.');
+          }
+          return core.unlockChecklistActivity(
+            currentTools.performanceChecklistHistory,
+            currentChecklistValue,
+            currentAssignmentValue,
+            activityId
+          );
+        });
+        globalScope.render();
+        globalScope.setView('tools');
+        activate('checklist');
+        globalScope.toast(
+          `${activityTitle} is editable again. ${result.restoredScores} official score change${result.restoredScores === 1 ? '' : 's'} restored.`,
+          'success'
+        );
+      });
+    });
+  }
+
   function openChecklistMoreActions() {
     const checklist = currentChecklist();
     if (!checklist) return;
@@ -1687,12 +2226,12 @@
         body: 'Performance Checklist keeps a separate checklist for every class, term, and MAPEH strand. Confirm the context shown at the top before recording.'
       },
       {
-        title: 'Start today or open an earlier session',
-        body: 'Use Start Today’s Session for a new school day. Earlier sessions stay available for review, but the app will not silently add entries to an old session.'
+        title: 'Add each activity occurrence',
+        body: 'Create Recitation 1, Recitation 2, Notebook 1, Assignment 1, or another activity as it happens. Every activity keeps its own date, HPS, scoring mode, and destination.'
       },
       {
         title: 'Record evidence quickly',
-        body: 'Mark learners directly in the grid, use Bulk Mark for visible learners, or use the Mini Name Picker. Search and filters only change what you see; they never delete records.'
+        body: 'Select one activity and mark learners in its focused roster. Bulk Mark, search, filters, notes, and the Mini Name Picker affect only the selected activity.'
       },
       {
         title: 'Correct safely',
@@ -1700,7 +2239,7 @@
       },
       {
         title: 'Review before adding to grades',
-        body: 'Tracking Only criteria never affect official grades. For Written Work or Performance Task criteria, choose an existing assessment and review every proposed change before publishing.'
+        body: 'Tracking Only activities never affect official grades. For Written Work or Performance Task, the app recommends unused assessments first and blocks any target that would place a learner above HPS.'
       },
       {
         title: 'Keep a reusable setup',
@@ -1983,9 +2522,33 @@
     });
   }
 
-  async function updateChecklistEntry(learnerId, criterionId, value, input) {
+  async function adjustChecklistEntry(learnerId, criterionId, delta, sessionId = '') {
     const checklist = currentChecklist();
-    const session = checklistSession(checklist);
+    const session = (checklist?.sessions || []).find(item => item.id === String(sessionId || ''))
+      || checklistSession(checklist);
+    const criterion = checklistCriterion(checklist, criterionId);
+    const definition = core.checklistActivityDefinition(checklist, session) || criterion;
+    if (!checklist || !session || !criterion || !definition) return;
+    if (core.isChecklistActivityPublished(session)) {
+      globalScope.toast('Unlock this published activity with your PIN before changing learner points.', 'warning');
+      return;
+    }
+    const entry = core.checklistEntry(checklist, session.id, learnerId, criterionId);
+    const currentPoints = Number(entry?.points || 0);
+    const maximum = Number(definition.maxPointsPerSession || 0);
+    const adjustment = Number(delta);
+    if (!Number.isFinite(adjustment) || !Number.isFinite(maximum) || maximum <= 0) return;
+    const nextPoints = Math.round(
+      (Math.min(maximum, Math.max(0, currentPoints + adjustment)) + Number.EPSILON) * 10000
+    ) / 10000;
+    if (nextPoints === currentPoints) return;
+    await updateChecklistEntry(learnerId, criterionId, String(nextPoints), null, session.id);
+  }
+
+  async function updateChecklistEntry(learnerId, criterionId, value, input, sessionId = '') {
+    const checklist = currentChecklist();
+    const session = (checklist?.sessions || []).find(item => item.id === String(sessionId || ''))
+      || checklistSession(checklist);
     if (!checklist || !session) return;
     const previous = core.checklistEntry(checklist, session.id, learnerId, criterionId);
     try {
@@ -2004,6 +2567,9 @@
         appendChecklistEntryHistory(record);
         return record;
       });
+      checklistState.sessionId = session.id;
+      checklistState.gridCriterionId = criterionId;
+      checklistState.selectedCriterionId = criterionId;
       globalScope.setView('tools');
       activate('checklist');
       renderChecklistPickerModal();
@@ -2016,16 +2582,22 @@
     }
   }
 
-  function openChecklistEntryNote(learnerId, criterionId) {
+  function openChecklistEntryNote(learnerId, criterionId, sessionId = '') {
     const checklist = currentChecklist();
-    const session = checklistSession(checklist);
+    const session = (checklist?.sessions || []).find(item => item.id === String(sessionId || ''))
+      || checklistSession(checklist);
     const assignment = activeAssignment();
     const learner = (assignment?.learners || []).find(item => item.id === learnerId);
     const criterion = checklistCriterion(checklist, criterionId);
+    const definition = core.checklistActivityDefinition(checklist, session) || criterion;
     const entry = core.checklistEntry(checklist, session?.id, learnerId, criterionId);
-    if (!checklist || !session || !learner || !criterion || !entry || !criterion.allowNotes) return;
+    if (!checklist || !session || !learner || !criterion || !entry || !definition?.allowNotes) return;
+    if (core.isChecklistActivityPublished(session)) {
+      globalScope.toast('Unlock this published activity with your PIN before editing learner notes.', 'warning');
+      return;
+    }
     const entrySnapshot = core.clone(entry);
-    const body = `<p><strong>${esc(learnerName(learner))}</strong> · ${esc(criterion.label)} · ${esc(entry.points)} point${entry.points === 1 ? '' : 's'}</p>
+    const body = `<p><strong>${esc(learnerName(learner))}</strong> · ${esc(definition.title || criterion.label)} · ${esc(entry.points)} point${entry.points === 1 ? '' : 's'}</p>
       <label><span class="field-label">Private teacher note</span><textarea id="checklistEntryNote" class="field-input checklist-note-input" maxlength="500" placeholder="Optional observation or follow-up note">${esc(entry.note || '')}</textarea></label>
       <p class="text-muted text-sm">Notes stay in the encrypted profile and are excluded from the basic CSV export.</p>`;
     const modal = createModal(
@@ -2071,11 +2643,11 @@
   }
 
   function ensureChecklistPicker(checklist, assignment) {
-    const activeCriteria = (checklist.criteria || []).filter(item => item.active);
+    const session = checklistSession(checklist);
+    const activeCriteria = core.checklistSessionCriteria(checklist, session).filter(item => item.active);
     if (!activeCriteria.some(item => item.id === checklistState.selectedCriterionId)) {
       checklistState.selectedCriterionId = activeCriteria[0]?.id || '';
     }
-    const session = checklistSession(checklist);
     const criterion = checklistCriterion(checklist);
     const learners = core.activeLearners(assignment).filter(learner =>
       checklistState.pickerFilter !== 'missing'
@@ -2090,6 +2662,7 @@
       ...learners.map(item => item.id)
     ].join('|');
     if (checklistState.rosterSignature !== signature || !checklistState.picker) {
+      cancelChecklistPickerAnimation();
       checklistState.rosterSignature = signature;
       checklistState.picker = core.createNamePicker(learners);
       checklistState.selected = null;
@@ -2100,12 +2673,18 @@
   function openChecklistPicker() {
     const checklist = currentChecklist();
     const assignment = activeAssignment();
-    if (!checklist || !checklistSession(checklist)) return;
+    const session = checklistSession(checklist);
+    if (!checklist || !session) return;
+    if (core.isChecklistActivityPublished(session)) {
+      globalScope.toast('Unlock this published activity with your PIN before awarding or clearing points.', 'warning');
+      return;
+    }
     const learners = ensureChecklistPicker(checklist, assignment);
     if (!learners.length || !checklist.criteria.some(item => item.active)) {
       globalScope.toast('Add an active criterion and learner before opening the mini picker.', 'warning');
       return;
     }
+    cancelChecklistPickerAnimation();
     checklistPickerModal?.remove();
     const modal = createModal(
       'Performance Checklist Mini Picker',
@@ -2115,10 +2694,49 @@
     );
     checklistPickerModal = modal.overlay;
     modal.overlay.querySelector('[data-close]').addEventListener('click', () => {
+      cancelChecklistPickerAnimation();
       modal.close();
       checklistPickerModal = null;
     });
     renderChecklistPickerModal();
+  }
+
+  function cancelChecklistPickerAnimation() {
+    if (checklistPickerAnimationTimer) {
+      clearTimeout(checklistPickerAnimationTimer);
+      checklistPickerAnimationTimer = null;
+    }
+    checklistPickerAnimationToken++;
+    checklistState.spinning = false;
+    checklistState.rouletteName = '';
+    checklistState.rouletteLearner = null;
+  }
+
+  function animateChecklistPickerLearner(learner) {
+    const nameElement = document.getElementById('checklistPickerRouletteName');
+    const avatarElement = document.getElementById('checklistPickerRouletteAvatar');
+    if (!nameElement || !avatarElement || !learner) return false;
+    nameElement.textContent = learnerName(learner);
+    avatarElement.innerHTML = learnerAvatar(learner, 'xl');
+    nameElement.classList.remove('is-ticking');
+    avatarElement.classList.remove('is-ticking');
+    void nameElement.offsetWidth;
+    void avatarElement.offsetWidth;
+    nameElement.classList.add('is-ticking');
+    avatarElement.classList.add('is-ticking');
+    return true;
+  }
+
+  function revealChecklistPickerSelection() {
+    globalScope.requestAnimationFrame?.(() => {
+      document.getElementById('checklistPickerRouletteName')?.classList.add('is-revealed');
+      document.getElementById('checklistPickerRouletteAvatar')?.classList.add('is-revealed');
+      if (checklistState.selected) launchSelectionConfetti('#checklistPickerRouletteAvatar');
+      document.getElementById(`checklistLearner-${checklistState.selected?.id}`)?.scrollIntoView({
+        block: 'center',
+        behavior: globalScope.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+      });
+    });
   }
 
   function renderChecklistPickerModal() {
@@ -2128,65 +2746,120 @@
     const assignment = activeAssignment();
     const session = checklistSession(checklist);
     const learners = ensureChecklistPicker(checklist, assignment);
-    const criterion = checklistCriterion(checklist);
+    const criterion = core.checklistActivityDefinition(checklist, session) || checklistCriterion(checklist);
     const selected = checklistState.selected;
+    const displayLearner = checklistState.spinning ? checklistState.rouletteLearner : selected;
     const currentEntry = selected && criterion
       ? core.checklistEntry(checklist, session.id, selected.id, criterion.id)
       : null;
     const status = checklistState.picker.status();
     content.innerHTML = `<div class="checklist-picker">
       <div class="checklist-picker__controls">
-        <label><span class="field-label">Criterion to record</span><select class="field-select" onchange="TeacherTools.changeChecklistPickerCriterion(this.value)">
-          ${checklist.criteria.filter(item => item.active).map(item => `<option value="${esc(item.id)}" ${item.id === criterion?.id ? 'selected' : ''}>${esc(item.label)} · ${esc(checklistComponentLabel(item.destinationComponent))}</option>`).join('')}
+        <label><span class="field-label">Criterion to record</span><select class="field-select" onchange="TeacherTools.changeChecklistPickerCriterion(this.value)" ${checklistState.spinning ? 'disabled' : ''}>
+          ${core.checklistSessionCriteria(checklist, session).filter(item => item.active).map(item => `<option value="${esc(item.id)}" ${item.id === criterion?.id ? 'selected' : ''}>${esc(item.label)} · ${esc(checklistComponentLabel(item.destinationComponent))}</option>`).join('')}
         </select></label>
-        <label><span class="field-label">Picker group</span><select class="field-select" onchange="TeacherTools.changeChecklistPickerFilter(this.value)">
+        <label><span class="field-label">Picker group</span><select class="field-select" onchange="TeacherTools.changeChecklistPickerFilter(this.value)" ${checklistState.spinning ? 'disabled' : ''}>
           <option value="all" ${checklistState.pickerFilter === 'all' ? 'selected' : ''}>All active learners</option>
           <option value="missing" ${checklistState.pickerFilter === 'missing' ? 'selected' : ''}>Missing this criterion</option>
         </select></label>
       </div>
-      <div class="checklist-picker__stage">
-        <span class="text-muted text-sm">${status.remaining || learners.length} remaining in this draw cycle</span>
-        <strong>${esc(selected ? learnerName(selected) : 'Ready to pick')}</strong>
-        <span>${selected && criterion ? `${esc(criterion.label)}: ${currentEntry ? `${esc(currentEntry.points)} this session` : 'not recorded'}` : 'Selecting a learner does not award points.'}</span>
+      <div class="checklist-picker__stage${checklistState.spinning ? ' is-spinning' : ''}">
+        <span class="checklist-picker__status text-muted text-sm">${checklistState.spinning ? `${learners.length} eligible learners · roulette spinning` : `${status.remaining || learners.length} remaining in this draw cycle`}</span>
+        <div class="checklist-picker__selection">
+          <div id="checklistPickerRouletteAvatar" class="checklist-picker__avatar${displayLearner ? '' : ' is-empty'}">${learnerAvatar(displayLearner, 'xl')}</div>
+          <strong id="checklistPickerRouletteName" class="checklist-picker__name${checklistState.spinning ? ' is-spinning' : ''}"
+            aria-live="${checklistState.spinning ? 'off' : 'polite'}" aria-busy="${checklistState.spinning ? 'true' : 'false'}">${esc(checklistState.spinning ? checklistState.rouletteName : (selected ? learnerName(selected) : 'Ready to pick'))}</strong>
+        </div>
+        <span>${checklistState.spinning ? 'Slowly narrowing down the draw...' : (selected && criterion ? `${esc(criterion.label)}: ${currentEntry ? `${esc(currentEntry.points)} this session` : 'not recorded'}` : 'Selecting a learner does not award points.')}</span>
       </div>
       <div class="checklist-picker__actions">
-        <button class="btn btn-primary" type="button" onclick="TeacherTools.pickChecklistName()" ${learners.length ? '' : 'disabled'}>${selected ? 'Skip / Pick Another' : 'Pick a Learner'}</button>
-        <button class="btn btn-ghost" type="button" onclick="TeacherTools.awardChecklistPickerPoints()" ${selected && criterion && !(criterion.scoringMode === 'CHECK' && currentEntry) && Number(currentEntry?.points || 0) < Number(criterion?.maxPointsPerSession || 0) ? '' : 'disabled'}>${criterion?.scoringMode === 'CHECK' ? `Award ${esc(criterion.pointsPerCheck)} point${criterion.pointsPerCheck === 1 ? '' : 's'}` : `Add ${esc(criterion?.pointsPerCheck || 1)} point${criterion?.pointsPerCheck === 1 ? '' : 's'}`}</button>
-        <button class="btn btn-ghost" type="button" onclick="TeacherTools.clearChecklistPickerEntry()" ${selected && currentEntry ? '' : 'disabled'}>Clear Entry</button>
-        ${criterion?.allowNotes ? `<button class="btn btn-ghost" type="button" onclick="TeacherTools.openChecklistEntryNote('${esc(selected?.id || '')}','${esc(criterion.id)}')" ${selected && currentEntry ? '' : 'disabled'}>${currentEntry?.note ? 'Edit Note' : 'Add Note'}</button>` : ''}
-        <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.resetChecklistPicker()">Reset Draws</button>
+        <button class="btn btn-primary" type="button" onclick="TeacherTools.pickChecklistName()" ${learners.length && !checklistState.spinning ? '' : 'disabled'}>${checklistState.spinning ? 'Picking...' : (selected ? 'Skip / Pick Another' : 'Pick a Learner')}</button>
+        <button class="btn btn-ghost" type="button" onclick="TeacherTools.awardChecklistPickerPoints()" ${!checklistState.spinning && selected && criterion && !(criterion.scoringMode === 'CHECK' && currentEntry) && Number(currentEntry?.points || 0) < Number(criterion?.maxPointsPerSession || 0) ? '' : 'disabled'}>${criterion?.scoringMode === 'CHECK' ? `Award ${esc(criterion.pointsPerCheck)} point${criterion.pointsPerCheck === 1 ? '' : 's'}` : `Add ${esc(criterion?.pointsPerCheck || 1)} point${criterion?.pointsPerCheck === 1 ? '' : 's'}`}</button>
+        <button class="btn btn-ghost" type="button" onclick="TeacherTools.clearChecklistPickerEntry()" ${!checklistState.spinning && selected && currentEntry ? '' : 'disabled'}>Clear Entry</button>
+        ${criterion?.allowNotes ? `<button class="btn btn-ghost" type="button" onclick="TeacherTools.openChecklistEntryNote('${esc(selected?.id || '')}','${esc(criterion.id)}')" ${!checklistState.spinning && selected && currentEntry ? '' : 'disabled'}>${currentEntry?.note ? 'Edit Note' : 'Add Note'}</button>` : ''}
+        <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.resetChecklistPicker()" ${checklistState.spinning ? 'disabled' : ''}>Reset Draws</button>
       </div>
     </div>`;
   }
 
   function changeChecklistPickerCriterion(criterionId) {
+    cancelChecklistPickerAnimation();
     checklistState.selectedCriterionId = criterionId;
     checklistState.rosterSignature = '';
     renderChecklistPickerModal();
   }
 
   function changeChecklistPickerFilter(value) {
+    cancelChecklistPickerAnimation();
     checklistState.pickerFilter = value === 'missing' ? 'missing' : 'all';
     checklistState.rosterSignature = '';
     renderChecklistPickerModal();
   }
 
   function pickChecklistName() {
+    if (checklistState.spinning) return;
     const checklist = currentChecklist();
     const assignment = activeAssignment();
-    ensureChecklistPicker(checklist, assignment);
-    checklistState.selected = checklistState.picker.draw().learner;
-    refresh();
+    const learners = ensureChecklistPicker(checklist, assignment);
+    if (!learners.length) return;
+    const result = checklistState.picker.draw();
+    checklistState.selected = result.learner;
+    if (!result.learner || learners.length < 2 || globalScope.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      refresh();
+      renderChecklistPickerModal();
+      revealChecklistPickerSelection();
+      return;
+    }
+
+    const token = ++checklistPickerAnimationToken;
+    const totalSteps = 27;
+    let step = 0;
+    let previousId = '';
+    const pickRouletteLearner = () => {
+      let candidate = learners[core.secureRandomInt(learners.length)];
+      for (let attempt = 0; attempt < 4 && candidate.id === previousId; attempt++) {
+        candidate = learners[core.secureRandomInt(learners.length)];
+      }
+      previousId = candidate.id;
+      return candidate;
+    };
+
+    checklistState.spinning = true;
+    checklistState.rouletteLearner = pickRouletteLearner();
+    checklistState.rouletteName = learnerName(checklistState.rouletteLearner);
     renderChecklistPickerModal();
-    setTimeout(() => document.getElementById(`checklistLearner-${checklistState.selected?.id}`)?.scrollIntoView({
-      block: 'center',
-      behavior: globalScope.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-    }), 0);
+
+    const tick = () => {
+      if (token !== checklistPickerAnimationToken || !checklistState.spinning) return;
+      if (step >= totalSteps) {
+        checklistPickerAnimationTimer = null;
+        checklistState.spinning = false;
+        checklistState.rouletteName = '';
+        checklistState.rouletteLearner = null;
+        refresh();
+        renderChecklistPickerModal();
+        revealChecklistPickerSelection();
+        return;
+      }
+      const candidate = pickRouletteLearner();
+      checklistState.rouletteLearner = candidate;
+      checklistState.rouletteName = learnerName(candidate);
+      if (!animateChecklistPickerLearner(candidate)) {
+        cancelChecklistPickerAnimation();
+        return;
+      }
+      step++;
+      const progress = step / totalSteps;
+      const delay = 35 + Math.round(progress * progress * 190);
+      checklistPickerAnimationTimer = setTimeout(tick, delay);
+    };
+    checklistPickerAnimationTimer = setTimeout(tick, 45);
   }
 
   function resetChecklistPicker() {
     const checklist = currentChecklist();
     ensureChecklistPicker(checklist, activeAssignment());
+    cancelChecklistPickerAnimation();
     checklistState.picker.reset();
     checklistState.selected = null;
     refresh();
@@ -2197,7 +2870,7 @@
     const checklist = currentChecklist();
     const session = checklistSession(checklist);
     const learner = checklistState.selected;
-    const criterion = checklistCriterion(checklist);
+    const criterion = core.checklistActivityDefinition(checklist, session) || checklistCriterion(checklist);
     if (!checklist || !session || !learner || !criterion) return;
     const existing = core.checklistEntry(checklist, session.id, learner.id, criterion.id);
     const next = criterion.scoringMode === 'CHECK'
@@ -2217,12 +2890,37 @@
 
   function checklistSummaryRows(checklist, assignment) {
     const totals = core.checklistLearnerTotals(checklist, assignment);
+    const activitySessions = (checklist.sessions || []).filter(session => session.activity);
+    const hasLegacySessions = (checklist.sessions || []).some(session => !session.activity);
+    const columns = [
+      ...activitySessions.map(session => {
+        const activity = core.checklistActivityDefinition(checklist, session);
+        return {
+          id: activity.activityId,
+          label: activity.title,
+          detail: `${session.date} · ${checklistComponentLabel(activity.destinationComponent)} · HPS ${activity.maxPointsPerSession}`,
+          value: learnerId => core.checklistEntry(
+            checklist,
+            session.id,
+            learnerId,
+            activity.criterionId
+          )?.points ?? ''
+        };
+      }),
+      ...(hasLegacySessions ? (checklist.criteria || []).map(criterion => ({
+        id: criterion.id,
+        label: criterion.label,
+        detail: `${checklistComponentLabel(criterion.destinationComponent)} · Legacy total`,
+        value: learnerId => totals[learnerId]?.criteria?.[criterion.id] || 0
+      })) : [])
+    ];
     return core.activeLearners(assignment).map(learner => ({
       learner,
-      criterionTotals: (checklist.criteria || []).map(criterion => totals[learner.id]?.criteria?.[criterion.id] || 0),
+      values: columns.map(column => column.value(learner.id)),
       tracking: totals[learner.id]?.TRACKING || 0,
       ww: totals[learner.id]?.WW || 0,
-      pt: totals[learner.id]?.PT || 0
+      pt: totals[learner.id]?.PT || 0,
+      columns
     }));
   }
 
@@ -2232,13 +2930,14 @@
     const sheet = document.getElementById('teacherToolsPrintSheet');
     if (!checklist || !assignment || !sheet) return;
     const rows = checklistSummaryRows(checklist, assignment);
+    const columns = rows[0]?.columns || [];
     sheet.innerHTML = `<h1>${esc(checklist.title)}</h1>
       <p>${esc(assignmentLabel(assignment))} · Term ${esc(checklist.term)}${checklist.mapePart ? ` · ${esc(checklist.mapePart === 'music_arts' ? 'Music & Arts' : 'PE & Health')}` : ''}</p>
       <table class="checklist-print-table"><thead><tr><th>Learner</th>
-        ${checklist.criteria.map(item => `<th>${esc(item.label)}<small>${esc(checklistComponentLabel(item.destinationComponent))}</small></th>`).join('')}
+        ${columns.map(item => `<th>${esc(item.label)}<small>${esc(item.detail)}</small></th>`).join('')}
         <th>Tracking</th><th>WW</th><th>PT</th>
       </tr></thead><tbody>${rows.map(row => `<tr><td>${esc(learnerName(row.learner))}</td>
-        ${row.criterionTotals.map(value => `<td>${esc(value)}</td>`).join('')}
+        ${row.values.map(value => `<td>${esc(value)}</td>`).join('')}
         <td>${esc(row.tracking)}</td><td>${esc(row.ww)}</td><td>${esc(row.pt)}</td>
       </tr>`).join('')}</tbody></table>
       <p class="checklist-print-note">Checklist totals are evidence records. Only contributions shown in Published Point History have been applied to official assessment scores.</p>`;
@@ -2260,9 +2959,10 @@
     const assignment = activeAssignment();
     if (!checklist || !assignment) return;
     const rows = checklistSummaryRows(checklist, assignment);
+    const columns = rows[0]?.columns || [];
     const headings = [
       'Learner',
-      ...checklist.criteria.map(item => `${item.label} (${checklistComponentLabel(item.destinationComponent)})`),
+      ...columns.map(item => `${item.label} (${item.detail})`),
       'Tracking Total',
       'Written Work Total',
       'Performance Task Total'
@@ -2271,7 +2971,7 @@
       headings.map(csvCell).join(','),
       ...rows.map(row => [
         learnerName(row.learner),
-        ...row.criterionTotals,
+        ...row.values,
         row.tracking,
         row.ww,
         row.pt
@@ -2337,8 +3037,103 @@
         <span><strong>${ready}</strong> ready</span><span><strong>${blocked}</strong> excluded</span><span><strong>${overflow}</strong> at limit</span>
       </div>
       <div class="checklist-contribution-card__actions">
-        <button class="btn btn-ghost btn-sm" type="button" data-save-contribution="${component}" ${assessments.length ? '' : 'disabled'}>Save Target</button>
+        <button class="btn btn-secondary btn-sm" type="button" data-save-contribution="${component}" ${assessments.length ? '' : 'disabled'}>Save Target</button>
         <button class="btn btn-primary btn-sm" type="button" data-review-contribution="${component}" ${assessments.length ? '' : 'disabled'}>Review Changes</button>
+      </div>
+    </section>`;
+  }
+
+  function checklistActivityContributionCard(checklist, assignment, session) {
+    const activity = core.checklistActivityDefinition(checklist, session);
+    if (!activity || !['WW', 'PT'].includes(activity.destinationComponent)) return '';
+    const suggestions = core.checklistActivityTargetSuggestions(
+      checklist,
+      assignment,
+      activity.activityId
+    );
+    const recommended = suggestions.find(item => item.recommended);
+    const targetId = session.activity.publicationTarget?.assessmentId || '';
+    const currentSuggestion = suggestions.find(item => item.assessmentId === targetId);
+    const targetHasPublishedScores = core.isChecklistActivityPublished(session);
+    const displayTargetId = targetId && (currentSuggestion?.compatible || targetHasPublishedScores)
+      ? targetId
+      : recommended?.assessmentId || '';
+    const selectedSuggestion = suggestions.find(item => item.assessmentId === displayTargetId);
+    let ready = 0;
+    let blocked = 0;
+    let state = displayTargetId
+      ? selectedSuggestion?.recommended
+        ? 'Recommended target selected'
+        : 'Target selected'
+      : 'No safe target available';
+    if (displayTargetId && selectedSuggestion?.compatible) {
+      try {
+        const plan = core.planChecklistActivityPublication(
+          checklist,
+          assignment,
+          activity.activityId,
+          displayTargetId
+        );
+        ready = plan.changes.length;
+        blocked = plan.blocked.length;
+        state = ready
+          ? `${ready} learner${ready === 1 ? '' : 's'} ready`
+          : blocked
+            ? `${blocked} learner${blocked === 1 ? '' : 's'} need review`
+            : 'Fully up to date';
+      } catch (error) {
+        state = error.message;
+      }
+    }
+    const overflowSuggestions = suggestions.filter(item => item.overflowLearnerIds.length);
+    const selectable = Boolean(displayTargetId && selectedSuggestion?.compatible);
+    const optionLabel = suggestion => {
+      const hps = suggestion.configuredMax === null ? 'not set' : suggestion.configuredMax;
+      const status = suggestion.recommended
+        ? suggestion.requiresSetup
+          ? `Recommended - empty; will become HPS ${suggestion.effectiveMax}`
+          : 'Recommended - empty with matching HPS'
+        : suggestion.linkedElsewhere
+          ? 'Unavailable - linked to another activity'
+          : suggestion.overflowLearnerIds.length
+            ? `Unavailable - ${suggestion.overflowLearnerIds.length} learner${suggestion.overflowLearnerIds.length === 1 ? '' : 's'} exceed HPS`
+            : suggestion.empty
+              ? suggestion.requiresSetup
+                ? `Empty - will become HPS ${suggestion.effectiveMax}`
+                : 'Empty'
+              : 'Can accept all recorded points';
+      return `${suggestion.title} - HPS ${hps} - ${status}`;
+    };
+    const recommendation = recommended
+      ? `<div class="checklist-target-recommendation">
+          <strong>Recommended: ${esc(recommended.title)}</strong>
+          <span>${recommended.requiresSetup
+            ? `This slot is empty. Publication will rename it to ${esc(activity.title)} and set its HPS to ${esc(activity.maxPointsPerSession)}.`
+            : `This assessment is empty and already matches HPS ${esc(activity.maxPointsPerSession)}.`}</span>
+        </div>`
+      : '<div class="checklist-warning">No assessment can safely accept all recorded points. Adjust an assessment HPS or free an unused slot in the Grading Sheet.</div>';
+    const overflowWarning = overflowSuggestions.length
+      ? `<div class="checklist-warning"><strong>HPS warning</strong><span>${overflowSuggestions.map(item =>
+        `${esc(item.title)} would place ${item.overflowLearnerIds.length} learner${item.overflowLearnerIds.length === 1 ? '' : 's'} above HPS`
+      ).join('; ')}. These targets cannot be selected.</span></div>`
+      : '';
+    return `<section class="checklist-contribution-card" data-activity="${esc(activity.activityId)}">
+      <div class="checklist-contribution-card__header">
+        <div><strong>${esc(activity.title)}</strong><span>${esc(session.date)} - ${esc(checklistComponentLabel(activity.destinationComponent))} - HPS ${esc(activity.maxPointsPerSession)}</span></div>
+        <span class="checklist-contribution-card__state">${esc(state)}</span>
+      </div>
+      ${recommendation}
+      ${suggestions.length ? `<label><span class="field-label">Official assessment</span><select class="field-select" data-activity-target="${esc(activity.activityId)}">
+        <option value="">Choose assessment...</option>
+        ${suggestions.map(item => `<option value="${esc(item.assessmentId)}" ${item.assessmentId === displayTargetId ? 'selected' : ''} ${item.compatible ? '' : 'disabled'}>${esc(optionLabel(item))}</option>`).join('')}
+      </select></label>` : `<div class="checklist-warning">No ${esc(checklistComponentLabel(activity.destinationComponent))} assessment slot exists for this term.</div>`}
+      ${overflowWarning}
+      <div class="checklist-contribution-stats">
+        <span><strong>${ready}</strong> ready</span><span><strong>${blocked}</strong> excluded</span>
+      </div>
+      <div class="checklist-contribution-card__actions">
+        <button class="btn btn-secondary btn-sm" type="button" data-save-activity="${esc(activity.activityId)}" ${selectable ? '' : 'disabled'}>Save Target</button>
+        <button class="btn btn-primary btn-sm" type="button" data-review-activity="${esc(activity.activityId)}" ${selectable ? '' : 'disabled'}>Review Changes</button>
       </div>
     </section>`;
   }
@@ -2347,33 +3142,107 @@
     const checklist = currentChecklist();
     const assignment = activeAssignment();
     if (!checklist || !assignment) return;
-    const components = ['WW', 'PT'].filter(component =>
-      checklist.criteria.some(item => item.destinationComponent === component)
+    const gradedActivities = checklist.sessions.filter(session =>
+      ['WW', 'PT'].includes(session.activity?.destinationComponent)
     );
-    const body = components.length
-      ? `<p>Link each checklist component once, then review every official score change before publishing.</p>
-        <div class="checklist-contribution-dashboard">${components.map(component =>
-          checklistContributionCard(checklist, assignment, component)
-        ).join('')}</div>
+    const hasLegacySessions = checklist.sessions.some(session => !session.activity);
+    const legacyComponents = hasLegacySessions
+      ? ['WW', 'PT'].filter(component =>
+        checklist.criteria.some(item => item.destinationComponent === component)
+      )
+      : [];
+    const contributionCards = [
+      ...gradedActivities.map(session =>
+        checklistActivityContributionCard(checklist, assignment, session)
+      ),
+      ...legacyComponents.map(component =>
+        checklistContributionCard(checklist, assignment, component)
+      )
+    ].filter(Boolean);
+    const body = contributionCards.length
+      ? `<p>Each graded activity adds its earned points to one compatible official assessment. Empty assessments are recommended first, and unsafe HPS results are blocked.</p>
+        <div class="checklist-contribution-dashboard">${contributionCards.join('')}</div>
         <div class="checklist-integrity-note">Tracking Only criteria are excluded. Publication still requires valid HPS, a before-and-after preview, PIN verification, and a verified save.</div>`
-      : '<div class="checklist-welcome__content"><h2>Tracking Only Checklist</h2><p>Assign at least one criterion to Written Work or Performance Task before setting up grade contributions.</p></div>';
+      : `<div class="checklist-contribution-guide">
+          <div>
+            <h2>No graded activity yet</h2>
+            <p>Your current activities are Tracking Only, so they are saved in the checklist but cannot change official grades.</p>
+          </div>
+          <ol class="checklist-contribution-steps">
+            <li><strong>Edit the active activity</strong><span>Set Grade destination to Written Work or Performance Task.</span></li>
+            <li><strong>Review suggested targets</strong><span>The app prioritizes empty assessments and identifies targets that have enough HPS capacity.</span></li>
+            <li><strong>Record learner scores</strong><span>Enter scores in that activity's Performance Checklist column.</span></li>
+            <li><strong>Review before publishing</strong><span>Return here, select a compatible assessment, review every change, and verify your PIN.</span></li>
+          </ol>
+          <div class="checklist-integrity-note">Changing an activity type's defaults affects future activities. Use Edit Active Activity to change the activity you already created.</div>
+        </div>`;
+    const actions = contributionCards.length
+      ? '<button class="btn btn-cancel btn-sm" data-close>Close</button>'
+      : `<button class="btn btn-cancel btn-sm" data-close>Close</button>
+        ${hasLegacySessions
+          ? '<button class="btn btn-primary btn-sm" data-manage-criteria>Manage Criteria</button>'
+          : '<button class="btn btn-ghost btn-sm" data-add-graded-activity>Add Graded Activity</button><button class="btn btn-primary btn-sm" data-edit-graded-activity>Edit Active Activity</button>'}`;
     const modal = createModal(
       'Review Grade Contributions',
       body,
-      '<button class="btn btn-cancel btn-sm" data-close>Close</button>',
+      actions,
       true
     );
     modal.overlay.querySelector('[data-close]').addEventListener('click', modal.close);
+    modal.overlay.querySelector('[data-manage-criteria]')?.addEventListener('click', () => {
+      modal.close();
+      openChecklistCriteria();
+    });
+    modal.overlay.querySelector('[data-add-graded-activity]')?.addEventListener('click', () => {
+      modal.close();
+      openAddChecklistActivity();
+    });
+    modal.overlay.querySelector('[data-edit-graded-activity]')?.addEventListener('click', () => {
+      modal.close();
+      openEditChecklistActivity();
+    });
+    const saveTargetWithFeedback = async (button, saveAction) => {
+      const card = button.closest('.checklist-contribution-card');
+      const state = card?.querySelector('.checklist-contribution-card__state');
+      button.disabled = true;
+      button.textContent = 'Saving...';
+      const saved = await saveAction();
+      if (!button.isConnected) return saved;
+      if (!saved) {
+        button.disabled = false;
+        button.textContent = 'Save Target';
+        return false;
+      }
+      button.textContent = 'Saved';
+      if (state) state.textContent = 'Target saved - review changes to publish';
+      return true;
+    };
+    modal.overlay.querySelectorAll('[data-contribution-target], [data-activity-target]').forEach(select => {
+      select.addEventListener('change', () => {
+        const card = select.closest('.checklist-contribution-card');
+        const saveButton = card?.querySelector('[data-save-contribution], [data-save-activity]');
+        const reviewButton = card?.querySelector('[data-review-contribution], [data-review-activity]');
+        const state = card?.querySelector('.checklist-contribution-card__state');
+        const hasTarget = Boolean(select.value);
+        if (saveButton) {
+          saveButton.disabled = !hasTarget;
+          saveButton.textContent = 'Save Target';
+        }
+        if (reviewButton) reviewButton.disabled = !hasTarget;
+        if (state) state.textContent = hasTarget ? 'Unsaved target selected' : 'Choose a target assessment';
+      });
+    });
     modal.overlay.querySelectorAll('[data-save-contribution]').forEach(button => {
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         const component = button.dataset.saveContribution;
         const assessmentId = modal.overlay.querySelector(`[data-contribution-target="${component}"]`)?.value || '';
         if (!assessmentId) {
           globalScope.toast('Choose a target assessment first.', 'warning');
           return;
         }
-        modal.close();
-        saveChecklistContributionTarget(component, assessmentId, false);
+        await saveTargetWithFeedback(button, () =>
+          saveChecklistContributionTarget(component, assessmentId, false)
+        );
       });
     });
     modal.overlay.querySelectorAll('[data-review-contribution]').forEach(button => {
@@ -2388,6 +3257,67 @@
         saveChecklistContributionTarget(component, assessmentId, true);
       });
     });
+    modal.overlay.querySelectorAll('[data-save-activity]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const activityId = button.dataset.saveActivity;
+        const assessmentId = modal.overlay.querySelector(`[data-activity-target="${activityId}"]`)?.value || '';
+        if (!assessmentId) {
+          globalScope.toast('Choose a compatible official assessment first.', 'warning');
+          return;
+        }
+        await saveTargetWithFeedback(button, () =>
+          saveChecklistActivityTarget(activityId, assessmentId, false)
+        );
+      });
+    });
+    modal.overlay.querySelectorAll('[data-review-activity]').forEach(button => {
+      button.addEventListener('click', () => {
+        const activityId = button.dataset.reviewActivity;
+        const assessmentId = modal.overlay.querySelector(`[data-activity-target="${activityId}"]`)?.value || '';
+        if (!assessmentId) {
+          globalScope.toast('Choose a compatible official assessment first.', 'warning');
+          return;
+        }
+        modal.close();
+        saveChecklistActivityTarget(activityId, assessmentId, true);
+      });
+    });
+  }
+
+  async function saveChecklistActivityTarget(activityId, assessmentId, reviewAfterSave) {
+    try {
+      const checklist = currentChecklist();
+      const findActivitySession = source => source?.sessions.find(item =>
+        String(item.activity?.id || item.id) === String(activityId)
+      );
+      const session = findActivitySession(checklist);
+      const existingId = session?.activity?.publicationTarget?.assessmentId || '';
+      if (existingId !== assessmentId) {
+        await runTransaction(() => core.linkChecklistActivityPublicationTarget(
+          currentChecklist(),
+          activeAssignment(),
+          activityId,
+          assessmentId
+        ));
+      }
+      const savedSession = findActivitySession(currentChecklist());
+      if (savedSession?.activity?.publicationTarget?.assessmentId !== assessmentId) {
+        throw new Error('The selected target could not be verified after saving.');
+      }
+      const criterionId = savedSession.activity.criterionId || '';
+      if (reviewAfterSave) {
+        showChecklistPublicationPreview('', assessmentId, activityId);
+      } else {
+        checklistState.sessionId = savedSession.id;
+        checklistState.gridCriterionId = criterionId;
+        checklistState.selectedCriterionId = criterionId;
+        globalScope.toast('Target saved. Review changes when you are ready to publish.', 'success');
+      }
+      return true;
+    } catch (error) {
+      globalScope.toast(error.message || 'The activity target could not be saved.', 'warning');
+      return false;
+    }
   }
 
   async function saveChecklistContributionTarget(component, assessmentId, reviewAfterSave) {
@@ -2402,15 +3332,18 @@
           assessmentId
         ));
       }
+      if (currentChecklist()?.publicationTargets?.[component]?.assessmentId !== assessmentId) {
+        throw new Error('The selected target could not be verified after saving.');
+      }
       if (reviewAfterSave) {
         showChecklistPublicationPreview(component, assessmentId);
       } else {
-        globalScope.setView('tools');
-        activate('checklist');
-        globalScope.toast(`${checklistComponentLabel(component)} target saved.`, 'success');
+        globalScope.toast(`${checklistComponentLabel(component)} target saved. Review changes when you are ready to publish.`, 'success');
       }
+      return true;
     } catch (error) {
       globalScope.toast(error.message || 'The target assessment could not be saved.', 'warning');
+      return false;
     }
   }
 
@@ -2442,12 +3375,14 @@
     });
   }
 
-  function showChecklistPublicationPreview(component, assessmentId) {
+  function showChecklistPublicationPreview(component, assessmentId, activityId = '') {
     const checklist = currentChecklist();
     const assignment = activeAssignment();
     let plan;
     try {
-      plan = core.planChecklistPublication(checklist, assignment, component, assessmentId);
+      plan = activityId
+        ? core.planChecklistActivityPublication(checklist, assignment, activityId, assessmentId)
+        : core.planChecklistPublication(checklist, assignment, component, assessmentId);
     } catch (error) {
       globalScope.toast(error.message, 'warning');
       return;
@@ -2455,26 +3390,39 @@
     const learnerById = new Map((assignment.learners || []).map(item => [item.id, item]));
     const changedRows = plan.changes.map(change => `<tr>
       <td>${esc(learnerName(learnerById.get(change.learnerId)))}</td>
-      <td>${esc(change.before.value)}</td>
+      <td>${change.before.present ? esc(change.before.value) : '—'}</td>
       <td>${change.requestedDelta > 0 ? '+' : ''}${esc(change.requestedDelta)}</td>
-      <td>${esc(change.after.value)}</td>
+      <td>${change.after.present ? esc(change.after.value) : '—'}</td>
       <td>${change.overflow ? esc(`${change.overflow} not applied`) : '—'}</td>
     </tr>`).join('');
     const blockedRows = plan.blocked.map(item => `<li>${esc(learnerName(learnerById.get(item.learnerId)))} — ${
       item.reason === 'blank-score'
         ? 'official score is blank'
+        : item.reason === 'target-score-not-blank'
+          ? 'official assessment already contains a score'
         : item.reason === 'score-changed-after-publication'
           ? 'official score changed after the previous checklist publication'
+          : item.reason === 'score-exceeds-hps'
+            ? `resulting score ${item.projected} would exceed HPS ${item.maxScore}`
           : item.reason === 'hps-limit'
             ? 'already at HPS'
             : 'already at zero'
     }</li>`).join('');
-    const body = `<p><strong>${esc(plan.assessmentTitle)}</strong> · HPS ${esc(plan.maxScore)}</p>
+    const assessmentSetup = plan.assessmentBefore
+      && (String(plan.assessmentBefore.title) !== String(plan.assessmentAfter?.title)
+        || String(plan.assessmentBefore.maxScore ?? '') !== String(plan.assessmentAfter?.maxScore ?? ''))
+      ? `<div class="checklist-target-recommendation">
+          <strong>Empty assessment will be prepared</strong>
+          <span>${esc(plan.assessmentBefore.title || plan.assessmentTitle)} will become ${esc(plan.assessmentAfter.title)} with HPS ${esc(plan.assessmentAfter.maxScore)} when you publish.</span>
+        </div>`
+      : '';
+    const body = `<p>${plan.activityTitle ? `<strong>${esc(plan.activityTitle)}</strong> · ` : ''}<strong>${esc(plan.assessmentTitle)}</strong> · HPS ${esc(plan.maxScore)}</p>
+      ${assessmentSetup}
       ${plan.changes.length ? `<div class="checklist-preview-table-wrap"><table class="checklist-preview-table">
         <thead><tr><th>Learner</th><th>Before</th><th>Checklist change</th><th>After</th><th>Limit</th></tr></thead>
         <tbody>${changedRows}</tbody>
       </table></div>` : '<p>No eligible official score changes are ready to publish.</p>'}
-      ${blockedRows ? `<div class="checklist-warning"><strong>Excluded learners</strong><ul>${blockedRows}</ul></div>` : ''}
+      ${blockedRows ? `<div class="checklist-warning"><strong>Publication blocked</strong><ul>${blockedRows}</ul></div>` : ''}
       <p class="text-muted text-sm">PIN verification is required. Reopening this action without new entries will not add the same points again.</p>`;
     const modal = createModal(
       'Checklist Publication Preview',
@@ -2482,6 +3430,8 @@
       `<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-publish ${plan.canApply ? '' : 'disabled'}>Publish ${plan.changes.length} Change${plan.changes.length === 1 ? '' : 's'}</button>`,
       true
     );
+    modal.overlay.classList.add('checklist-publication-preview-overlay');
+    modal.overlay.querySelector('.modal')?.classList.add('checklist-publication-preview-modal');
     modal.overlay.querySelector('[data-cancel]').addEventListener('click', modal.close);
     modal.overlay.querySelector('[data-publish]')?.addEventListener('click', () => {
       modal.close();
@@ -2494,7 +3444,9 @@
       const record = await runTransaction(() => {
         const checklist = currentChecklist();
         const official = activeAssignment();
-        const applied = core.applyChecklistPublication(checklist, official, reviewedPlan);
+        const applied = reviewedPlan.activityId
+          ? core.applyChecklistActivityPublication(checklist, official, reviewedPlan)
+          : core.applyChecklistPublication(checklist, official, reviewedPlan);
         const tools = core.normalize(profileDb());
         tools.performanceChecklistHistory = [applied, ...tools.performanceChecklistHistory]
           .slice(0, core.CHECKLIST_HISTORY_LIMIT);
@@ -2641,7 +3593,7 @@
     if (initialized || !core) return;
     initialized = true;
     core.normalize(profileDb());
-    registerTool({ id: 'groups', label: 'Group Randomizer', render: renderGroupRandomizer });
+    registerTool({ id: 'groups', label: 'Group Randomizer', render: renderGroupRandomizer, onDeactivate: cancelGroupAnimation });
     registerTool({ id: 'picker', label: 'Name Picker', render: renderNamePicker, onDeactivate: cancelPickerAnimation });
     registerTool({ id: 'simulator', label: 'Grade Simulator', render: renderGradeSimulator });
     registerTool({
@@ -2649,6 +3601,7 @@
       label: 'Performance Checklist',
       render: renderPerformanceChecklist,
       onDeactivate: () => {
+        cancelChecklistPickerAnimation();
         checklistPickerModal?.remove();
         checklistPickerModal = null;
       }
@@ -2713,11 +3666,15 @@
     openChecklistCriteria,
     openAddChecklistCriterion,
     openAddChecklistSession,
+    openAddChecklistActivity,
+    openEditChecklistActivity,
+    reviewChecklistActivityUnlock,
     openChecklistMoreActions,
     openChecklistTutorial,
     openSaveChecklistTemplate,
     openManageChecklistTemplates,
     openResetChecklist,
+    adjustChecklistEntry,
     updateChecklistEntry,
     openChecklistEntryNote,
     openChecklistPicker,

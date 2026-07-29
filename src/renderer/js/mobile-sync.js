@@ -273,7 +273,9 @@ async function syncDataToMobile() {
         id: l.id,
         name: l.name,
         sex: l.sex,
-        lrn: l.lrn || ''
+        lrn: l.lrn || '',
+        avatarPresetId: l.avatarPresetId || '',
+        avatarAssignment: l.avatarAssignment === 'manual' ? 'manual' : 'auto'
       })),
       assessments: a.assessments.map(ast => ({
         id: ast.id,

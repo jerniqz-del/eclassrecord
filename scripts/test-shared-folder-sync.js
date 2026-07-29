@@ -237,7 +237,25 @@ function loadRendererSyncHarness(secure, options) {
         'learner-2|assessment-2': 75
       }
     }],
-    advisory: { schemaVersion: 2, classes: [], learners: [], subjects: [], grades: [], importBatches: [], sourceMappings: [] }
+    advisory: { schemaVersion: 2, classes: [], learners: [], subjects: [], grades: [], importBatches: [], sourceMappings: [] },
+    tools: {
+      schemaVersion: 4,
+      performanceChecklists: [{
+        id: 'checklist-1',
+        assignmentId: 'class-1',
+        term: '1',
+        criteria: [{ id: 'criterion-recitation', label: 'Recitation' }],
+        sessions: [{
+          id: 'activity-base',
+          title: 'Recitation 1',
+          activity: { id: 'activity-base', criterionId: 'criterion-recitation' },
+          entries: {}
+        }]
+      }],
+      performanceChecklistHistory: [],
+      performanceChecklistEntryHistory: [],
+      performanceChecklistTemplates: []
+    }
   };
 
   const canonical = secure.SharedSyncCrypto.canonicalProfile(baseProfile);
@@ -404,6 +422,35 @@ function loadRendererSyncHarness(secure, options) {
   assert.strictEqual(separateMerge.conflicts.length, 0);
   assert.strictEqual(separateMerge.merged.assignments[0].scores['learner-1|assessment-1'], 85);
   assert.strictEqual(separateMerge.merged.assignments[0].scores['learner-2|assessment-2'], 79);
+
+  const localActivities = clone(canonical);
+  const remoteActivities = clone(canonical);
+  localActivities.tools.performanceChecklists[0].sessions.push({
+    id: 'activity-local',
+    title: 'Recitation 2',
+    activity: { id: 'activity-local', criterionId: 'criterion-recitation' },
+    entries: { 'learner-1': { 'criterion-recitation': { points: 1 } } }
+  });
+  remoteActivities.tools.performanceChecklists[0].sessions.push({
+    id: 'activity-remote',
+    title: 'Recitation 3',
+    activity: { id: 'activity-remote', criterionId: 'criterion-recitation' },
+    entries: { 'learner-2': { 'criterion-recitation': { points: 1 } } }
+  });
+  const activityMerge = secure.SharedSyncMerge.mergeThreeWay(
+    canonical,
+    localActivities,
+    remoteActivities
+  );
+  assert.strictEqual(activityMerge.conflicts.length, 0);
+  assert.strictEqual(
+    Array.from(
+      activityMerge.merged.tools.performanceChecklists[0].sessions,
+      item => item.id
+    ).join(','),
+    'activity-base,activity-local,activity-remote',
+    'separate activity IDs from two PCs must merge without dropping either activity'
+  );
 
   const localConflict = clone(canonical);
   const remoteConflict = clone(canonical);

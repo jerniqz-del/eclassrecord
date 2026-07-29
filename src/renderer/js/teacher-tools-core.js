@@ -6,7 +6,7 @@
 (function initTeacherToolsCore(globalScope) {
   'use strict';
 
-  const TOOLS_SCHEMA_VERSION = 3;
+  const TOOLS_SCHEMA_VERSION = 4;
   const SIMULATION_HISTORY_LIMIT = 10;
   const CHECKLIST_HISTORY_LIMIT = 20;
   const CHECKLIST_ENTRY_HISTORY_LIMIT = 50;
@@ -101,13 +101,32 @@
     return CHECKLIST_COMPONENTS.includes(component) ? component : 'TRACKING';
   }
 
+  function standardChecklistType(value) {
+    const standardTypes = ['recitation', 'notebook', 'assignment'];
+    const candidates = value && typeof value === 'object'
+      ? [value.standardType, value.label]
+      : [value];
+    return candidates
+      .map(candidate => String(candidate || '').trim().toLowerCase())
+      .find(candidate => standardTypes.includes(candidate))
+      || '';
+  }
+
+  function isStandardNumericalChecklistLabel(value) {
+    return Boolean(standardChecklistType(value));
+  }
+
   function normalizeChecklistCriterion(criterion, index = 0) {
     if (!criterion || typeof criterion !== 'object') return null;
     const label = String(criterion.label || '').trim();
     if (!label) return null;
-    const scoringMode = CHECKLIST_SCORING_MODES.includes(String(criterion.scoringMode || '').toUpperCase())
+    const standardType = standardChecklistType(criterion);
+    const requestedScoringMode = CHECKLIST_SCORING_MODES.includes(String(criterion.scoringMode || '').toUpperCase())
       ? String(criterion.scoringMode).toUpperCase()
       : 'CHECK';
+    const scoringMode = Boolean(standardType)
+      ? 'NUMERIC'
+      : requestedScoringMode;
     let pointsPerCheck = optionalPositive(criterion.pointsPerCheck) || 1;
     const maxPointsPerSession = optionalPositive(criterion.maxPointsPerSession)
       || (scoringMode === 'CHECK' ? pointsPerCheck : 1);
@@ -117,6 +136,7 @@
       ...criterion,
       id: String(criterion.id || createId('checklist-criterion')),
       label,
+      standardType,
       destinationComponent: normalizedChecklistComponent(criterion.destinationComponent),
       scoringMode,
       pointsPerCheck,
@@ -147,8 +167,12 @@
     };
   }
 
-  function normalizeChecklistSession(session, criterionIds) {
+  function normalizeChecklistSession(session, criteriaOrIds) {
     if (!session || typeof session !== 'object') return null;
+    const criteria = Array.isArray(criteriaOrIds) ? criteriaOrIds : [];
+    const criterionIds = criteriaOrIds instanceof Set
+      ? criteriaOrIds
+      : new Set(criteria.map(item => item.id));
     const entries = {};
     const sourceEntries = session.entries && typeof session.entries === 'object' && !Array.isArray(session.entries)
       ? session.entries
@@ -163,7 +187,7 @@
       });
       if (Object.keys(normalizedLearnerEntries).length) entries[learnerId] = normalizedLearnerEntries;
     });
-    return {
+    const normalizedSession = {
       ...session,
       id: String(session.id || createId('checklist-session')),
       date: String(session.date || new Date().toISOString().slice(0, 10)),
@@ -172,6 +196,12 @@
       createdAt: String(session.createdAt || new Date().toISOString()),
       updatedAt: String(session.updatedAt || session.createdAt || new Date().toISOString())
     };
+    normalizedSession.activity = normalizeChecklistActivity(
+      session.activity,
+      normalizedSession,
+      criteria
+    );
+    return normalizedSession;
   }
 
   function normalizeContributionMap(value) {
@@ -201,7 +231,44 @@
       assessmentId: String(existing.assessmentId || ''),
       lastPublishedAt: String(existing.lastPublishedAt || ''),
       publishedContributions: normalizeContributionMap(existing.publishedContributions),
-      publishedScoreStates: normalizeScoreStateMap(existing.publishedScoreStates)
+      publishedScoreStates: normalizeScoreStateMap(existing.publishedScoreStates),
+      originalScoreStates: normalizeScoreStateMap(existing.originalScoreStates)
+    };
+  }
+
+  function normalizeChecklistActivity(activity, session, criteria) {
+    if (!activity || typeof activity !== 'object' || Array.isArray(activity)) return null;
+    const criterionId = String(activity.criterionId || '');
+    const criterion = (criteria || []).find(item => item.id === criterionId);
+    if (!criterion) return null;
+    const requestedScoringMode = CHECKLIST_SCORING_MODES.includes(String(activity.scoringMode || '').toUpperCase())
+      ? String(activity.scoringMode).toUpperCase()
+      : criterion.scoringMode;
+    const scoringMode = isStandardNumericalChecklistLabel(criterion)
+      ? 'NUMERIC'
+      : requestedScoringMode;
+    const maxPoints = optionalPositive(activity.maxPoints) || criterion.maxPointsPerSession;
+    const pointsPerCheck = Math.min(
+      optionalPositive(activity.pointsPerCheck) || criterion.pointsPerCheck || 1,
+      maxPoints
+    );
+    return {
+      ...activity,
+      id: String(activity.id || session.id || createId('checklist-activity')),
+      criterionId,
+      title: String(activity.title || session.title || criterion.label).trim() || criterion.label,
+      sequence: Math.max(1, Math.floor(finiteNonNegative(activity.sequence, 1))),
+      destinationComponent: normalizedChecklistComponent(
+        activity.destinationComponent || criterion.destinationComponent
+      ),
+      scoringMode,
+      pointsPerCheck,
+      maxPoints,
+      allowNotes: activity.allowNotes === undefined
+        ? Boolean(criterion.allowNotes)
+        : Boolean(activity.allowNotes),
+      status: activity.status === 'archived' ? 'archived' : 'active',
+      publicationTarget: normalizePublicationTarget(activity.publicationTarget)
     };
   }
 
@@ -212,9 +279,8 @@
     const criteria = Array.isArray(checklist.criteria)
       ? checklist.criteria.map(normalizeChecklistCriterion).filter(Boolean)
       : [];
-    const criterionIds = new Set(criteria.map(item => item.id));
     const sessions = Array.isArray(checklist.sessions)
-      ? checklist.sessions.map(item => normalizeChecklistSession(item, criterionIds)).filter(Boolean)
+      ? checklist.sessions.map(item => normalizeChecklistSession(item, criteria)).filter(Boolean)
       : [];
     const targets = checklist.publicationTargets && typeof checklist.publicationTargets === 'object'
       ? checklist.publicationTargets
@@ -257,6 +323,8 @@
       id: String(entry.id || createId('checklist-publication')),
       checklistId,
       assignmentId,
+      activityId: String(entry.activityId || ''),
+      activityTitle: String(entry.activityTitle || ''),
       assessmentId: String(entry.assessmentId || ''),
       component,
       term: ['1', '2', '3'].includes(String(entry.term)) ? String(entry.term) : '1',
@@ -642,7 +710,7 @@
       {
         label: 'Recitation',
         destinationComponent: 'TRACKING',
-        scoringMode: 'CHECK',
+        scoringMode: 'NUMERIC',
         pointsPerCheck: 1,
         maxPointsPerSession: 1,
         maxPointsPerTerm: null
@@ -650,7 +718,7 @@
       {
         label: 'Notebook',
         destinationComponent: 'TRACKING',
-        scoringMode: 'CHECK',
+        scoringMode: 'NUMERIC',
         pointsPerCheck: 1,
         maxPointsPerSession: 1,
         maxPointsPerTerm: null
@@ -658,7 +726,7 @@
       {
         label: 'Assignment',
         destinationComponent: 'TRACKING',
-        scoringMode: 'CHECK',
+        scoringMode: 'NUMERIC',
         pointsPerCheck: 1,
         maxPointsPerSession: 1,
         maxPointsPerTerm: null
@@ -679,6 +747,9 @@
       .map((criterion, index) => normalizeChecklistCriterion({ ...criterion, order: index }, index))
       .filter(Boolean);
     if (!criteria.length) throw new Error('Add at least one checklist criterion.');
+    const firstActivityTitle = String(
+      options.activityTitle || `${criteria[0].label} 1`
+    ).trim() || `${criteria[0].label} 1`;
     const checklist = normalizePerformanceChecklist({
       id: createId('performance-checklist'),
       assignmentId: String(assignment.id),
@@ -691,8 +762,18 @@
       sessions: [{
         id: createId('checklist-session'),
         date: String(options.date || now.slice(0, 10)),
-        title: String(options.sessionTitle || 'Session 1'),
+        title: String(options.activityMode ? firstActivityTitle : options.sessionTitle || 'Session 1'),
         entries: {},
+        activity: options.activityMode ? {
+          criterionId: criteria[0].id,
+          title: firstActivityTitle,
+          sequence: 1,
+          destinationComponent: criteria[0].destinationComponent,
+          scoringMode: criteria[0].scoringMode,
+          pointsPerCheck: criteria[0].pointsPerCheck,
+          maxPoints: criteria[0].maxPointsPerSession,
+          allowNotes: criteria[0].allowNotes
+        } : null,
         createdAt: now,
         updatedAt: now
       }],
@@ -725,10 +806,139 @@
       entries: {},
       createdAt: now,
       updatedAt: now
-    }, new Set((checklist.criteria || []).map(item => item.id)));
+    }, checklist.criteria || []);
     checklist.sessions = [...(checklist.sessions || []), session];
     checklist.updatedAt = now;
     return session;
+  }
+
+  function addChecklistActivity(checklist, options = {}) {
+    if (!checklist || typeof checklist !== 'object') throw new TypeError('A performance checklist is required.');
+    const criterion = (checklist.criteria || []).find(item => item.id === String(options.criterionId || ''));
+    if (!criterion || !criterion.active) throw new Error('Choose an active activity type.');
+    const now = new Date().toISOString();
+    const sequence = (checklist.sessions || []).filter(session =>
+      session.activity?.criterionId === criterion.id
+    ).length + 1;
+    const title = String(options.title || `${criterion.label} ${sequence}`).trim();
+    if (!title) throw new Error('Enter an activity title.');
+    const sessionId = createId('checklist-session');
+    const session = normalizeChecklistSession({
+      id: sessionId,
+      date: String(options.date || now.slice(0, 10)),
+      title,
+      entries: {},
+      activity: {
+        id: sessionId,
+        criterionId: criterion.id,
+        title,
+        sequence,
+        destinationComponent: options.destinationComponent || criterion.destinationComponent,
+        scoringMode: options.scoringMode || criterion.scoringMode,
+        pointsPerCheck: options.pointsPerCheck || criterion.pointsPerCheck,
+        maxPoints: options.maxPoints || criterion.maxPointsPerSession,
+        allowNotes: options.allowNotes === undefined ? criterion.allowNotes : options.allowNotes,
+        publicationTarget: normalizePublicationTarget(null)
+      },
+      createdAt: now,
+      updatedAt: now
+    }, checklist.criteria || []);
+    if (!session?.activity) throw new Error('The activity settings are invalid.');
+    checklist.sessions = [...(checklist.sessions || []), session];
+    checklist.updatedAt = now;
+    return session;
+  }
+
+  function updateChecklistActivity(checklist, activityId, options = {}) {
+    if (!checklist || typeof checklist !== 'object') throw new TypeError('A performance checklist is required.');
+    const session = (checklist.sessions || []).find(item =>
+      String(item.activity?.id || item.id) === String(activityId || '')
+    );
+    if (!session?.activity) throw new Error('The selected activity is unavailable.');
+    const published = isChecklistActivityPublished(session);
+    if (published) {
+      throw new Error('Published activities are locked. Unlock this activity with your PIN before editing it.');
+    }
+    const maxPoints = optionalPositive(options.maxPoints) || session.activity.maxPoints;
+    const oversizedEntry = Object.values(session.entries || {}).some(learnerEntries => {
+      const entry = learnerEntries?.[session.activity.criterionId];
+      return Number(entry?.points) > maxPoints;
+    });
+    if (oversizedEntry) {
+      throw new Error('Reduce existing learner scores before lowering this activity HPS.');
+    }
+    const title = String(options.title || session.title).trim();
+    const date = String(options.date || session.date);
+    if (!title || !date) throw new Error('Enter an activity title and date.');
+    session.title = title;
+    session.date = date;
+    session.activity = normalizeChecklistActivity({
+      ...session.activity,
+      title,
+      destinationComponent: options.destinationComponent || session.activity.destinationComponent,
+      scoringMode: options.scoringMode || session.activity.scoringMode,
+      pointsPerCheck: options.pointsPerCheck || session.activity.pointsPerCheck,
+      maxPoints,
+      allowNotes: options.allowNotes === undefined
+        ? session.activity.allowNotes
+        : options.allowNotes
+    }, session, checklist.criteria || []);
+    const now = new Date().toISOString();
+    session.updatedAt = now;
+    checklist.updatedAt = now;
+    return session;
+  }
+
+  function checklistActivityDefinition(checklist, sessionOrId) {
+    const session = typeof sessionOrId === 'string'
+      ? (checklist?.sessions || []).find(item => item.id === sessionOrId)
+      : sessionOrId;
+    if (!session?.activity) return null;
+    const criterion = (checklist?.criteria || []).find(item => item.id === session.activity.criterionId);
+    if (!criterion) return null;
+    return {
+      ...criterion,
+      ...session.activity,
+      id: criterion.id,
+      activityId: session.activity.id || session.id,
+      criterionId: criterion.id,
+      maxPointsPerSession: session.activity.maxPoints
+    };
+  }
+
+  function checklistSessionCriteria(checklist, sessionOrId) {
+    const activity = checklistActivityDefinition(checklist, sessionOrId);
+    return activity
+      ? [activity]
+      : (checklist?.criteria || []);
+  }
+
+  function checklistTableColumns(checklist) {
+    return (checklist?.sessions || []).flatMap(session => {
+      const activity = checklistActivityDefinition(checklist, session);
+      if (activity) {
+        return [{
+          session,
+          definition: activity,
+          sessionId: session.id,
+          criterionId: activity.criterionId,
+          activityId: activity.activityId,
+          title: activity.title,
+          date: session.date,
+          legacy: false
+        }];
+      }
+      return (checklist?.criteria || []).map(criterion => ({
+        session,
+        definition: criterion,
+        sessionId: session.id,
+        criterionId: criterion.id,
+        activityId: '',
+        title: `${criterion.label} - ${session.title}`,
+        date: session.date,
+        legacy: true
+      }));
+    });
   }
 
   function checklistEntry(checklist, sessionId, learnerId, criterionId) {
@@ -742,9 +952,16 @@
     }
     const session = (checklist.sessions || []).find(item => item.id === sessionId);
     const criterion = (checklist.criteria || []).find(item => item.id === criterionId);
+    const activityCriterion = checklistActivityDefinition(checklist, session);
     const learner = (assignment.learners || []).find(item => item.id === learnerId);
     if (!session) throw new Error('The selected checklist session is unavailable.');
     if (!criterion) throw new Error('The selected criterion is unavailable.');
+    if (isChecklistActivityPublished(session)) {
+      throw new Error('Published activities are locked. Unlock this activity with your PIN before editing learner points.');
+    }
+    if (activityCriterion && activityCriterion.criterionId !== criterion.id) {
+      throw new Error('The selected activity does not accept this entry type.');
+    }
     if (!session.entries || typeof session.entries !== 'object') session.entries = {};
     if (!session.entries[learnerId]) session.entries[learnerId] = {};
     const text = String(rawValue ?? '').trim();
@@ -755,13 +972,14 @@
       checklist.updatedAt = session.updatedAt;
       return null;
     }
-    if (!criterion.active) throw new Error('The selected criterion is unavailable.');
+    const entryDefinition = activityCriterion || criterion;
+    if (!entryDefinition.active) throw new Error('The selected criterion is unavailable.');
     if (!learner || learner.transferredOutTerm || learner.transferredOutDate) {
       throw new Error('This learner is not eligible for a new checklist entry.');
     }
     const points = Number(text);
-    if (!Number.isFinite(points) || points < 0 || points > criterion.maxPointsPerSession) {
-      throw new RangeError(`Enter points from 0 to ${criterion.maxPointsPerSession}.`);
+    if (!Number.isFinite(points) || points < 0 || points > entryDefinition.maxPointsPerSession) {
+      throw new RangeError(`Enter points from 0 to ${entryDefinition.maxPointsPerSession}.`);
     }
     const now = new Date().toISOString();
     const previous = session.entries[learnerId][criterionId];
@@ -888,6 +1106,13 @@
     if (!plan.canUndo) {
       throw new Error('One or more checklist entries changed after this action. The newer entries were preserved.');
     }
+    const lockedActivity = plan.changes.some(change => {
+      const session = (checklist?.sessions || []).find(item => item.id === change.sessionId);
+      return isChecklistActivityPublished(session);
+    });
+    if (lockedActivity) {
+      throw new Error('Published activities are locked. Unlock the activity with your PIN before undoing checklist entries.');
+    }
     plan.changes.slice().reverse().forEach(change => writeChecklistEntryState(
       checklist,
       change.sessionId,
@@ -936,32 +1161,64 @@
   function checklistLearnerTotals(checklist, assignment) {
     const learnerIds = new Set((assignment?.learners || []).map(item => String(item.id || '')).filter(Boolean));
     const totals = {};
+    const buckets = {};
     learnerIds.forEach(learnerId => {
       totals[learnerId] = { TRACKING: 0, WW: 0, PT: 0, criteria: {} };
+      buckets[learnerId] = {};
+    });
+    (checklist?.sessions || []).forEach(session => {
+      checklistSessionCriteria(checklist, session).forEach(definition => {
+        const component = normalizedChecklistComponent(definition.destinationComponent);
+        learnerIds.forEach(learnerId => {
+          const entry = session.entries?.[learnerId]?.[definition.criterionId || definition.id];
+          if (!entry || !Number.isFinite(Number(entry.points))) return;
+          const criterionId = definition.criterionId || definition.id;
+          if (!buckets[learnerId][criterionId]) {
+            buckets[learnerId][criterionId] = { TRACKING: 0, WW: 0, PT: 0 };
+          }
+          buckets[learnerId][criterionId][component] = roundScore(
+            buckets[learnerId][criterionId][component] + Number(entry.points)
+          );
+        });
+      });
     });
     (checklist?.criteria || []).forEach(criterion => {
       learnerIds.forEach(learnerId => {
+        let remaining = criterion.maxPointsPerTerm || Number.POSITIVE_INFINITY;
         let criterionTotal = 0;
-        (checklist.sessions || []).forEach(session => {
-          const entry = session.entries?.[learnerId]?.[criterion.id];
-          if (entry && Number.isFinite(Number(entry.points))) criterionTotal += Number(entry.points);
+        CHECKLIST_COMPONENTS.forEach(component => {
+          const raw = finiteNonNegative(buckets[learnerId][criterion.id]?.[component], 0);
+          const applied = Math.min(raw, remaining);
+          remaining -= applied;
+          criterionTotal = roundScore(criterionTotal + applied);
+          totals[learnerId][component] = roundScore(totals[learnerId][component] + applied);
         });
-        if (criterion.maxPointsPerTerm) criterionTotal = Math.min(criterionTotal, criterion.maxPointsPerTerm);
-        criterionTotal = roundScore(criterionTotal);
         totals[learnerId].criteria[criterion.id] = criterionTotal;
-        totals[learnerId][normalizedChecklistComponent(criterion.destinationComponent)] = roundScore(
-          totals[learnerId][normalizedChecklistComponent(criterion.destinationComponent)] + criterionTotal
-        );
       });
     });
     return totals;
   }
 
-  function hasPublishedChecklistContributions(checklist) {
-    return ['WW', 'PT'].some(component =>
-      Object.values(checklist?.publicationTargets?.[component]?.publishedContributions || {})
-        .some(value => Number(value) > 0)
+  function isPublicationTargetPublished(target) {
+    const normalized = normalizePublicationTarget(target);
+    return Boolean(
+      normalized.lastPublishedAt
+      || Object.keys(normalized.publishedContributions).length
+      || Object.keys(normalized.publishedScoreStates).length
     );
+  }
+
+  function isChecklistActivityPublished(session) {
+    return Boolean(session?.activity)
+      && isPublicationTargetPublished(session.activity.publicationTarget);
+  }
+
+  function hasPublishedChecklistContributions(checklist) {
+    const legacyPublished = ['WW', 'PT'].some(component =>
+      isPublicationTargetPublished(checklist?.publicationTargets?.[component])
+    );
+    const activityPublished = (checklist?.sessions || []).some(isChecklistActivityPublished);
+    return legacyPublished || activityPublished;
   }
 
   function checklistEntryCount(session) {
@@ -1158,6 +1415,385 @@
     };
   }
 
+  function checklistActivityPublicationContext(checklist, assignment, activityId) {
+    if (!checklist || String(checklist.assignmentId) !== String(assignment?.id)) {
+      throw new Error('The checklist no longer matches the active class.');
+    }
+    const session = (checklist.sessions || []).find(item =>
+      String(item.activity?.id || item.id) === String(activityId || '')
+    );
+    const activity = checklistActivityDefinition(checklist, session);
+    if (!session || !activity) throw new Error('The selected activity is unavailable.');
+    const component = normalizedChecklistComponent(activity.destinationComponent);
+    if (!['WW', 'PT'].includes(component)) {
+      throw new Error('Tracking Only activities cannot be published to official grades.');
+    }
+    const target = normalizePublicationTarget(session.activity.publicationTarget);
+    return { session, activity, component, target };
+  }
+
+  function assessmentHasScores(assignment, assessmentId) {
+    const suffix = `|${assessmentId}`;
+    return Object.entries(assignment?.scores || {}).some(([key, value]) =>
+      key.endsWith(suffix) && value !== '' && value !== null && value !== undefined
+    );
+  }
+
+  function assessmentPublicationState(assessment) {
+    return {
+      title: String(assessment?.title || ''),
+      maxScore: assessment?.maxScore === undefined ? '' : assessment.maxScore
+    };
+  }
+
+  function equalAssessmentPublicationState(assessment, state) {
+    return Boolean(assessment && state)
+      && String(assessment.title || '') === String(state.title || '')
+      && String(assessment.maxScore ?? '') === String(state.maxScore ?? '');
+  }
+
+  function checklistActivityTargetSuggestions(checklist, assignment, activityId) {
+    const context = checklistActivityPublicationContext(checklist, assignment, activityId);
+    const targetId = context.target.assessmentId;
+    const suggestions = (assignment.assessments || []).filter(assessment =>
+      String(assessment.term) === String(checklist.term)
+      && String(assessment.component) === context.component
+      && String(assessment.mapePart || '') === String(checklist.mapePart || '')
+    ).map((assessment, index) => {
+      const linkedElsewhere = (checklist.sessions || []).some(other =>
+        other !== context.session
+        && other.activity?.publicationTarget?.assessmentId === assessment.id
+      ) || (
+        (checklist.sessions || []).some(other => !other.activity)
+        && checklist.publicationTargets?.[context.component]?.assessmentId === assessment.id
+      );
+      const empty = !assessmentHasScores(assignment, assessment.id);
+      const configuredMax = Number(assessment.maxScore);
+      const hasPositiveHps = Number.isFinite(configuredMax) && configuredMax > 0;
+      const exactHps = hasPositiveHps
+        && roundScore(configuredMax) === roundScore(context.activity.maxPointsPerSession);
+      const requiresSetup = empty && !exactHps;
+      const effectiveMax = requiresSetup
+        ? context.activity.maxPointsPerSession
+        : configuredMax;
+      const overflowLearnerIds = [];
+      const conflictLearnerIds = [];
+      let contributionCount = 0;
+      activeLearners(assignment).forEach(learner => {
+        const learnerId = String(learner.id);
+        const entry = context.session.entries?.[learnerId]?.[context.activity.criterionId];
+        const key = `${learnerId}|${assessment.id}`;
+        const before = scoreState(assignment.scores || {}, key);
+        const wasPublished = targetId === assessment.id
+          && Object.prototype.hasOwnProperty.call(context.target.publishedContributions, learnerId);
+        if (!entry && !wasPublished) return;
+        if (entry) contributionCount++;
+        if (wasPublished) {
+          const expected = context.target.publishedScoreStates[learnerId];
+          if (!expected || !equalScoreState(before, expected)) {
+            conflictLearnerIds.push(learnerId);
+            return;
+          }
+        }
+        const baseline = wasPublished
+          ? context.target.originalScoreStates[learnerId] || { present: false, value: null }
+          : before;
+        const contribution = Math.min(
+          finiteNonNegative(entry?.points, 0),
+          context.activity.maxPointsPerSession
+        );
+        const projected = roundScore((baseline.present ? Number(baseline.value) : 0) + contribution);
+        if (Number.isFinite(effectiveMax) && effectiveMax > 0 && projected > effectiveMax) {
+          overflowLearnerIds.push(learnerId);
+        }
+      });
+      const compatible = !linkedElsewhere
+        && conflictLearnerIds.length === 0
+        && Number.isFinite(effectiveMax)
+        && effectiveMax > 0
+        && overflowLearnerIds.length === 0;
+      const rank = targetId === assessment.id
+        ? -1
+        : linkedElsewhere
+          ? 5
+          : empty && exactHps
+            ? 0
+            : empty
+              ? 1
+              : compatible
+                ? 2
+                : 4;
+      return {
+        assessment,
+        assessmentId: assessment.id,
+        title: String(assessment.title || assessment.component),
+        configuredMax: hasPositiveHps ? configuredMax : null,
+        effectiveMax,
+        empty,
+        exactHps,
+        requiresSetup,
+        linkedElsewhere,
+        overflowLearnerIds,
+        conflictLearnerIds,
+        contributionCount,
+        compatible,
+        rank,
+        sourceIndex: index,
+        current: targetId === assessment.id,
+        recommended: false
+      };
+    }).sort((left, right) =>
+      left.rank - right.rank
+      || left.sourceIndex - right.sourceIndex
+    );
+    const recommended = suggestions.find(item => item.compatible);
+    if (recommended) recommended.recommended = true;
+    return suggestions;
+  }
+
+  function validateChecklistActivityPublication(checklist, assignment, activityId, assessmentId) {
+    const context = checklistActivityPublicationContext(checklist, assignment, activityId);
+    const suggestion = checklistActivityTargetSuggestions(checklist, assignment, activityId)
+      .find(item => String(item.assessmentId) === String(assessmentId));
+    const assessment = suggestion?.assessment;
+    if (!assessment) {
+      throw new Error('Choose an assessment from this class, term, component, and MAPEH strand.');
+    }
+    if (suggestion.linkedElsewhere) {
+      throw new Error('This official assessment is already linked to another checklist activity.');
+    }
+    if (!Number.isFinite(suggestion.effectiveMax) || suggestion.effectiveMax <= 0) {
+      throw new Error('Set a positive HPS for this occupied assessment before adding checklist points.');
+    }
+    const duplicateTarget = (checklist.sessions || []).find(item =>
+      item !== context.session
+      && item.activity?.publicationTarget?.assessmentId === assessment.id
+    );
+    if (duplicateTarget) {
+      throw new Error('This official assessment is already linked to another checklist activity.');
+    }
+    const hasPublishedPoints = Object.keys(context.target.publishedContributions).length > 0;
+    if (hasPublishedPoints && context.target.assessmentId && context.target.assessmentId !== assessment.id) {
+      throw new Error('Revert this activity publication before selecting a different target assessment.');
+    }
+    const assessmentBefore = assessmentPublicationState(assessment);
+    const assessmentAfter = suggestion.requiresSetup
+      ? {
+        title: context.activity.title,
+        maxScore: context.activity.maxPointsPerSession
+      }
+      : assessmentBefore;
+    return {
+      ...context,
+      assessment,
+      maxScore: suggestion.effectiveMax,
+      suggestion,
+      assessmentBefore,
+      assessmentAfter
+    };
+  }
+
+  function linkChecklistActivityPublicationTarget(checklist, assignment, activityId, assessmentId) {
+    const validated = validateChecklistActivityPublication(
+      checklist,
+      assignment,
+      activityId,
+      assessmentId
+    );
+    if (!validated.suggestion.compatible) {
+      if (validated.suggestion.overflowLearnerIds.length) {
+        throw new Error(`${validated.suggestion.overflowLearnerIds.length} learner score${validated.suggestion.overflowLearnerIds.length === 1 ? '' : 's'} would exceed this assessment's HPS.`);
+      }
+      throw new Error('The selected assessment cannot safely accept these checklist points.');
+    }
+    validated.session.activity.publicationTarget = {
+      ...validated.target,
+      assessmentId: validated.assessment.id
+    };
+    checklist.updatedAt = new Date().toISOString();
+    return validated.session.activity.publicationTarget;
+  }
+
+  function planChecklistActivityPublication(checklist, assignment, activityId, assessmentId) {
+    const validated = validateChecklistActivityPublication(
+      checklist,
+      assignment,
+      activityId,
+      assessmentId
+    );
+    const changes = [];
+    const blocked = [];
+    const contributionsAfter = { ...validated.target.publishedContributions };
+    const scoreStatesAfter = { ...validated.target.publishedScoreStates };
+    const originalScoreStatesAfter = { ...validated.target.originalScoreStates };
+    activeLearners(assignment).forEach(learner => {
+      const learnerId = String(learner.id);
+      const entry = validated.session.entries?.[learnerId]?.[validated.activity.criterionId];
+      const wasPublished = Object.prototype.hasOwnProperty.call(
+        validated.target.publishedContributions,
+        learnerId
+      );
+      if (!entry && !wasPublished) return;
+      const total = roundScore(Math.min(
+        finiteNonNegative(entry?.points, 0),
+        validated.activity.maxPointsPerSession
+      ));
+      const published = finiteNonNegative(validated.target.publishedContributions[learnerId], 0);
+      const requestedDelta = roundScore(total - published);
+      const key = `${learnerId}|${validated.assessment.id}`;
+      const before = scoreState(assignment.scores || {}, key);
+      const expectedPublishedScore = validated.target.publishedScoreStates[learnerId];
+      if (wasPublished && (!expectedPublishedScore || !equalScoreState(before, expectedPublishedScore))) {
+        blocked.push({ learnerId, key, reason: 'score-changed-after-publication', total, published, requestedDelta });
+        return;
+      }
+      const original = wasPublished
+        ? validated.target.originalScoreStates[learnerId] || { present: false, value: null }
+        : before;
+      const after = entry
+        ? {
+          present: true,
+          value: roundScore((original.present ? Number(original.value) : 0) + total)
+        }
+        : original;
+      if (after.present && Number(after.value) > validated.maxScore) {
+        blocked.push({
+          learnerId,
+          key,
+          reason: 'score-exceeds-hps',
+          total,
+          published,
+          requestedDelta,
+          projected: after.value,
+          maxScore: validated.maxScore
+        });
+        return;
+      }
+      if (equalScoreState(before, after) && requestedDelta === 0) return;
+      if (entry) {
+        contributionsAfter[learnerId] = total;
+        scoreStatesAfter[learnerId] = clone(after);
+        originalScoreStatesAfter[learnerId] = clone(original);
+      } else {
+        delete contributionsAfter[learnerId];
+        delete scoreStatesAfter[learnerId];
+        delete originalScoreStatesAfter[learnerId];
+      }
+      changes.push({
+        learnerId,
+        key,
+        before,
+        after,
+        total,
+        publishedBefore: published,
+        publishedAfter: entry ? total : 0,
+        requestedDelta,
+        appliedDelta: requestedDelta,
+        overflow: 0
+      });
+    });
+    return {
+      checklistId: checklist.id,
+      assignmentId: assignment.id,
+      activityId: validated.activity.activityId,
+      activityTitle: validated.activity.title,
+      assessmentId: validated.assessment.id,
+      assessmentTitle: String(validated.assessment.title || validated.assessment.component),
+      component: validated.component,
+      term: checklist.term,
+      maxScore: validated.maxScore,
+      assessmentBefore: clone(validated.assessmentBefore),
+      assessmentAfter: clone(validated.assessmentAfter),
+      publicationBefore: clone(validated.target),
+      publicationAfter: {
+        assessmentId: validated.assessment.id,
+        lastPublishedAt: '',
+        publishedContributions: contributionsAfter,
+        publishedScoreStates: scoreStatesAfter,
+        originalScoreStates: originalScoreStatesAfter
+      },
+      changes,
+      blocked,
+      canApply: changes.length > 0 && blocked.length === 0
+    };
+  }
+
+  function comparableChecklistActivityPlan(plan) {
+    return {
+      checklistId: plan.checklistId,
+      assignmentId: plan.assignmentId,
+      activityId: plan.activityId,
+      assessmentId: plan.assessmentId,
+      component: plan.component,
+      maxScore: plan.maxScore,
+      assessmentBefore: plan.assessmentBefore,
+      assessmentAfter: plan.assessmentAfter,
+      changes: plan.changes.map(change => ({
+        key: change.key,
+        before: change.before,
+        after: change.after,
+        publishedBefore: change.publishedBefore,
+        publishedAfter: change.publishedAfter
+      })),
+      blocked: plan.blocked.map(item => ({ key: item.key, reason: item.reason, requestedDelta: item.requestedDelta }))
+    };
+  }
+
+  function applyChecklistActivityPublication(checklist, assignment, reviewedPlan) {
+    const freshPlan = planChecklistActivityPublication(
+      checklist,
+      assignment,
+      reviewedPlan?.activityId,
+      reviewedPlan?.assessmentId
+    );
+    if (JSON.stringify(comparableChecklistActivityPlan(freshPlan))
+      !== JSON.stringify(comparableChecklistActivityPlan(reviewedPlan))) {
+      throw new Error('Activity entries or official scores changed after the review opened. Review the publication again.');
+    }
+    if (freshPlan.blocked.length) {
+      throw new Error('One or more learner scores would exceed HPS or conflict with newer official scores.');
+    }
+    if (!freshPlan.changes.length) throw new Error('There are no activity score changes to publish.');
+    if (!assignment.scores) assignment.scores = {};
+    const assessment = (assignment.assessments || []).find(item => item.id === freshPlan.assessmentId);
+    if (!assessment || !equalAssessmentPublicationState(assessment, freshPlan.assessmentBefore)) {
+      throw new Error('The target assessment changed after the review opened. Review the publication again.');
+    }
+    assessment.title = freshPlan.assessmentAfter.title;
+    assessment.maxScore = freshPlan.assessmentAfter.maxScore;
+    freshPlan.changes.forEach(change => writeScoreState(assignment.scores, change.key, change.after));
+    const appliedAt = new Date().toISOString();
+    freshPlan.publicationAfter.lastPublishedAt = appliedAt;
+    const session = (checklist.sessions || []).find(item =>
+      String(item.activity?.id || item.id) === String(freshPlan.activityId)
+    );
+    if (!session?.activity) throw new Error('The selected activity is unavailable.');
+    session.activity.publicationTarget = clone(freshPlan.publicationAfter);
+    checklist.updatedAt = appliedAt;
+    return {
+      id: createId('checklist-publication'),
+      checklistId: checklist.id,
+      assignmentId: assignment.id,
+      activityId: freshPlan.activityId,
+      activityTitle: freshPlan.activityTitle,
+      assessmentId: freshPlan.assessmentId,
+      component: freshPlan.component,
+      term: checklist.term,
+      appliedAt,
+      assessmentBefore: clone(freshPlan.assessmentBefore),
+      assessmentAfter: clone(freshPlan.assessmentAfter),
+      changes: clone(freshPlan.changes.map(change => ({
+        key: change.key,
+        before: change.before,
+        after: change.after
+      }))),
+      publicationBefore: clone(freshPlan.publicationBefore),
+      publicationAfter: clone(freshPlan.publicationAfter),
+      status: 'applied',
+      revertedAt: ''
+    };
+  }
+
   function planChecklistPublicationRevert(historyEntry, checklist, assignment) {
     const entry = normalizeChecklistHistoryEntry(historyEntry);
     if (!entry
@@ -1171,13 +1807,28 @@
       scoreState(assignment.scores || {}, change.key),
       change.after
     ));
-    const currentTarget = normalizePublicationTarget(checklist.publicationTargets?.[entry.component]);
+    const activitySession = entry.activityId
+      ? (checklist.sessions || []).find(item =>
+        String(item.activity?.id || item.id) === String(entry.activityId)
+      )
+      : null;
+    if (entry.activityId && !activitySession?.activity) {
+      throw new Error('The published activity is no longer available.');
+    }
+    const currentTarget = normalizePublicationTarget(
+      activitySession?.activity?.publicationTarget
+      || checklist.publicationTargets?.[entry.component]
+    );
     const publicationConflict = JSON.stringify(currentTarget) !== JSON.stringify(entry.publicationAfter);
+    const assessment = (assignment.assessments || []).find(item => item.id === entry.assessmentId);
+    const assessmentConflict = Boolean(entry.assessmentAfter)
+      && !equalAssessmentPublicationState(assessment, entry.assessmentAfter);
     return {
       changes: entry.changes,
       scoreConflicts,
       publicationConflict,
-      canRevert: scoreConflicts.length === 0 && !publicationConflict
+      assessmentConflict,
+      canRevert: scoreConflicts.length === 0 && !publicationConflict && !assessmentConflict
     };
   }
 
@@ -1188,11 +1839,139 @@
     }
     if (!assignment.scores) assignment.scores = {};
     plan.changes.forEach(change => writeScoreState(assignment.scores, change.key, change.before));
-    checklist.publicationTargets[historyEntry.component] = clone(historyEntry.publicationBefore);
+    if (historyEntry.assessmentBefore) {
+      const assessment = (assignment.assessments || []).find(item => item.id === historyEntry.assessmentId);
+      if (!assessment) throw new Error('The target assessment is no longer available.');
+      assessment.title = historyEntry.assessmentBefore.title;
+      assessment.maxScore = historyEntry.assessmentBefore.maxScore;
+    }
+    if (historyEntry.activityId) {
+      const session = (checklist.sessions || []).find(item =>
+        String(item.activity?.id || item.id) === String(historyEntry.activityId)
+      );
+      if (!session?.activity) throw new Error('The published activity is no longer available.');
+      session.activity.publicationTarget = clone(historyEntry.publicationBefore);
+    } else {
+      checklist.publicationTargets[historyEntry.component] = clone(historyEntry.publicationBefore);
+    }
     checklist.updatedAt = new Date().toISOString();
     historyEntry.status = 'reverted';
     historyEntry.revertedAt = checklist.updatedAt;
     return { restored: plan.changes.map(change => change.key) };
+  }
+
+  function matchingAppliedActivityPublications(historyEntries, checklist, assignment, activityId) {
+    return (Array.isArray(historyEntries) ? historyEntries : [])
+      .map((entry, index) => ({
+        entry: normalizeChecklistHistoryEntry(entry),
+        index
+      }))
+      .filter(item => item.entry
+        && item.entry.status === 'applied'
+        && item.entry.checklistId === checklist?.id
+        && item.entry.assignmentId === assignment?.id
+        && item.entry.activityId === String(activityId || ''))
+      .sort((left, right) => {
+        const appliedOrder = String(right.entry.appliedAt).localeCompare(String(left.entry.appliedAt));
+        return appliedOrder || left.index - right.index;
+      });
+  }
+
+  function planChecklistActivityUnlock(historyEntries, checklist, assignment, activityId) {
+    const session = (checklist?.sessions || []).find(item =>
+      String(item.activity?.id || item.id) === String(activityId || '')
+    );
+    if (!session?.activity) throw new Error('The selected activity is unavailable.');
+    if (!isChecklistActivityPublished(session)) {
+      return {
+        canUnlock: false,
+        publicationIds: [],
+        publications: 0,
+        restoredScores: 0,
+        error: 'This activity is not published.'
+      };
+    }
+    const publications = matchingAppliedActivityPublications(
+      historyEntries,
+      checklist,
+      assignment,
+      activityId
+    );
+    if (!publications.length) {
+      return {
+        canUnlock: false,
+        publicationIds: [],
+        publications: 0,
+        restoredScores: 0,
+        error: 'The publication history required to restore official scores is unavailable.'
+      };
+    }
+    const simulatedChecklist = clone(checklist);
+    const simulatedAssignment = clone(assignment);
+    let restoredScores = 0;
+    try {
+      publications.forEach(item => {
+        const simulatedEntry = clone(item.entry);
+        const result = revertChecklistPublication(
+          simulatedEntry,
+          simulatedChecklist,
+          simulatedAssignment
+        );
+        restoredScores += result.restored.length;
+      });
+      const simulatedSession = (simulatedChecklist.sessions || []).find(item =>
+        String(item.activity?.id || item.id) === String(activityId || '')
+      );
+      if (isChecklistActivityPublished(simulatedSession)) {
+        throw new Error('Additional publication history is required before this activity can be unlocked.');
+      }
+      return {
+        canUnlock: true,
+        publicationIds: publications.map(item => item.entry.id),
+        publications: publications.length,
+        restoredScores,
+        error: ''
+      };
+    } catch (error) {
+      return {
+        canUnlock: false,
+        publicationIds: publications.map(item => item.entry.id),
+        publications: publications.length,
+        restoredScores: 0,
+        error: error.message || 'The official scores changed after publication.'
+      };
+    }
+  }
+
+  function unlockChecklistActivity(historyEntries, checklist, assignment, activityId) {
+    const plan = planChecklistActivityUnlock(
+      historyEntries,
+      checklist,
+      assignment,
+      activityId
+    );
+    if (!plan.canUnlock) {
+      throw new Error(plan.error || 'This activity cannot be unlocked safely.');
+    }
+    const entriesById = new Map(
+      (Array.isArray(historyEntries) ? historyEntries : []).map(entry => [String(entry?.id || ''), entry])
+    );
+    let restoredScores = 0;
+    plan.publicationIds.forEach(publicationId => {
+      const historyEntry = entriesById.get(publicationId);
+      if (!historyEntry) throw new Error('The publication history changed. Reopen the unlock review.');
+      restoredScores += revertChecklistPublication(historyEntry, checklist, assignment).restored.length;
+    });
+    const session = (checklist.sessions || []).find(item =>
+      String(item.activity?.id || item.id) === String(activityId || '')
+    );
+    if (isChecklistActivityPublished(session)) {
+      throw new Error('The activity still has published points and remains locked.');
+    }
+    return {
+      publications: plan.publications,
+      restoredScores
+    };
   }
 
   const api = {
@@ -1203,6 +1982,7 @@
     CHECKLIST_COMPONENTS,
     CHECKLIST_SCORING_MODES,
     clone,
+    isStandardNumericalChecklistLabel,
     activeLearners,
     secureRandomInt,
     shuffle,
@@ -1221,6 +2001,11 @@
     createPerformanceChecklist,
     createChecklistCriterion,
     addChecklistSession,
+    addChecklistActivity,
+    updateChecklistActivity,
+    checklistActivityDefinition,
+    checklistSessionCriteria,
+    checklistTableColumns,
     checklistEntry,
     setChecklistEntry,
     applyChecklistEntryTransaction,
@@ -1229,14 +2014,21 @@
     createChecklistTemplate,
     checklistCriteriaFromTemplate,
     checklistLearnerTotals,
+    isChecklistActivityPublished,
     hasPublishedChecklistContributions,
     checklistEntryCount,
     clearChecklistEntries,
     linkChecklistPublicationTarget,
     planChecklistPublication,
     applyChecklistPublication,
+    linkChecklistActivityPublicationTarget,
+    checklistActivityTargetSuggestions,
+    planChecklistActivityPublication,
+    applyChecklistActivityPublication,
     planChecklistPublicationRevert,
     revertChecklistPublication,
+    planChecklistActivityUnlock,
+    unlockChecklistActivity,
     scoreState,
     equalScoreState
   };
@@ -1259,6 +2051,11 @@
     create: createPerformanceChecklist,
     createCriterion: createChecklistCriterion,
     addSession: addChecklistSession,
+    addActivity: addChecklistActivity,
+    updateActivity: updateChecklistActivity,
+    activityDefinition: checklistActivityDefinition,
+    sessionCriteria: checklistSessionCriteria,
+    tableColumns: checklistTableColumns,
     entry: checklistEntry,
     setEntry: setChecklistEntry,
     applyEntryTransaction: applyChecklistEntryTransaction,
@@ -1267,13 +2064,20 @@
     createTemplate: createChecklistTemplate,
     criteriaFromTemplate: checklistCriteriaFromTemplate,
     totals: checklistLearnerTotals,
+    isActivityPublished: isChecklistActivityPublished,
     hasPublishedContributions: hasPublishedChecklistContributions,
     clearEntries: clearChecklistEntries,
     linkTarget: linkChecklistPublicationTarget,
     planPublication: planChecklistPublication,
     applyPublication: applyChecklistPublication,
+    linkActivityTarget: linkChecklistActivityPublicationTarget,
+    activityTargetSuggestions: checklistActivityTargetSuggestions,
+    planActivityPublication: planChecklistActivityPublication,
+    applyActivityPublication: applyChecklistActivityPublication,
     planRevert: planChecklistPublicationRevert,
-    revertPublication: revertChecklistPublication
+    revertPublication: revertChecklistPublication,
+    planActivityUnlock: planChecklistActivityUnlock,
+    unlockActivity: unlockChecklistActivity
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

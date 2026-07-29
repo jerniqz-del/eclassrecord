@@ -8,6 +8,95 @@
 /**
  * Displays a popup modal to add a new learner to the active class roster.
  */
+function createLearnerAvatarPicker(container, options = {}) {
+  if (!container || !globalThis.LearnerAvatars) {
+    return {
+      selection: () => ({ avatarPresetId: '', avatarAssignment: 'auto' }),
+      syncSex: () => {}
+    };
+  }
+  const sourceLearner = options.learner || {};
+  const workingLearner = {
+    ...sourceLearner,
+    id: sourceLearner.id || options.learnerId || uid('learner'),
+    sex: sourceLearner.sex || options.sex || ''
+  };
+  let assignmentMode = sourceLearner.avatarAssignment === 'manual' ? 'manual' : 'auto';
+  let selectedId = LearnerAvatars.isValid(sourceLearner.avatarPresetId)
+    ? sourceLearner.avatarPresetId
+    : LearnerAvatars.NEUTRAL_ID;
+  let activeTab = LearnerAvatars.categoryForId(selectedId)
+    || LearnerAvatars.cleanSex(workingLearner.sex)
+    || '';
+
+  const applyAutomatic = () => {
+    workingLearner.avatarPresetId = '';
+    workingLearner.avatarAssignment = 'auto';
+    LearnerAvatars.assignNewLearner(workingLearner, options.roster || []);
+    selectedId = workingLearner.avatarPresetId;
+    assignmentMode = 'auto';
+    activeTab = LearnerAvatars.categoryForId(selectedId) || '';
+  };
+  if (!LearnerAvatars.isValid(sourceLearner.avatarPresetId)) applyAutomatic();
+
+  const renderPicker = () => {
+    const presets = LearnerAvatars.presets(activeTab);
+    const categoryLabel = activeTab === 'M' ? 'Male' : activeTab === 'F' ? 'Female' : 'Default';
+    container.innerHTML = `<div class="learner-avatar-picker">
+      <div class="learner-avatar-picker__preview">
+        ${LearnerAvatars.renderPreset(selectedId, { size: 'xl', decorative: false })}
+        <div>
+          <strong>Learner Avatar</strong>
+          <span class="text-muted text-sm">${assignmentMode === 'auto' ? 'Automatically assigned from the recorded sex' : 'Manually selected avatar'}</span>
+          <button class="btn btn-ghost btn-sm" type="button" data-avatar-auto ${assignmentMode === 'auto' ? 'disabled' : ''}>Use Automatic Assignment</button>
+        </div>
+      </div>
+      <div class="learner-avatar-picker__tabs" role="tablist" aria-label="Learner avatar category">
+        <button type="button" role="tab" data-avatar-tab="M" aria-selected="${activeTab === 'M'}">Male Avatars</button>
+        <button type="button" role="tab" data-avatar-tab="F" aria-selected="${activeTab === 'F'}">Female Avatars</button>
+        <button type="button" role="tab" data-avatar-tab="" aria-selected="${activeTab === ''}">Default</button>
+      </div>
+      <div class="learner-avatar-picker__grid" role="group" aria-label="${categoryLabel} learner avatars">
+        ${presets.map((preset, index) => `<button class="learner-avatar-option" type="button" data-avatar-preset="${esc(preset.id)}" aria-pressed="${preset.id === selectedId}" title="${esc(`${categoryLabel} avatar ${index + 1}`)}">
+          ${LearnerAvatars.renderPreset(preset.id, { size: 'lg', decorative: true })}
+        </button>`).join('')}
+      </div>
+    </div>`;
+    container.querySelectorAll('[data-avatar-tab]').forEach(button => {
+      button.addEventListener('click', () => {
+        activeTab = button.dataset.avatarTab || '';
+        renderPicker();
+      });
+    });
+    container.querySelectorAll('[data-avatar-preset]').forEach(button => {
+      button.addEventListener('click', () => {
+        selectedId = button.dataset.avatarPreset;
+        assignmentMode = 'manual';
+        renderPicker();
+      });
+    });
+    container.querySelector('[data-avatar-auto]')?.addEventListener('click', () => {
+      applyAutomatic();
+      renderPicker();
+    });
+  };
+
+  renderPicker();
+  return {
+    selection: () => ({
+      avatarPresetId: selectedId,
+      avatarAssignment: assignmentMode
+    }),
+    syncSex: (sex) => {
+      workingLearner.sex = sex;
+      if (assignmentMode === 'auto') {
+        applyAutomatic();
+        renderPicker();
+      }
+    }
+  };
+}
+
 function showAddLearnerModal() {
   const a = currentAssignment();
   if (!a) {
@@ -15,13 +104,15 @@ function showAddLearnerModal() {
     return;
   }
 
+  const draftLearnerId = uid('learner');
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.style.zIndex = '12000';
   overlay.innerHTML = `
-    <div class="modal" style="max-width: 620px; width: 92%;">
+    <div class="modal" style="max-width: 760px; width: 92%;">
       <div class="modal__title">Add New Learner</div>
       <div class="modal__body">
+        <div id="addLearnerAvatarPicker" class="u-mb-4"></div>
         <div class="field" style="margin-bottom: var(--space-3);">
           <label class="field-label">Learner Reference Number (LRN)</label>
           <input id="modalLearnerLrn" class="field-input" placeholder="e.g. 101234567890" maxlength="12" />
@@ -97,6 +188,11 @@ function showAddLearnerModal() {
   const sexInput = overlay.querySelector('#modalLearnerSex');
   const birthdateInput = overlay.querySelector('#modalLearnerBirthdate');
   const confirmBtn = overlay.querySelector('#btnConfirmAddLearner');
+  const avatarPicker = createLearnerAvatarPicker(
+    overlay.querySelector('#addLearnerAvatarPicker'),
+    { learnerId: draftLearnerId, roster: a.learners, sex: sexInput.value }
+  );
+  sexInput.addEventListener('change', () => avatarPicker.syncSex(sexInput.value));
 
   const submit = () => {
     const lrn = trim(lrnInput.value);
@@ -116,16 +212,20 @@ function showAddLearnerModal() {
     }
 
     const learner = {
-      id: uid('learner'),
+      id: draftLearnerId,
       lrn: lrn,
       lastName: lastName,
       firstName: firstName,
       middleName: middleName,
       sex: sex,
-      birthdate: normalizeLearnerBirthdate(birthdateInput.value)
+      birthdate: normalizeLearnerBirthdate(birthdateInput.value),
+      ...avatarPicker.selection()
     };
 
     learner.displayName = formatLearnerName(learner.lastName, learner.firstName, learner.middleName);
+    if (globalThis.LearnerAvatars && learner.avatarAssignment !== 'manual') {
+      LearnerAvatars.assignNewLearner(learner, a.learners);
+    }
     a.learners.push(learner);
 
     saveDatabase();
@@ -423,8 +523,9 @@ function renderLearnersRoster() {
     <table class="roster-table" style="width:100%;border-collapse:collapse">
       <thead>
         <tr style="border-bottom:2px solid var(--border-color);text-align:left">
-          <th style="padding:var(--space-2);width:8%">No.</th>
-          <th style="padding:var(--space-2);width:18%">LRN</th>
+          <th style="padding:var(--space-2);width:6%">No.</th>
+          <th style="padding:var(--space-2);width:7%;text-align:center">Avatar</th>
+          <th style="padding:var(--space-2);width:16%">LRN</th>
           <th style="padding:var(--space-2)">Name</th>
           <th style="padding:var(--space-2);width:9%">Sex</th>
           <th style="padding:var(--space-2);width:15%">Birthdate</th>
@@ -470,6 +571,7 @@ function renderLearnersRoster() {
     html += `
       <tr style="border-bottom:1px solid var(--border-color); ${l.transferredOutTerm ? 'opacity: 0.65;' : ''}">
         <td style="padding:var(--space-2)">${i + 1}</td>
+        <td class="roster-avatar-cell">${globalThis.LearnerAvatars ? LearnerAvatars.renderLearner(l, { size: 'sm' }) : ''}</td>
         <td style="padding:var(--space-2)">${esc(l.lrn || '—')}</td>
         <td style="padding:var(--space-2)"><strong>${esc(learnerDisplayName(l))}</strong>${badgeHtml}</td>
         <td style="padding:var(--space-2)">${esc(l.sex || '—')}</td>
@@ -557,6 +659,8 @@ function createTransferTargetLearner(learner, completedTermGrades) {
     middleName: learner.middleName || '',
     sex: learner.sex,
     birthdate: normalizeLearnerBirthdate(learner.birthdate),
+    avatarPresetId: learner.avatarPresetId || '',
+    avatarAssignment: learner.avatarAssignment === 'manual' ? 'manual' : 'auto',
     transferredInGrades: completedTermGrades
   };
   targetLearner.displayName = formatLearnerName(targetLearner.lastName, targetLearner.firstName, targetLearner.middleName);
@@ -771,6 +875,7 @@ function removeLearner(learnerId) {
         <!-- Edit Learner Profile Info -->
         <div style="border-bottom: 1px solid var(--border-color); margin-bottom: var(--space-4); padding-bottom: var(--space-4);">
           <h3 style="margin-top: 0; margin-bottom: var(--space-3); font-size: var(--font-size-md); font-weight: 600; color: var(--text-primary);">Edit Learner Information</h3>
+          <div id="editLearnerAvatarPicker" class="u-mb-4"></div>
           <div class="field" style="margin-bottom: var(--space-3);">
             <label class="field-label">Learner Reference Number (LRN)</label>
             <input id="editLearnerLrn" class="field-input" value="${esc(learner.lrn || '')}" maxlength="12" placeholder="e.g. 101234567890" />
@@ -793,6 +898,7 @@ function removeLearner(learnerId) {
             <div class="field" style="flex: 1; margin-bottom: 0;">
               <label class="field-label">Sex</label>
               <select id="editLearnerSex" class="field-select">
+                <option value="" ${!learner.sex ? 'selected' : ''}>Not specified</option>
                 <option value="M" ${learner.sex === 'M' ? 'selected' : ''}>Male / Boy</option>
                 <option value="F" ${learner.sex === 'F' ? 'selected' : ''}>Female / Girl</option>
               </select>
@@ -839,6 +945,14 @@ function removeLearner(learnerId) {
   `;
   document.body.appendChild(overlay);
 
+  const editSexInput = overlay.querySelector('#editLearnerSex');
+  const otherLearners = (a.learners || []).filter(item => item.id !== learner.id);
+  const editAvatarPicker = createLearnerAvatarPicker(
+    overlay.querySelector('#editLearnerAvatarPicker'),
+    { learner, roster: otherLearners }
+  );
+  editSexInput.addEventListener('change', () => editAvatarPicker.syncSex(editSexInput.value));
+
   const close = () => {
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   };
@@ -878,7 +992,7 @@ function removeLearner(learnerId) {
     const editLast = normalizeNamePart(overlay.querySelector('#editLearnerLast').value);
     const editFirst = normalizeNamePart(overlay.querySelector('#editLearnerFirst').value);
     const editMiddle = normalizeNamePart(overlay.querySelector('#editLearnerMiddle').value);
-    const editSex = overlay.querySelector('#editLearnerSex').value;
+    const editSex = editSexInput.value;
     const editBirthdateInput = overlay.querySelector('#editLearnerBirthdate').value;
     const editBirthdateError = validateLearnerBirthdate(editBirthdateInput);
 
@@ -898,6 +1012,12 @@ function removeLearner(learnerId) {
     learner.sex = editSex;
     learner.birthdate = normalizeLearnerBirthdate(editBirthdateInput);
     learner.displayName = formatLearnerName(editLast, editFirst, editMiddle);
+    const avatarSelection = editAvatarPicker.selection();
+    learner.avatarPresetId = avatarSelection.avatarPresetId;
+    learner.avatarAssignment = avatarSelection.avatarAssignment;
+    if (globalThis.LearnerAvatars && learner.avatarAssignment !== 'manual') {
+      LearnerAvatars.assignNewLearner(learner, otherLearners);
+    }
 
     saveDatabase();
     render();
