@@ -287,18 +287,35 @@ const HELP_TOPICS = [
     id: 'teacher_tools',
     category: 'grading_scoring',
     title: 'Teacher Tools Workspace',
-    keywords: 'tools group randomizer name picker grade simulator games sudoku 2048 minesweeper active class temporary preview apply revert',
+    keywords: 'tools group randomizer name picker grade simulator performance checklist recitation notebook assignment written work performance task games sudoku 2048 minesweeper active class temporary preview apply publish revert',
     content: `
-      <p>Open <strong>Tools</strong> below Attendance for classroom utilities and short offline games. Group Randomizer, Name Picker, and Grade Simulator share the app's Active Class selection.</p>
+      <p>Open <strong>Tools</strong> below Attendance for classroom utilities and short offline games. Group Randomizer, Name Picker, Grade Simulator, and Performance Checklist share the app's Active Class selection.</p>
       <h5>Classroom Utilities:</h5>
       <ul>
         <li><strong>Group Randomizer:</strong> Create complete-random or sex-balanced groups, then copy or print the temporary result.</li>
         <li><strong>Name Picker:</strong> Draw every eligible learner once before the bag resets.</li>
         <li><strong>Grade Simulator:</strong> Try raw-score changes on a detached preview. Nothing is saved until you review and apply the change summary.</li>
+        <li><strong>Performance Checklist:</strong> Start with a standard checklist or a saved template, then record Recitation, Notebook, Assignment, or custom criteria per class and term. Search, missing-entry filters, Bulk Mark, learner notes, and the Mini Name Picker make daily recording faster.</li>
         <li><strong>Offline Games:</strong> Play locally bundled Sudoku, 2048, or Minesweeper without network access.</li>
       </ul>
+      <h5>Publishing Checklist Points:</h5>
+      <ol>
+        <li>Create a checklist and assign every criterion to Tracking Only, Written Work, or Performance Task.</li>
+        <li>Start today's dated session, then record entries in the grid, with Bulk Mark, or with the Mini Name Picker.</li>
+        <li>Select <strong>Review Grade Contributions</strong> and choose the Written Work or Performance Task card.</li>
+        <li>Choose an existing assessment with a valid HPS and inspect every before-and-after score.</li>
+        <li>Verify the profile PIN before publishing. Reopening Publish without new entries will not add the same points twice.</li>
+      </ol>
+      <h5>Resetting a Checklist:</h5>
+      <ol>
+        <li>Open <strong>More Actions</strong>, then select <strong>Reset Checklist</strong>.</li>
+        <li>Choose whether to clear the current session, one criterion, every session in the selected term, or only the Mini Name Picker draw cycle.</li>
+        <li>If points were published, revert every applicable Published Point History entry first.</li>
+        <li>Data-clearing resets require PIN verification and create a local restore point before removing entries.</li>
+      </ol>
+      <p>Use <strong>Undo Last Entry</strong> for the latest compatible edit or bulk action. If a newer change touches the same entry, the app preserves it and refuses the undo. Open <strong>Checklist Tutorial</strong> from More Actions for a read-only guided walkthrough.</p>
       <div class="help-highlight-box">
-        <strong>Record safety:</strong> Random groups, picker draws, simulation previews, and game progress remain temporary. Applying or reversing a Grade Simulator change uses the official save path, verifies protected profiles, and records a compact reversal history.
+        <strong>Record safety:</strong> Tracking Only checklist entries never affect grades. Blank official scores are excluded, published scores cannot exceed HPS, and publishing or reverting checklist points uses the protected save path with a reversible history.
       </div>
     `
   },

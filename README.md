@@ -8,6 +8,7 @@ A premium, modern offline desktop application designed for Filipino teachers to 
 - **Senior High Teaching Loads**: Grades 11–12 class setup with strengthened-SHS Core, Academic Elective, Sports/Arts, Field Experience, Research/Design, TechPro, and Work Immersion grading presets.
 - **Roster Management**: Roster uploads from LIS school records via native SF1 spreadsheet importer (`.xlsx`, `.xls`, `.csv`, `.txt` parsed using `xlsx` library) and direct CSV rosters paste.
 - **Dense Score Grid**: Smooth score matrix with inline Arrow/Enter key navigation and HPS (Highest Possible Score) adjustment rows.
+- **Performance Checklist**: Streamlined per-class, per-term evidence tracking with Quick Start templates, today-aware sessions, search and missing-entry filters, Bulk Mark, notes, safe undo/reset, a mini Name Picker, and reviewed, PIN-confirmed publication to existing WW or PT assessments.
 - **Final Grades Summary**: Auto-computed averages across terms with remarked pass/fail color-coded badges.
 - **Advisory Class Consolidation**: A fixed adviser dashboard with official roster management, subject completion tracking, and audited offline Grade Transfer File import/export.
 - **Native File Dialogs**: Backup and recovery in JSON backups, and grades reports exporting in standard CSV files.
