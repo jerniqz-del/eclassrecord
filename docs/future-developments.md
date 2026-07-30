@@ -4,6 +4,10 @@ This document records deferred product ideas that have been reviewed but are not
 approved for implementation yet. Items in this document must not be treated as
 released features, active subscriptions, or compatibility commitments.
 
+## Detailed Feature Plans
+
+- [Temporary Presentation Viewer and Interactive Noise Meter](future-development-presentation-viewer-noise-meter.md)
+
 ## Managed E-Class Cloud Backup and Group Subscription
 
 **Status:** Deferred for future evaluation
