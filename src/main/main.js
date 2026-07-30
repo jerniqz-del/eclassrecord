@@ -1774,6 +1774,8 @@ function parseLinkPreview(html, url) {
   };
 }
 
+const { fetchPublicUrl } = require('./link-preview-helper');
+
 async function fetchLinkPreview(url) {
   let parsed;
   try {
@@ -1793,20 +1795,21 @@ async function fetchLinkPreview(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 6000);
   try {
-    const response = await fetch(parsed.toString(), {
-      redirect: 'follow',
+    const { response, finalUrl } = await fetchPublicUrl(parsed, {
+      fetchImpl: fetch,
       signal: controller.signal,
-      headers: {
-        'user-agent': 'E-Class Record Link Preview'
-      }
+      headers: { 'user-agent': 'E-Class Record Link Preview' }
     });
     const contentType = response.headers.get('content-type') || '';
     if (!response.ok || !/text\/html|application\/xhtml\+xml/i.test(contentType)) {
       return { success: false, error: 'Preview is unavailable.' };
     }
     const html = (await response.text()).slice(0, 250000);
-    return { success: true, preview: parseLinkPreview(html, response.url || parsed.toString()) };
+    return { success: true, preview: parseLinkPreview(html, finalUrl.toString()) };
   } catch (err) {
+    if (err.message === 'PRIVATE_HOST') {
+      return { success: false, error: 'Preview blocked for private/internal hosts.' };
+    }
     return { success: false, error: 'Preview request failed.' };
   } finally {
     clearTimeout(timeout);

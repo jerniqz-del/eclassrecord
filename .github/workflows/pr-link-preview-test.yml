@@ -1,0 +1,24 @@
+name: PR - link-preview test
+
+on:
+  pull_request:
+
+jobs:
+  link-preview-test:
+    name: Run link-preview host-blocking smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run link-preview test
+        run: npm run test:link-preview

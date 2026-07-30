@@ -82,3 +82,12 @@ To build and publish an OTA update:
 2. Commit and push a Git release tag matching the pattern `v*` (e.g., `git tag v2.1.0` then `git push origin v2.1.0`).
 3. GitHub Actions will build the NSIS executable and metadata files, pushing them directly to GitHub Releases.
 4. Active users will automatically prompt to download and apply the update on relaunch.
+
+## Security notes
+
+- Link-preview fetches performed by the app are restricted to public hosts. The main process blocks requests to loopback, RFC1918, link-local (169.254.*) and IPv6 link-local/ULA ranges to mitigate SSRF risks when renderer code requests previews.
+- A test script is available to validate the host blocking logic locally:
+  - npm run test:link-preview
+  - It uses deterministic DNS stubs and assertions for private, public, mixed, and failed DNS results.
+
+If you maintain CI workflows, ensure tests are run before publishing releases (recommended).
