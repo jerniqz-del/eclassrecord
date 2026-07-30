@@ -86,8 +86,8 @@ To build and publish an OTA update:
 ## Security notes
 
 - Link-preview fetches performed by the app are restricted to public hosts. The main process blocks requests to loopback, RFC1918, link-local (169.254.*) and IPv6 link-local/ULA ranges to mitigate SSRF risks when renderer code requests previews.
-- A new test script is available to validate the host blocking logic locally:
+- A test script is available to validate the host blocking logic locally:
   - npm run test:link-preview
-  - It checks example.com, github.com, localhost, 127.0.0.1, and 169.254.169.254 and prints whether each host is blocked.
+  - It uses deterministic DNS stubs and assertions for private, public, mixed, and failed DNS results.
 
 If you maintain CI workflows, ensure tests are run before publishing releases (recommended).

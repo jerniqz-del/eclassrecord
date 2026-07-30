@@ -10,8 +10,6 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const os = require('os');
-const dns = require('dns').promises;
-const net = require('net');
 
 const isSmokeTest = process.argv.includes('--smoke-test') || process.argv.includes('--offline-smoke-test');
 const isOfflineSmokeTest = process.argv.includes('--offline-smoke-test');
@@ -1776,7 +1774,7 @@ function parseLinkPreview(html, url) {
   };
 }
 
-const { isPrivateHost } = require('./link-preview-helper');
+const { fetchPublicUrl } = require('./link-preview-helper');
 
 async function fetchLinkPreview(url) {
   let parsed;
@@ -1790,10 +1788,6 @@ async function fetchLinkPreview(url) {
     return { success: false, error: 'Unsupported URL.' };
   }
 
-  if (await isPrivateHost(parsed.hostname)) {
-    return { success: false, error: 'Preview blocked for private/internal hosts.' };
-  }
-
   if (typeof fetch !== 'function') {
     return { success: false, error: 'Preview fetch is unavailable.' };
   }
@@ -1801,20 +1795,21 @@ async function fetchLinkPreview(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 6000);
   try {
-    const response = await fetch(parsed.toString(), {
-      redirect: 'follow',
+    const { response, finalUrl } = await fetchPublicUrl(parsed, {
+      fetchImpl: fetch,
       signal: controller.signal,
-      headers: {
-        'user-agent': 'E-Class Record Link Preview'
-      }
+      headers: { 'user-agent': 'E-Class Record Link Preview' }
     });
     const contentType = response.headers.get('content-type') || '';
     if (!response.ok || !/text\/html|application\/xhtml\+xml/i.test(contentType)) {
       return { success: false, error: 'Preview is unavailable.' };
     }
     const html = (await response.text()).slice(0, 250000);
-    return { success: true, preview: parseLinkPreview(html, response.url || parsed.toString()) };
+    return { success: true, preview: parseLinkPreview(html, finalUrl.toString()) };
   } catch (err) {
+    if (err.message === 'PRIVATE_HOST') {
+      return { success: false, error: 'Preview blocked for private/internal hosts.' };
+    }
     return { success: false, error: 'Preview request failed.' };
   } finally {
     clearTimeout(timeout);
