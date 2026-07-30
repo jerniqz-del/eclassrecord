@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>E-Class Record App</title>
   
-  <!-- Typography from Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  
   <!-- Style Sheets -->
   <link rel="stylesheet" href="css/design-tokens.css" />
   <link rel="stylesheet" href="css/layout.css" />
@@ -651,6 +646,10 @@
         <div class="card backup-sync-card">
           <h2 class="card-title">OneDrive Backup &amp; Sync</h2>
           <p class="settings-row__desc">Create an ID on your main PC, or paste the ID from another PC to connect the same profile.</p>
+          <div class="action-cluster u-mt-2">
+            <button id="btnStartBackupTour" class="btn btn-primary btn-sm" type="button" onclick="startBackupSettingsTour()">Start Interactive Tour</button>
+            <button id="btnOpenOneDriveTutorial" class="btn btn-ghost btn-sm" type="button" onclick="openHelpTopic('secondary_backup')">View Step-by-Step Tutorial</button>
+          </div>
 
           <div class="backup-sync-primary">
             <label class="field-label" for="backupRecoverySearchInput">Backup Recovery ID</label>

@@ -5,10 +5,10 @@ plugins {
 }
 
 android {
-    namespace = "com.example.eclassrecordmobile"
+    namespace = "com.eclassrecord.mobile"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.example.eclassrecordmobile"
+        applicationId = "com.eclassrecord.mobile"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

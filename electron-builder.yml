@@ -1,6 +1,6 @@
 appId: com.eclassrecord.app
 productName: E-Class Record
-copyright: Copyright © 2026 E-Class Record App
+copyright: Copyright (c) 2026 E-Class Record App
 
 directories:
   output: dist

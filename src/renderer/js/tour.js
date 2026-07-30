@@ -6,6 +6,8 @@
 
 let currentTourStepIndex = 0;
 let originalDbBackup = null;
+let activeTourKind = 'app';
+let activeTourSteps = [];
 
 const TOUR_STEPS = [
   {
@@ -94,6 +96,98 @@ const TOUR_STEPS = [
   }
 ];
 
+function backupSettingsTourSteps() {
+  const profile = typeof activeProfile === 'function' ? activeProfile() : null;
+  const hasRecoveryId = Boolean(profile?.backupRecoveryId);
+  const steps = [
+    {
+      title: 'OneDrive Backup & Sync',
+      selector: '.backup-sync-card',
+      view: 'settings',
+      align: 'top',
+      body: 'This card contains the complete OneDrive backup and multi-PC workflow. The tour only explains these controls and will not create an ID, select a folder, change a profile, or write synchronization files.'
+    },
+    {
+      title: 'Backup and Sync Status',
+      selector: '#sharedSyncSettingsStatus',
+      view: 'settings',
+      align: 'bottom',
+      body: 'Check this message first. Local saving remains active even when OneDrive is not configured, unavailable, or waiting for synchronization.'
+    },
+    {
+      title: 'Backup Recovery ID',
+      selector: '#backupRecoverySearchInput',
+      view: 'settings',
+      align: 'bottom',
+      body: hasRecoveryId
+        ? 'This profile already has a Recovery ID. It identifies the encrypted OneDrive repository used by this profile, but the profile PIN is still required to decrypt records.'
+        : 'On another PC, paste the Recovery ID copied from the main PC here. Leave it empty when this is the main PC and you are creating a new synchronization identity.'
+    }
+  ];
+
+  if (hasRecoveryId) {
+    steps.push(
+      {
+        title: 'Copy the Existing ID',
+        selector: '#btnCopyBackupRecoveryId',
+        view: 'settings',
+        align: 'bottom',
+        body: 'Copy this Recovery ID when connecting the same encrypted profile on another PC. Keep the profile PIN separately because the ID alone cannot open the records.'
+      },
+      {
+        title: 'Resume OneDrive Sync',
+        selector: '#btnSharedSyncToggle',
+        view: 'settings',
+        align: 'bottom',
+        body: 'If synchronization is disconnected on this PC, use this control to select the corresponding local OneDrive folder and resume only after the existing repository has been scanned.'
+      }
+    );
+  } else {
+    steps.push(
+      {
+        title: 'Create an ID on the Main PC',
+        selector: '#btnSharedSyncToggle',
+        view: 'settings',
+        align: 'bottom',
+        body: 'Use Create New ID only on the PC that already contains the records you want to keep. The app verifies the PIN and OneDrive folder before committing the new identity.'
+      },
+      {
+        title: 'Connect an Existing ID',
+        selector: '#btnSharedSyncConnect',
+        view: 'settings',
+        align: 'bottom',
+        body: 'On PC2 or PC3, paste the ID from the main PC and select Connect Existing ID. The app scans without writing, requires the original profile PIN, and asks you to review any differences.'
+      }
+    );
+  }
+
+  steps.push(
+    {
+      title: 'Profiles Found in OneDrive',
+      selector: '.backup-found',
+      view: 'settings',
+      align: 'top',
+      body: 'This list automatically discovers valid E-Class Record backups and synchronized profiles in detected OneDrive folders. Match both the profile name and Recovery ID before connecting or restoring.'
+    },
+    {
+      title: 'Advanced Device Controls',
+      selector: '.backup-sync-advanced',
+      view: 'settings',
+      align: 'top',
+      body: 'Open this section to check OneDrive now, review incoming changes, rename this device, disconnect this PC, find a backup manually, or manage a separate local backup folder.'
+    },
+    {
+      title: 'Detailed OneDrive Guide',
+      selector: '#btnOpenOneDriveTutorial',
+      view: 'settings',
+      align: 'top',
+      body: 'Open the full step-by-step guide whenever you need the main-PC setup, PC2/PC3 connection, Files On-Demand, offline use, troubleshooting, or safety instructions.'
+    }
+  );
+
+  return steps;
+}
+
 function checkTourPrompt() {
   const disabled = localStorage.getItem('tour_prompts_disabled') === 'true';
   const dismissedUntil = localStorage.getItem('tour_prompt_dismissed_until');
@@ -163,6 +257,8 @@ function acceptTourPrompt() {
 
 function startAppTour() {
   currentTourStepIndex = 0;
+  activeTourKind = 'app';
+  activeTourSteps = TOUR_STEPS;
 
   // Hide profileOverlay if active so mockup views are visible
   const profileOverlay = document.getElementById('profileOverlay');
@@ -241,13 +337,32 @@ function startAppTour() {
   renderTourStep();
 }
 
+function startBackupSettingsTour() {
+  currentTourStepIndex = 0;
+  activeTourKind = 'backup-settings';
+  activeTourSteps = backupSettingsTourSteps();
+  originalDbBackup = null;
+
+  if (typeof setView === 'function') {
+    setView('settings');
+  }
+
+  const blocker = document.getElementById('tourClickBlocker');
+  const overlay = document.getElementById('tourHighlightOverlay');
+  if (blocker) blocker.style.display = 'block';
+  if (overlay) overlay.style.display = 'block';
+
+  renderTourStep();
+}
+
 function renderTourStep() {
-  if (currentTourStepIndex < 0 || currentTourStepIndex >= TOUR_STEPS.length) {
+  const steps = activeTourSteps.length ? activeTourSteps : TOUR_STEPS;
+  if (currentTourStepIndex < 0 || currentTourStepIndex >= steps.length) {
     exitTour();
     return;
   }
 
-  const step = TOUR_STEPS[currentTourStepIndex];
+  const step = steps[currentTourStepIndex];
 
   // 1. Switch View if needed
   if (step.view && typeof setView === 'function') {
@@ -297,11 +412,11 @@ function renderTourStep() {
 
       if (titleEl) titleEl.textContent = step.title;
       if (bodyEl) bodyEl.textContent = step.body;
-      if (countEl) countEl.textContent = `Step ${currentTourStepIndex + 1} of ${TOUR_STEPS.length}`;
+      if (countEl) countEl.textContent = `Step ${currentTourStepIndex + 1} of ${steps.length}`;
 
       // Render dots
       if (dotsEl) {
-        dotsEl.innerHTML = TOUR_STEPS.map((s, idx) => `
+        dotsEl.innerHTML = steps.map((s, idx) => `
           <span class="tour-popover__dot ${idx === currentTourStepIndex ? 'tour-popover__dot--active' : ''}"></span>
         `).join('');
       }
@@ -315,7 +430,7 @@ function renderTourStep() {
       }
 
       if (nextBtn) {
-        if (currentTourStepIndex === TOUR_STEPS.length - 1) {
+        if (currentTourStepIndex === steps.length - 1) {
           nextBtn.textContent = 'Finish';
         } else {
           nextBtn.textContent = 'Next \u2192';
@@ -388,10 +503,11 @@ function prevTourStep() {
 }
 
 function skipTour() {
-  exitTour();
+  exitTour(false);
 }
 
-function exitTour() {
+function exitTour(completed = true) {
+  const finishedTourKind = activeTourKind;
   const blocker = document.getElementById('tourClickBlocker');
   const overlay = document.getElementById('tourHighlightOverlay');
   const popover = document.getElementById('tourPopover');
@@ -406,22 +522,34 @@ function exitTour() {
     originalDbBackup = null;
   }
 
-  const hasActiveProfile = (typeof sessionActive !== 'undefined' && sessionActive);
-  if (!hasActiveProfile) {
-    if (typeof showProfileOverlayAfterWelcome === 'function') {
-      showProfileOverlayAfterWelcome();
+  if (finishedTourKind === 'backup-settings') {
+    if (typeof setView === 'function') {
+      setView('settings');
     }
   } else {
-    // Return to dashboard
-    if (typeof setView === 'function') {
-      setView('dashboard');
-    }
+    const hasActiveProfile = (typeof sessionActive !== 'undefined' && sessionActive);
+    if (!hasActiveProfile) {
+      if (typeof showProfileOverlayAfterWelcome === 'function') {
+        showProfileOverlayAfterWelcome();
+      }
+    } else {
+      // Return to dashboard
+      if (typeof setView === 'function') {
+        setView('dashboard');
+      }
 
-    // Refresh UI to display active user profile records
-    if (typeof render === 'function') {
-      render();
+      // Refresh UI to display active user profile records
+      if (typeof render === 'function') {
+        render();
+      }
     }
   }
 
-  toast('App tour completed!', 'success');
+  activeTourKind = 'app';
+  activeTourSteps = [];
+  if (completed) {
+    toast(finishedTourKind === 'backup-settings' ? 'Backup settings tour completed!' : 'App tour completed!', 'success');
+  }
 }
+
+window.startBackupSettingsTour = startBackupSettingsTour;

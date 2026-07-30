@@ -590,6 +590,8 @@ function loadRendererSyncHarness(secure, options) {
   const preloadSource = fs.readFileSync(path.join(projectRoot, 'src/main/preload.js'), 'utf8');
   const databaseSource = fs.readFileSync(path.join(projectRoot, 'src/renderer/js/database.js'), 'utf8');
   const rendererSyncSource = fs.readFileSync(path.join(projectRoot, 'src/renderer/js/shared-folder-sync.js'), 'utf8');
+  const helpSource = fs.readFileSync(path.join(projectRoot, 'src/renderer/js/help.js'), 'utf8');
+  const tourSource = fs.readFileSync(path.join(projectRoot, 'src/renderer/js/tour.js'), 'utf8');
   const htmlSource = fs.readFileSync(path.join(projectRoot, 'src/renderer/index.html'), 'utf8');
   assert(mainSource.includes("ipcMain.handle('shared-sync:scan'"));
   assert(mainSource.includes("ipcMain.handle('shared-sync:create-restore-point'"));
@@ -606,6 +608,19 @@ function loadRendererSyncHarness(secure, options) {
   assert(rendererSyncSource.includes('await applyResolvedProfile(merge.merged, remoteMeta);'));
   assert(htmlSource.includes('id="sharedSyncIndicator"'));
   assert(htmlSource.includes('id="btnSharedSyncReview"'));
+  assert(htmlSource.includes('id="btnStartBackupTour"'));
+  assert(htmlSource.includes('onclick="startBackupSettingsTour()"'));
+  assert(htmlSource.includes('id="btnOpenOneDriveTutorial"'));
+  assert(helpSource.includes("title: 'OneDrive Backup & Multi-PC Sync — Step-by-Step'"));
+  assert(helpSource.includes('<strong>Create New ID</strong>'));
+  assert(helpSource.includes('<strong>Connect Existing ID</strong>'));
+  assert(helpSource.includes('Always keep on this device'));
+  assert(helpSource.includes('function openHelpTopic(topicId)'));
+  assert(tourSource.includes("activeTourKind = 'backup-settings'"));
+  assert(tourSource.includes('function backupSettingsTourSteps()'));
+  assert(tourSource.includes('function startBackupSettingsTour()'));
+  assert(tourSource.includes("setView('settings')"));
+  assert(tourSource.includes('will not create an ID, select a folder, change a profile, or write synchronization files'));
 
   console.log('Shared Folder Sync encryption, safe joining, automatic reconciliation, repository isolation, and conflict tests passed.');
 })().catch(error => {

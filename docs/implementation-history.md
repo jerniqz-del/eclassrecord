@@ -251,3 +251,6 @@ Adjusted patches:
 - Wire a visible dashboard entry point for Class Analysis if it should be user-facing.
 - Smoke-test calendar, database integrity repair, Quick Grade Entry, PDF/Excel export, SF1 import, backup restore, and OTA update flows.
 - Clean encoding artifacts in older UI strings where mojibake appears.
+- Keep the optional managed cloud backup and shared-subscription concept deferred
+  under [Future Developments](future-developments.md); it is not part of the
+  current database, OneDrive synchronization, or release commitments.
