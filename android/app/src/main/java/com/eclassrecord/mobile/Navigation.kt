@@ -1,4 +1,4 @@
-package com.example.eclassrecordmobile
+﻿package com.eclassrecord.mobile
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -8,10 +8,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import com.example.eclassrecordmobile.ui.ClassDetailScreen
-import com.example.eclassrecordmobile.ui.ScoreEntryScreen
-import com.example.eclassrecordmobile.ui.SyncScreen
-import com.example.eclassrecordmobile.ui.main.MainScreen
+import com.eclassrecord.mobile.ui.ClassDetailScreen
+import com.eclassrecord.mobile.ui.ScoreEntryScreen
+import com.eclassrecord.mobile.ui.SyncScreen
+import com.eclassrecord.mobile.ui.main.MainScreen
 
 @Composable
 fun MainNavigation() {

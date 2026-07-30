@@ -1,4 +1,4 @@
-package com.example.eclassrecordmobile.theme
+﻿package com.eclassrecord.mobile.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

@@ -61,6 +61,14 @@ function main() {
   fs.mkdirSync(tmpDir, { recursive: true });
   removeDirectory(backupDir);
 
+  const bundleResult = spawnSync(process.execPath, [path.join(__dirname, 'bundle-offline-games.js'), '--check'], {
+    cwd: rootDir,
+    stdio: 'inherit'
+  });
+  if (bundleResult.status !== 0) {
+    throw new Error('Offline game bundles are stale. Run npm run bundle:games before building.');
+  }
+
   console.log('Creating readable source backup before release build...');
   copyDirectory(srcDir, backupDir);
 

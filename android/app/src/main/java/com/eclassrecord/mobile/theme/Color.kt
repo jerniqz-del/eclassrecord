@@ -1,4 +1,4 @@
-package com.example.eclassrecordmobile.theme
+﻿package com.eclassrecord.mobile.theme
 
 import androidx.compose.ui.graphics.Color
 

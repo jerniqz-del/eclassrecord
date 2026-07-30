@@ -1,4 +1,4 @@
-package com.example.eclassrecordmobile.ui.main
+﻿package com.eclassrecord.mobile.ui.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,10 +22,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
-import com.example.eclassrecordmobile.ClassDetail
-import com.example.eclassrecordmobile.Sync
-import com.example.eclassrecordmobile.data.Assignment
-import com.example.eclassrecordmobile.data.DatabaseHelper
+import com.eclassrecord.mobile.ClassDetail
+import com.eclassrecord.mobile.Sync
+import com.eclassrecord.mobile.data.Assignment
+import com.eclassrecord.mobile.data.DatabaseHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -294,7 +294,7 @@ fun AssignmentCard(
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "M: $males · F: $females",
+                        text = "M: $males Â· F: $females",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = contentColor

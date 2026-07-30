@@ -1,4 +1,4 @@
-package com.example.eclassrecordmobile
+﻿package com.eclassrecord.mobile
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.example.eclassrecordmobile.data.BleServerManager
-import com.example.eclassrecordmobile.data.DatabaseHelper
-import com.example.eclassrecordmobile.theme.EClassRecordMobileTheme
+import com.eclassrecord.mobile.data.BleServerManager
+import com.eclassrecord.mobile.data.DatabaseHelper
+import com.eclassrecord.mobile.theme.EClassRecordMobileTheme
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {

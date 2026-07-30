@@ -1,4 +1,4 @@
-package com.example.eclassrecordmobile.ui
+﻿package com.eclassrecord.mobile.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,7 +30,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.eclassrecordmobile.data.DatabaseHelper
+import com.eclassrecord.mobile.data.DatabaseHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,7 +136,7 @@ fun ScoreEntryScreen(
                 title = {
                     Column {
                         Text(assessment.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text("Grade ${assignment.gradeLevel} - ${assignment.section} · HPS: ${assessment.maxScore}", fontSize = 12.sp)
+                        Text("Grade ${assignment.gradeLevel} - ${assignment.section} Â· HPS: ${assessment.maxScore}", fontSize = 12.sp)
                     }
                 },
                 navigationIcon = {
@@ -211,7 +211,7 @@ fun ScoreEntryScreen(
                                 .width(1.dp)
                         )
                         Text(
-                            text = "LRN: ${activeLearner.lrn.ifEmpty { "—" }}",
+                            text = "LRN: ${activeLearner.lrn.ifEmpty { "â€”" }}",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
@@ -388,7 +388,7 @@ fun ScoreEntryScreen(
                                         MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = currentScore.ifEmpty { "—" },
+                                    text = currentScore.ifEmpty { "â€”" },
                                     fontWeight = FontWeight.Bold,
                                     color = if (currentScore.isNotEmpty())
                                         MaterialTheme.colorScheme.primary

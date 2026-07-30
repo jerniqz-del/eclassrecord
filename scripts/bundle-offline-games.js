@@ -2,13 +2,21 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
+const checkOnly = process.argv.includes('--check');
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
 function write(relativePath, content) {
-  fs.writeFileSync(path.join(root, relativePath), content, 'utf8');
+  const target = path.join(root, relativePath);
+  if (checkOnly) {
+    if (fs.readFileSync(target, 'utf8') !== content) {
+      throw new Error(`Generated offline game is stale: ${relativePath}. Run npm run bundle:games.`);
+    }
+    return;
+  }
+  fs.writeFileSync(target, content, 'utf8');
 }
 
 function inlineBlock(source, startMarker, endMarker, replacement) {
@@ -74,4 +82,6 @@ mines = inlineBlock(
 );
 write(minesPath, mines);
 
-console.log('Offline game assets bundled into sandbox-local HTML.');
+console.log(checkOnly
+  ? 'Generated offline game assets are up to date.'
+  : 'Offline game assets bundled into sandbox-local HTML.');

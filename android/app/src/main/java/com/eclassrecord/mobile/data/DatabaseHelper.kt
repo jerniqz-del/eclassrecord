@@ -1,4 +1,4 @@
-package com.example.eclassrecordmobile.data
+﻿package com.eclassrecord.mobile.data
 
 import android.content.Context
 import android.util.Log

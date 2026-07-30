@@ -1,4 +1,4 @@
-package com.example.eclassrecordmobile.ui
+﻿package com.eclassrecord.mobile.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,9 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
-import com.example.eclassrecordmobile.ScoreEntry
-import com.example.eclassrecordmobile.data.Assessment
-import com.example.eclassrecordmobile.data.DatabaseHelper
+import com.eclassrecord.mobile.ScoreEntry
+import com.eclassrecord.mobile.data.Assessment
+import com.eclassrecord.mobile.data.DatabaseHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -227,7 +227,7 @@ fun AssessmentItem(
                 
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "$label · HPS: ${if (hps > 0) hps else "--"}",
+                    text = "$label Â· HPS: ${if (hps > 0) hps else "--"}",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

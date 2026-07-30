@@ -91,7 +91,7 @@
   --sidebar-input-focus:    rgba(6, 182, 212, 0.4);
 
   /* ── Typography ──────────────────────────────────────── */
-  --font-family-sans:  'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-family-sans:  'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-family-mono:  'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
 
   --font-size-xs:   0.6875rem;   /* 11px */

@@ -1,9 +1,9 @@
-package com.example.eclassrecordmobile.ui.main
+﻿package com.eclassrecord.mobile.ui.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.eclassrecordmobile.data.DataRepository
-import com.example.eclassrecordmobile.ui.main.MainScreenUiState.Success
+import com.eclassrecord.mobile.data.DataRepository
+import com.eclassrecord.mobile.ui.main.MainScreenUiState.Success
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch

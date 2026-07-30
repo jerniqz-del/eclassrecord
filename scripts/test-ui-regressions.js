@@ -50,7 +50,7 @@ assert(zValue('#imageZoomModal.modal-z-top') > zValue('.modal-z-donate'), 'Image
 
 assert(attendanceSource.includes("target.id = 'attendanceSf2ReportPrint'"), 'SF2 export must create a dedicated print target.');
 assert(attendanceSource.includes('target.innerHTML = window.renderAttendanceSf2Preview(payload)'), 'SF2 PDF must use the exact preview renderer.');
-assert(printCss.includes('body.support-print-mode.support-print-attendance > *:not(#attendanceSf2ReportPrint)'), 'SF2 print mode must exclude the grading sheet and all other page content.');
-assert(printCss.includes('#attendanceSf2ReportPrint .sf2-preview-sheet'), 'SF2 print mode must size the preview sheet for PDF output.');
+assert(printCss.includes('body.support-print-mode.support-print-attendance.sf2-export-print-mode > *:not(#attendanceSf2ReportPrint)'), 'SF2 export mode must exclude the grading sheet and all other page content.');
+assert(printCss.includes('body.support-print-mode.support-print-attendance.sf2-export-print-mode #attendanceSf2ReportPrint .sf2-preview-sheet'), 'SF2 export mode must size the preview sheet for PDF output.');
 
 console.log('UI regression checks passed.');

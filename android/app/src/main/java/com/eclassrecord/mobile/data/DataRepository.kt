@@ -1,4 +1,4 @@
-package com.example.eclassrecordmobile.data
+﻿package com.eclassrecord.mobile.data
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

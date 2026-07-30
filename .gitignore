@@ -5,6 +5,8 @@ out/
 # Local restore points and temporary checks
 .recovery-backups/
 .tmp-checks/
+.worktrees/
+.pr*-worktree/
 .agents/
 AGENTS.md
 RTK.md

@@ -2560,7 +2560,7 @@
    print-preview and report-preparation overlays. */
 .modal-z-donate { z-index: 13000; }
 #donateQrModal.modal-z-higher { z-index: 13010; }
-#imageZoomModal.modal-z-top { z-index: 10060; }
+#imageZoomModal.modal-z-top { z-index: 13020; }
 .modal-z-tour { z-index: 10020; }
 .modal-z-confirm { z-index: 10030; }
 

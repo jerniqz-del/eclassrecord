@@ -1,4 +1,4 @@
-package com.example.eclassrecordmobile.ui
+﻿package com.eclassrecord.mobile.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -25,8 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.example.eclassrecordmobile.data.BleServerManager
-import com.example.eclassrecordmobile.data.DatabaseHelper
+import com.eclassrecord.mobile.data.BleServerManager
+import com.eclassrecord.mobile.data.DatabaseHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -1,6 +1,6 @@
-package com.example.eclassrecordmobile.ui.main
+﻿package com.eclassrecord.mobile.ui.main
 
-import com.example.eclassrecordmobile.data.DataRepository
+import com.eclassrecord.mobile.data.DataRepository
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
