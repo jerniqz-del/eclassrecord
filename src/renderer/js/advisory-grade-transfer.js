@@ -949,7 +949,7 @@
       .sort((left, right) => text(right.importedAt).localeCompare(text(left.importedAt)))[0] || null;
   }
 
-  async function exportAssignment(assignmentId, term, mapePart = '', adviserMayModifySubmittedGrades = false, adviserModificationNote = '') {
+  async function prepareAssignmentPayload(assignmentId, term, mapePart = '', adviserMayModifySubmittedGrades = false, adviserModificationNote = '') {
     const profileDb = activeDb();
     const assignment = (profileDb.assignments || []).find(item => item.id === assignmentId);
     if (!assignment) throw new Error('The selected subject class was not found.');
@@ -973,6 +973,11 @@
         : globalScope.getLearnerTermGradeForExport(source, learnerId, selectedTerm)
     });
     if (!payload.learners.length) throw new Error('No saved final grades were found for the selected term.');
+    return payload;
+  }
+
+  async function exportAssignment(assignmentId, term, mapePart = '', adviserMayModifySubmittedGrades = false, adviserModificationNote = '') {
+    const payload = await prepareAssignmentPayload(assignmentId, term, mapePart, adviserMayModifySubmittedGrades, adviserModificationNote);
     const requestedFilename = gradeTransferFilename(payload);
     const exportFilename = globalScope.AdminTestMode?.isActive?.()
       ? globalScope.AdminTestMode.markExportFilename(requestedFilename)
@@ -988,7 +993,7 @@
     const overlay = document.createElement('div');
     const isMapeh = /mapeh|music, arts, physical education, and health/i.test(text(assignment.subject));
     overlay.className = 'modal-overlay advisory-nested-modal';
-    overlay.innerHTML = `<div class="modal"><div class="modal__title">Export Final Grades</div><div class="modal__body"><div class="advisory-transfer-summary"><strong>Grade ${globalScope.esc(assignment.gradeLevel)} - ${globalScope.esc(assignment.section)}</strong><span>${globalScope.esc(assignment.subject)} · SY ${globalScope.esc(assignment.schoolYear || profileDb.schoolYear)}</span></div><div class="field"><label class="field-label">Term</label><select class="field-select" data-export-term><option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option></select></div><label class="advisory-permission-option"><input type="checkbox" data-adviser-edit-permission><span><strong>Allow the adviser to modify grades submitted in this file</strong><small>This applies only to the saved grades in the selected subject and term.</small></span></label><div class="field advisory-permission-note" data-adviser-note-field hidden><label class="field-label" for="adviserModificationNote">Note to Adviser <span>(Optional)</span></label><textarea class="field-input" id="adviserModificationNote" rows="4" maxlength="${ADVISER_NOTE_MAX_LENGTH}" data-adviser-note placeholder="Add instructions or context for the adviser."></textarea><p class="field-help"><span data-adviser-note-count>0</span> / ${ADVISER_NOTE_MAX_LENGTH} characters</p></div><label class="advisory-privacy-notice"><input type="checkbox" data-privacy-confirm><span><strong>Privacy reminder</strong>This Grade Transfer File contains learner names, LRNs, and final grades. Store and share it securely.</span></label></div><div class="modal__actions"><button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-export disabled>Continue &amp; Save File</button></div></div>`;
+    overlay.innerHTML = `<div class="modal"><div class="modal__title">Export Final Grades</div><div class="modal__body"><div class="advisory-transfer-summary"><strong>Grade ${globalScope.esc(assignment.gradeLevel)} - ${globalScope.esc(assignment.section)}</strong><span>${globalScope.esc(assignment.subject)} · SY ${globalScope.esc(assignment.schoolYear || profileDb.schoolYear)}</span></div><div class="field"><label class="field-label">Term</label><select class="field-select" data-export-term><option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option></select></div><label class="advisory-permission-option"><input type="checkbox" data-adviser-edit-permission><span><strong>Allow the adviser to modify grades submitted in this file</strong><small>This applies only to the saved grades in the selected subject and term.</small></span></label><div class="field advisory-permission-note" data-adviser-note-field hidden><label class="field-label" for="adviserModificationNote">Note to Adviser <span>(Optional)</span></label><textarea class="field-input" id="adviserModificationNote" rows="4" maxlength="${ADVISER_NOTE_MAX_LENGTH}" data-adviser-note placeholder="Add instructions or context for the adviser."></textarea><p class="field-help"><span data-adviser-note-count>0</span> / ${ADVISER_NOTE_MAX_LENGTH} characters</p></div><label class="advisory-privacy-notice"><input type="checkbox" data-privacy-confirm><span><strong>Privacy reminder</strong>This Grade Transfer File contains learner names, LRNs, and final grades. Store and share it securely.</span></label></div><div class="modal__actions"><button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-ghost btn-sm" data-submit-online disabled>Submit to Adviser</button><button class="btn btn-primary btn-sm" data-export disabled>Continue &amp; Save File</button></div></div>`;
     document.body.appendChild(overlay);
     if (isMapeh) {
       const termField = overlay.querySelector('[data-export-term]')?.closest('.field');
@@ -1000,7 +1005,11 @@
     const noteInput = overlay.querySelector('[data-adviser-note]');
     const noteCount = overlay.querySelector('[data-adviser-note-count]');
     const exportButton = overlay.querySelector('[data-export]');
-    privacy.addEventListener('change', () => { exportButton.disabled = !privacy.checked; });
+    const onlineButton = overlay.querySelector('[data-submit-online]');
+    privacy.addEventListener('change', () => {
+      exportButton.disabled = !privacy.checked;
+      onlineButton.disabled = !privacy.checked;
+    });
     editPermission.addEventListener('change', () => {
       noteField.hidden = !editPermission.checked;
       if (!editPermission.checked) {
@@ -1010,6 +1019,29 @@
     });
     noteInput.addEventListener('input', () => { noteCount.textContent = String(noteInput.value.length); });
     overlay.querySelector('[data-cancel]').addEventListener('click', () => overlay.remove());
+    onlineButton.addEventListener('click', async () => {
+      onlineButton.disabled = true;
+      exportButton.disabled = true;
+      try {
+        const payload = await prepareAssignmentPayload(
+          assignmentId,
+          overlay.querySelector('[data-export-term]').value,
+          overlay.querySelector('[data-export-mape-part]')?.value || '',
+          editPermission.checked,
+          editPermission.checked ? noteInput.value : ''
+        );
+        const result = await globalScope.CloudGradePilot.submitGradePayload(payload);
+        if (!result?.cancelled) overlay.remove();
+      } catch (error) {
+        console.error('Online grade submission failed:', error);
+        globalScope.toast(error.message || 'Grades could not be submitted online.', 'error');
+      } finally {
+        if (overlay.isConnected) {
+          onlineButton.disabled = !privacy.checked;
+          exportButton.disabled = !privacy.checked;
+        }
+      }
+    });
     exportButton.addEventListener('click', async () => {
       exportButton.disabled = true;
       try {
@@ -1044,7 +1076,7 @@
     }
   }
 
-  function showImportPreview(plan) {
+  function showImportPreview(plan, options = {}) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay advisory-nested-modal';
     document.body.appendChild(overlay);
@@ -1076,6 +1108,8 @@
           if (globalScope.AdvisoryRoster.renderWorkspace) globalScope.AdvisoryRoster.renderWorkspace();
           globalScope.renderDashboardOverview();
           globalScope.toast(`Imported ${result.importedCount} final grade${result.importedCount === 1 ? '' : 's'}.`, 'success');
+          try { await options.onImported?.(result); }
+          catch (error) { globalScope.toast(`Grades were imported, but the online receipt could not be sent: ${error.message}`, 'warning'); }
         } catch (error) {
           console.error('Grade import failed:', error);
           globalScope.toast('The import could not be completed. Previous data was restored.', 'error');
@@ -1083,6 +1117,22 @@
       });
     };
     renderPreview();
+  }
+
+  function openOnlineSubmission(payload, submission) {
+    const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
+    if (!advisoryClass) { globalScope.showAdvisoryClassSetupModal(); return; }
+    const filename = `Online - ${submission.senderName} - ${submission.subjectName} - Term ${submission.term}`;
+    showImportPreview(planImport(activeDb(), advisoryClass, payload, filename), {
+      onImported: () => globalScope.CloudGradePilot.acknowledge(submission.id, 'accepted')
+    });
+  }
+
+  async function showOnlineInbox() {
+    const advisoryClass = globalScope.AdvisoryDashboard.currentClass();
+    if (!advisoryClass) { globalScope.showAdvisoryClassSetupModal(); return; }
+    try { await globalScope.CloudGradePilot.showInbox(advisoryClass); }
+    catch (error) { globalScope.toast(error.message || 'The online grade inbox could not be opened.', 'error'); }
   }
 
   function showSubjectModal(subjectId) {
@@ -1924,7 +1974,7 @@
 
     panel.innerHTML = `
       <section id="advisoryGradeRecordPanel" role="tabpanel" data-advisory-panel="grades">
-        <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Final grades are shown by default. Show every term at once or use the + beside a subject or General Average.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-decimals aria-pressed="${advisoryDecimalView}">Decimal View: ${advisoryDecimalView ? 'On' : 'Off'}</button><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-terms aria-pressed="${allTermsExpanded}">${allTermsExpanded ? 'Hide Terms 1–3' : 'Show Terms 1–3'}</button>${quickGradeSubjects.length ? '<button class="btn btn-primary btn-sm" type="button" data-advisory-quick-grade>Quick Grade Entry</button>' : ''}${advisoryClass.isSpecialClass ? '<button class="btn btn-ghost btn-sm" type="button" data-manage-special-subjects>Manage Special Subjects</button>' : ''}<button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
+        <div class="advisory-grade-panel__header"><div><h3>Learner Grade Record</h3><p>Final grades are shown by default. Show every term at once or use the + beside a subject or General Average.</p></div><div class="advisory-grade-panel__actions"><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-decimals aria-pressed="${advisoryDecimalView}">Decimal View: ${advisoryDecimalView ? 'On' : 'Off'}</button><button class="btn btn-ghost btn-sm" type="button" data-toggle-advisory-terms aria-pressed="${allTermsExpanded}">${allTermsExpanded ? 'Hide Terms 1–3' : 'Show Terms 1–3'}</button>${quickGradeSubjects.length ? '<button class="btn btn-primary btn-sm" type="button" data-advisory-quick-grade>Quick Grade Entry</button>' : ''}${advisoryClass.isSpecialClass ? '<button class="btn btn-ghost btn-sm" type="button" data-manage-special-subjects>Manage Special Subjects</button>' : ''}<button class="btn btn-ghost btn-sm" type="button" data-cloud-grade-inbox>Online Grade Inbox</button><button class="btn btn-primary btn-sm" type="button" data-import-subject-grades>Import Grade Transfer File</button></div></div>
         ${matrix}
       </section>
       <section id="advisoryGradeSourcesPanel" role="tabpanel" data-advisory-panel="sources" hidden>
@@ -1961,6 +2011,7 @@
         </form>
       </section>`;
     panel.querySelector('[data-import-subject-grades]')?.addEventListener('click', selectImportFile);
+    panel.querySelector('[data-cloud-grade-inbox]')?.addEventListener('click', showOnlineInbox);
     panel.querySelector('[data-advisory-quick-grade]')?.addEventListener('click', () => showManualQuickGradeModal());
     panel.querySelectorAll('[data-advisory-grade-entry]').forEach(input => {
       const persist = async () => {
@@ -2204,6 +2255,7 @@
     gradeTransferFilename,
     fileFingerprint,
     buildExportPayload,
+    prepareAssignmentPayload,
     validatePayload,
     contextValidation,
     matchLearner,
@@ -2238,6 +2290,9 @@
     sortLearnersBySubject,
     setPanelTab,
     showExportModal,
+    showImportPreview,
+    openOnlineSubmission,
+    showOnlineInbox,
     showSubjectModal,
     showManualQuickGradeModal,
     selectImportFile,

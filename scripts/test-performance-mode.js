@@ -51,6 +51,27 @@ assert(analytics.includes('Math.max(requestedDelay, 30000)'), 'optional analytic
 assert(updater.includes('LOW_SPEC_STARTUP_DELAY_MS = 30000'), 'automatic updates are not delayed in low-spec mode');
 assert(help.includes('helpCenterInitialized'), 'Help Center lacks one-time initialization');
 assert(help.includes('window.ensureHelpCenterInitialized'), 'Help Center cannot be initialized on demand');
+assert(help.includes("id: 'school_cloud'"), 'School ICT and Cloud Setup category is missing');
+[
+  'ict_cloud_scope',
+  'ict_cloudflare_account',
+  'ict_cloud_installation',
+  'ict_teacher_onboarding',
+  'ict_cloud_assignments',
+  'ict_cloud_pilot_test',
+  'ict_cloud_operations',
+  'ict_cloud_troubleshooting'
+].forEach(topicId => {
+  assert(help.includes(`id: '${topicId}'`), `School ICT tutorial topic ${topicId} is missing`);
+});
+assert(help.includes('Teachers must never share or use this infrastructure account.'), 'Cloudflare account-sharing warning is missing');
+assert(help.includes('No R2 subscription, checkout, payment method, or paid Workers plan is required.'), 'D1-only no-payment guidance is missing');
+assert(help.includes('does not grant access to grades'), 'Worker address access boundary is missing');
+assert(help.includes('Every activation code is private, temporary, and single-use'), 'Teacher activation-code guidance is missing');
+assert(help.includes('Settings &gt; School Grade Submission'), 'Teacher connection steps are missing');
+assert(help.includes('Do not begin with all teachers or real learner data.'), 'Synthetic-first pilot guidance is missing');
+assert(help.includes('Cloudflare package retention is not a backup strategy.'), 'Cloud retention warning is missing');
+
 
 const storageKey = performanceMode.STORAGE_KEY;
 assert.strictEqual(storageKey, 'eclass_performance_mode_v1');

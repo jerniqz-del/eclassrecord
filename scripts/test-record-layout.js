@@ -5,6 +5,7 @@ const vm = require('vm');
 
 const source = fs.readFileSync(path.join(__dirname, '../src/renderer/js/record-table.js'), 'utf8');
 const learnerGradesSource = fs.readFileSync(path.join(__dirname, '../src/renderer/js/learner-grades.js'), 'utf8');
+const quickGradeSource = fs.readFileSync(path.join(__dirname, '../src/renderer/js/quick-grade.js'), 'utf8');
 let domReady = null;
 const assignment = { gradeLevel: '7', subject: 'Mathematics', learners: [] };
 const context = {
@@ -44,6 +45,10 @@ assert.strictEqual(context.usesExpandedRecordLayout({ gradeLevel: '1' }), false)
 assert.strictEqual(context.usesExpandedRecordLayout({ gradeLevel: '4' }), true);
 assert.strictEqual(context.usesExpandedRecordLayout({ gradeLevel: '7' }), true);
 assert.strictEqual(context.usesExpandedRecordLayout({ gradeLevel: '12' }), true);
+assert.strictEqual(context.assessmentHpsLimit({ assessments: [{ id: 'blank', maxScore: '' }] }, 'blank'), null,
+  'blank HPS must leave score entry unrestricted');
+assert.strictEqual(context.assessmentHpsLimit({ assessments: [{ id: 'limited', maxScore: '25' }] }, 'limited'), 25,
+  'a populated HPS must become the score-entry ceiling');
 
 const standardItems = [
   ...Array.from({ length: 5 }, (_, index) => ({ component: 'WW', maxScore: index + 10 })),
@@ -82,6 +87,17 @@ assert.deepStrictEqual(
 
 const colGroup = context.recordColGroup({ gradeLevel: '11' }, standardItems);
 assert.strictEqual((colGroup.match(/<col\b/g) || []).length, 26, 'expanded Grade 11 layout must include assessment, T/%/WS, identity, and grade columns');
+
+assert.match(source, /function scheduleRecordTableRefresh\(\)[\s\S]*?requestAnimationFrame\(refresh\)/,
+  'score updates must defer grid rebuilding until mouse focus has moved');
+assert(source.includes('data-learner-id="${esc(learner.id)}"'),
+  'score inputs must expose a stable learner key for focus restoration');
+assert.match(source, /function updateScore\([\s\S]*?scheduleRecordTableRefresh\(\);[\s\S]*?renderFinalOnly\(\);/,
+  'score updates must use the focus- and scroll-preserving grid refresh');
+assert(source.includes('hpsLimit !== null && parseFloat(clean) > hpsLimit'),
+  'the central score update must reject scores above a populated HPS');
+assert(quickGradeSource.includes('if (!saveActiveScore()) return;'),
+  'Quick Grade must not navigate away from a rejected score');
 
 assert.match(
   learnerGradesSource,

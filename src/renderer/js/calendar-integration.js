@@ -1,0 +1,51 @@
+(function initCalendarIntegration(globalScope) {
+  'use strict';
+
+  const baseSetView = globalScope.setView;
+  let seededProfileDatabase = null;
+
+  function updateCalendarHeader() {
+    const title = document.getElementById('currentTitle');
+    if (title) title.textContent = 'School Calendar';
+    const school = document.getElementById('headerSchoolName');
+    if (school) school.textContent = db.schoolName || 'School calendar';
+  }
+
+  function configureCalendarSync() {
+    const button = document.getElementById('btnCalendarSync');
+    const offline = document.getElementById('calendarSyncOffline');
+    const hasRemoteBridge = typeof globalScope.electronAPI?.syncCalendarRemote === 'function';
+    if (button) button.hidden = !hasRemoteBridge;
+    if (offline) {
+      offline.hidden = hasRemoteBridge;
+      offline.textContent = 'Local calendar active';
+    }
+  }
+
+  function renderCalendarPage() {
+    if (typeof db !== 'object' || !db) return;
+    if (seededProfileDatabase !== db) {
+      if (typeof seedCalendarEvents === 'function') seedCalendarEvents();
+      seededProfileDatabase = db;
+    }
+    configureCalendarSync();
+    if (typeof renderCalendar === 'function') renderCalendar();
+    if (typeof updateSyncTimestamp === 'function') updateSyncTimestamp();
+    if (typeof checkTodayCalendarNotifications === 'function') checkTodayCalendarNotifications();
+  }
+
+  globalScope.openCalendarView = function openCalendarView() {
+    globalScope.setView('calendar');
+  };
+
+  globalScope.setView = function setViewWithCalendar(view) {
+    baseSetView(view);
+    const isCalendar = view === 'calendar';
+    document.getElementById('navCalendar')?.classList.toggle('nav-btn--active', isCalendar);
+    if (!isCalendar) return;
+    updateCalendarHeader();
+    requestAnimationFrame(renderCalendarPage);
+  };
+
+  globalScope.refreshCalendarView = renderCalendarPage;
+})(window);

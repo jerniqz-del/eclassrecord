@@ -1,0 +1,62 @@
+.workplace-grade-insight { margin-top:12px; }
+.workplace-performance-card,.workplace-missing-card { width:100%; }
+.workplace-performance-header { align-items:flex-end !important; }
+.workplace-learner-selector { display:grid; gap:4px; min-width:min(290px,40vw); color:var(--color-neutral-500); font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
+.workplace-learner-selector .field-select { min-height:34px; font-size:12px; text-transform:none; }
+.workplace-performance-summary { display:flex; align-items:center; gap:20px; margin-bottom:15px; padding:10px 12px; border:1px solid var(--color-neutral-200); border-radius:10px; background:var(--color-neutral-50); }
+.workplace-performance-summary > div:first-child { display:flex; align-items:baseline; gap:8px; white-space:nowrap; }
+.workplace-performance-summary span,.workplace-performance-summary p,.workplace-student-term__label span,.workplace-missing-table td > span { color:var(--color-neutral-500); font-size:11px; }
+.workplace-performance-summary strong { color:var(--color-primary-700); font-size:24px; }
+.workplace-performance-summary p { margin:0 0 0 auto; }
+.workplace-performance-legend { display:flex; gap:12px; }
+.workplace-performance-legend span { display:flex; align-items:center; gap:5px; white-space:nowrap; }
+.workplace-performance-legend i { width:9px; height:9px; border-radius:50%; background:var(--color-primary-500); }
+.workplace-performance-legend span:last-child i { background:var(--color-neutral-400); }
+.workplace-student-chart { display:grid; gap:12px; }
+.workplace-student-term { display:grid; grid-template-columns:72px minmax(180px,1fr) 82px; align-items:center; gap:12px; }
+.workplace-student-term__label,.workplace-student-term__values { display:flex; flex-direction:column; gap:2px; }
+.workplace-student-term__label strong,.workplace-student-term__values strong { font-size:12px; }
+.workplace-student-term__plot { display:grid; gap:4px; }
+.workplace-student-term__track { display:block; overflow:hidden; height:8px; border-radius:999px; background:var(--color-neutral-100); }
+.workplace-student-term__track i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--color-primary-500),var(--color-success-500)); }
+.workplace-student-term__track--average { height:5px; }
+.workplace-student-term__track--average i { background:var(--color-neutral-400); }
+.workplace-student-term__values span { color:var(--color-neutral-500); font-size:10px; }
+.workplace-insight-chip--warning { color:#8a4b08; background:#fff3db; }
+.workplace-missing-table-wrap { max-height:390px; overflow:auto; border:1px solid var(--color-neutral-200); border-radius:10px; }
+.workplace-missing-table { width:100%; border-collapse:collapse; font-size:12px; }
+.workplace-missing-table thead th { position:sticky; top:0; z-index:2; padding:9px 10px; color:var(--color-neutral-600); background:var(--color-neutral-50); border-bottom:1px solid var(--color-neutral-200); text-align:left; font-size:10px; letter-spacing:.04em; text-transform:uppercase; }
+.workplace-missing-table td { padding:9px 10px; border-bottom:1px solid var(--color-neutral-100); vertical-align:top; }
+.workplace-missing-table td:first-child { display:flex; flex-direction:column; gap:2px; }
+.workplace-missing-row--complete { background:#edfaf3; }
+.workplace-missing-row--missing { background:#fff0f0; }
+.workplace-missing-row--complete:hover { background:#e2f7ec; }
+.workplace-missing-row--missing:hover { background:#ffe5e5; }
+.workplace-missing-row--complete td:first-child strong { color:#087447; }
+.workplace-missing-row--missing td:first-child strong { color:#a52b2b; }
+.workplace-missing-row--term-1 td:first-child { border-left:4px solid var(--color-primary-500); }
+.workplace-missing-row--term-2 td:first-child { border-left:4px solid var(--color-success-500); }
+.workplace-missing-row--term-3 td:first-child { border-left:4px solid var(--color-warning-500); }
+.workplace-term-separator th { padding:9px 10px; text-align:left; font-size:11px; letter-spacing:.04em; text-transform:uppercase; }
+.workplace-term-separator th span { display:inline-block; width:9px; height:9px; margin-right:7px; border-radius:50%; vertical-align:-1px; }
+.workplace-term-separator th small { margin-left:8px; font-weight:500; letter-spacing:0; text-transform:none; }
+.workplace-term-separator--1 th { color:#087f9c; background:#e8f8fc; border-top:2px solid var(--color-primary-500); }
+.workplace-term-separator--1 th span { background:var(--color-primary-500); }
+.workplace-term-separator--2 th { color:#087447; background:#e8f8f0; border-top:2px solid var(--color-success-500); }
+.workplace-term-separator--2 th span { background:var(--color-success-500); }
+.workplace-term-separator--3 th { color:#8a4b08; background:#fff5df; border-top:2px solid var(--color-warning-500); }
+.workplace-term-separator--3 th span { background:var(--color-warning-500); }
+.workplace-missing-status { display:inline-flex; align-items:center; width:max-content; padding:3px 7px; border-radius:999px; color:var(--color-neutral-700) !important; background:var(--color-neutral-100); font-weight:700; }
+.workplace-missing-status--complete { color:#087447 !important; background:#e5f8ef; }
+.workplace-missing-status--warning { color:#a52b2b !important; background:#ffe0e0; }
+.workplace-missing-learners summary { color:var(--color-primary-700); cursor:pointer; font-weight:700; }
+.workplace-missing-learners div { min-width:180px; max-width:300px; margin-top:7px; padding:8px; border-radius:7px; color:var(--color-neutral-700); background:var(--color-neutral-50); line-height:1.55; }
+.workplace-missing-none { color:var(--color-neutral-400) !important; }
+.workplace-missing-open { padding-inline:9px; }
+@media (max-width:900px) {
+  .workplace-performance-header { align-items:flex-start !important; flex-direction:column; }
+  .workplace-learner-selector { width:100%; min-width:0; }
+  .workplace-performance-summary { align-items:flex-start; flex-direction:column; gap:5px; }
+  .workplace-performance-summary p { margin-left:0; }
+  .workplace-student-term { grid-template-columns:58px minmax(100px,1fr) 70px; gap:8px; }
+}

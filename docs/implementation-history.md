@@ -2,8 +2,8 @@
 
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
-Current app version: 1.8.0
-Last reviewed: 2026-07-29
+Current app version: 1.9.0
+Last reviewed: 2026-08-10
 
 ## 1. Project Foundation
 
@@ -245,6 +245,7 @@ Adjusted patches:
 | v1.7.2 | Streamlined OneDrive backup onboarding, empty-by-default Recovery IDs, automatic validated profile discovery, organized per-device backups and restore points, safe multi-PC joining, and Attendance PDF/printing fixes. | Patch release focused on database integrity, backward compatibility, and a simpler teacher-facing backup workflow. |
 | v1.7.3 | Added Performance Checklist workflows with reusable criteria, session history, guarded score publication and reversal, plus a responsive sidebar with the active teacher profile name. | Patch release for faster classroom evidence tracking and clearer profile identification while preserving grading, backup, and sync compatibility. |
 | v1.8.0 | Added 50 male and 50 female locally bundled learner avatars with stable automatic assignment and manual selection; animated avatar movement between temporary randomized groups; synchronized avatar/name roulettes with selection confetti; distinct random color schemes for generated groups; and repeatable activity occurrences for Recitations, Notebooks, Assignments, and custom evidence, each with independent dates, HPS, visible table columns, ranked official-assessment targets, additive score posting, HPS-overflow protection, numerical minus/plus entry controls, and PIN-verified locking and unpublication after publishing. | Feature release that improves learner recognition without photos or biometric data, makes randomization more visually engaging while respecting reduced-motion preferences, preserves legacy combined checklist sessions, and makes recurring term activities explicit, independently publishable, locked against post-publication edits, and safely reversible before further editing. |
+| v1.9.0 | Added the dashboard workplace and analytics, static working-class hero, scrollable Classes & Advisory panel with full view, learner performance and missing-grade insights, School Calendar restoration, HPS enforcement, grading focus stability, persistent score history across all score-writing paths, learner-avatar modal scrolling fixes, optional school grade-submission pilot, and corrected nested report/export modal stacking. | Minor feature release focused on daily teacher workflow visibility, score accountability, safer grade entry, calendar planning, optional school coordination, and compatibility with existing local profiles, encrypted backups, Advisory records, and offline Grade Transfer files. |
 
 ## Current Follow-Up Checks
 

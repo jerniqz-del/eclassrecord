@@ -41,7 +41,7 @@ assert.match(html, /id="settingAutomaticUpdateChecks"/);
 assert.match(html, /id="settingAutomaticUpdateDownloads"/);
 assert.match(html, /src="js\/update-manager\.js"/);
 assert.match(html, /UpdateManager\.init\(\)/);
-assert.strictEqual(pkg.version, '1.8.0');
+assert.strictEqual(pkg.version, '1.9.0');
 
 (async () => {
   const values = new Map();

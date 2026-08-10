@@ -44,6 +44,17 @@
     else scores[key] = Number(state.value);
   }
 
+  function auditScoreChange(assignment, change, source) {
+    const ids = globalScope.ScoreHistory?.splitScoreKey(change?.key);
+    if (!ids) return;
+    globalScope.ScoreHistory.record(assignment, {
+      ...ids,
+      previousValue: change.before?.present ? change.before.value : null,
+      newValue: change.after?.present ? change.after.value : null,
+      source
+    });
+  }
+
   function normalizeScoreState(state) {
     if (!state || typeof state !== 'object') return null;
     if (!state.present) return { present: false, value: null };
@@ -656,7 +667,10 @@
       throw new Error('Official scores changed while this simulation was open.');
     }
     if (!officialAssignment.scores) officialAssignment.scores = {};
-    plan.changes.forEach(change => writeScoreState(officialAssignment.scores, change.key, change.after));
+    plan.changes.forEach(change => {
+      auditScoreChange(officialAssignment, change, 'teacher-tools-simulation');
+      writeScoreState(officialAssignment.scores, change.key, change.after);
+    });
     return {
       id: createId('grade-simulation'),
       assignmentId: officialAssignment.id,
@@ -689,11 +703,13 @@
     const restored = [];
     const kept = [];
     plan.ready.forEach(change => {
+      auditScoreChange(officialAssignment, { ...change, before: change.after, after: change.before }, 'teacher-tools-revert');
       writeScoreState(officialAssignment.scores, change.key, change.before);
       restored.push(change.key);
     });
     plan.conflicts.forEach(change => {
       if (resolutions[change.key] === 'restore') {
+        auditScoreChange(officialAssignment, { ...change, before: change.current, after: change.before }, 'teacher-tools-revert');
         writeScoreState(officialAssignment.scores, change.key, change.before);
         restored.push(change.key);
       } else {
@@ -1389,7 +1405,10 @@
     }
     if (!freshPlan.changes.length) throw new Error('There are no checklist point changes to publish.');
     if (!assignment.scores) assignment.scores = {};
-    freshPlan.changes.forEach(change => writeScoreState(assignment.scores, change.key, change.after));
+    freshPlan.changes.forEach(change => {
+      auditScoreChange(assignment, change, 'checklist-publication');
+      writeScoreState(assignment.scores, change.key, change.after);
+    });
     const appliedAt = new Date().toISOString();
     freshPlan.publicationAfter.lastPublishedAt = appliedAt;
     if (!checklist.publicationTargets) checklist.publicationTargets = {};
@@ -1761,7 +1780,10 @@
     }
     assessment.title = freshPlan.assessmentAfter.title;
     assessment.maxScore = freshPlan.assessmentAfter.maxScore;
-    freshPlan.changes.forEach(change => writeScoreState(assignment.scores, change.key, change.after));
+    freshPlan.changes.forEach(change => {
+      auditScoreChange(assignment, change, 'checklist-publication');
+      writeScoreState(assignment.scores, change.key, change.after);
+    });
     const appliedAt = new Date().toISOString();
     freshPlan.publicationAfter.lastPublishedAt = appliedAt;
     const session = (checklist.sessions || []).find(item =>
@@ -1838,7 +1860,10 @@
       throw new Error('Scores or checklist publication data changed after this publication. Preserve the newer data and review it manually.');
     }
     if (!assignment.scores) assignment.scores = {};
-    plan.changes.forEach(change => writeScoreState(assignment.scores, change.key, change.before));
+    plan.changes.forEach(change => {
+      auditScoreChange(assignment, { ...change, before: change.after, after: change.before }, 'checklist-publication-revert');
+      writeScoreState(assignment.scores, change.key, change.before);
+    });
     if (historyEntry.assessmentBefore) {
       const assessment = (assignment.assessments || []).find(item => item.id === historyEntry.assessmentId);
       if (!assessment) throw new Error('The target assessment is no longer available.');

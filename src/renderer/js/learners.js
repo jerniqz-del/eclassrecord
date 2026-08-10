@@ -109,7 +109,7 @@ function showAddLearnerModal() {
   overlay.className = 'modal-overlay';
   overlay.style.zIndex = '12000';
   overlay.innerHTML = `
-    <div class="modal" style="max-width: 760px; width: 92%;">
+    <div class="modal learner-manage-modal" style="max-width: 760px; width: 92%;">
       <div class="modal__title">Add New Learner</div>
       <div class="modal__body">
         <div id="addLearnerAvatarPicker" class="u-mb-4"></div>

@@ -1,18 +1,15 @@
-// Bundled changelog for v1.8.0
+// Bundled changelog for v1.9.0
 const APP_CHANGELOG = {
-  version: '1.8.0',
-  releaseDate: '2026-07-29',
+  version: '1.9.0',
+  releaseDate: '2026-08-10',
   points: [
-    'Group Randomizer now animates learner avatars moving between temporary groups before settling into the final complete or sex-balanced result.',
-    'Name Picker and the Performance Checklist mini picker now shuffle avatars with learner names on the same slowing roulette timer and show brief confetti for the selected learner.',
-    'Added 50 male and 50 female locally bundled human learner avatars, with automatic stable assignment, neutral fallback, manual selection, and display across rosters, grading, attendance tools, and Teacher Tools.',
-    'Group Randomizer now assigns each generated group a distinct random color scheme and carries the group color into printed lists.',
-    'Added multiple Recitation, Notebook, Assignment, and custom activity occurrences within every class term.',
-    'Each activity now has its own title, date, HPS, scoring mode, notes setting, and Tracking Only, Written Work, or Performance Task destination.',
-    'Every created activity now appears as a separate table column; the Active Activity selector controls focused filtering, Bulk Mark, and the mini Name Picker.',
-    'Graded activities can add earned checklist points to compatible official scores, with unused assessments ranked first and safe empty-slot setup included in the publication review.',
-    'Added HPS-overflow warnings, unsafe-target blocking, before/contribution/after previews, duplicate-publication protection, stale-score detection, PIN verification, and guarded reversal.',
-    'Published activities are now locked until a PIN-verified unlock safely restores their official score changes; Recitation, Notebook, and Assignment use numerical entries with minus and plus controls.',
-    'Preserved older combined checklist sessions, encrypted backups, Shared Folder Sync records, entry history, and published-score history.'
+    'Redesigned the dashboard as a complete teacher workplace with grading analytics, learner performance, missing-grade tracking, and a scrollable Classes & Advisory side panel.',
+    'Added persistent score history for populated grading cells with old and new values, timestamps, terms, assessments, and entry sources across every supported score-writing workflow.',
+    'Prevented scores above HPS while allowing unrestricted entry when HPS is blank, and fixed mouse navigation so grading-sheet focus and scroll position remain stable.',
+    'Restored the School Calendar with month navigation, reminders, planned assessments, upcoming events, and optional DepEd calendar synchronization.',
+    'Added class-aware learner performance graphs, term-separated missing-grade status, and a duplicate-inclusive or unique-learner toggle for dashboard statistics.',
+    'Added an optional school-managed online grade-submission pilot while preserving secure offline Grade Transfer files as the default workflow.',
+    'Fixed learner-avatar modal scrolling and corrected Reports and Export Final Grades stacking above the Classes & Advisory full view.',
+    'Preserved existing profiles, scores, assessments, Advisory records, encrypted backups, Shared Folder Sync data, avatars, and Grade Transfer compatibility.'
   ]
 };

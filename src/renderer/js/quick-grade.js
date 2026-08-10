@@ -248,11 +248,11 @@ function updateQuickGradeActiveLearner() {
   }
   
   const assessment = a.assessments.find(x => x.id === quickGradeAssessmentId);
-  const maxScore = assessment ? number(assessment.maxScore) : 0;
+  const maxScore = assessmentHpsLimit(a, assessment?.id);
   
   const hpsEl = document.getElementById('quickGradeHpsLabel');
   if (hpsEl) {
-    hpsEl.textContent = maxScore > 0 ? `/ ${maxScore}` : '/ —';
+    hpsEl.textContent = maxScore !== null ? `/ ${maxScore}` : '/ —';
   }
   
   const scoreKey = `${learner.id}|${quickGradeAssessmentId}`;
@@ -319,8 +319,8 @@ function validateScoreInput(val, maxScore) {
     if (isNaN(numVal)) {
       msgEl.innerHTML = '<span class="badge badge--fail">Invalid number format</span>';
       inputWrap.classList.add('invalid');
-    } else if (maxScore > 0 && numVal > maxScore) {
-      msgEl.innerHTML = `<span class="badge badge--warning">Warning: Score exceeds HPS of ${maxScore}</span>`;
+    } else if (maxScore !== null && numVal > maxScore) {
+      msgEl.innerHTML = '<span class="badge badge--warning">Score cannot exceed HPS of ' + maxScore + '</span>';
       inputWrap.classList.add('invalid');
     }
   }
@@ -347,17 +347,23 @@ function saveActiveScore() {
   
   // Return if identical or invalid non-empty string
   if (oldValue === newValue || (val !== '' && isNaN(parseFloat(val)))) {
-    return;
+    return oldValue === newValue;
   }
   
   // Invoke central updateScore (handles history pushes, autosave debouncing, grid updates)
-  updateScore(learner.id, quickGradeAssessmentId, val);
+  const accepted = updateScore(learner.id, quickGradeAssessmentId, val, input, 'quick-grade');
+  if (!accepted) {
+    const assessment = a.assessments.find(item => item.id === quickGradeAssessmentId);
+    validateScoreInput(input.value, assessmentHpsLimit(a, assessment?.id));
+    return false;
+  }
   
   // Update sidebar list score indicator directly
   const scoreDisplay = document.querySelector(`#qg-roster-item-${quickGradeLearnerIndex} .quick-grade-roster-item__score`);
   if (scoreDisplay) {
     scoreDisplay.textContent = val !== '' ? val : '—';
   }
+  return true;
 }
 
 /**
@@ -367,7 +373,7 @@ function quickGradeNext() {
   const a = currentAssignment();
   if (!a) return;
   
-  saveActiveScore();
+  if (!saveActiveScore()) return;
   
   if (quickGradeLearnerIndex < a.learners.length - 1) {
     quickGradeLearnerIndex++;
@@ -392,7 +398,7 @@ function quickGradePrev() {
   const a = currentAssignment();
   if (!a) return;
   
-  saveActiveScore();
+  if (!saveActiveScore()) return;
   
   if (quickGradeLearnerIndex > 0) {
     quickGradeLearnerIndex--;
@@ -416,7 +422,7 @@ function quickGradeJumpToLearner(index) {
   const a = currentAssignment();
   if (!a || index < 0 || index >= a.learners.length) return;
   
-  saveActiveScore();
+  if (!saveActiveScore()) return;
   quickGradeLearnerIndex = index;
   updateQuickGradeActiveLearner();
 }
@@ -430,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
     input.addEventListener('input', (e) => {
       const a = currentAssignment();
       const assessment = a ? a.assessments.find(x => x.id === quickGradeAssessmentId) : null;
-      const maxScore = assessment ? number(assessment.maxScore) : 0;
+      const maxScore = assessmentHpsLimit(a, assessment?.id);
       validateScoreInput(e.target.value, maxScore);
     });
     

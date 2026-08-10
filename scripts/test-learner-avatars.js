@@ -94,6 +94,7 @@ assert(!/<script|onerror=|javascript:/i.test(rendered), 'Rendered avatar markup 
 const indexSource = read('src/renderer/index.html');
 const databaseSource = read('src/renderer/js/database.js');
 const learnerSource = read('src/renderer/js/learners.js');
+const componentStyles = read('src/renderer/css/components.css');
 const transferSource = read('src/renderer/js/import-export.js');
 const mobileSyncSource = read('src/renderer/js/mobile-sync.js');
 const recordSource = read('src/renderer/js/record-table.js');
@@ -103,6 +104,14 @@ const mainSource = read('src/main/main.js');
 assert(indexSource.includes('css/learner-avatars.css') && indexSource.includes('js/learner-avatars.js'));
 assert(databaseSource.includes('LearnerAvatars.assignDatabase(db)'));
 assert(learnerSource.includes('addLearnerAvatarPicker') && learnerSource.includes('editLearnerAvatarPicker'));
+const addLearnerModalSource = learnerSource.slice(
+  learnerSource.indexOf('function showAddLearnerModal()'),
+  learnerSource.indexOf('function sortLearners()')
+);
+assert(addLearnerModalSource.includes('class="modal learner-manage-modal"'),
+  'The Add Learner modal must keep its expanded avatar picker inside a scrollable dialog.');
+assert(/\.learner-manage-modal \.modal__body\s*\{[^}]*overflow-y:\s*auto;/s.test(componentStyles),
+  'Learner modal bodies must remain vertically scrollable.');
 assert(transferSource.includes('avatarPresetId') && transferSource.includes('avatarAssignment'));
 assert(mobileSyncSource.includes('avatarPresetId') && mobileSyncSource.includes('avatarAssignment'));
 assert(recordSource.includes('LearnerAvatars.renderLearner'));

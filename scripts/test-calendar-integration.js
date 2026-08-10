@@ -1,0 +1,35 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const root = path.join(__dirname, '..');
+const index = fs.readFileSync(path.join(root, 'src', 'renderer', 'index.html'), 'utf8');
+const calendar = fs.readFileSync(path.join(root, 'src', 'renderer', 'js', 'calendar.js'), 'utf8');
+const integration = fs.readFileSync(path.join(root, 'src', 'renderer', 'js', 'calendar-integration.js'), 'utf8');
+
+assert(index.includes('id="navCalendar"'));
+const calendarNav = index.match(/<button id="navCalendar"[\s\S]*?<\/button>/)?.[0] || '';
+assert(calendarNav.includes('<path d="M3 9h18"></path>'), 'Calendar sidebar icon should use the calendar-grid artwork.');
+assert(!calendarNav.includes('m9 15 2 2 4-5'), 'The previous calendar-check artwork should be removed.');
+assert(index.includes('data-view="calendar"'));
+assert(index.includes('id="calendarGrid"'));
+assert(index.includes('id="calendarMonthTitle"'));
+assert(index.includes('id="calendarSidebarList"'));
+assert(index.includes('id="calendarDayModal"'));
+assert(index.indexOf('js/calendar.js') < index.indexOf('js/app.js'));
+assert(index.indexOf('js/app.js') < index.indexOf('js/calendar-integration.js'));
+assert(calendar.includes('function renderCalendar('));
+assert(calendar.includes('function openCalendarDayModal('));
+assert(calendar.includes('function saveCalendarReminder('));
+assert(calendar.includes('function savePlannedAssessment('));
+assert(integration.includes("globalScope.setView('calendar')"));
+assert(integration.includes("typeof globalScope.electronAPI?.syncCalendarRemote === 'function'"));
+assert(integration.includes('seedCalendarEvents()'));
+assert(integration.includes('checkTodayCalendarNotifications()'));
+const gradeInsights = fs.readFileSync(path.join(root, 'src', 'renderer', 'js', 'dashboard-grade-insights.js'), 'utf8');
+assert(gradeInsights.includes('item.hasHps'), 'Missing-grade rows must exclude assessments without HPS.');
+assert(gradeInsights.includes("item.missing ? 'missing' : 'complete'"));
+const gradeInsightsCss = fs.readFileSync(path.join(root, 'src', 'renderer', 'css', 'dashboard-grade-insights.css'), 'utf8');
+assert(gradeInsightsCss.includes('.workplace-missing-row--complete'));
+assert(gradeInsightsCss.includes('.workplace-missing-row--missing'));
+console.log('Calendar navigation and restored feature integration tests passed.');

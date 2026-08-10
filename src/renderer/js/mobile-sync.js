@@ -224,6 +224,15 @@ function mergeUploadedScores(payload) {
       const oldValue = targetAssignment.scores[scoreKey] === undefined ? '' : String(targetAssignment.scores[scoreKey]);
       
       if (oldValue !== newValue) {
+        const ids = globalThis.ScoreHistory?.splitScoreKey(scoreKey);
+        if (ids) {
+          ScoreHistory.record(targetAssignment, {
+            ...ids,
+            previousValue: oldValue,
+            newValue,
+            source: 'mobile-sync'
+          });
+        }
         targetAssignment.scores[scoreKey] = newValue;
         updateCount++;
       }

@@ -1,0 +1,79 @@
+.view-section[data-view="dashboard"] {
+  overflow: hidden;
+}
+
+.view-section[data-view="dashboard"] .dashboard-workplace-shell {
+  height: 100%;
+  min-height: 0;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.view-section[data-view="dashboard"] .dashboard-workplace {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow: hidden;
+}
+
+.view-section[data-view="dashboard"] .workplace-hero {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  box-shadow: var(--shadow-md);
+}
+
+.view-section[data-view="dashboard"] .workplace-scroll-content {
+  display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
+  align-content: start;
+  gap: var(--space-4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 3px;
+  scrollbar-gutter: stable;
+}
+
+.view-section[data-view="dashboard"] .dashboard-class-panel {
+  position: relative;
+  top: auto;
+  height: 100%;
+  max-height: 100%;
+}
+
+@media (max-width: 920px) {
+  .view-section[data-view="dashboard"] {
+    overflow-y: auto;
+  }
+
+  .view-section[data-view="dashboard"] .dashboard-workplace-shell,
+  .view-section[data-view="dashboard"] .dashboard-workplace {
+    height: auto;
+    overflow: visible;
+  }
+
+  .view-section[data-view="dashboard"] .workplace-scroll-content {
+    display: grid;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .view-section[data-view="dashboard"] .dashboard-class-panel {
+    height: auto;
+    max-height: none;
+  }
+}
+
+@media print {
+  .view-section[data-view="dashboard"],
+  .view-section[data-view="dashboard"] .dashboard-workplace-shell,
+  .view-section[data-view="dashboard"] .dashboard-workplace,
+  .view-section[data-view="dashboard"] .workplace-scroll-content {
+    height: auto;
+    overflow: visible;
+  }
+}

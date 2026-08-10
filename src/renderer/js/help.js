@@ -12,6 +12,7 @@ const HELP_CATEGORIES = [
   { id: 'direct_transfers', name: '🔄 Direct Transfers' },
   { id: 'deped_policies', name: '📋 DepEd Policies & Rules' },
   { id: 'backups_settings', name: '⚙️ Backups & Settings' },
+  { id: 'school_cloud', name: 'School ICT & Cloud Setup' },
   { id: 'change_history', name: 'Change History & Patches' }
 ];
 
@@ -317,6 +318,122 @@ const HELP_TOPICS = [
       <div class="help-highlight-box">
         <strong>Record safety:</strong> Tracking Only checklist entries never affect grades. Blank official scores are excluded, published scores cannot exceed HPS, and publishing or reverting checklist points uses the protected save path with a reversible history.
       </div>
+    `
+  },
+  {
+    id: 'ict_cloud_scope',
+    category: 'school_cloud',
+    title: 'Cloud Grade Submissions: Purpose and Boundaries',
+    keywords: 'school ict cloud cloudflare grade submission d1 scope privacy temporary mailbox adviser subject teacher pilot',
+    content: `
+      <p>Cloud Grade Submissions is the optional online delivery path for one validated Grade Transfer package sent by an assigned subject teacher to the correct adviser. The existing file export and import workflow remains available.</p>
+      <div class="help-highlight-box"><strong>Pilot boundary:</strong> The school Worker and D1 database temporarily carry encrypted final-grade packages. They are not the permanent learner database, backup service, report repository, or grade calculator.</div>
+      <h5>Information Sent:</h5>
+      <ul><li>School year, grade level, section, subject, term, sender, recipient, learner count, and encrypted Grade Transfer content.</li><li>Submission, opening, acceptance, expiration, and administrative audit events.</li></ul>
+      <h5>Information Not Sent:</h5>
+      <ul><li>Raw scores, assessment columns, HPS, attendance, attachments, or the complete local profile.</li><li>Cloudflare passwords, administrator secrets, or private device encryption keys.</li></ul>
+      <p>The subject teacher&apos;s local record remains the source. The adviser&apos;s local Advisory Class becomes the consolidated record only after the normal review and import confirmation.</p>
+    `
+  },
+  {
+    id: 'ict_cloudflare_account',
+    category: 'school_cloud',
+    title: 'Creating and Protecting the School Cloudflare Account',
+    keywords: 'cloudflare free account school email owner ict administrator no payment card recovery password two factor custodian',
+    content: `
+      <p>The school needs one school-controlled Cloudflare account for infrastructure. Teachers must never share or use this infrastructure account.</p>
+      <div class="help-highlight-box"><strong>Free pilot:</strong> Select Workers Free and use Workers plus D1 only. No R2 subscription, checkout, payment method, or paid Workers plan is required.</div>
+      <h5>Account Checklist:</h5>
+      <ol><li>Obtain school-head authorization and identify the responsible ICT Coordinator.</li><li>Use an official school-controlled email rather than a personal address.</li><li>Enable multi-factor authentication and store recovery codes with an authorized custodian.</li><li>Record who may deploy, create users, revoke access, and respond to incidents.</li><li>Keep the account on Workers Free for the pilot.</li></ol>
+      <h5>Safety Rules:</h5>
+      <ul><li>Never give teachers the Cloudflare password, recovery codes, API tokens, or administrator secret.</li><li>Do not activate R2 or upgrade to Workers Paid during the no-payment pilot.</li><li>Review account members whenever ICT duties change.</li></ul>
+    `
+  },
+  {
+    id: 'ict_cloud_installation',
+    category: 'school_cloud',
+    title: 'Installing the D1-Only Grade Service',
+    keywords: 'install deploy worker d1 wrangler schema secret worker address health check cloud setup free',
+    content: `
+      <p>School ICT performs this installation once from the approved <strong>cloud-grade-pilot</strong> deployment folder.</p>
+      <h5>Installation Steps:</h5>
+      <ol><li>Install Node.js, open the project folder, and run <code>npx wrangler login</code>.</li><li>Create the free database with <code>npx wrangler d1 create eclassrecord-grade-pilot</code>.</li><li>Copy <code>wrangler.toml.example</code> to <code>wrangler.toml</code> and enter the returned database ID.</li><li>Run the included <code>schema.sql</code> against the remote D1 database.</li><li>Create a long random <code>ADMIN_SETUP_TOKEN</code> using <code>wrangler secret put</code>. Never save this value in the project.</li><li>Deploy the Worker and open its <code>/health</code> address.</li><li>Confirm the response identifies <strong>eclassrecord-grade-pilot</strong> and <strong>d1-only</strong> storage.</li></ol>
+      <h5>ICT Keeps Private:</h5>
+      <ul><li>The Cloudflare login, recovery codes, administrator secret, project configuration, and deployment computer.</li></ul>
+      <h5>ICT Gives Each User:</h5>
+      <ul><li>The HTTPS Worker address and that person&apos;s private one-time activation code.</li></ul>
+      <p>The Worker address identifies the school service but does not grant access to grades. Access also requires an activated individual profile and its protected device session.</p>
+    `
+  },
+  {
+    id: 'ict_teacher_onboarding',
+    category: 'school_cloud',
+    title: 'Registering and Connecting Teachers',
+    keywords: 'teacher onboarding settings school grade submission worker address activation code device account individual adviser subject teacher',
+    content: `
+      <p>Every teacher uses an individual E-Class Record profile. Every activation code is private, temporary, and single-use.</p>
+      <h5>ICT Preparation:</h5>
+      <ol><li>Verify the teacher&apos;s name, role, school year, section, and subject assignments.</li><li>Create an <strong>adviser</strong> user with each advised section.</li><li>Create a <strong>subject-teacher</strong> user with each section and normalized subject key.</li><li>Give the generated activation code privately to its owner. It expires after 14 days.</li></ol>
+      <h5>Teacher or Adviser Steps:</h5>
+      <ol><li>Open <strong>Settings &gt; School Grade Submission</strong>.</li><li>Enter the HTTPS School Worker Address.</li><li>Enter the one-time activation code and choose <strong>Connect Profile</strong>.</li><li>Confirm the displayed name and role, then use <strong>Test Connection</strong>.</li><li>Report an incorrect identity or assignment before sending or receiving grades.</li></ol>
+      <p>The app creates a device encryption key inside the protected local profile. Only the public key goes to Cloudflare. Reconnecting after disconnection requires a new code from ICT.</p>
+    `
+  },
+  {
+    id: 'ict_cloud_assignments',
+    category: 'school_cloud',
+    title: 'Configuring Sections, Subjects, and Adviser Permissions',
+    keywords: 'assignment school year grade section normalized subject key adviser teacher permission submit receive mapeh role mapping',
+    content: `
+      <p>The Worker permits submissions only when the registered assignments exactly match the Grade Transfer metadata.</p>
+      <h5>Required Setup Order:</h5>
+      <ol><li>Use the same school year, grade level, and section spelling used by local profiles.</li><li>Register one active adviser for each section.</li><li>Register every subject teacher with each handled section.</li><li>Use the app&apos;s normalized subject key, such as <code>MATHEMATICS</code>, <code>SCIENCE</code>, or <code>ENGLISH</code>.</li><li>For MAPEH, register the keys used by the exported Music &amp; Arts and PE &amp; Health components.</li><li>Complete one fictional submission for every distinct assignment pattern.</li></ol>
+      <h5>Permission Rules:</h5>
+      <ul><li>Subject teachers can submit only their assigned subject and section.</li><li>Advisers see only submissions addressed to their activated profile and assigned section.</li><li>Only the recipient adviser device key can decrypt the package.</li><li>ICT manages registration but should not receive or routinely inspect grade packages.</li></ul>
+    `
+  },
+  {
+    id: 'ict_cloud_pilot_test',
+    category: 'school_cloud',
+    title: 'Running the Required Grade-Submission Pilot Test',
+    keywords: 'pilot test synthetic sample grades submit online inbox accept duplicate offline retry compare validation',
+    content: `
+      <p>Do not begin with all teachers or real learner data. Use fictional learners and keep Grade Transfer Files available as the fallback.</p>
+      <h5>Required Test Sequence:</h5>
+      <ol><li>Register one subject teacher and one adviser for one fictional section.</li><li>Connect both individual app profiles and run <strong>Test Connection</strong>.</li><li>Create about 20 fictional learners with matching LRNs in both records.</li><li>Submit one term through <strong>Export Final Grades &gt; Submit to Adviser</strong>.</li><li>Open <strong>Advisory Class &gt; Online Grade Inbox</strong> as the adviser.</li><li>Review learner matches and compare every grade before confirming import.</li><li>Submit the same export again and verify duplicate protection.</li><li>Disconnect the internet during a new submission, reconnect, and retry safely.</li><li>Confirm the accepted item leaves the pending inbox and appears in local import history.</li></ol>
+      <h5>Limited Real Pilot:</h5>
+      <p>Start with two or three sections, five to eight teachers, and one term. Expand to all 26 teachers only after the test results are documented and approved.</p>
+    `
+  },
+  {
+    id: 'ict_cloud_operations',
+    category: 'school_cloud',
+    title: 'Daily Administration, Privacy, and Recovery',
+    keywords: 'daily administration privacy recovery revoke session activation retention delete audit monitoring outage backup incident ict d1 limit',
+    content: `
+      <h5>Routine ICT Tasks:</h5>
+      <ul><li>Check the Worker health address before submission deadlines.</li><li>Review D1 read, write, and storage use in the Cloudflare dashboard.</li><li>Disable departed or incorrectly registered users and issue new activation codes when needed.</li><li>Correct assignment records rather than sharing administrator access.</li><li>Keep the administrator secret off teacher computers and support screenshots.</li></ul>
+      <h5>Current Pilot Retention:</h5>
+      <ul><li>Activation code: valid for 14 days and usable once.</li><li>Device session: valid for 30 days unless access is disabled.</li><li>Encrypted submission: deleted after the school retention setting, 30 days by default.</li><li>Audit entries remain in D1 for pilot review; define an approved audit-retention rule before production.</li></ul>
+      <h5>Lost Device or Suspected Misuse:</h5>
+      <ol><li>Tell the user to stop using the affected profile.</li><li>Disable the user in D1 or through the future ICT administration screen.</li><li>Review submission audit events and follow school privacy procedures.</li><li>Create a replacement activation code only after identity verification.</li></ol>
+      <div class="help-highlight-box"><strong>Local records remain essential:</strong> Cloudflare package retention is not a backup strategy. Continue using local backup and restore tools.</div>
+    `
+  },
+  {
+    id: 'ict_cloud_troubleshooting',
+    category: 'school_cloud',
+    title: 'Troubleshooting Connections and Grade Submissions',
+    keywords: 'troubleshoot cannot connect activation expired wrong assignment submit failed duplicate adviser inbox missing cloudflare d1 free limit health',
+    content: `
+      <h5>Profile Cannot Connect:</h5>
+      <ul><li>Confirm the address begins with <code>https://</code> and its <code>/health</code> page works.</li><li>Verify that the code belongs to that person, is unexpired, and has not already been used.</li><li>Check that the Worker has its D1 binding and <code>ADMIN_SETUP_TOKEN</code> secret.</li></ul>
+      <h5>Teacher Cannot Submit:</h5>
+      <ul><li>Check that the profile role is <strong>subject teacher</strong>.</li><li>Match school year, grade level, section spelling, and normalized subject key with the registered assignment.</li><li>Confirm an activated adviser is assigned to the same section.</li><li>Resolve local Grade Transfer validation errors before retrying.</li></ul>
+      <h5>Adviser Cannot Find or Import:</h5>
+      <ul><li>Confirm the adviser opened the matching local Advisory Class.</li><li>Check that the submission was addressed to this adviser profile and is still pending.</li><li>If decryption fails after reconnecting, the original adviser device key was removed; use a new teacher export and submission.</li><li>Resolve learner matches and conflicts in the normal preview rather than altering the package.</li></ul>
+      <h5>Free Limit Reached:</h5>
+      <p>Free-tier operations may pause until the daily allowance resets or old data is cleaned. This does not create an automatic charge. Record the time, user, submission ID, and displayed error without including learner grades or secrets.</p>
     `
   },
   {

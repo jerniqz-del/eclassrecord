@@ -154,7 +154,8 @@ let db = {
   activeView: 'dashboard',
   autoBlur: false,
   assignments: [],
-  advisory: createAdvisoryStore()
+  advisory: createAdvisoryStore(),
+  workplace: typeof DashboardWorkplace !== 'undefined' ? DashboardWorkplace.createStore() : { version: 1, tasks: [], preferences: { collapsedPanels: [] }, lastContext: { assignmentId: '', term: '1', action: 'grading' } }
 };
 
 // Feature modules run in their own closures, while the legacy active profile
@@ -230,6 +231,7 @@ function normalizeDatabase() {
   if (db.district === undefined) db.district = '';
   if (db.autoBlur === undefined) db.autoBlur = false;
   normalizeAdvisoryData(db);
+  if (typeof DashboardWorkplace !== 'undefined') DashboardWorkplace.normalize(db);
   if (typeof ToolsData !== 'undefined') ToolsData.normalize(db);
   
   for (let i = 0; i < db.assignments.length; i++) {
@@ -283,6 +285,7 @@ function normalizeDatabase() {
 
     if (!a.assessments) a.assessments = [];
     if (!a.scores) a.scores = {};
+    if (!Array.isArray(a.scoreHistory)) a.scoreHistory = [];
     if (!Array.isArray(a.learners)) a.learners = [];
     a.learners = a.learners.filter(learner => learner && typeof learner === 'object').map(learner => {
       learner.birthdate = normalizeLearnerBirthdate(learner.birthdate ?? learner.birthDate ?? learner.dateOfBirth);
@@ -751,7 +754,8 @@ function clearLocalData() {
           activeView: 'dashboard',
           autoBlur: false,
           assignments: [],
-          advisory: createAdvisoryStore()
+          advisory: createAdvisoryStore(),
+          workplace: typeof DashboardWorkplace !== 'undefined' ? DashboardWorkplace.createStore() : { version: 1, tasks: [], preferences: { collapsedPanels: [] }, lastContext: { assignmentId: '', term: '1', action: 'grading' } }
         };
         currentProfilePin = '';
         currentView = 'dashboard';

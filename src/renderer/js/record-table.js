@@ -7,7 +7,83 @@
 
 let recordRowCount = 0;
 let recordColCount = 0;
+let recordTableRefreshPending = false;
 
+function captureRecordTableInteractionState() {
+  const scroll = document.querySelector('#recordTable .record-scroll');
+  const active = document.activeElement;
+  const isRecordInput = active
+    && active.classList?.contains('score-input')
+    && active.closest?.('#recordTable');
+
+  return {
+    scrollTop: scroll?.scrollTop || 0,
+    scrollLeft: scroll?.scrollLeft || 0,
+    focus: isRecordInput ? {
+      id: active.id,
+      learnerId: active.dataset.learnerId || '',
+      assessmentId: active.dataset.assessmentId || '',
+      selectionStart: active.selectionStart,
+      selectionEnd: active.selectionEnd
+    } : null
+  };
+}
+
+function restoreRecordTableInteractionState(state) {
+  if (!state) return;
+
+  let target = null;
+  if (state.focus?.learnerId) {
+    target = Array.from(document.querySelectorAll('#recordTable .score-input[data-learner-id]'))
+      .find(input => input.dataset.learnerId === state.focus.learnerId
+        && input.dataset.assessmentId === state.focus.assessmentId) || null;
+  } else if (state.focus?.id) {
+    target = document.getElementById(state.focus.id);
+  }
+
+  if (target) {
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_) {
+      target.focus();
+    }
+    if (Number.isInteger(state.focus.selectionStart) && Number.isInteger(state.focus.selectionEnd)) {
+      target.setSelectionRange(state.focus.selectionStart, state.focus.selectionEnd);
+    }
+  }
+
+  const scroll = document.querySelector('#recordTable .record-scroll');
+  if (scroll) {
+    scroll.scrollTop = state.scrollTop;
+    scroll.scrollLeft = state.scrollLeft;
+  }
+}
+
+function scheduleRecordTableRefresh() {
+  if (recordTableRefreshPending) return;
+  recordTableRefreshPending = true;
+
+  const refresh = () => {
+    recordTableRefreshPending = false;
+    const interactionState = captureRecordTableInteractionState();
+    renderRecordTable();
+    restoreRecordTableInteractionState(interactionState);
+  };
+
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(refresh);
+  } else {
+    setTimeout(refresh, 0);
+  }
+}
+
+function assessmentHpsLimit(assignment, assessmentId) {
+  const assessment = assignment?.assessments?.find(item => item.id === assessmentId);
+  const rawMax = assessment?.maxScore;
+  if (rawMax === '' || rawMax === null || rawMax === undefined) return null;
+  const parsedMax = Number(rawMax);
+  return Number.isFinite(parsedMax) ? parsedMax : null;
+}
 // Debounced save — batches rapid score entries into one IPC round-trip per 400ms
 const debouncedSave = debounce(saveDatabase, 400);
 
@@ -231,11 +307,12 @@ function updateUndoRedoUI() {
 /**
  * Restores the database state from a snapshot.
  */
-function restoreSheetSnapshot(snapshot) {
+function restoreSheetSnapshot(snapshot, auditSource = '') {
   if (snapshot && Array.isArray(snapshot.assignments)) {
     snapshot.assignments.forEach(item => {
       const assignment = db.assignments.find(candidate => candidate.id === item.id);
       if (!assignment) return;
+      if (auditSource) globalThis.ScoreHistory?.recordDiff(assignment, assignment.scores || {}, item.scores || {}, auditSource);
       assignment.scores = JSON.parse(JSON.stringify(item.scores || {}));
       assignment.assessments = JSON.parse(JSON.stringify(item.assessments || []));
     });
@@ -246,6 +323,7 @@ function restoreSheetSnapshot(snapshot) {
 
   const a = currentAssignment();
   if (!a) return;
+  if (auditSource) globalThis.ScoreHistory?.recordDiff(a, a.scores || {}, snapshot.scores || {}, auditSource);
   a.scores = JSON.parse(JSON.stringify(snapshot.scores));
   a.assessments = JSON.parse(JSON.stringify(snapshot.assessments));
   
@@ -264,7 +342,7 @@ function triggerUndo() {
   if (!currentSnapshot) return;
   
   redoStack.push(currentSnapshot);
-  restoreSheetSnapshot(previousSnapshot);
+  restoreSheetSnapshot(previousSnapshot, 'undo');
   updateUndoRedoUI();
 }
 
@@ -279,7 +357,7 @@ function triggerRedo() {
   if (!currentSnapshot) return;
   
   undoStack.push(currentSnapshot);
-  restoreSheetSnapshot(nextSnapshot);
+  restoreSheetSnapshot(nextSnapshot, 'redo');
   updateUndoRedoUI();
 }
 
@@ -513,19 +591,22 @@ function renderRecordTable() {
     for (let j = 0; j < items.length; j++) {
       const key = `${learner.id}|${items[j].id}`;
       const val = a.scores[key] === undefined ? '' : a.scores[key];
-      const maxNum = number(items[j].maxScore);
-      const overMax = maxNum > 0 && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) > maxNum;
-      const isPerfect = maxNum > 0 && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) === maxNum;
+      const maxNum = assessmentHpsLimit(a, items[j].id);
+      const overMax = maxNum !== null && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) > maxNum;
+      const isPerfect = maxNum !== null && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) === maxNum;
       const isSimilar = maxNum > 0 && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= maxNum * 0.9 && parseFloat(val) < maxNum;
       
-      const scoreTitle = `${learnerDisplayName(learner)} - ${componentFullName(items[j].component)} ${assessmentHeaderLabel(items[j], items)} ${maxNum > 0 ? '(max ' + maxNum + ')' : ''}`;
+      const scoreTitle = `${learnerDisplayName(learner)} - ${componentFullName(items[j].component)} ${assessmentHeaderLabel(items[j], items)} ${maxNum !== null ? '(max ' + maxNum + ')' : ''}`;
       
-      html += `<td class="c-score">
+      const historyButton = !isDisabled && globalThis.ScoreHistory?.hasScore(val)
+        ? `<button type="button" class="score-history-trigger" title="View score history" aria-label="View score history for ${esc(learnerDisplayName(learner))}" onclick="event.preventDefault(); event.stopPropagation(); openScoreHistory('${esc(learner.id)}', '${esc(items[j].id)}')">&#8635;</button>`
+        : '';
+      html += `<td class="c-score"><div class="score-cell-wrap">
         <input id="sc-${r}-${j}" class="score-input${overMax ? ' invalid' : ''}${isPerfect ? ' perfect' : ''}${isSimilar ? ' similar' : ''}" title="${esc(scoreTitle)}" value="${isDisabled ? '' : esc(val)}"
-          data-learner-index="${r}" data-assessment-id="${esc(items[j].id)}"
+          data-learner-index="${r}" data-learner-id="${esc(learner.id)}" data-assessment-id="${esc(items[j].id)}"
           ${isDisabled ? 'disabled style="cursor: not-allowed; opacity: 0.5;"' : ''}
           onkeydown="return scoreNav(event, ${r}, ${j}, '${esc(learner.id)}', '${esc(items[j].id)}')"
-          onchange="updateScore('${esc(learner.id)}', '${esc(items[j].id)}', this.value)" />
+          onchange="updateScore('${esc(learner.id)}', '${esc(items[j].id)}', this.value, this)" />${historyButton}</div>
       </td>`;
       
       if (isExpanded) {
@@ -1133,7 +1214,13 @@ function scoreNav(event, r, j, learnerId, assessmentId) {
   if (event.preventDefault) event.preventDefault();
   event.returnValue = false;
   
-  updateScore(learnerId, assessmentId, value);
+  if (!updateScore(learnerId, assessmentId, value, input)) {
+    if (input) {
+      input.focus();
+      input.select?.();
+    }
+    return false;
+  }
   
   if (targetId) {
     const el = document.getElementById(targetId);
@@ -1195,7 +1282,7 @@ function maxNav(event, h, assessmentId) {
 /**
  * Handles score update from event inputs.
  */
-function updateScore(learnerId, assessmentId, value) {
+function updateScore(learnerId, assessmentId, value, inputElement = null, source = 'grading-sheet') {
   const a = currentAssignment();
   if (!a) return;
   
@@ -1204,9 +1291,16 @@ function updateScore(learnerId, assessmentId, value) {
   
   const oldValue = a.scores[key] === undefined ? '' : String(a.scores[key]);
   const newValue = clean === '' ? '' : String(parseFloat(clean));
+  const hpsLimit = assessmentHpsLimit(a, assessmentId);
+
+  if (clean !== '' && !isNaN(parseFloat(clean)) && hpsLimit !== null && parseFloat(clean) > hpsLimit) {
+    if (inputElement) inputElement.value = oldValue;
+    toast('Score cannot be higher than the HPS of ' + hpsLimit + '.', 'warning');
+    return false;
+  }
   
   if (oldValue === newValue || (clean !== '' && isNaN(parseFloat(clean)))) {
-    return;
+    return clean === '' || !isNaN(parseFloat(clean));
   }
   
   pushHistoryState();
@@ -1217,10 +1311,20 @@ function updateScore(learnerId, assessmentId, value) {
     const n = parseFloat(clean);
     a.scores[key] = n;
   }
+  globalThis.ScoreHistory?.record(a, {
+    learnerId,
+    assessmentId,
+    previousValue: oldValue,
+    newValue,
+    source
+  });
   
   debouncedSave();
-  renderRecordTable();
+  // Let a mouse click finish moving focus before rebuilding the grid. The
+  // scheduled refresh restores the clicked cell and the current scroll offset.
+  scheduleRecordTableRefresh();
   renderFinalOnly();
+  return true;
 }
 
 /**
@@ -1819,13 +1923,29 @@ function applyScoreTransfer() {
   if (!config.targetAssignment.scores) config.targetAssignment.scores = {};
   if (!config.sourceAssignment.scores) config.sourceAssignment.scores = {};
 
+  const auditLengths = new Map([config.sourceAssignment, config.targetAssignment]
+    .map(assignment => [assignment, globalThis.ScoreHistory?.ensure(assignment).length || 0]));
   const rollbackSnapshot = getAssignmentsSnapshot([config.sourceAssignment, config.targetAssignment]);
   pushTransferHistoryState([config.sourceAssignment, config.targetAssignment]);
 
   try {
     plan.transferable.forEach(item => {
+      const targetIds = globalThis.ScoreHistory?.splitScoreKey(item.targetKey);
+      if (targetIds) ScoreHistory.record(config.targetAssignment, {
+        ...targetIds,
+        previousValue: config.targetAssignment.scores[item.targetKey],
+        newValue: number(item.sourceValue),
+        source: `score-transfer-${plan.mode}`
+      });
       config.targetAssignment.scores[item.targetKey] = number(item.sourceValue);
       if (plan.mode === 'move') {
+        const sourceIds = globalThis.ScoreHistory?.splitScoreKey(item.sourceKey);
+        if (sourceIds) ScoreHistory.record(config.sourceAssignment, {
+          ...sourceIds,
+          previousValue: config.sourceAssignment.scores[item.sourceKey],
+          newValue: null,
+          source: 'score-transfer-move'
+        });
         delete config.sourceAssignment.scores[item.sourceKey];
       }
     });
@@ -1839,6 +1959,7 @@ function applyScoreTransfer() {
     render();
     toast(`${plan.mode === 'copy' ? 'Copied' : 'Moved'} ${plan.transferable.length} score(s).`, 'success');
   } catch (error) {
+    auditLengths.forEach((length, assignment) => assignment.scoreHistory?.splice(length));
     if (rollbackSnapshot) restoreSheetSnapshot(rollbackSnapshot);
     undoStack.pop();
     updateUndoRedoUI();
@@ -1865,6 +1986,13 @@ function clearColumnScores(assessmentId) {
       pushHistoryState();
       a.learners.forEach(learner => {
         const key = `${learner.id}|${assessmentId}`;
+        globalThis.ScoreHistory?.record(a, {
+          learnerId: learner.id,
+          assessmentId,
+          previousValue: a.scores[key],
+          newValue: null,
+          source: 'clear-column'
+        });
         delete a.scores[key];
       });
       saveDatabase();

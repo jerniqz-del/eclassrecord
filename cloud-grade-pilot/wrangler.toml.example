@@ -1,0 +1,14 @@
+name = "eclassrecord-grade-pilot"
+main = "worker.js"
+compatibility_date = "2026-07-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "eclassrecord-grade-pilot"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[triggers]
+crons = ["17 0 * * *"]
+
+# Add ADMIN_SETUP_TOKEN as an encrypted Worker secret:
+# npx wrangler secret put ADMIN_SETUP_TOKEN
