@@ -48,6 +48,7 @@
     "test:advisory-backup": "node scripts/test-advisory-backup.js",
     "test:advisory-e2e": "node scripts/test-advisory-e2e.js",
     "test:advisory-redesign": "node scripts/test-advisory-redesign.js",
+    "test:link-preview": "node scripts/test-link-preview.js",
     "smoke:offline": "electron . --offline-smoke-test",
     "build": "node scripts/build-obfuscated.js --win",
     "publish": "node scripts/build-obfuscated.js --win --publish always",
