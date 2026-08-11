@@ -3656,12 +3656,28 @@ ${labels}`, '1')) - 1;
   }
 
   function usageCounts() { return core.normalize(profileDb()).toolUsageCounts; }
+  function workspaceMotionStyle() {
+    return core.normalize(profileDb()).appearancePreferences.workspaceMotionStyle || 'standard';
+  }
+  function applyWorkspaceMotionStyle() {
+    const style = workspaceMotionStyle();
+    document.getElementById('teacherToolsView')?.setAttribute('data-motion-style', style);
+    document.getElementById('performanceChecklistContent')?.setAttribute('data-motion-style', style);
+  }
+  async function setWorkspaceMotionStyle(value) {
+    const style = ['calm', 'standard', 'playful'].includes(String(value)) ? String(value) : 'standard';
+    core.normalize(profileDb()).appearancePreferences.workspaceMotionStyle = style;
+    applyWorkspaceMotionStyle();
+    await globalScope.saveDatabase?.();
+  }
   function renderLauncher() {
     const content = document.getElementById('teacherToolsContent');
     if (!content) return;
+    content.dataset.activeTool = 'launcher';
+    applyWorkspaceMotionStyle();
     const counts = usageCounts();
     const tools = Array.from(registry.values()).filter(tool => tool.showInLauncher !== false);
-    content.innerHTML = `<section class="teacher-tools-launcher"><header class="teacher-tools-launcher__hero"><div><h2>Choose a classroom tool</h2><p>Everything you need for fair participation, classroom routines, records, and learner-friendly activities.</p></div><strong>${tools.length} tools</strong></header><div class="teacher-tools-grid">${tools.map(tool => `<button class="teacher-tool-card" type="button" style="--card-accent:${TOOL_ACCENTS[tool.id] || '#06b6d4'}" onclick="TeacherTools.openTool('${esc(tool.id)}')"><span class="teacher-tool-card__icon" aria-hidden="true">${icons[tool.id] || tool.launchIcon || '★'}</span><span class="teacher-tool-card__copy"><strong>${esc(tool.label)}</strong><small>${esc(tool.description || TOOL_DESCRIPTIONS[tool.id] || '')}</small></span><span class="teacher-tool-card__count">Used ${Number(counts[tool.id] || 0)} time${Number(counts[tool.id] || 0) === 1 ? '' : 's'}</span></button>`).join('')}</div></section>`;
+    content.innerHTML = `<section class="teacher-tools-launcher"><header class="teacher-tools-launcher__hero"><div><h2>Choose a classroom tool</h2><p>Everything you need for fair participation, classroom routines, records, and learner-friendly activities.</p></div><div class="teacher-tools-launcher__controls"><strong>${tools.length} tools</strong><label>Motion <select aria-label="Workspace motion style" onchange="TeacherTools.setWorkspaceMotionStyle(this.value)"><option value="calm" ${workspaceMotionStyle() === 'calm' ? 'selected' : ''}>Calm</option><option value="standard" ${workspaceMotionStyle() === 'standard' ? 'selected' : ''}>Standard</option><option value="playful" ${workspaceMotionStyle() === 'playful' ? 'selected' : ''}>Playful</option></select></label></div></header><div class="teacher-tools-grid">${tools.map(tool => `<button class="teacher-tool-card" type="button" style="--card-accent:${TOOL_ACCENTS[tool.id] || '#06b6d4'}" onclick="TeacherTools.openTool('${esc(tool.id)}')"><span class="teacher-tool-card__icon" aria-hidden="true">${icons[tool.id] || tool.launchIcon || '★'}</span><span class="teacher-tool-card__copy"><strong>${esc(tool.label)}</strong><small>${esc(tool.description || TOOL_DESCRIPTIONS[tool.id] || '')}</small></span><span class="teacher-tool-card__count">Used ${Number(counts[tool.id] || 0)} time${Number(counts[tool.id] || 0) === 1 ? '' : 's'}</span></button>`).join('')}</div></section>`;
   }
   function showLauncher() {
     registry.get(activeToolId)?.onDeactivate?.();
@@ -3676,6 +3692,8 @@ ${labels}`, '1')) - 1;
     activeToolId = toolId;
     const content = containerOverride || document.getElementById('teacherToolsContent');
     if (content) {
+      content.dataset.activeTool = toolId;
+      applyWorkspaceMotionStyle();
       next.render(content);
       if (!containerOverride && toolId !== 'checklist') content.insertAdjacentHTML('afterbegin', `<div class="teacher-tool-pagebar no-print"><button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.showLauncher()">← All Tools</button><strong>${esc(next.label)}</strong><span class="teacher-tool-pagebar__count">Used ${Number(usageCounts()[toolId] || 0)} times</span></div>`);
     }
@@ -3769,6 +3787,7 @@ ${labels}`, '1')) - 1;
     activate,
     openTool,
     showLauncher,
+    setWorkspaceMotionStyle,
     openPerformanceChecklistPage,
     refresh,
     disposeActiveTool,

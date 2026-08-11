@@ -6,7 +6,7 @@
 (function initTeacherToolsCore(globalScope) {
   'use strict';
 
-  const TOOLS_SCHEMA_VERSION = 10;
+  const TOOLS_SCHEMA_VERSION = 11;
   const SIMULATION_HISTORY_LIMIT = 10;
   const CHECKLIST_HISTORY_LIMIT = 20;
   const CHECKLIST_ENTRY_HISTORY_LIMIT = 50;
@@ -131,6 +131,10 @@
     return ['relaxed', 'normal', 'quick'].includes(String(value)) ? String(value) : 'normal';
   }
 
+  function normalizeWorkspaceMotionStyle(value) {
+    return ['calm', 'standard', 'playful'].includes(String(value)) ? String(value) : 'standard';
+  }
+
   function normalizeAppearancePreferences(value) {
     const existing = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     return {
@@ -140,7 +144,8 @@
       groupRandomizerSound: existing.groupRandomizerSound !== false,
       namePickerSound: existing.namePickerSound !== false,
       groupRandomizerAnimationSpeed: normalizeAnimationSpeed(existing.groupRandomizerAnimationSpeed),
-      namePickerAnimationSpeed: normalizeAnimationSpeed(existing.namePickerAnimationSpeed)
+      namePickerAnimationSpeed: normalizeAnimationSpeed(existing.namePickerAnimationSpeed),
+      workspaceMotionStyle: normalizeWorkspaceMotionStyle(existing.workspaceMotionStyle)
     };
   }
 
