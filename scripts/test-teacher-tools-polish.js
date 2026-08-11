@@ -7,6 +7,7 @@ const html = read('src/renderer/index.html');
 const css = read('src/renderer/css/teacher-tools-polish.css');
 const polish = read('src/renderer/js/teacher-tools-polish.js');
 const tools = read('src/renderer/js/teacher-tools.js');
+const participation = read('src/renderer/js/teacher-tools-participation.js');
 
 ['timer','participation','noise','duels','seating','exit','notes','race','simulator','games','picker','groups']
   .forEach(id => assert(css.includes(`data-active-tool="${id}"`) || ['picker','groups'].includes(id)));
@@ -19,6 +20,10 @@ assert(css.includes('data-motion-style="playful"'));
 assert(polish.includes('MutationObserver'));
 assert(polish.includes('tool-button-ripple'));
 assert(polish.includes('pointermove'));
+assert(!participation.includes('tool-theme-preview'));
+assert(!read('src/renderer/css/teacher-tools-participation.css').includes('tool-theme-preview'));
+assert(tools.includes('teacher-tools-back__icon'));
+['btn.btn-primary','btn.btn-ghost','btn.btn-warn','btn.btn-danger','button:focus-visible','teacher-tools-back','tool-segmented button'].forEach(selector => assert(css.includes(selector), `missing shared button treatment for ${selector}`));
 assert(tools.includes('workspaceMotionStyle'));
 assert(tools.includes('setWorkspaceMotionStyle'));
 assert(html.includes('teacher-tools-polish.css'));

@@ -33,7 +33,7 @@
   }
   function addRipple(event) {
     if (reduced()) return;
-    const button = event.target.closest('#teacherToolsView .btn,#performanceChecklistContent .btn');
+    const button = event.target.closest('#teacherToolsView .btn,#teacherToolsView .tool-segmented button,#teacherToolsView .game-tool__switcher button,#performanceChecklistContent .btn');
     if (!button || button.disabled) return;
     const rect = button.getBoundingClientRect();
     const ripple = document.createElement('span');

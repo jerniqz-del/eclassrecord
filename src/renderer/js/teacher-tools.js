@@ -3695,7 +3695,7 @@ ${labels}`, '1')) - 1;
       content.dataset.activeTool = toolId;
       applyWorkspaceMotionStyle();
       next.render(content);
-      if (!containerOverride && toolId !== 'checklist') content.insertAdjacentHTML('afterbegin', `<div class="teacher-tool-pagebar no-print"><button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.showLauncher()">← All Tools</button><strong>${esc(next.label)}</strong><span class="teacher-tool-pagebar__count">Used ${Number(usageCounts()[toolId] || 0)} times</span></div>`);
+      if (!containerOverride && toolId !== 'checklist') content.insertAdjacentHTML('afterbegin', `<div class="teacher-tool-pagebar no-print"><button class="btn btn-ghost btn-sm teacher-tools-back" type="button" onclick="TeacherTools.showLauncher()"><span class="teacher-tools-back__icon" aria-hidden="true">←</span><span>All Tools</span></button><strong>${esc(next.label)}</strong><span class="teacher-tool-pagebar__count">Used ${Number(usageCounts()[toolId] || 0)} times</span></div>`);
     }
     next.onActivate?.();
   }

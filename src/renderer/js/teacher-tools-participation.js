@@ -69,7 +69,7 @@
     const wrapper = document.createElement('div');
     wrapper.className = 'field tool-theme-control';
     wrapper.dataset.themeControl = tool;
-    wrapper.innerHTML = `<label class="field-label">Experience</label><div class="tool-theme-control__row"><span class="tool-theme-preview" data-tool-theme="${selected}" aria-hidden="true"></span><select class="field-select">${themeOptions(tool, selected)}</select></div>`;
+    wrapper.innerHTML = `<label class="field-label">Experience</label><div class="tool-theme-control__row"><select class="field-select">${themeOptions(tool, selected)}</select></div>`;
     const select = wrapper.querySelector('select');
     select.addEventListener('change', () => setTheme(tool, select.value, false).catch(error => globalScope.toast(error.message, 'error')));
     host.insertBefore(wrapper, host.querySelector('.tool-control-strip__actions'));
@@ -116,7 +116,7 @@
     if (!stage || stage.previousElementSibling?.classList.contains('picker-toolbar')) return;
     const bar = document.createElement('div');
     bar.className = 'picker-toolbar no-print';
-    bar.innerHTML = `<div class="field tool-theme-control" data-theme-control="picker"><label class="field-label">Experience</label><div class="tool-theme-control__row"><span class="tool-theme-preview" data-tool-theme="${theme('picker')}" aria-hidden="true"></span><select class="field-select">${themeOptions('picker', theme('picker'))}</select></div></div><div class="field"><label class="field-label">Term</label><select data-picker-term class="field-select">${['1','2','3'].map(value => `<option value="${value}" ${value === term() ? 'selected' : ''}>Term ${value}</option>`).join('')}</select></div><div class="field"><label class="field-label">Picker mode</label><select data-picker-mode class="field-select"><option value="random">Random</option><option value="no-repeat">No Repeat</option><option value="least-stars">Least Stars First</option><option value="no-stars">No Stars Yet</option></select></div><label class="picker-attendance-filter"><input data-include-absent type="checkbox" ${state.includeAbsent ? 'checked' : ''}> Include absent learners</label>`;
+    bar.innerHTML = `<div class="field tool-theme-control" data-theme-control="picker"><label class="field-label">Experience</label><div class="tool-theme-control__row"><select class="field-select">${themeOptions('picker', theme('picker'))}</select></div></div><div class="field"><label class="field-label">Term</label><select data-picker-term class="field-select">${['1','2','3'].map(value => `<option value="${value}" ${value === term() ? 'selected' : ''}>Term ${value}</option>`).join('')}</select></div><div class="field"><label class="field-label">Picker mode</label><select data-picker-mode class="field-select"><option value="random">Random</option><option value="no-repeat">No Repeat</option><option value="least-stars">Least Stars First</option><option value="no-stars">No Stars Yet</option></select></div><label class="picker-attendance-filter"><input data-include-absent type="checkbox" ${state.includeAbsent ? 'checked' : ''}> Include absent learners</label>`;
     bar.querySelector('[data-picker-mode]').value = state.mode;
     const themeSelect = bar.querySelector('[data-theme-control] select');
     themeSelect.addEventListener('change', () => setTheme('picker', themeSelect.value, false).catch(error => globalScope.toast(error.message, 'error')));
