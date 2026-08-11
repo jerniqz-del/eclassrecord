@@ -7,7 +7,7 @@ const css = fs.readFileSync(path.join(root, 'src/renderer/css/teacher-tools-part
 const html = fs.readFileSync(path.join(root, 'src/renderer/index.html'), 'utf8');
 ['Carnival Prize Wheel','Arcade Capsule Machine','Mystery Card Deck','Galaxy Scanner','Game Show Spotlight','Team Draft Arena','Space Crew Launch','Island Expedition','House Sorting Ceremony','Puzzle Party'].forEach(text => assert(source.includes(text)));
 ['random','no-repeat','least-stars','no-stars'].forEach(mode => assert(source.includes(mode)));
-['Award Star','Undo Last Star','Participation standings','Export CSV','Reset Term Stars'].forEach(text => assert(source.includes(text)));
+['Award Star','Undo Last Star','Star leaderboard','Export CSV','Reset Term Stars'].forEach(text => assert(source.includes(text)));
 assert(source.includes('promptPinVerification'));
 assert(source.includes("source: 'name-picker'"));
 assert(source.includes('attendanceRollCallStatus'));

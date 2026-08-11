@@ -7,7 +7,7 @@
   const core = globalScope.TeacherToolsCore;
   const registry = new Map();
   let initialized = false;
-  let activeToolId = 'groups';
+  let activeToolId = '';
   let groupState = {
     assignmentId: '',
     mode: 'random',
@@ -61,8 +61,32 @@
     picker: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3v5h5"></path><path d="M21 12a9 9 0 0 0-15-6.7L3 8"></path><path d="M21 21v-5h-5"></path><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"></path></svg>',
     simulator: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 3h6"></path><path d="M10 9h4"></path><path d="M10 3v6l-4 8a3 3 0 0 0 2.7 4h6.6a3 3 0 0 0 2.7-4l-4-8V3"></path></svg>',
     checklist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 5h10"></path><path d="M9 12h10"></path><path d="M9 19h10"></path><path d="m3 5 1.5 1.5L7 4"></path><path d="m3 12 1.5 1.5L7 11"></path><path d="m3 19 1.5 1.5L7 18"></path></svg>',
+    timer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v5l3 2M9 2h6"></path></svg>',
+    participation: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 2 3 6 6 .9-4.5 4.4 1 6.2-5.5-3-5.5 3 1-6.2L3 8.9 9 8z"></path></svg>',
+    noise: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"></path></svg>',
+    duels: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 3 12 18M18 3 6 21"></path><path d="m4 5 3-2M20 5l-3-2"></path></svg>',
+    seating: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="7" height="6"></rect><rect x="14" y="4" width="7" height="6"></rect><rect x="3" y="14" width="7" height="6"></rect><rect x="14" y="14" width="7" height="6"></rect></svg>',
+    exit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 3H4v18h5M16 17l5-5-5-5M21 12H9"></path></svg>',
+    notes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 3h16v18H4zM8 8h8M8 12h8M8 16h5"></path></svg>',
+    race: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 17h18M5 14l3-8 4 8M12 14l3-10 4 10"></path></svg>',
     games: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>'
   };
+
+  const TOOL_DESCRIPTIONS = Object.freeze({
+    picker: 'Pick learners fairly with animated classroom experiences and term stars.',
+    groups: 'Build random or sex-balanced teams with presentation-ready reveals.',
+    simulator: 'Try score changes safely before applying them to the class record.',
+    games: 'Open fun offline games for breaks, rewards, and learning stations.',
+    timer: 'Run lesson segments, transitions, and classroom activity countdowns.',
+    participation: 'Award and undo the same class- and term-scoped stars used by Name Picker.',
+    noise: 'Monitor live room volume locally without recording classroom audio.',
+    duels: 'Run learner-versus-learner or team classroom challenges.',
+    seating: 'Arrange, lock, print, and randomize classroom seats.',
+    exit: 'Record quick learner understanding and follow-up needs.',
+    notes: 'Keep private, class-scoped anecdotal observations.',
+    race: 'Use Randomizer teams in a lively teacher-scored boat race.'
+  });
+  const TOOL_ACCENTS = Object.freeze({ picker:'#e11d48',groups:'#2563eb',simulator:'#7c3aed',games:'#f59e0b',timer:'#0891b2',participation:'#eab308',noise:'#10b981',duels:'#ef4444',seating:'#6366f1',exit:'#14b8a6',notes:'#8b5cf6',race:'#0284c7' });
 
   const GROUP_COLOR_SCHEMES = Object.freeze([
     { name: 'Blue', accent: '#2563eb' },
@@ -273,8 +297,8 @@
     const previousTool = activeToolId;
     resetTemporaryClassState();
     globalScope.selectAssignment(assignmentId);
-    globalScope.setView('tools');
-    activate(previousTool);
+    if (previousTool === 'checklist') openPerformanceChecklistPage();
+    else { globalScope.setView('tools'); activate(previousTool); }
   }
 
   function selectAssignmentFromElsewhere(assignmentId, selectElement) {
@@ -1317,8 +1341,7 @@
         return created;
       });
       checklistState.sessionId = checklist.sessions[0].id;
-      globalScope.setView('tools');
-      activate('checklist');
+      openPerformanceChecklistPage();
       globalScope.toast('Today’s performance checklist is ready.', 'success');
     } catch (error) {
       globalScope.toast(error.message || 'The checklist could not be created.', 'error');
@@ -1476,8 +1499,7 @@
         date: checklistToday()
       }));
       checklistState.sessionId = session.id;
-      globalScope.setView('tools');
-      activate('checklist');
+      openPerformanceChecklistPage();
       globalScope.toast('Today’s checklist session started.', 'success');
     } catch (error) {
       globalScope.toast(error.message || 'Today’s session could not be created.', 'error');
@@ -1702,8 +1724,7 @@
         appendChecklistEntryHistory(applied);
         return applied;
       });
-      globalScope.setView('tools');
-      activate('checklist');
+      openPerformanceChecklistPage();
       globalScope.toast(`${record.changes.length} checklist entries updated.`, 'success');
     } catch (error) {
       globalScope.toast(error.message || 'The bulk checklist update failed.', 'error');
@@ -1730,8 +1751,7 @@
         const currentEntry = tools.performanceChecklistEntryHistory.find(item => item.id === entry.id);
         return core.undoChecklistEntryTransaction(currentEntry, currentChecklist());
       });
-      globalScope.setView('tools');
-      activate('checklist');
+      openPerformanceChecklistPage();
       globalScope.toast(`${result.restored} checklist entr${result.restored === 1 ? 'y' : 'ies'} restored.`, 'success');
     } catch (error) {
       globalScope.toast(error.message || 'The checklist action could not be undone.', 'error');
@@ -1798,8 +1818,7 @@
           checklistState.sessionId = checklist.sessions[0].id;
           return checklist;
         });
-        globalScope.setView('tools');
-        activate('checklist');
+        openPerformanceChecklistPage();
         globalScope.toast('Performance checklist created.', 'success');
       } catch (error) {
         globalScope.toast(error.message, 'error');
@@ -1868,8 +1887,7 @@
           current.criteria = criteria;
           current.updatedAt = new Date().toISOString();
         });
-        globalScope.setView('tools');
-        activate('checklist');
+        openPerformanceChecklistPage();
         globalScope.toast('Checklist criteria updated.', 'success');
       } catch (error) {
         globalScope.toast(error.message, 'warning');
@@ -1927,8 +1945,7 @@
           current.criteria.push(criterion);
           current.updatedAt = new Date().toISOString();
         });
-        globalScope.setView('tools');
-        activate('checklist');
+        openPerformanceChecklistPage();
         globalScope.toast('Criterion added.', 'success');
       } catch (error) {
         globalScope.toast(error.message, 'warning');
@@ -1961,8 +1978,7 @@
       try {
         const session = await runTransaction(() => core.addChecklistSession(currentChecklist(), { title, date }));
         checklistState.sessionId = session.id;
-        globalScope.setView('tools');
-        activate('checklist');
+        openPerformanceChecklistPage();
         globalScope.toast('Checklist session created.', 'success');
       } catch (error) {
         globalScope.toast(error.message, 'error');
@@ -2059,8 +2075,7 @@
         checklistState.gridCriterionId = activitySession.activity.criterionId;
         checklistState.selected = null;
         checklistState.picker = null;
-        globalScope.setView('tools');
-        activate('checklist');
+        openPerformanceChecklistPage();
         globalScope.toast(`${activitySession.title} created.`, 'success');
       } catch (error) {
         globalScope.toast(error.message || 'The activity could not be created.', 'error');
@@ -2134,8 +2149,7 @@
           activity.activityId,
           options
         ));
-        globalScope.setView('tools');
-        activate('checklist');
+        openPerformanceChecklistPage();
         globalScope.toast('Activity updated.', 'success');
       } catch (error) {
         globalScope.toast(error.message || 'The activity could not be updated.', 'warning');
@@ -2224,8 +2238,7 @@ ${labels}`, '1')) - 1;
           );
         });
         globalScope.render();
-        globalScope.setView('tools');
-        activate('checklist');
+        openPerformanceChecklistPage();
         globalScope.toast(
           `${activityTitle} is editable again. ${result.restoredScores} official score change${result.restoredScores === 1 ? '' : 's'} restored.`,
           'success'
@@ -2362,8 +2375,7 @@ ${labels}`, '1')) - 1;
         await runTransaction(() => {
           core.normalize(profileDb()).performanceChecklistTemplates.push(template);
         });
-        globalScope.setView('tools');
-        activate('checklist');
+        openPerformanceChecklistPage();
         globalScope.toast('Checklist template saved.', 'success');
       } catch (error) {
         globalScope.toast(error.message || 'The checklist template could not be saved.', 'warning');
@@ -2411,8 +2423,7 @@ ${labels}`, '1')) - 1;
           const tools = core.normalize(profileDb());
           tools.performanceChecklistTemplates = tools.performanceChecklistTemplates.filter(item => item.id !== templateId);
         });
-        globalScope.setView('tools');
-        activate('checklist');
+        openPerformanceChecklistPage();
         globalScope.toast('Checklist template deleted.', 'success');
       } catch (error) {
         globalScope.toast(error.message || 'The checklist template could not be deleted.', 'error');
@@ -2557,8 +2568,7 @@ ${labels}`, '1')) - 1;
       checklistState.selected = null;
       checklistState.picker = null;
       globalScope.render();
-      globalScope.setView('tools');
-      activate('checklist');
+      openPerformanceChecklistPage();
       const destination = result.scope === 'term'
         ? 'the selected term'
         : result.scope === 'criterion'
@@ -2641,8 +2651,7 @@ ${labels}`, '1')) - 1;
       checklistState.sessionId = session.id;
       checklistState.gridCriterionId = criterionId;
       checklistState.selectedCriterionId = criterionId;
-      globalScope.setView('tools');
-      activate('checklist');
+      openPerformanceChecklistPage();
       renderChecklistPickerModal();
     } catch (error) {
       if (input) {
@@ -2703,8 +2712,7 @@ ${labels}`, '1')) - 1;
           });
           appendChecklistEntryHistory(record);
         });
-        globalScope.setView('tools');
-        activate('checklist');
+        openPerformanceChecklistPage();
         renderChecklistPickerModal();
         globalScope.toast('Checklist note saved.', 'success');
       } catch (error) {
@@ -3545,8 +3553,7 @@ ${labels}`, '1')) - 1;
         return applied;
       });
       globalScope.render();
-      globalScope.setView('tools');
-      activate('checklist');
+      openPerformanceChecklistPage();
       globalScope.toast(`${record.changes.length} checklist score change${record.changes.length === 1 ? '' : 's'} published.`, 'success');
     });
   }
@@ -3579,29 +3586,30 @@ ${labels}`, '1')) - 1;
           return core.revertChecklistPublication(currentEntry, currentChecklistRecord, currentAssignment);
         });
         globalScope.render();
-        globalScope.setView('tools');
-        activate('checklist');
+        openPerformanceChecklistPage();
         globalScope.toast(`${result.restored.length} checklist score change${result.restored.length === 1 ? '' : 's'} reverted.`, 'success');
       });
     });
   }
 
   const gameSources = {
-    sudoku: 'games/sudoku/index.html',
-    '2048': 'games/2048/index.html',
-    minesweeper: 'games/minesweeper/index.html'
+    sudoku: 'games/sudoku/index.html', '2048': 'games/2048/index.html', minesweeper: 'games/minesweeper/index.html',
+    memory: 'games/memory/index.html', reaction: 'games/reaction/index.html', 'word-scramble': 'games/word-scramble/index.html'
   };
 
   function renderGames(container) {
     container.innerHTML = `<div class="game-tool">
       <div class="game-tool__switcher no-print">
-        <div class="tool-segmented" role="tablist" aria-label="Offline games">
+        <div class="tool-segmented" role="tablist" aria-label="Games">
           <button type="button" aria-selected="${activeGameId === 'sudoku'}" onclick="TeacherTools.openGame('sudoku')">Sudoku</button>
           <button type="button" aria-selected="${activeGameId === '2048'}" onclick="TeacherTools.openGame('2048')">2048</button>
           <button type="button" aria-selected="${activeGameId === 'minesweeper'}" onclick="TeacherTools.openGame('minesweeper')">Minesweeper</button>
+          <button type="button" aria-selected="${activeGameId === 'memory'}" onclick="TeacherTools.openGame('memory')">Memory Match</button>
+          <button type="button" aria-selected="${activeGameId === 'reaction'}" onclick="TeacherTools.openGame('reaction')">Reaction Challenge</button>
+          <button type="button" aria-selected="${activeGameId === 'word-scramble'}" onclick="TeacherTools.openGame('word-scramble')">Word Scramble</button>
         </div>
       </div>
-      <iframe id="teacherToolsGameFrame" class="game-frame" sandbox="allow-scripts" title="${esc(activeGameId)} offline game" src="${gameSources[activeGameId]}"></iframe>
+      <iframe id="teacherToolsGameFrame" class="game-frame" sandbox="allow-scripts" title="${esc(activeGameId)} game" src="${gameSources[activeGameId]}"></iframe>
     </div>`;
     gameFrame = document.getElementById('teacherToolsGameFrame');
   }
@@ -3644,29 +3652,55 @@ ${labels}`, '1')) - 1;
 
   function renderTabs() {
     const tabs = document.getElementById('teacherToolsTabs');
-    if (!tabs) return;
-    tabs.innerHTML = Array.from(registry.values()).map(tool => `
-      <button id="teacherToolTab-${esc(tool.id)}" class="teacher-tools__tab" type="button" role="tab"
-        aria-selected="${activeToolId === tool.id}" onclick="TeacherTools.activate('${esc(tool.id)}')">
-        ${icons[tool.id] || ''}<span>${esc(tool.label)}</span>
-      </button>`).join('');
+    if (tabs) tabs.innerHTML = '';
   }
 
-  function activate(toolId) {
+  function usageCounts() { return core.normalize(profileDb()).toolUsageCounts; }
+  function renderLauncher() {
+    const content = document.getElementById('teacherToolsContent');
+    if (!content) return;
+    const counts = usageCounts();
+    const tools = Array.from(registry.values()).filter(tool => tool.showInLauncher !== false);
+    content.innerHTML = `<section class="teacher-tools-launcher"><header class="teacher-tools-launcher__hero"><div><h2>Choose a classroom tool</h2><p>Everything you need for fair participation, classroom routines, records, and learner-friendly activities.</p></div><strong>${tools.length} tools</strong></header><div class="teacher-tools-grid">${tools.map(tool => `<button class="teacher-tool-card" type="button" style="--card-accent:${TOOL_ACCENTS[tool.id] || '#06b6d4'}" onclick="TeacherTools.openTool('${esc(tool.id)}')"><span class="teacher-tool-card__icon" aria-hidden="true">${icons[tool.id] || tool.launchIcon || '★'}</span><span class="teacher-tool-card__copy"><strong>${esc(tool.label)}</strong><small>${esc(tool.description || TOOL_DESCRIPTIONS[tool.id] || '')}</small></span><span class="teacher-tool-card__count">Used ${Number(counts[tool.id] || 0)} time${Number(counts[tool.id] || 0) === 1 ? '' : 's'}</span></button>`).join('')}</div></section>`;
+  }
+  function showLauncher() {
+    registry.get(activeToolId)?.onDeactivate?.();
+    activeToolId = '';
+    renderLauncher();
+  }
+  function activate(toolId, containerOverride = null) {
     const next = registry.get(toolId);
     if (!next) return;
     const current = registry.get(activeToolId);
     if (current && current !== next) current.onDeactivate?.();
     activeToolId = toolId;
-    renderTabs();
-    const content = document.getElementById('teacherToolsContent');
-    if (content) next.render(content);
+    const content = containerOverride || document.getElementById('teacherToolsContent');
+    if (content) {
+      next.render(content);
+      if (!containerOverride && toolId !== 'checklist') content.insertAdjacentHTML('afterbegin', `<div class="teacher-tool-pagebar no-print"><button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.showLauncher()">← All Tools</button><strong>${esc(next.label)}</strong><span class="teacher-tool-pagebar__count">Used ${Number(usageCounts()[toolId] || 0)} times</span></div>`);
+    }
     next.onActivate?.();
+  }
+  async function openTool(toolId) {
+    if (!registry.get(toolId)) return;
+    const counts = usageCounts(); counts[toolId] = Number(counts[toolId] || 0) + 1;
+    await globalScope.saveDatabase?.();
+    activate(toolId);
+  }
+  function renderDedicatedChecklist() {
+    const content = document.getElementById('performanceChecklistContent');
+    if (content) activate('checklist', content);
+  }
+  function openPerformanceChecklistPage() {
+    activeToolId = 'checklist';
+    globalScope.setView('performance-checklist');
   }
 
   function refresh() {
-    if (globalScope.getRuntimeNavigationState?.().currentView !== 'tools') return;
-    activate(activeToolId);
+    const view = globalScope.getRuntimeNavigationState?.().currentView;
+    if (view === 'performance-checklist') return renderDedicatedChecklist();
+    if (view !== 'tools') return;
+    if (activeToolId) activate(activeToolId); else renderLauncher();
   }
 
   function disposeActiveTool() {
@@ -3676,9 +3710,12 @@ ${labels}`, '1')) - 1;
   function updateToolsNav(view) {
     const navTools = document.getElementById('navTools');
     if (navTools) navTools.classList.toggle('nav-btn--active', view === 'tools');
-    if (view === 'tools') {
+    const navChecklist = document.getElementById('navPerformanceChecklist');
+    if (navChecklist) navChecklist.classList.toggle('nav-btn--active', view === 'performance-checklist');
+    if (view === 'tools' || view === 'performance-checklist') {
+      const activeButton = view === 'tools' ? navTools : navChecklist;
       document.querySelectorAll('.nav-btn.nav-btn--active').forEach(button => {
-        if (button !== navTools) button.classList.remove('nav-btn--active');
+        if (button !== activeButton) button.classList.remove('nav-btn--active');
       });
     }
   }
@@ -3687,20 +3724,21 @@ ${labels}`, '1')) - 1;
     if (initialized || !core) return;
     initialized = true;
     core.normalize(profileDb());
-    registerTool({ id: 'groups', label: 'Group Randomizer', render: renderGroupRandomizer, onDeactivate: cancelGroupAnimation });
     registerTool({ id: 'picker', label: 'Name Picker', render: renderNamePicker, onDeactivate: cancelPickerAnimation });
+    registerTool({ id: 'groups', label: 'Group Randomizer', render: renderGroupRandomizer, onDeactivate: cancelGroupAnimation });
     registerTool({ id: 'simulator', label: 'Grade Simulator', render: renderGradeSimulator });
     registerTool({
       id: 'checklist',
       label: 'Performance Checklist',
       render: renderPerformanceChecklist,
+      showInLauncher: false,
       onDeactivate: () => {
         cancelChecklistPickerAnimation();
         checklistPickerModal?.remove();
         checklistPickerModal = null;
       }
     });
-    registerTool({ id: 'games', label: 'Offline Games', render: renderGames, onDeactivate: disposeGame });
+    registerTool({ id: 'games', label: 'Games', render: renderGames, onDeactivate: disposeGame });
 
     baseSetView = globalScope.setView;
     baseSelectAssignment = globalScope.selectAssignment;
@@ -3708,7 +3746,8 @@ ${labels}`, '1')) - 1;
     globalScope.setView = function setViewWithTools(view) {
       const result = baseSetView(view);
       updateToolsNav(view);
-      if (view === 'tools') setTimeout(() => activate(activeToolId), 0);
+      if (view === 'tools') showLauncher();
+      else if (view === 'performance-checklist') setTimeout(renderDedicatedChecklist, 0);
       else disposeActiveTool();
       return result;
     };
@@ -3716,9 +3755,7 @@ ${labels}`, '1')) - 1;
     baseRender = globalScope.render;
     globalScope.render = function renderWithTools() {
       const result = baseRender();
-      if (globalScope.getRuntimeNavigationState?.().currentView === 'tools') {
-        setTimeout(refresh, 0);
-      }
+      if (['tools', 'performance-checklist'].includes(globalScope.getRuntimeNavigationState?.().currentView)) setTimeout(refresh, 0);
       return result;
     };
 
@@ -3730,6 +3767,9 @@ ${labels}`, '1')) - 1;
     init,
     registerTool,
     activate,
+    openTool,
+    showLauncher,
+    openPerformanceChecklistPage,
     refresh,
     disposeActiveTool,
     handleActiveClassChange,

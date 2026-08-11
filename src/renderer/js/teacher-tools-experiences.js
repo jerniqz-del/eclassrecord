@@ -99,12 +99,12 @@
     return root?.requestFullscreen?.();
   }
   function sceneMarkup(theme, learners) {
-    const names = learners.slice(0, 12).map(learner => learnerName(learner).split(/[ ,]/)[0]).filter(Boolean);
+    const names = learners.slice(0, 36).map(learner => learnerName(learner).split(/[ ,]/)[0]).filter(Boolean);
     if (theme === 'carnival-wheel') return `<div class="picker-wheel" aria-hidden="true"><div class="picker-wheel__disc">${names.map((name, index) => `<span style="--item:${index};--items:${Math.max(names.length, 1)}">${esc(name)}</span>`).join('')}</div><i class="picker-wheel__pointer"></i></div>`;
-    if (theme === 'arcade-capsule') return `<div class="capsule-machine" aria-hidden="true"><div class="capsule-machine__glass">${names.map((name, index) => `<i style="--item:${index}" title="${esc(name)}"><span>${esc(name.slice(0, 1))}</span></i>`).join('')}</div><div class="capsule-machine__chute"><b></b></div></div>`;
-    if (theme === 'mystery-cards') return `<div class="mystery-deck" aria-hidden="true">${Array.from({ length: 7 }, (_, index) => `<i style="--item:${index}"><span>?</span></i>`).join('')}</div>`;
-    if (theme === 'galaxy-scanner') return `<div class="galaxy-field" aria-hidden="true"><i class="galaxy-field__planet"></i><i class="galaxy-field__beam"></i>${names.slice(0, 10).map((name, index) => `<span style="--item:${index};--items:${Math.max(Math.min(names.length, 10), 1)}">${esc(name.slice(0, 1))}</span>`).join('')}</div>`;
-    return '<div class="game-show-stage" aria-hidden="true"><i class="game-show-stage__curtain game-show-stage__curtain--left"></i><i class="game-show-stage__curtain game-show-stage__curtain--right"></i><i class="game-show-stage__spotlight"></i><span>WHO WILL IT BE?</span></div>';
+    if (theme === 'arcade-capsule') return `<div class="capsule-machine" aria-hidden="true"><div class="capsule-machine__glass">${names.map((name, index) => `<i style="--item:${index}" title="${esc(name)}"><span>${esc(name.slice(0, 1))}</span></i>`).join('')}</div><div class="capsule-machine__chute"><b></b><span class="capsule-machine__winner"></span></div></div>`;
+    if (theme === 'mystery-cards') return `<div class="mystery-deck" aria-hidden="true">${Array.from({ length: 7 }, (_, index) => `<i style="--item:${index}"><span>?</span></i>`).join('')}<b class="mystery-deck__winner"></b></div>`;
+    if (theme === 'galaxy-scanner') return `<div class="galaxy-field" aria-hidden="true"><i class="galaxy-field__planet"></i><b class="galaxy-field__planet-name"></b><i class="galaxy-field__beam"></i>${names.slice(0, 10).map((name, index) => `<span style="--item:${index};--items:${Math.max(Math.min(names.length, 10), 1)}">${esc(name.slice(0, 1))}</span>`).join('')}</div>`;
+    return `<div class="game-show-stage" aria-hidden="true"><i class="game-show-stage__curtain game-show-stage__curtain--left"></i><i class="game-show-stage__curtain game-show-stage__curtain--right"></i><i class="game-show-stage__spotlight"></i><span>WHO WILL IT BE?</span><div class="game-show-roster">${learners.slice(0,40).map(learner => `<i class="game-show-roster__learner" data-roster-learner="${esc(learner.id)}">${avatar(learner,'sm')}<b>${esc(learnerName(learner))}</b></i>`).join('')}</div></div>`;
   }
   function speedOptions(selected) {
     return [['relaxed','Relaxed'],['normal','Normal'],['quick','Quick']]
@@ -207,6 +207,10 @@
     const avatarNode = root.querySelector('#namePickerRouletteAvatar');
     if (name) { name.textContent = learnerName(animation.selected); name.classList.remove('is-ticking'); name.classList.add('is-revealed'); }
     if (avatarNode) { avatarNode.innerHTML = avatar(animation.selected); avatarNode.classList.remove('is-ticking','is-empty'); avatarNode.classList.add('is-revealed'); }
+    const luckyName = learnerName(animation.selected);
+    root.querySelectorAll('.capsule-machine__winner,.mystery-deck__winner').forEach(node => { node.textContent = luckyName; });
+    const planet = root.querySelector('.galaxy-field__planet-name'); if (planet) planet.textContent = 'Planet ' + (animation.selected.firstName || luckyName.split(/[ ,]/)[0]);
+    root.querySelectorAll('.game-show-roster__learner').forEach(node => node.classList.toggle('is-lucky', node.dataset.rosterLearner === String(animation.selected.id)));
     cleanPicker(animation);
     stage?.classList.add('experience-revealed');
     if (soundEnabled('picker')) tone('reveal');

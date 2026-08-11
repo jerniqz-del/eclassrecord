@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="css/teacher-tools-participation.css" />
   <link rel="stylesheet" href="css/teacher-tools-experiences.css" />
   <link rel="stylesheet" href="css/teacher-tools-motion.css" />
+  <link rel="stylesheet" href="css/teacher-tools-workspace.css" />
   <link rel="stylesheet" href="css/classroom-management.css" />
   <link rel="stylesheet" href="css/print.css" media="print" />
   <link rel="stylesheet" href="css/admin.css" />
@@ -128,6 +129,12 @@
             <path d="m9 16 2 2 4-5"></path>
           </svg>
           <span class="nav-btn__label">Attendance</span>
+        </button>
+        <button id="navPerformanceChecklist" class="nav-btn" onclick="TeacherTools.openPerformanceChecklistPage()" title="Performance Checklist">
+          <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 5h10"></path><path d="M9 12h10"></path><path d="M9 19h10"></path><path d="m3 5 1.5 1.5L7 4"></path><path d="m3 12 1.5 1.5L7 11"></path><path d="m3 19 1.5 1.5L7 18"></path>
+          </svg>
+          <span class="nav-btn__label">Performance Checklist</span>
         </button>
         <button id="navCalendar" class="nav-btn" onclick="openCalendarView()" title="School Calendar">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -671,6 +678,14 @@
             <div id="attendanceFiltersCard" class="card support-filters-card no-print"></div>
             <div id="attendanceReportPrintable" class="card support-report-card panel-fill u-p-0"></div>
           </div>
+        </div>
+      </section>
+
+      <!-- Performance Checklist View -->
+      <section class="view-section view-section--flex" data-view="performance-checklist" style="display:none">
+        <div class="performance-checklist-page panel-fill">
+          <header class="performance-checklist-page__header no-print"><div><h1>Performance Checklist</h1><p>Track activities, edit or delete them, and publish reviewed points to the official class record.</p></div></header>
+          <div id="performanceChecklistContent"></div>
         </div>
       </section>
 

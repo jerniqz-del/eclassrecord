@@ -6,7 +6,7 @@
 (function initTeacherToolsCore(globalScope) {
   'use strict';
 
-  const TOOLS_SCHEMA_VERSION = 9;
+  const TOOLS_SCHEMA_VERSION = 10;
   const SIMULATION_HISTORY_LIMIT = 10;
   const CHECKLIST_HISTORY_LIMIT = 20;
   const CHECKLIST_ENTRY_HISTORY_LIMIT = 50;
@@ -535,6 +535,11 @@
     };
   }
 
+  function normalizeToolUsageCounts(value) {
+    const existing = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    return Object.fromEntries(Object.entries(existing).map(([key, count]) => [String(key), Math.max(0, Math.floor(Number(count) || 0))]));
+  }
+
   function normalizeToolsData(profileDb) {
     if (!profileDb || typeof profileDb !== 'object' || Array.isArray(profileDb)) {
       throw new TypeError('A profile database object is required.');
@@ -585,6 +590,7 @@
       appearancePreferences: normalizeAppearancePreferences(existing.appearancePreferences),
       participationStarEvents,
       classroomToolSessions,
+      toolUsageCounts: normalizeToolUsageCounts(existing.toolUsageCounts),
       calendarPreferences: normalizeCalendarPreferences(existing.calendarPreferences)
     };
     return profileDb.tools;

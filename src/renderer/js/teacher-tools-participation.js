@@ -24,6 +24,9 @@
     return globalScope.learnerDisplayName?.(learner)
       || [learner?.lastName ? `${learner.lastName},` : '', learner?.firstName, learner?.middleName].filter(Boolean).join(' ');
   }
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[character]);
+  }
   function term() { return state.term || String(database()?.currentTerm || '1'); }
   function totals() { return core.participationStarTotals(tools().participationStarEvents, assignment()?.id, term()); }
   function eligible() {
@@ -124,38 +127,78 @@
   }
   function standingsMarkup() {
     const starTotals = totals();
-    return core.activeLearners(assignment()).sort((a, b) => (starTotals[b.id] || 0) - (starTotals[a.id] || 0) || learnerName(a).localeCompare(learnerName(b)))
-      .map(item => `<li><span>${learnerName(item)}</span><strong>${starTotals[item.id] || 0} ★</strong></li>`).join('');
+    return core.activeLearners(assignment())
+      .sort((a, b) => (starTotals[b.id] || 0) - (starTotals[a.id] || 0) || learnerName(a).localeCompare(learnerName(b)))
+      .map(item => `<li data-star-learner="${esc(item.id)}"><span>${esc(learnerName(item))}</span><strong>${starTotals[item.id] || 0} ★</strong></li>`).join('');
   }
-  function renderParticipation() {
+  function animateStarChange(panel, change) {
+    if (!change?.learnerId) return;
+    globalScope.requestAnimationFrame?.(() => {
+      const row = [...panel.querySelectorAll('[data-star-learner]')]
+        .find(item => item.dataset.starLearner === String(change.learnerId));
+      if (!row) return;
+      row.classList.add(change.direction === 'down' ? 'star-change-down' : 'star-change-up');
+      const rect = row.getBoundingClientRect();
+      const spark = document.createElement('span');
+      spark.className = 'picker-star-spark';
+      spark.textContent = change.direction === 'down' ? '☆' : '★';
+      spark.style.left = `${rect.right - 20}px`;
+      spark.style.top = `${rect.top + 8}px`;
+      document.body.appendChild(spark);
+      setTimeout(() => spark.remove(), 900);
+    });
+  }
+  function renderParticipation(change = null) {
     const stage = document.querySelector('#namePickerRouletteName')?.closest('.name-picker-stage');
     if (!stage) return;
     let actions = stage.querySelector('.picker-star-actions');
     if (!actions) {
-      actions = document.createElement('div'); actions.className = 'picker-star-actions'; stage.querySelector('.name-picker-stage__content')?.appendChild(actions);
+      actions = document.createElement('div');
+      actions.className = 'picker-star-actions';
+      stage.querySelector('.name-picker-stage__content')?.appendChild(actions);
     }
     const selectedTotal = state.selected ? (totals()[state.selected.id] || 0) : 0;
-    actions.innerHTML = state.selected ? `<strong>Term stars: ${selectedTotal}</strong><input class="field-input" maxlength="160" placeholder="Optional note, e.g. Correct answer."><button class="btn btn-primary btn-sm" data-award-star>Award Star</button><button class="btn btn-ghost btn-sm" data-undo-star>Undo Last Star</button>` : '<span>Select a learner to award a participation star.</span>';
+    actions.innerHTML = state.selected
+      ? `<strong>Term stars: ${selectedTotal}</strong><input class="field-input" maxlength="160" placeholder="Optional note, e.g. Correct answer."><button class="btn btn-primary btn-sm" data-award-star>Award Star</button><button class="btn btn-ghost btn-sm" data-undo-star>Undo Last Star</button>`
+      : '<span>Select a learner to award a participation star.</span>';
     actions.querySelector('[data-award-star]')?.addEventListener('click', async () => {
-      core.awardParticipationStar(tools(), assignment().id, term(), state.selected.id, { source: 'name-picker', note: actions.querySelector('input').value });
-      await persist(); globalScope.toast('Participation star awarded.', 'success'); renderParticipation();
+      const learnerId = state.selected.id;
+      core.awardParticipationStar(tools(), assignment().id, term(), learnerId, { source: 'name-picker', note: actions.querySelector('input').value });
+      await persist();
+      globalScope.toast('Participation star awarded.', 'success');
+      renderParticipation({ learnerId, direction: 'up' });
     });
     actions.querySelector('[data-undo-star]')?.addEventListener('click', async () => {
-      if (!core.undoLastParticipationStar(tools(), assignment().id, term())) return globalScope.toast('There is no star to undo.', 'warning');
-      await persist(); globalScope.toast('Last participation star undone.', 'success'); renderParticipation();
+      const reversed = core.undoLastParticipationStar(tools(), assignment().id, term());
+      if (!reversed) return globalScope.toast('There is no star to undo.', 'warning');
+      await persist();
+      globalScope.toast('Last participation star undone.', 'success');
+      renderParticipation({ learnerId: reversed.learnerId, direction: 'down' });
     });
     let panel = stage.nextElementSibling;
-    if (!panel?.classList.contains('picker-standings')) { panel = document.createElement('section'); panel.className = 'picker-standings'; stage.after(panel); }
-    panel.innerHTML = `<div class="picker-standings__header"><div><h2>Participation standings</h2><span>Term ${term()} · Stars never change official grades.</span></div><div><button class="btn btn-ghost btn-sm" data-export-stars>Export CSV</button><button class="btn btn-warn btn-sm" data-reset-stars>Reset Term Stars</button></div></div><ol>${standingsMarkup()}</ol>`;
+    if (!panel?.classList.contains('picker-star-leaderboard')) {
+      panel = document.createElement('aside');
+      panel.className = 'picker-star-leaderboard';
+      stage.after(panel);
+    }
+    panel.innerHTML = `<div class="picker-star-leaderboard__header"><div><h2>Star leaderboard</h2><span>Term ${term()} · Shared with Participation Tracker</span></div></div><ol>${standingsMarkup()}</ol><div class="picker-star-leaderboard__actions"><button class="btn btn-ghost btn-sm" data-export-stars>Export CSV</button><button class="btn btn-warn btn-sm" data-reset-stars>Reset Term Stars</button></div>`;
+    let workspace = stage.parentElement?.classList.contains('name-picker-workspace') ? stage.parentElement : null;
+    if (!workspace) {
+      workspace = document.createElement('div');
+      workspace.className = 'name-picker-workspace';
+      stage.before(workspace);
+      workspace.append(stage, panel);
+    }
     panel.querySelector('[data-export-stars]').addEventListener('click', exportCsv);
     panel.querySelector('[data-reset-stars]').addEventListener('click', resetTerm);
+    animateStarChange(panel, change);
   }
   async function exportCsv() {
     const starTotals = totals();
     const quote = value => `"${String(value ?? '').replaceAll('"', '""')}"`;
     const rows = [['Learner ID','Learner','Class','Term','Stars'], ...core.activeLearners(assignment()).map(item => [item.id, learnerName(item), core.assignmentLabel(assignment()), term(), starTotals[item.id] || 0])];
     const result = await globalScope.electronAPI?.exportCsv(rows.map(row => row.map(quote).join(',')).join('\r\n'), `Participation-Stars-Term-${term()}.csv`);
-    if (result?.success) globalScope.toast('Participation standings exported.', 'success');
+    if (result?.success) globalScope.toast('Star leaderboard exported.', 'success');
   }
   function resetTerm() {
     const active = tools().participationStarEvents.filter(item => item.assignmentId === assignment().id && item.term === term() && !item.reversedAt).length;
