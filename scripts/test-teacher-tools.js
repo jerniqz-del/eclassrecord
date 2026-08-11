@@ -160,7 +160,7 @@ function fixture() {
     }
   };
   const tools = core.normalize(database);
-  assert.strictEqual(tools.schemaVersion, 5);
+  assert.strictEqual(tools.schemaVersion, 6);
   assert.deepStrictEqual(tools.performanceChecklists, []);
   assert.deepStrictEqual(tools.performanceChecklistHistory, []);
   assert.deepStrictEqual(tools.performanceChecklistEntryHistory, []);
@@ -715,7 +715,7 @@ function fixture() {
 
   tools.performanceChecklistEntryHistory.unshift(transferredClear, noteRecord, bulkRecord);
   const normalized = core.normalize(database);
-  assert.strictEqual(normalized.schemaVersion, 5);
+  assert.strictEqual(normalized.schemaVersion, 6);
   assert.strictEqual(normalized.performanceChecklistTemplates.length, 1);
   assert.strictEqual(normalized.performanceChecklistEntryHistory.length, 3);
 }

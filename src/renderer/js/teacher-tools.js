@@ -1060,11 +1060,11 @@
 
   function checklistSession(checklist) {
     if (!checklist) return null;
-    let session = (checklist.sessions || []).find(item => item.id === checklistState.sessionId);
+    let session = (checklist.sessions || []).find(item => item.id === checklistState.sessionId && !item.activity?.deletedAt);
     if (!session) {
-      const sessions = (checklist.sessions || []).slice();
+      const sessions = (checklist.sessions || []).filter(item => !item.activity?.deletedAt).slice();
       session = sessions
-        .filter(item => item.date === checklistToday())
+        .filter(item => !item.activity?.deletedAt && item.date === checklistToday())
         .sort((left, right) => String(right.updatedAt || '').localeCompare(String(left.updatedAt || '')))[0]
         || sessions.sort((left, right) =>
           String(right.date || '').localeCompare(String(left.date || ''))
@@ -1116,6 +1116,11 @@
       ? `<button class="checklist-note-button${entry?.note ? ' has-note' : ''}" type="button" title="${esc(lockTitle || (entry ? 'Add or edit learner note' : 'Record an entry before adding a note'))}" aria-label="${esc(`Note for ${learnerName(learner)}, ${definition.title || criterion.label}`)}" onclick="TeacherTools.openChecklistEntryNote('${esc(learner.id)}','${esc(criterion.id)}','${esc(session.id)}')" ${entry && !published ? '' : 'disabled'}>${entry?.note ? '●' : 'Note'}</button>`
       : '';
     if (definition.scoringMode === 'CHECK') {
+      const checkItems = (definition.checkItems || []).filter(item => item.active !== false);
+      if (checkItems.length > 1) {
+        const selected = new Set(entry?.selectedItemIds || []);
+        return `<fieldset class="checklist-multi-items" data-checklist-multi-cell ${disabled ? 'disabled' : ''}><legend class="sr-only">${esc(learnerName(learner))}, ${esc(definition.title || criterion.label)}</legend>${checkItems.map(item => `<label title="${esc(item.label)} (${esc(item.pointValue)} points)"><input type="checkbox" value="${esc(item.id)}" ${selected.has(item.id) ? 'checked' : ''} onchange="TeacherTools.updateChecklistItemSelection('${esc(learner.id)}','${esc(criterion.id)}',this.closest('[data-checklist-multi-cell]'),'${esc(session.id)}')"><span>${esc(item.label)} +${esc(item.pointValue)}</span></label>`).join('')}<strong>${entry?.points || 0}</strong></fieldset>`;
+      }
       return `<div class="checklist-entry-control${published ? ' is-locked' : ''}" title="${esc(lockTitle)}"><label class="checklist-check" data-checklist-cell>
         <input type="checkbox" ${entry ? 'checked' : ''} ${disabled ? 'disabled' : ''}
           aria-label="${esc(`${learnerName(learner)}, ${definition.title || criterion.label}`)}"
@@ -1141,7 +1146,7 @@
   }
 
   function checklistStatus(checklist, assignment) {
-    const entryCount = (checklist.sessions || []).reduce(
+    const entryCount = (checklist.sessions || []).filter(session => !session.activity?.deletedAt).reduce(
       (total, session) => total + core.checklistEntryCount(session),
       0
     );
@@ -1151,7 +1156,7 @@
     let needsReview = false;
     let published = false;
     const gradedActivities = (checklist.sessions || []).filter(session =>
-      ['WW', 'PT'].includes(session.activity?.destinationComponent)
+      !session.activity?.deletedAt && ['WW', 'PT'].includes(session.activity?.destinationComponent)
     );
     gradedActivities.forEach(session => {
       const target = session.activity.publicationTarget;
@@ -1329,6 +1334,7 @@
     const entryHistory = core.normalize(profileDb()).performanceChecklistEntryHistory
       .find(item => item.checklistId === checklist.id && item.status === 'applied');
     const activityOptions = checklist.sessions
+      .filter(item => !item.activity?.deletedAt)
       .slice()
       .sort((left, right) => String(right.date).localeCompare(String(left.date)))
       .map(item => {
@@ -1344,14 +1350,15 @@
             <h2 class="checklist-title">${esc(checklist.title)}</h2>
             <span class="checklist-status checklist-status--${esc(status.tone)}">${esc(status.label)}</span>
           </div>
-          <p class="text-muted text-sm">${checklist.criteria.length} activity types · ${checklist.sessions.length} activit${checklist.sessions.length === 1 ? 'y' : 'ies'} · ${learners.length} active learners</p>
+          <p class="text-muted text-sm">${checklist.criteria.length} activity types · ${checklist.sessions.filter(item => !item.activity?.deletedAt).length} active activities · ${learners.length} active learners</p>
         </div>
         <div class="checklist-summary__actions no-print">
           ${session?.activity
             ? activityPublished
               ? `<button class="btn btn-warning btn-sm" type="button" onclick="TeacherTools.reviewChecklistActivityUnlock('${esc(session.activity.id || session.id)}')">Unlock Activity</button>`
-              : '<button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.openEditChecklistActivity()">Edit Activity</button>'
+              : '<button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.openEditChecklistActivity()">Edit Activity</button><button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.duplicateChecklistActivity()">Duplicate</button><button class="btn btn-danger btn-sm" type="button" onclick="TeacherTools.deleteChecklistActivity()">Delete</button>'
             : ''}
+          ${(checklist.sessions || []).some(item => item.activity?.deletedAt) ? '<button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.restoreChecklistActivity()">Restore Deleted</button>' : ''}
           <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.undoLastChecklistEntryChange()" ${entryHistory && !activityPublished ? '' : 'disabled'}>Undo Last Entry</button>
         </div>
       </div>
@@ -1371,7 +1378,7 @@
           <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.openAddChecklistActivity()">Add Activity</button>
           ${checklist.sessions.length ? `<select class="field-select" onchange="if(this.value) TeacherTools.changeChecklistSession(this.value)">
             <option value="">Open Existing Activity...</option>
-            ${checklist.sessions.slice().sort((left, right) => String(right.date).localeCompare(String(left.date))).map(item => `<option value="${esc(item.id)}">${esc(item.date)} · ${esc(item.title)}</option>`).join('')}
+            ${checklist.sessions.filter(item => !item.activity?.deletedAt).slice().sort((left, right) => String(right.date).localeCompare(String(left.date))).map(item => `<option value="${esc(item.id)}">${esc(item.date)} · ${esc(item.title)}</option>`).join('')}
           </select>` : ''}
         </div>
       </div>`}
@@ -2078,6 +2085,7 @@
           <option value="NUMERIC" ${activity.scoringMode === 'NUMERIC' ? 'selected' : ''}>Numeric score</option>
         </select></label>
         <label><span class="field-label">Highest Possible Score</span><input id="editChecklistActivityHps" class="field-input" type="number" min="0.01" step="any" value="${esc(activity.maxPointsPerSession)}"></label>
+        <label id="editChecklistItemsField"><span class="field-label">Checklist items (one per line: Label | Points)</span><textarea id="editChecklistActivityItems" class="field-input" rows="5">${esc((activity.checkItems || []).map(item => item.label + ' | ' + item.pointValue).join('\n'))}</textarea><small>Use 1–10 items. Stable item IDs are retained when labels match.</small></label>
         <label class="checklist-active-toggle"><input id="editChecklistActivityNotes" type="checkbox" ${activity.allowNotes ? 'checked' : ''}> Allow learner notes</label>
       </div>`;
     const modal = createModal(
@@ -2095,11 +2103,21 @@
         globalScope.toast('Enter an activity title, date, and positive HPS.', 'warning');
         return;
       }
+      const requestedMode = modal.overlay.querySelector('#editChecklistActivityMode').value;
+      const existingEntries = core.checklistEntryCount(session);
+      if (requestedMode !== activity.scoringMode && existingEntries && !globalScope.confirm('This activity has learner entries. Change scoring mode while preserving every existing value?')) return;
+      const lines = modal.overlay.querySelector('#editChecklistActivityItems').value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      if (requestedMode === 'CHECK' && (lines.length < 1 || lines.length > 10)) { globalScope.toast('Checklist mode requires 1–10 items.', 'warning'); return; }
+      const previousItems = new Map((activity.checkItems || []).map(item => [item.label.toLowerCase(), item]));
+      const checkItems = lines.map((line, index) => { const [labelPart, pointsPart] = line.split('|'); const label = String(labelPart || '').trim(); const pointValue = Number(pointsPart); const previous = previousItems.get(label.toLowerCase()); return { ...previous, id: previous?.id, label, pointValue, active:true, order:index }; });
+      if (requestedMode === 'CHECK' && checkItems.some(item => !item.label || !Number.isFinite(item.pointValue) || item.pointValue < 0)) { globalScope.toast('Use “Label | Points” for every checklist item.', 'warning'); return; }
       const options = {
         title,
         date,
         destinationComponent: modal.overlay.querySelector('#editChecklistActivityDestination').value,
-        scoringMode: modal.overlay.querySelector('#editChecklistActivityMode').value,
+        scoringMode: requestedMode,
+        confirmModeChange: true,
+        checkItems,
         pointsPerCheck: maxPoints,
         maxPoints,
         allowNotes: modal.overlay.querySelector('#editChecklistActivityNotes').checked
@@ -2118,6 +2136,32 @@
         globalScope.toast(error.message || 'The activity could not be updated.', 'warning');
       }
     });
+  }
+
+  async function duplicateChecklistActivity() {
+    const checklist = currentChecklist(); const session = checklistSession(checklist);
+    if (!session?.activity) return;
+    try { const copy = core.duplicateChecklistActivity(checklist, session.activity.id); await globalScope.saveDatabase(); checklistState.sessionId = copy.id; activate('checklist'); globalScope.toast('Activity duplicated without learner entries.', 'success'); }
+    catch (error) { globalScope.toast(error.message, 'warning'); }
+  }
+
+  function deleteChecklistActivity() {
+    const checklist = currentChecklist(); const session = checklistSession(checklist);
+    if (!session?.activity) return;
+    if (core.isChecklistActivityPublished(session)) { globalScope.toast('Unlock and revert official changes before deleting this published activity.', 'warning'); return; }
+    const count = core.checklistEntryCount(session);
+    if (!globalScope.confirm(count ? `Delete this activity? ${count} learner entry record(s) will be hidden but retained for restoration.` : 'Delete this empty, unpublished activity?')) return;
+    globalScope.promptPinVerification(async () => { core.deleteChecklistActivity(checklist, session.activity.id, { confirmed:true }); await globalScope.saveDatabase(); checklistState.sessionId=''; activate('checklist'); globalScope.toast('Activity deleted. It can be restored.', 'success'); });
+  }
+
+  function restoreChecklistActivity() {
+    const checklist = currentChecklist(); const deleted = (checklist?.sessions || []).filter(item => item.activity?.deletedAt);
+    if (!deleted.length) return;
+    const labels = deleted.map((item,index) => `${index + 1}. ${item.title}`).join('\n');
+    const index = Number(globalScope.prompt(`Choose an activity to restore:
+${labels}`, '1')) - 1;
+    if (!deleted[index]) return;
+    core.restoreChecklistActivity(checklist, deleted[index].activity.id); globalScope.saveDatabase().then(() => { checklistState.sessionId=deleted[index].id; activate('checklist'); globalScope.toast('Activity restored with its entries.', 'success'); });
   }
 
   function reviewChecklistActivityUnlock(activityId = '') {
@@ -2545,6 +2589,28 @@
     await updateChecklistEntry(learnerId, criterionId, String(nextPoints), null, session.id);
   }
 
+  async function updateChecklistItemSelection(learnerId, criterionId, fieldset, sessionId = '') {
+    const checklist = currentChecklist();
+    const session = (checklist?.sessions || []).find(item => item.id === String(sessionId || '')) || checklistSession(checklist);
+    if (!checklist || !session || !fieldset) return;
+    const previous = core.clone(core.checklistEntry(checklist, session.id, learnerId, criterionId));
+    const selectedItemIds = [...fieldset.querySelectorAll('input:checked')].map(input => input.value);
+    try {
+      await runTransaction(() => {
+        const current = currentChecklist();
+        const before = core.clone(core.checklistEntry(current, session.id, learnerId, criterionId));
+        const after = core.clone(core.setChecklistItemSelection(current, activeAssignment(), session.id, learnerId, criterionId, selectedItemIds, { deviceId: rootDb()?.deviceId || '' }));
+        const record = { id: `checklist-entry-change-${Date.now()}`, checklistId: current.id, assignmentId: activeAssignment().id, operation: 'entry', label: 'Checklist item selection', createdAt: new Date().toISOString(), changes: [{ sessionId:session.id, learnerId, criterionId, before, after }], status:'applied', revertedAt:'' };
+        appendChecklistEntryHistory(record); return record;
+      });
+      checklistState.sessionId = session.id; globalScope.setView('tools'); activate('checklist');
+    } catch (error) {
+      const selected = new Set(previous?.selectedItemIds || []);
+      fieldset.querySelectorAll('input').forEach(input => { input.checked = selected.has(input.value); });
+      globalScope.toast(error.message, 'warning');
+    }
+  }
+
   async function updateChecklistEntry(learnerId, criterionId, value, input, sessionId = '') {
     const checklist = currentChecklist();
     const session = (checklist?.sessions || []).find(item => item.id === String(sessionId || ''))
@@ -2890,7 +2956,7 @@
 
   function checklistSummaryRows(checklist, assignment) {
     const totals = core.checklistLearnerTotals(checklist, assignment);
-    const activitySessions = (checklist.sessions || []).filter(session => session.activity);
+    const activitySessions = (checklist.sessions || []).filter(session => session.activity && !session.activity.deletedAt);
     const hasLegacySessions = (checklist.sessions || []).some(session => !session.activity);
     const columns = [
       ...activitySessions.map(session => {
@@ -2898,7 +2964,7 @@
         return {
           id: activity.activityId,
           label: activity.title,
-          detail: `${session.date} · ${checklistComponentLabel(activity.destinationComponent)} · HPS ${activity.maxPointsPerSession}`,
+          detail: `${session.date} · ${checklistComponentLabel(activity.destinationComponent)} · HPS ${activity.maxPointsPerSession}${activity.scoringMode === 'CHECK' ? ` · Items: ${(activity.checkItems || []).map(item => `${item.label} (${item.pointValue})`).join('; ')}` : ''}`,
           value: learnerId => core.checklistEntry(
             checklist,
             session.id,
@@ -3676,6 +3742,10 @@
     openResetChecklist,
     adjustChecklistEntry,
     updateChecklistEntry,
+    updateChecklistItemSelection,
+    duplicateChecklistActivity,
+    deleteChecklistActivity,
+    restoreChecklistActivity,
     openChecklistEntryNote,
     openChecklistPicker,
     changeChecklistPickerCriterion,

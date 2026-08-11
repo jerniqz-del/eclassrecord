@@ -6,7 +6,7 @@
 (function initTeacherToolsCore(globalScope) {
   'use strict';
 
-  const TOOLS_SCHEMA_VERSION = 5;
+  const TOOLS_SCHEMA_VERSION = 6;
   const SIMULATION_HISTORY_LIMIT = 10;
   const CHECKLIST_HISTORY_LIMIT = 20;
   const CHECKLIST_ENTRY_HISTORY_LIMIT = 50;
@@ -279,7 +279,10 @@
       points,
       note: String(entry.note || ''),
       updatedAt: String(entry.updatedAt || ''),
-      updatedByDeviceId: String(entry.updatedByDeviceId || '')
+      updatedByDeviceId: String(entry.updatedByDeviceId || ''),
+      selectedItemIds: Array.isArray(entry.selectedItemIds)
+        ? Array.from(new Set(entry.selectedItemIds.map(String).filter(Boolean)))
+        : []
     };
   }
 
@@ -383,7 +386,9 @@
       allowNotes: activity.allowNotes === undefined
         ? Boolean(criterion.allowNotes)
         : Boolean(activity.allowNotes),
-      status: activity.status === 'archived' ? 'archived' : 'active',
+      status: activity.status === 'archived' || activity.deletedAt ? 'archived' : 'active',
+      deletedAt: String(activity.deletedAt || ''),
+      checkItems: (Array.isArray(activity.checkItems) ? activity.checkItems : criterion.checkItems || []).map(normalizeChecklistItem).filter(Boolean).slice(0, 10),
       publicationTarget: normalizePublicationTarget(activity.publicationTarget)
     };
   }
@@ -1023,6 +1028,7 @@
         pointsPerCheck: options.pointsPerCheck || criterion.pointsPerCheck,
         maxPoints: options.maxPoints || criterion.maxPointsPerSession,
         allowNotes: options.allowNotes === undefined ? criterion.allowNotes : options.allowNotes,
+        checkItems: Array.isArray(options.checkItems) ? options.checkItems : criterion.checkItems,
         publicationTarget: normalizePublicationTarget(null)
       },
       createdAt: now,
@@ -1044,6 +1050,11 @@
     if (published) {
       throw new Error('Published activities are locked. Unlock this activity with your PIN before editing it.');
     }
+    const requestedMode = CHECKLIST_SCORING_MODES.includes(String(options.scoringMode || '').toUpperCase())
+      ? String(options.scoringMode).toUpperCase() : session.activity.scoringMode;
+    if (requestedMode !== session.activity.scoringMode && checklistEntryCount(session) > 0 && options.confirmModeChange !== true) {
+      throw new Error('Confirm the scoring-mode change because this activity already has learner entries. Existing values will be preserved.');
+    }
     const maxPoints = optionalPositive(options.maxPoints) || session.activity.maxPoints;
     const oversizedEntry = Object.values(session.entries || {}).some(learnerEntries => {
       const entry = learnerEntries?.[session.activity.criterionId];
@@ -1061,12 +1072,13 @@
       ...session.activity,
       title,
       destinationComponent: options.destinationComponent || session.activity.destinationComponent,
-      scoringMode: options.scoringMode || session.activity.scoringMode,
+      scoringMode: requestedMode,
       pointsPerCheck: options.pointsPerCheck || session.activity.pointsPerCheck,
       maxPoints,
       allowNotes: options.allowNotes === undefined
         ? session.activity.allowNotes
-        : options.allowNotes
+        : options.allowNotes,
+      checkItems: Array.isArray(options.checkItems) ? options.checkItems : session.activity.checkItems
     }, session, checklist.criteria || []);
     const now = new Date().toISOString();
     session.updatedAt = now;
@@ -1099,7 +1111,7 @@
   }
 
   function checklistTableColumns(checklist) {
-    return (checklist?.sessions || []).flatMap(session => {
+    return (checklist?.sessions || []).filter(session => !session.activity?.deletedAt).flatMap(session => {
       const activity = checklistActivityDefinition(checklist, session);
       if (activity) {
         return [{
@@ -1173,12 +1185,70 @@
       points,
       note: String(metadata.note ?? previous?.note ?? ''),
       updatedAt: now,
-      updatedByDeviceId: String(metadata.deviceId || previous?.updatedByDeviceId || '')
+      updatedByDeviceId: String(metadata.deviceId || previous?.updatedByDeviceId || ''),
+      selectedItemIds: Array.isArray(previous?.selectedItemIds) ? [...previous.selectedItemIds] : []
     };
     session.entries[learnerId][criterionId] = entry;
     session.updatedAt = now;
     checklist.updatedAt = now;
     return entry;
+  }
+
+  function setChecklistItemSelection(checklist, assignment, sessionId, learnerId, criterionId, selectedItemIds, metadata = {}) {
+    const session = (checklist?.sessions || []).find(item => item.id === sessionId);
+    const definition = checklistActivityDefinition(checklist, session)
+      || (checklist?.criteria || []).find(item => item.id === criterionId);
+    if (!definition || definition.scoringMode !== 'CHECK') throw new Error('This activity does not use checklist items.');
+    const activeItems = (definition.checkItems || []).filter(item => item.active !== false);
+    const selected = Array.from(new Set((selectedItemIds || []).map(String)))
+      .filter(id => activeItems.some(item => item.id === id));
+    if (!selected.length) return setChecklistEntry(checklist, assignment, sessionId, learnerId, criterionId, '', metadata);
+    const points = roundScore(selected.reduce((sum, id) => sum + Number(activeItems.find(item => item.id === id)?.pointValue || 0), 0));
+    const entry = setChecklistEntry(checklist, assignment, sessionId, learnerId, criterionId, points, metadata);
+    entry.selectedItemIds = selected;
+    return entry;
+  }
+
+  function deleteChecklistActivity(checklist, activityId, options = {}) {
+    const session = (checklist?.sessions || []).find(item => String(item.activity?.id || item.id) === String(activityId || ''));
+    if (!session?.activity) throw new Error('The selected activity is unavailable.');
+    if (isChecklistActivityPublished(session)) throw new Error('Published activities must be reverted or unpublished before deletion.');
+    const affectedEntries = checklistEntryCount(session);
+    if (options.confirmed !== true) throw new Error(affectedEntries
+      ? `Confirm deletion of this activity and its ${affectedEntries} learner entry record(s).`
+      : 'Confirm deletion of this empty activity.');
+    const now = new Date().toISOString();
+    session.activity.deletedAt = now;
+    session.activity.status = 'archived';
+    session.updatedAt = now;
+    checklist.updatedAt = now;
+    return { activityId: session.activity.id || session.id, affectedEntries, deletedAt: now };
+  }
+
+  function restoreChecklistActivity(checklist, activityId) {
+    const session = (checklist?.sessions || []).find(item => String(item.activity?.id || item.id) === String(activityId || ''));
+    if (!session?.activity?.deletedAt) throw new Error('The deleted activity is unavailable.');
+    session.activity.deletedAt = '';
+    session.activity.status = 'active';
+    session.updatedAt = new Date().toISOString();
+    checklist.updatedAt = session.updatedAt;
+    return session;
+  }
+
+  function duplicateChecklistActivity(checklist, activityId, options = {}) {
+    const source = (checklist?.sessions || []).find(item => String(item.activity?.id || item.id) === String(activityId || ''));
+    if (!source?.activity || source.activity.deletedAt) throw new Error('The activity to duplicate is unavailable.');
+    return addChecklistActivity(checklist, {
+      criterionId: source.activity.criterionId,
+      title: options.title || `${source.title} Copy`,
+      date: options.date || new Date().toISOString().slice(0, 10),
+      destinationComponent: source.activity.destinationComponent,
+      scoringMode: source.activity.scoringMode,
+      pointsPerCheck: source.activity.pointsPerCheck,
+      maxPoints: source.activity.maxPoints,
+      allowNotes: source.activity.allowNotes,
+      checkItems: clone(source.activity.checkItems || [])
+    });
   }
 
   function writeChecklistEntryState(checklist, sessionId, learnerId, criterionId, state) {
@@ -1353,6 +1423,7 @@
     });
     (checklist?.sessions || []).forEach(session => {
       checklistSessionCriteria(checklist, session).forEach(definition => {
+        if (session.activity?.deletedAt) return;
         const component = normalizedChecklistComponent(definition.destinationComponent);
         learnerIds.forEach(learnerId => {
           const entry = session.entries?.[learnerId]?.[definition.criterionId || definition.id];
@@ -2214,6 +2285,10 @@
     checklistTableColumns,
     checklistEntry,
     setChecklistEntry,
+    setChecklistItemSelection,
+    deleteChecklistActivity,
+    restoreChecklistActivity,
+    duplicateChecklistActivity,
     applyChecklistEntryTransaction,
     planChecklistEntryUndo,
     undoChecklistEntryTransaction,
@@ -2264,6 +2339,10 @@
     tableColumns: checklistTableColumns,
     entry: checklistEntry,
     setEntry: setChecklistEntry,
+    setItemSelection: setChecklistItemSelection,
+    deleteActivity: deleteChecklistActivity,
+    restoreActivity: restoreChecklistActivity,
+    duplicateActivity: duplicateChecklistActivity,
     applyEntryTransaction: applyChecklistEntryTransaction,
     planEntryUndo: planChecklistEntryUndo,
     undoEntryTransaction: undoChecklistEntryTransaction,

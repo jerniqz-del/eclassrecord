@@ -18,7 +18,7 @@ function fixture() {
 {
   const db = fixture();
   const tools = core.normalize(db);
-  assert.strictEqual(tools.schemaVersion, 5);
+  assert.strictEqual(tools.schemaVersion, 6);
   assert.deepStrictEqual(tools.futureField, { retained: true });
   assert.strictEqual(tools.appearancePreferences.groupRandomizerTheme, 'ocean');
   assert.strictEqual(tools.appearancePreferences.namePickerTheme, 'classic');

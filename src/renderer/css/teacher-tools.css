@@ -1934,3 +1934,8 @@ body.admin-test-mode .checklist-publication-preview-overlay {
     font-size: 9px;
   }
 }
+
+.checklist-multi-items { display:grid; gap:3px; min-width:140px; margin:0; padding:var(--space-1); border:0; }
+.checklist-multi-items label { display:flex; align-items:center; gap:4px; font-size:var(--font-size-xs); text-align:left; }
+.checklist-multi-items strong { color:var(--color-primary-700); text-align:right; }
+#editChecklistItemsField { grid-column:1 / -1; }
