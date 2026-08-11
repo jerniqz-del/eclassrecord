@@ -6,7 +6,7 @@
 (function initTeacherToolsCore(globalScope) {
   'use strict';
 
-  const TOOLS_SCHEMA_VERSION = 8;
+  const TOOLS_SCHEMA_VERSION = 9;
   const SIMULATION_HISTORY_LIMIT = 10;
   const CHECKLIST_HISTORY_LIMIT = 20;
   const CHECKLIST_ENTRY_HISTORY_LIMIT = 50;
@@ -127,6 +127,10 @@
     return available.includes(theme) ? theme : (legacy[theme] || available[0]);
   }
 
+  function normalizeAnimationSpeed(value) {
+    return ['relaxed', 'normal', 'quick'].includes(String(value)) ? String(value) : 'normal';
+  }
+
   function normalizeAppearancePreferences(value) {
     const existing = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     return {
@@ -134,7 +138,9 @@
       groupRandomizerTheme: normalizedTheme(existing.groupRandomizerTheme, 'groups'),
       namePickerTheme: normalizedTheme(existing.namePickerTheme, 'picker'),
       groupRandomizerSound: existing.groupRandomizerSound !== false,
-      namePickerSound: existing.namePickerSound !== false
+      namePickerSound: existing.namePickerSound !== false,
+      groupRandomizerAnimationSpeed: normalizeAnimationSpeed(existing.groupRandomizerAnimationSpeed),
+      namePickerAnimationSpeed: normalizeAnimationSpeed(existing.namePickerAnimationSpeed)
     };
   }
 

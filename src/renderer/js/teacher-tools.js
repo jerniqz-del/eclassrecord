@@ -323,6 +323,7 @@
   }
 
   function cancelGroupAnimation() {
+    globalScope.TeacherToolExperiences?.cancelGroups?.();
     if (groupAnimationTimer) {
       clearTimeout(groupAnimationTimer);
       groupAnimationTimer = null;
@@ -453,7 +454,7 @@
       const finalGroups = core.randomizeGroups(learners, groupState.groupCount, groupState.mode);
       groupState.colors = randomGroupColors(finalGroups.length);
       groupState.pendingGroups = finalGroups;
-      if (learners.length < 2 || globalScope.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      if (learners.length < 2 || globalScope.TeacherToolsAnimationEngine?.prefersReducedMotion?.()) {
         groupState.groups = finalGroups;
         groupState.pendingGroups = [];
         refresh();
@@ -461,31 +462,20 @@
       }
 
       const token = ++groupAnimationToken;
-      const delays = [100, 115, 135, 160, 200, 250, 320, 410];
-      let step = 0;
       groupState.animating = true;
-      renderGroupArrangement(
-        core.randomizeGroups(learners, groupState.groupCount, 'random'),
-        { duration: 180 }
-      );
-
-      const shuffleStep = () => {
+      groupState.groups = finalGroups;
+      refresh();
+      globalScope.requestAnimationFrame?.(() => {
         if (token !== groupAnimationToken || !groupState.animating) return;
-        if (step >= delays.length) {
-          groupAnimationTimer = null;
+        const root = document.getElementById('groupRandomizerCount')?.closest('.teacher-tool');
+        const complete = () => {
+          if (token !== groupAnimationToken) return;
           groupState.animating = false;
           groupState.pendingGroups = [];
-          renderGroupArrangement(finalGroups, { duration: 540, settled: true });
-          return;
-        }
-        renderGroupArrangement(
-          core.randomizeGroups(learners, groupState.groupCount, 'random'),
-          { duration: Math.min(360, delays[step] + 120) }
-        );
-        groupAnimationTimer = setTimeout(shuffleStep, delays[step]);
-        step++;
-      };
-      groupAnimationTimer = setTimeout(shuffleStep, delays[0]);
+          renderGroupArrangement(finalGroups, { duration: 0, settled: true });
+        };
+        if (!globalScope.TeacherToolExperiences?.animateGroups?.({ root, onComplete: complete })) complete();
+      });
     } catch (error) {
       cancelGroupAnimation();
       globalScope.toast(error.message, 'warning');
@@ -494,8 +484,7 @@
 
   function revealGroupsNow() {
     if (!groupState.animating || !groupState.pendingGroups?.length) return false;
-    if (groupAnimationTimer) clearTimeout(groupAnimationTimer);
-    groupAnimationTimer = null;
+    if (globalScope.TeacherToolExperiences?.revealGroupsNow?.()) return true;
     groupAnimationToken++;
     const finalGroups = groupState.pendingGroups;
     groupState.pendingGroups = [];

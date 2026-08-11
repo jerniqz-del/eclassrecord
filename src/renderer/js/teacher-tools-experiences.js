@@ -23,7 +23,10 @@
     classic: 'draft-arena', fiesta: 'puzzle-party', chalkboard: 'house-sorting',
     ocean: 'island-expedition', space: 'space-crew', 'high-contrast': 'draft-arena'
   });
-  const state = { pickerAnimation: null, audioContext: null, groupWasAnimating: false };
+  const state = {
+    pickerAnimation: null, groupAnimation: null, audioContext: null,
+    pickerRoot: null, groupRoot: null, lastPicker: null, lastGroup: null
+  };
 
   function database() { return globalScope.getActiveProfileDatabase?.(); }
   function tools() { return globalScope.TeacherToolsCore?.normalize(database()); }
@@ -55,10 +58,22 @@
   function soundEnabled(tool) {
     return tool === 'picker' ? preferences().namePickerSound !== false : preferences().groupRandomizerSound !== false;
   }
+  function animationSpeed(tool) {
+    return tool === 'picker'
+      ? preferences().namePickerAnimationSpeed || 'normal'
+      : preferences().groupRandomizerAnimationSpeed || 'normal';
+  }
   async function setSound(tool, enabled) {
     const prefs = preferences();
     if (tool === 'picker') prefs.namePickerSound = Boolean(enabled);
     else prefs.groupRandomizerSound = Boolean(enabled);
+    await globalScope.saveDatabase?.();
+  }
+  async function setAnimationSpeed(tool, value) {
+    const speed = ['relaxed', 'normal', 'quick'].includes(value) ? value : 'normal';
+    const prefs = preferences();
+    if (tool === 'picker') prefs.namePickerAnimationSpeed = speed;
+    else prefs.groupRandomizerAnimationSpeed = speed;
     await globalScope.saveDatabase?.();
   }
   function tone(kind = 'tick') {
@@ -91,6 +106,10 @@
     if (theme === 'galaxy-scanner') return `<div class="galaxy-field" aria-hidden="true"><i class="galaxy-field__planet"></i><i class="galaxy-field__beam"></i>${names.slice(0, 10).map((name, index) => `<span style="--item:${index};--items:${Math.max(Math.min(names.length, 10), 1)}">${esc(name.slice(0, 1))}</span>`).join('')}</div>`;
     return '<div class="game-show-stage" aria-hidden="true"><i class="game-show-stage__curtain game-show-stage__curtain--left"></i><i class="game-show-stage__curtain game-show-stage__curtain--right"></i><i class="game-show-stage__spotlight"></i><span>WHO WILL IT BE?</span></div>';
   }
+  function speedOptions(selected) {
+    return [['relaxed','Relaxed'],['normal','Normal'],['quick','Quick']]
+      .map(([value, label]) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`).join('');
+  }
   function addExperienceToolbar(tool, root) {
     if (!root || root.querySelector(`[data-experience-toolbar="${tool}"]`)) return;
     const host = tool === 'picker'
@@ -100,17 +119,26 @@
     const toolbar = document.createElement('div');
     toolbar.className = 'experience-toolbar no-print';
     toolbar.dataset.experienceToolbar = tool;
-    toolbar.innerHTML = `<label class="experience-sound"><input type="checkbox" ${soundEnabled(tool) ? 'checked' : ''}> Sound</label><button class="btn btn-ghost btn-sm" type="button" data-present>Present Fullscreen</button>${tool === 'picker' ? '<button class="btn btn-ghost btn-sm" type="button" data-reveal hidden>Reveal Now</button>' : '<button class="btn btn-ghost btn-sm" type="button" data-reveal>Reveal Now</button>'}`;
+    toolbar.innerHTML = `<label class="experience-sound"><input type="checkbox" ${soundEnabled(tool) ? 'checked' : ''}> Sound</label><label class="experience-toolbar__speed">Speed <select class="field-select" data-animation-speed>${speedOptions(animationSpeed(tool))}</select></label><button class="btn btn-ghost btn-sm" type="button" data-present>Presentation Mode</button><button class="btn btn-ghost btn-sm" type="button" data-reveal hidden>Reveal Now</button><button class="btn btn-ghost btn-sm" type="button" data-replay disabled>Replay Animation</button>`;
     toolbar.querySelector('input').addEventListener('change', event => setSound(tool, event.target.checked));
+    toolbar.querySelector('[data-animation-speed]').addEventListener('change', event => setAnimationSpeed(tool, event.target.value));
     toolbar.querySelector('[data-present]').addEventListener('click', () => fullscreen(root));
     toolbar.querySelector('[data-reveal]').addEventListener('click', () => {
       if (tool === 'picker') revealPickerNow();
-      else globalScope.TeacherTools?.revealGroupsNow?.();
+      else if (!revealGroupsNow()) globalScope.TeacherTools?.revealGroupsNow?.();
     });
+    toolbar.querySelector('[data-replay]').addEventListener('click', () => tool === 'picker' ? replayPicker() : replayGroups());
     host.appendChild(toolbar);
   }
   function enhancePicker(root, learners = []) {
     if (!root) return;
+    if (state.pickerRoot && state.pickerRoot !== root) {
+      cancelPicker();
+      if (state.lastPicker && learners.some(item => item.id === state.lastPicker.selected?.id)) {
+        state.lastPicker = { ...state.lastPicker, root, learners };
+      } else state.lastPicker = null;
+    }
+    state.pickerRoot = root;
     const theme = selectedTheme('picker');
     root.dataset.toolTheme = theme;
     root.dataset.experience = 'picker';
@@ -124,12 +152,16 @@
     }
     stage.dataset.experienceLabel = pickerThemes[theme];
     addExperienceToolbar('picker', root);
+    const replay = root.querySelector('[data-experience-toolbar="picker"] [data-replay]');
+    if (replay) replay.disabled = !state.lastPicker;
   }
   function groupIcon(theme) {
     return { 'draft-arena':'🏆', 'space-crew':'🚀', 'island-expedition':'🏝️', 'house-sorting':'🛡️', 'puzzle-party':'🧩' }[theme] || '★';
   }
   function enhanceGroups(root) {
     if (!root) return;
+    if (state.groupRoot && state.groupRoot !== root) cancelGroups();
+    state.groupRoot = root;
     const theme = selectedTheme('groups');
     root.dataset.toolTheme = theme;
     root.dataset.experience = 'groups';
@@ -148,64 +180,182 @@
         }
       });
     }
-    const animating = Boolean(root.querySelector('.group-randomizer-status'));
-    if (state.groupWasAnimating && !animating && results) {
-      if (soundEnabled('groups')) tone('reveal');
-      if (!isReduced()) globalScope.TeacherTools?.launchSelectionConfetti?.(results.querySelector('.group-result') || results);
-      results.classList.add('is-revealed');
-    }
-    state.groupWasAnimating = animating;
+    if (state.lastGroup) state.lastGroup = results ? { root } : null;
+    const replay = root.querySelector('[data-experience-toolbar="groups"] [data-replay]');
+    if (replay) replay.disabled = !state.lastGroup || !results;
   }
-  function finishPicker(animation) {
+  function showPickerCandidate(root, learner) {
+    const name = root.querySelector('#namePickerRouletteName');
+    const avatarNode = root.querySelector('#namePickerRouletteAvatar');
+    if (name) { name.textContent = learnerName(learner); name.classList.remove('is-revealed'); name.classList.add('is-ticking'); }
+    if (avatarNode) { avatarNode.innerHTML = avatar(learner); avatarNode.classList.remove('is-revealed','is-empty'); avatarNode.classList.add('is-ticking'); }
+  }
+  function cleanPicker(animation) {
+    const root = animation?.root;
+    const stage = root?.querySelector('.name-picker-stage');
+    root?.classList.remove('experience-running');
+    root?.setAttribute('aria-busy', 'false');
+    stage?.removeAttribute('data-motion-phase');
+    const pick = stage?.querySelector('.btn-primary.btn-lg'); if (pick) pick.disabled = false;
+    root?.querySelector('[data-experience-toolbar="picker"] [data-reveal]')?.setAttribute('hidden', '');
+  }
+  function finishPicker(animation, skipped = false) {
     if (!animation || animation.done) return;
     animation.done = true;
-    clearTimeout(animation.timer);
     const root = animation.root, stage = root.querySelector('.name-picker-stage');
     const name = root.querySelector('#namePickerRouletteName');
     const avatarNode = root.querySelector('#namePickerRouletteAvatar');
     if (name) { name.textContent = learnerName(animation.selected); name.classList.remove('is-ticking'); name.classList.add('is-revealed'); }
     if (avatarNode) { avatarNode.innerHTML = avatar(animation.selected); avatarNode.classList.remove('is-ticking','is-empty'); avatarNode.classList.add('is-revealed'); }
-    root.classList.remove('experience-running'); stage?.classList.add('experience-revealed');
-    root.querySelector('[data-experience-toolbar="picker"] [data-reveal]')?.setAttribute('hidden', '');
-    const pick = stage?.querySelector('.btn-primary.btn-lg'); if (pick) pick.disabled = false;
+    cleanPicker(animation);
+    stage?.classList.add('experience-revealed');
     if (soundEnabled('picker')) tone('reveal');
     if (!isReduced()) globalScope.TeacherTools?.launchSelectionConfetti?.(avatarNode || stage);
     state.pickerAnimation = null;
-    animation.onComplete();
+    state.lastPicker = { root, learners: animation.learners, selected: animation.selected };
+    const replay = root.querySelector('[data-experience-toolbar="picker"] [data-replay]'); if (replay) replay.disabled = false;
+    animation.onComplete?.({ skipped });
   }
   function animatePicker({ root, learners, selected, onComplete }) {
-    if (!root || !selected || isReduced() || learners.length < 2) return false;
-    revealPickerNow();
+    if (!root || !selected || !learners?.length) return false;
+    cancelPicker();
     enhancePicker(root, learners);
+    const engine = globalScope.TeacherToolsAnimationEngine;
+    const adapters = globalScope.TeacherToolExperienceAdapters;
+    if (!engine || !adapters) return false;
+    const theme = selectedTheme('picker');
+    const profile = adapters.picker[theme];
     const stage = root.querySelector('.name-picker-stage');
     const pick = stage?.querySelector('.btn-primary.btn-lg'); if (pick) pick.disabled = true;
-    root.classList.add('experience-running'); stage?.classList.remove('experience-revealed');
+    root.classList.add('experience-running'); root.setAttribute('aria-busy', 'true'); stage?.classList.remove('experience-revealed');
     const reveal = root.querySelector('[data-experience-toolbar="picker"] [data-reveal]'); if (reveal) reveal.hidden = false;
-    const animation = { root, learners, selected, onComplete, step: 0, timer: null, done: false };
-    state.pickerAnimation = animation;
-    const total = 22;
-    const tick = () => {
-      if (animation.done) return;
-      if (animation.step >= total) return finishPicker(animation);
-      const candidate = learners[globalScope.TeacherToolsCore.secureRandomInt(learners.length)];
-      const name = root.querySelector('#namePickerRouletteName');
-      const avatarNode = root.querySelector('#namePickerRouletteAvatar');
-      if (name) { name.textContent = learnerName(candidate); name.classList.remove('is-revealed'); name.classList.add('is-ticking'); }
-      if (avatarNode) { avatarNode.innerHTML = avatar(candidate); avatarNode.classList.remove('is-revealed','is-empty'); avatarNode.classList.add('is-ticking'); }
-      root.style.setProperty('--experience-step', String(animation.step));
-      if (soundEnabled('picker')) tone('tick');
-      animation.step++;
-      const progress = animation.step / total;
-      animation.timer = setTimeout(tick, 45 + Math.round(progress * progress * 150));
+    const replay = root.querySelector('[data-experience-toolbar="picker"] [data-replay]'); if (replay) replay.disabled = true;
+    const status = root.querySelector('.name-picker-stage__status');
+    if (status) { status.textContent = profile.label; status.setAttribute('aria-live', 'polite'); }
+    const animation = {
+      root, stage, learners, selected, onComplete, done: false, tickIndex: -1,
+      selectedIndex: Math.max(0, learners.findIndex(item => item.id === selected.id))
     };
-    tick();
+    state.pickerAnimation = animation;
+    engine.start({
+      id: 'name-picker', root, duration: profile.duration, speed: animationSpeed('picker'),
+      onFrame(progress) {
+        adapters.pickerFrame(theme, progress, animation);
+        const nextTick = Math.min(profile.tickCount - 1, Math.floor(progress * profile.tickCount));
+        if (nextTick !== animation.tickIndex && progress < .96) {
+          animation.tickIndex = nextTick;
+          showPickerCandidate(root, learners[globalScope.TeacherToolsCore.secureRandomInt(learners.length)]);
+          if (soundEnabled('picker')) tone('tick');
+        }
+      },
+      onFinish: ({ skipped }) => finishPicker(animation, skipped),
+      onCancel: () => cleanPicker(animation)
+    });
     return true;
   }
-  function revealPickerNow() { if (state.pickerAnimation) finishPicker(state.pickerAnimation); }
+  function revealPickerNow() { return globalScope.TeacherToolsAnimationEngine?.finish('name-picker') || false; }
+  function cancelPicker() {
+    const cancelled = globalScope.TeacherToolsAnimationEngine?.cancel('name-picker') || false;
+    if (cancelled) state.pickerAnimation = null;
+    return cancelled;
+  }
+  function replayPicker() {
+    const previous = state.lastPicker;
+    if (!previous || !document.contains(previous.root)) return false;
+    return animatePicker({ ...previous, onComplete: () => {} });
+  }
+
+  function cleanGroups(animation, finishAnimations = false) {
+    animation?.animations?.forEach(item => {
+      try { finishAnimations ? item.finish() : item.cancel(); } catch (_) { /* Detached learner card. */ }
+    });
+    const root = animation?.root;
+    const results = root?.querySelector('.group-results');
+    results?.classList.remove('is-assigning');
+    root?.setAttribute('aria-busy', 'false');
+    results?.querySelector('.group-animation-progress')?.remove();
+    root?.querySelector('[data-experience-toolbar="groups"] [data-reveal]')?.setAttribute('hidden', '');
+  }
+  function finishGroups(animation, skipped = false) {
+    if (!animation || animation.done) return;
+    animation.done = true;
+    cleanGroups(animation, true);
+    const results = animation.root.querySelector('.group-results');
+    results?.classList.add('is-revealed');
+    if (soundEnabled('groups')) tone('reveal');
+    if (!isReduced()) globalScope.TeacherTools?.launchSelectionConfetti?.(results?.querySelector('.group-result') || results);
+    state.groupAnimation = null;
+    state.lastGroup = { root: animation.root };
+    const replay = animation.root.querySelector('[data-experience-toolbar="groups"] [data-replay]'); if (replay) replay.disabled = false;
+    animation.onComplete?.({ skipped });
+  }
+  function animateGroups({ root, onComplete } = {}) {
+    if (!root) return false;
+    cancelGroups();
+    enhanceGroups(root);
+    const engine = globalScope.TeacherToolsAnimationEngine;
+    const adapters = globalScope.TeacherToolExperienceAdapters;
+    const results = root.querySelector('.group-results');
+    const learners = [...(results?.querySelectorAll('[data-group-learner-id]') || [])];
+    if (!engine || !adapters || !results || !learners.length) return false;
+    const theme = selectedTheme('groups');
+    const profile = adapters.groups[theme];
+    results.classList.remove('is-revealed'); results.classList.add('is-assigning'); root.setAttribute('aria-busy', 'true');
+    const progress = document.createElement('span'); progress.className = 'group-animation-progress'; progress.setAttribute('aria-hidden', 'true'); results.appendChild(progress);
+    const reveal = root.querySelector('[data-experience-toolbar="groups"] [data-reveal]'); if (reveal) reveal.hidden = false;
+    const replay = root.querySelector('[data-experience-toolbar="groups"] [data-replay]'); if (replay) replay.disabled = true;
+    const status = root.querySelector('.group-randomizer-status');
+    if (status) { status.textContent = profile.label; status.setAttribute('aria-live', 'polite'); }
+    const totalDuration = engine.duration(profile.duration, animationSpeed('groups'));
+    const stagger = Math.min(85, Math.max(24, Math.floor((totalDuration - 720) / Math.max(learners.length, 1))));
+    const animations = learners.map((element, index) => typeof element.animate === 'function'
+      ? element.animate(
+        adapters.groupKeyframes(theme, index, learners.length),
+        { duration: 620, delay: index * stagger, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both' }
+      )
+      : { finish() {}, cancel() {} });
+    const animation = { root, learners, animations, onComplete, done: false, announcedCount: -1 };
+    state.groupAnimation = animation;
+    engine.start({
+      id: 'group-randomizer', root, duration: Math.max(900, Math.min(totalDuration, learners.length * stagger + 760)),
+      onFrame(value) {
+        results.style.setProperty('--group-progress', value.toFixed(4));
+        const assigned = Math.min(learners.length, Math.ceil(value * learners.length));
+        if (status) status.textContent = profile.label + ' ' + assigned + ' of ' + learners.length;
+        const soundStep = Math.max(1, Math.ceil(learners.length / 12));
+        if (assigned !== animation.announcedCount && assigned % soundStep === 0) {
+          animation.announcedCount = assigned;
+          if (assigned && assigned < learners.length && soundEnabled('groups')) tone('tick');
+        }
+      },
+      onFinish: ({ skipped }) => finishGroups(animation, skipped),
+      onCancel: () => cleanGroups(animation, false)
+    });
+    return true;
+  }
+  function revealGroupsNow() { return globalScope.TeacherToolsAnimationEngine?.finish('group-randomizer') || false; }
+  function cancelGroups() {
+    const cancelled = globalScope.TeacherToolsAnimationEngine?.cancel('group-randomizer') || false;
+    if (cancelled) state.groupAnimation = null;
+    return cancelled;
+  }
+  function replayGroups() {
+    const previous = state.lastGroup;
+    if (!previous || !document.contains(previous.root)) return false;
+    return animateGroups({ root: previous.root, onComplete: () => {} });
+  }
+
+  globalScope.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    const completed = revealPickerNow() || revealGroupsNow();
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    if (completed) event.preventDefault();
+  });
 
   const api = {
     pickerThemes, groupThemes, legacyPickerThemes, legacyGroupThemes,
-    selectedTheme, enhancePicker, enhanceGroups, animatePicker, revealPickerNow, fullscreen
+    selectedTheme, enhancePicker, enhanceGroups, animatePicker, revealPickerNow, cancelPicker, replayPicker,
+    animateGroups, revealGroupsNow, cancelGroups, replayGroups, fullscreen
   };
   globalScope.TeacherToolExperiences = api;
 })(window);

@@ -160,7 +160,7 @@ function fixture() {
     }
   };
   const tools = core.normalize(database);
-  assert.strictEqual(tools.schemaVersion, 8);
+  assert.strictEqual(tools.schemaVersion, 9);
   assert.deepStrictEqual(tools.performanceChecklists, []);
   assert.deepStrictEqual(tools.performanceChecklistHistory, []);
   assert.deepStrictEqual(tools.performanceChecklistEntryHistory, []);
@@ -715,7 +715,7 @@ function fixture() {
 
   tools.performanceChecklistEntryHistory.unshift(transferredClear, noteRecord, bulkRecord);
   const normalized = core.normalize(database);
-  assert.strictEqual(normalized.schemaVersion, 8);
+  assert.strictEqual(normalized.schemaVersion, 9);
   assert.strictEqual(normalized.performanceChecklistTemplates.length, 1);
   assert.strictEqual(normalized.performanceChecklistEntryHistory.length, 3);
 }
@@ -770,7 +770,9 @@ function fixture() {
   assert(ui.includes("onDeactivate: cancelGroupAnimation"));
   assert(ui.includes('function renderGroupArrangement(groups, options = {})'));
   assert(ui.includes('data-group-learner-id="${esc(learner.id)}"'));
-  assert(ui.includes("const delays = [100, 115, 135, 160, 200, 250, 320, 410]"));
+  assert(ui.includes("TeacherToolExperiences?.animateGroups"));
+  assert(ui.includes('groupState.pendingGroups = finalGroups'));
+  assert(!ui.includes("const delays = [100, 115, 135, 160, 200, 250, 320, 410]"));
   assert(ui.includes('Learners are moving between groups...'));
   assert(ui.includes('function animatePickerLearner(learner)'));
   assert(ui.includes('id="namePickerRouletteAvatar"'));
