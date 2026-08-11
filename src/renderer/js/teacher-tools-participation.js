@@ -120,9 +120,9 @@
     bar.querySelector('[data-picker-mode]').value = state.mode;
     const themeSelect = bar.querySelector('[data-theme-control] select');
     themeSelect.addEventListener('change', () => setTheme('picker', themeSelect.value, false).catch(error => globalScope.toast(error.message, 'error')));
-    bar.querySelector('[data-picker-term]').addEventListener('change', event => { state.term = event.target.value; state.selected = null; renderParticipation(); });
-    bar.querySelector('[data-picker-mode]').addEventListener('change', event => { state.mode = event.target.value; state.selected = null; renderParticipation(); });
-    bar.querySelector('[data-include-absent]').addEventListener('change', event => { state.includeAbsent = event.target.checked; state.selected = null; });
+    bar.querySelector('[data-picker-term]').addEventListener('change', event => { state.term = event.target.value; state.selected = null; globalScope.TeacherTools?.refresh(); });
+    bar.querySelector('[data-picker-mode]').addEventListener('change', event => { state.mode = event.target.value; state.selected = null; globalScope.TeacherTools?.refresh(); });
+    bar.querySelector('[data-include-absent]').addEventListener('change', event => { state.includeAbsent = event.target.checked; state.selected = null; globalScope.TeacherTools?.refresh(); });
     stage.before(bar);
   }
   function standingsMarkup() {

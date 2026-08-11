@@ -2,7 +2,7 @@
   'use strict';
 
   const picker = Object.freeze({
-    'carnival-wheel': { duration: 3300, tickCount: 28, label: 'Spinning the prize wheel…' },
+    'carnival-wheel': { duration: 3600, tickCount: 32, label: 'Carnival lights are choosing…' },
     'arcade-capsule': { duration: 3000, tickCount: 22, label: 'Mixing the capsules…' },
     'mystery-cards': { duration: 2800, tickCount: 18, label: 'Shuffling the mystery deck…' },
     'galaxy-scanner': { duration: 3200, tickCount: 24, label: 'Scanning learner signals…' },
@@ -27,9 +27,7 @@
     stage?.style.setProperty('--experience-eased', eased.toFixed(4));
     if (stage) stage.dataset.motionPhase = progress < 0.18 ? 'start' : progress < 0.78 ? 'mix' : progress < 1 ? 'lock' : 'reveal';
     if (theme === 'carnival-wheel') {
-      const segment = 360 / Math.max(context.learners.length, 1);
-      const target = 360 - ((context.selectedIndex + 0.5) * segment);
-      stage?.style.setProperty('--wheel-angle', `${Math.round((eased * 1800) + (target * eased))}deg`);
+      stage?.style.setProperty('--carnival-glow', (0.35 + Math.sin(progress * Math.PI * 18) * 0.2).toFixed(3));
     } else if (theme === 'galaxy-scanner') {
       stage?.style.setProperty('--scanner-angle', `${Math.round(eased * 1440)}deg`);
     } else if (theme === 'game-show') {

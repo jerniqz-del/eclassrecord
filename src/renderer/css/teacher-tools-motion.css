@@ -4,9 +4,8 @@
 .name-picker-stage[data-motion-phase="start"] .picker-experience-scene{filter:saturate(1.25);transform:scale(.97)}
 .name-picker-stage[data-motion-phase="lock"] .picker-experience-scene{filter:saturate(1.45) brightness(1.08)}
 .name-picker-stage[data-motion-phase="reveal"] .picker-experience-scene{filter:saturate(1.1)}
-[data-tool-theme="carnival-wheel"] .picker-wheel__disc{transform:rotate(var(--wheel-angle,0deg));will-change:transform}
-[data-tool-theme="carnival-wheel"].experience-running .picker-wheel__disc{animation:none}
-[data-tool-theme="carnival-wheel"] [data-motion-phase="lock"] .picker-wheel__pointer{animation:pointer-lock .12s ease-in-out 4 alternate}
+[data-tool-theme="carnival-wheel"] .carnival-board__learner{will-change:transform,opacity,filter}
+[data-tool-theme="carnival-wheel"] [data-motion-phase="lock"] .carnival-board__learner.is-active{animation:carnival-lock .16s ease-in-out 3 alternate}
 [data-tool-theme="arcade-capsule"] [data-motion-phase="lock"] .capsule-machine__glass i:first-child{left:50%;top:76%;transform:translate(-50%,0) scale(1.25);z-index:3}
 [data-tool-theme="arcade-capsule"] [data-motion-phase="reveal"] .capsule-machine__chute b{transform:translateX(-50%) scale(1.35);box-shadow:0 0 2rem #22d3ee}
 [data-tool-theme="mystery-cards"] [data-motion-phase="lock"] .mystery-deck i:nth-child(4){transform:translateX(0) translateY(-1.5rem) scale(1.12);z-index:4}
@@ -20,6 +19,6 @@
 .group-experience-stage.is-assigning [data-group-learner-id]{will-change:transform,opacity}
 .group-experience-stage .group-animation-progress{position:absolute;left:1rem;right:1rem;top:2.25rem;height:.3rem;border-radius:999px;background:color-mix(in srgb,var(--experience-accent) 16%,transparent);overflow:hidden}
 .group-animation-progress::after{content:"";display:block;width:calc(var(--group-progress,0) * 100%);height:100%;background:linear-gradient(90deg,var(--experience-accent),var(--experience-accent-2));transition:width 80ms linear}
-@keyframes pointer-lock{to{transform:translateX(-.35rem)}}
+@keyframes carnival-lock{to{transform:translate(-50%,-50%) scale(1.32)}}
 @media(prefers-reduced-motion:reduce){.name-picker-stage[data-motion-phase] .picker-experience-scene{filter:none;transform:none}.group-animation-progress::after{transition:none}}
 html[data-performance-mode="low"] .group-animation-progress,.low-spec-mode .group-animation-progress{display:none}

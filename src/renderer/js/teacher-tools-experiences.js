@@ -98,9 +98,18 @@
     if (document.fullscreenElement) return document.exitFullscreen?.();
     return root?.requestFullscreen?.();
   }
+  function carnivalRoster(learners) {
+    const rings = learners.length > 30
+      ? [learners.filter((_, index) => index % 2 === 0), learners.filter((_, index) => index % 2 === 1)]
+      : [learners];
+    return rings.map((ring, ringIndex) => ring.map((learner, index) => {
+      const shortName = learner.firstName || learnerName(learner).split(/[ ,]/)[0] || 'Learner';
+      return `<i class="carnival-board__learner carnival-board__learner--${ringIndex ? 'inner' : 'outer'}" data-carnival-learner="${esc(learner.id)}" style="--item:${index};--items:${Math.max(ring.length, 1)}" title="${esc(learnerName(learner))}">${avatar(learner, 'sm')}<b>${esc(shortName)}</b></i>`;
+    }).join('')).join('');
+  }
   function sceneMarkup(theme, learners) {
     const names = learners.slice(0, 36).map(learner => learnerName(learner).split(/[ ,]/)[0]).filter(Boolean);
-    if (theme === 'carnival-wheel') return `<div class="picker-wheel" aria-hidden="true"><div class="picker-wheel__disc">${names.map((name, index) => `<span style="--item:${index};--items:${Math.max(names.length, 1)}">${esc(name)}</span>`).join('')}</div><i class="picker-wheel__pointer"></i></div>`;
+    if (theme === 'carnival-wheel') return `<div class="carnival-board" aria-hidden="true"><div class="carnival-board__canopy"></div><div class="carnival-board__roster">${carnivalRoster(learners)}</div><div class="carnival-board__center"><span>LUCKY LEARNER</span></div></div>`;
     if (theme === 'arcade-capsule') return `<div class="capsule-machine" aria-hidden="true"><div class="capsule-machine__glass">${names.map((name, index) => `<i style="--item:${index}" title="${esc(name)}"><span>${esc(name.slice(0, 1))}</span></i>`).join('')}</div><div class="capsule-machine__chute"><b></b><span class="capsule-machine__winner"></span></div></div>`;
     if (theme === 'mystery-cards') return `<div class="mystery-deck" aria-hidden="true">${Array.from({ length: 7 }, (_, index) => `<i style="--item:${index}"><span>?</span></i>`).join('')}<b class="mystery-deck__winner"></b></div>`;
     if (theme === 'galaxy-scanner') return `<div class="galaxy-field" aria-hidden="true"><i class="galaxy-field__planet"></i><b class="galaxy-field__planet-name"></b><i class="galaxy-field__beam"></i>${names.slice(0, 10).map((name, index) => `<span style="--item:${index};--items:${Math.max(Math.min(names.length, 10), 1)}">${esc(name.slice(0, 1))}</span>`).join('')}</div>`;
@@ -145,9 +154,10 @@
     const stage = root.querySelector('.name-picker-stage');
     if (!stage) return;
     let scene = stage.querySelector('.picker-experience-scene');
-    if (!scene || scene.dataset.sceneTheme !== theme) {
+    const rosterKey = learners.map(learner => String(learner.id)).join('|');
+    if (!scene || scene.dataset.sceneTheme !== theme || scene.dataset.rosterKey !== rosterKey) {
       scene?.remove(); scene = document.createElement('div');
-      scene.className = 'picker-experience-scene'; scene.dataset.sceneTheme = theme;
+      scene.className = 'picker-experience-scene'; scene.dataset.sceneTheme = theme; scene.dataset.rosterKey = rosterKey;
       scene.innerHTML = sceneMarkup(theme, learners); stage.prepend(scene);
     }
     stage.dataset.experienceLabel = pickerThemes[theme];
@@ -184,6 +194,51 @@
     const replay = root.querySelector('[data-experience-toolbar="groups"] [data-replay]');
     if (replay) replay.disabled = !state.lastGroup || !results;
   }
+  function carnivalLearnerNode(root, learnerId) {
+    return [...(root?.querySelectorAll('[data-carnival-learner]') || [])]
+      .find(node => node.dataset.carnivalLearner === String(learnerId)) || null;
+  }
+  function highlightCarnivalLearner(animation, tick, totalTicks) {
+    const learners = animation.learners;
+    if (!learners.length) return;
+    const offset = Math.max(0, totalTicks - 1 - tick);
+    const index = ((animation.selectedIndex - offset) % learners.length + learners.length) % learners.length;
+    const activeId = learners[index]?.id;
+    animation.root.querySelectorAll('[data-carnival-learner]').forEach(node => {
+      node.classList.toggle('is-active', node.dataset.carnivalLearner === String(activeId));
+      node.classList.remove('is-lucky');
+    });
+  }
+  function resetCarnivalScene(root) {
+    root?.classList.remove('carnival-winner-flight');
+    root?.querySelectorAll('[data-carnival-learner]').forEach(node => node.classList.remove('is-active', 'is-lucky'));
+    document.querySelectorAll('[data-carnival-flight]').forEach(node => node.remove());
+  }
+  function promoteCarnivalWinner(animation) {
+    const source = carnivalLearnerNode(animation.root, animation.selected.id);
+    const target = animation.root.querySelector('#namePickerRouletteAvatar');
+    if (!source) return;
+    animation.root.querySelectorAll('[data-carnival-learner]').forEach(node => node.classList.remove('is-active', 'is-lucky'));
+    source.classList.add('is-active', 'is-lucky');
+    if (!target || isReduced() || typeof source.animate !== 'function') return;
+    const from = source.getBoundingClientRect(), to = target.getBoundingClientRect();
+    if (!from.width || !to.width) return;
+    const flyer = source.cloneNode(true);
+    flyer.className = 'carnival-board__learner carnival-board__learner--flying';
+    flyer.dataset.carnivalFlight = 'true';
+    Object.assign(flyer.style, { left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px` });
+    document.body.appendChild(flyer);
+    animation.root.classList.add('carnival-winner-flight');
+    const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+    const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+    const scale = Math.max(1.2, Math.min(2.2, to.width / from.width));
+    const flight = flyer.animate([
+      { transform: 'translate(0,0) scale(1)', opacity: 1 },
+      { transform: `translate(${dx * .7}px,${dy * .7 - 24}px) scale(${scale * .82})`, opacity: 1, offset: .7 },
+      { transform: `translate(${dx}px,${dy}px) scale(${scale})`, opacity: 0 }
+    ], { duration: 650, easing: 'cubic-bezier(.2,.85,.2,1)', fill: 'forwards' });
+    flight.finished.catch(() => {}).finally(() => flyer.remove());
+  }
   function showPickerCandidate(root, learner) {
     const name = root.querySelector('#namePickerRouletteName');
     const avatarNode = root.querySelector('#namePickerRouletteAvatar');
@@ -198,6 +253,7 @@
     stage?.removeAttribute('data-motion-phase');
     const pick = stage?.querySelector('.btn-primary.btn-lg'); if (pick) pick.disabled = false;
     root?.querySelector('[data-experience-toolbar="picker"] [data-reveal]')?.setAttribute('hidden', '');
+    if (!animation?.done) resetCarnivalScene(root);
   }
   function finishPicker(animation, skipped = false) {
     if (!animation || animation.done) return;
@@ -213,6 +269,7 @@
     root.querySelectorAll('.game-show-roster__learner').forEach(node => node.classList.toggle('is-lucky', node.dataset.rosterLearner === String(animation.selected.id)));
     cleanPicker(animation);
     stage?.classList.add('experience-revealed');
+    if (selectedTheme('picker') === 'carnival-wheel') promoteCarnivalWinner(animation);
     if (soundEnabled('picker')) tone('reveal');
     if (!isReduced()) globalScope.TeacherTools?.launchSelectionConfetti?.(avatarNode || stage);
     state.pickerAnimation = null;
@@ -231,6 +288,13 @@
     const profile = adapters.picker[theme];
     const stage = root.querySelector('.name-picker-stage');
     const pick = stage?.querySelector('.btn-primary.btn-lg'); if (pick) pick.disabled = true;
+    resetCarnivalScene(root);
+    if (theme === 'carnival-wheel') {
+      const name = root.querySelector('#namePickerRouletteName');
+      const avatarNode = root.querySelector('#namePickerRouletteAvatar');
+      if (name) { name.textContent = 'Who will it be?'; name.classList.remove('is-revealed', 'is-ticking'); }
+      if (avatarNode) { avatarNode.innerHTML = ''; avatarNode.classList.add('is-empty'); avatarNode.classList.remove('is-revealed', 'is-ticking'); }
+    }
     root.classList.add('experience-running'); root.setAttribute('aria-busy', 'true'); stage?.classList.remove('experience-revealed');
     const reveal = root.querySelector('[data-experience-toolbar="picker"] [data-reveal]'); if (reveal) reveal.hidden = false;
     const replay = root.querySelector('[data-experience-toolbar="picker"] [data-replay]'); if (replay) replay.disabled = true;
@@ -248,7 +312,8 @@
         const nextTick = Math.min(profile.tickCount - 1, Math.floor(progress * profile.tickCount));
         if (nextTick !== animation.tickIndex && progress < .96) {
           animation.tickIndex = nextTick;
-          showPickerCandidate(root, learners[globalScope.TeacherToolsCore.secureRandomInt(learners.length)]);
+          if (theme === 'carnival-wheel') highlightCarnivalLearner(animation, nextTick, profile.tickCount);
+          else showPickerCandidate(root, learners[globalScope.TeacherToolsCore.secureRandomInt(learners.length)]);
           if (soundEnabled('picker')) tone('tick');
         }
       },

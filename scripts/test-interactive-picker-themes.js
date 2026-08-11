@@ -9,7 +9,7 @@ const engine=fs.readFileSync(path.join(root,'js/teacher-tools-animation-engine.j
 const adapters=fs.readFileSync(path.join(root,'js/teacher-tools-experience-adapters.js'),'utf8');
 ['Carnival Prize Wheel','Arcade Capsule Machine','Mystery Card Deck','Galaxy Scanner','Game Show Spotlight'].forEach(name=>assert(experience.includes(name)));
 ['Team Draft Arena','Space Crew Launch','Island Expedition','House Sorting Ceremony','Puzzle Party'].forEach(name=>assert(experience.includes(name)));
-['picker-wheel','capsule-machine','mystery-deck','galaxy-field','game-show-stage'].forEach(name=>assert(experience.includes(name)&&css.includes(name)));
+['carnival-board','capsule-machine','mystery-deck','galaxy-field','game-show-stage'].forEach(name=>assert(experience.includes(name)&&css.includes(name)));
 ['draft-arena','space-crew','island-expedition','house-sorting','puzzle-party'].forEach(name=>assert(experience.includes(name)&&css.includes(name)));
 assert(participation.includes('animatePicker'));
 assert(participation.includes('enhancePicker'));
@@ -35,6 +35,9 @@ assert(experience.includes("aria-busy"));
 assert(experience.includes("aria-live"));
 assert(adapters.includes('groupKeyframes'));
 assert(adapters.includes('pickerFrame'));
+['carnivalRoster','data-carnival-learner','highlightCarnivalLearner','promoteCarnivalWinner','carnival-winner-flight','rosterKey'].forEach(name=>assert(experience.includes(name)||css.includes(name), `missing Carnival avatar-board behavior: ${name}`));
+assert(!experience.includes('picker-wheel__disc'));
+assert(css.includes('offset-path:ellipse'));
 assert(motion.includes('data-motion-phase'));
 assert(!engine.includes('.scores'));
 assert(!adapters.includes('.scores'));
