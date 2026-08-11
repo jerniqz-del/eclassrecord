@@ -6,7 +6,7 @@
 (function initTeacherToolsCore(globalScope) {
   'use strict';
 
-  const TOOLS_SCHEMA_VERSION = 6;
+  const TOOLS_SCHEMA_VERSION = 7;
   const SIMULATION_HISTORY_LIMIT = 10;
   const CHECKLIST_HISTORY_LIMIT = 20;
   const CHECKLIST_ENTRY_HISTORY_LIMIT = 50;
