@@ -6,12 +6,17 @@
 (function initTeacherToolsCore(globalScope) {
   'use strict';
 
-  const TOOLS_SCHEMA_VERSION = 4;
+  const TOOLS_SCHEMA_VERSION = 5;
   const SIMULATION_HISTORY_LIMIT = 10;
   const CHECKLIST_HISTORY_LIMIT = 20;
   const CHECKLIST_ENTRY_HISTORY_LIMIT = 50;
   const CHECKLIST_COMPONENTS = ['TRACKING', 'WW', 'PT'];
   const CHECKLIST_SCORING_MODES = ['CHECK', 'NUMERIC'];
+  const TEACHER_TOOL_THEMES = ['classic', 'chalkboard', 'ocean', 'space', 'fiesta', 'high-contrast'];
+  const CLASSROOM_TOOL_TYPES = [
+    'timer-agenda', 'participation', 'noise-meter', 'seating-chart',
+    'exit-ticket', 'anecdotal-notes', 'boat-race', 'class-duels'
+  ];
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -107,6 +112,100 @@
     return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : null;
   }
 
+  function normalizedTerm(value) {
+    return ['1', '2', '3'].includes(String(value)) ? String(value) : '1';
+  }
+
+  function normalizedTheme(value) {
+    const theme = String(value || '').toLowerCase();
+    return TEACHER_TOOL_THEMES.includes(theme) ? theme : 'classic';
+  }
+
+  function normalizeAppearancePreferences(value) {
+    const existing = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    return {
+      ...existing,
+      groupRandomizerTheme: normalizedTheme(existing.groupRandomizerTheme),
+      namePickerTheme: normalizedTheme(existing.namePickerTheme)
+    };
+  }
+
+  function normalizeParticipationStarEvent(event, assignmentIds) {
+    if (!event || typeof event !== 'object' || Array.isArray(event)) return null;
+    const assignmentId = String(event.assignmentId || '');
+    const learnerId = String(event.learnerId || '');
+    if (!assignmentId || !learnerId || (assignmentIds && !assignmentIds.has(assignmentId))) return null;
+    const awardedAt = String(event.awardedAt || '');
+    if (!awardedAt || Number.isNaN(Date.parse(awardedAt))) return null;
+    const reversedAt = String(event.reversedAt || '');
+    return {
+      ...event,
+      id: String(event.id || createId('participation-star')),
+      assignmentId,
+      term: normalizedTerm(event.term),
+      learnerId,
+      awardedAt,
+      source: String(event.source || 'name-picker'),
+      note: String(event.note || '').slice(0, 160),
+      reversedAt: reversedAt && !Number.isNaN(Date.parse(reversedAt)) ? reversedAt : ''
+    };
+  }
+
+  function normalizeClassroomToolSession(session, assignmentIds) {
+    if (!session || typeof session !== 'object' || Array.isArray(session)) return null;
+    const assignmentId = String(session.assignmentId || '');
+    const tool = String(session.tool || '');
+    if (!assignmentId || !CLASSROOM_TOOL_TYPES.includes(tool)
+      || (assignmentIds && !assignmentIds.has(assignmentId))) return null;
+    return {
+      ...session,
+      id: String(session.id || createId('classroom-session')),
+      assignmentId,
+      term: normalizedTerm(session.term),
+      tool,
+      startedAt: String(session.startedAt || new Date().toISOString()),
+      endedAt: String(session.endedAt || ''),
+      events: Array.isArray(session.events)
+        ? session.events.filter(item => item && typeof item === 'object').map(item => ({ ...item }))
+        : []
+    };
+  }
+
+  function normalizeCalendarPreferences(value) {
+    const existing = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    const filters = existing.filters && typeof existing.filters === 'object' && !Array.isArray(existing.filters)
+      ? existing.filters : {};
+    return {
+      ...existing,
+      filters: {
+        ...filters,
+        official: filters.official !== false,
+        local: filters.local !== false,
+        birthdays: filters.birthdays !== false,
+        assignmentId: String(filters.assignmentId || 'all')
+      },
+      birthdayNotifications: Boolean(existing.birthdayNotifications),
+      sourcePacks: Array.isArray(existing.sourcePacks)
+        ? existing.sourcePacks.filter(pack => pack && typeof pack === 'object').map(pack => ({ ...pack })) : []
+    };
+  }
+
+  function normalizeChecklistItem(item, index = 0) {
+    if (!item || typeof item !== 'object') return null;
+    const label = String(item.label || '').trim();
+    if (!label) return null;
+    return {
+      ...item,
+      id: String(item.id || createId('check-item')),
+      label,
+      pointValue: finiteNonNegative(item.pointValue, 1),
+      color: String(item.color || ''),
+      icon: String(item.icon || ''),
+      active: item.active !== false,
+      order: Number.isFinite(Number(item.order)) ? Number(item.order) : index
+    };
+  }
+
   function normalizedChecklistComponent(value) {
     const component = String(value || '').toUpperCase();
     return CHECKLIST_COMPONENTS.includes(component) ? component : 'TRACKING';
@@ -143,6 +242,11 @@
       || (scoringMode === 'CHECK' ? pointsPerCheck : 1);
     pointsPerCheck = Math.min(pointsPerCheck, maxPointsPerSession);
     const maxPointsPerTerm = optionalPositive(criterion.maxPointsPerTerm);
+    const checkItems = (Array.isArray(criterion.checkItems) ? criterion.checkItems : [])
+      .map(normalizeChecklistItem).filter(Boolean).slice(0, 10);
+    if (scoringMode === 'CHECK' && checkItems.length === 0) {
+      checkItems.push(normalizeChecklistItem({ label: 'Completed', pointValue: pointsPerCheck }));
+    }
     return {
       ...criterion,
       id: String(criterion.id || createId('checklist-criterion')),
@@ -153,6 +257,7 @@
       pointsPerCheck,
       maxPointsPerSession,
       maxPointsPerTerm,
+      checkItems,
       allowNotes: Boolean(criterion.allowNotes),
       active: criterion.active !== false,
       order: Number.isFinite(Number(criterion.order)) ? Number(criterion.order) : index
@@ -444,6 +549,12 @@
     const performanceChecklistTemplates = Array.isArray(existing.performanceChecklistTemplates)
       ? existing.performanceChecklistTemplates.map(normalizeChecklistTemplate).filter(Boolean)
       : [];
+    const participationStarEvents = Array.isArray(existing.participationStarEvents)
+      ? existing.participationStarEvents.map(event => normalizeParticipationStarEvent(event, assignmentIds)).filter(Boolean)
+      : [];
+    const classroomToolSessions = Array.isArray(existing.classroomToolSessions)
+      ? existing.classroomToolSessions.map(session => normalizeClassroomToolSession(session, assignmentIds)).filter(Boolean)
+      : [];
     profileDb.tools = {
       ...existing,
       schemaVersion: Math.max(Number(existing.schemaVersion) || 0, TOOLS_SCHEMA_VERSION),
@@ -451,9 +562,67 @@
       performanceChecklists,
       performanceChecklistHistory,
       performanceChecklistEntryHistory,
-      performanceChecklistTemplates
+      performanceChecklistTemplates,
+      appearancePreferences: normalizeAppearancePreferences(existing.appearancePreferences),
+      participationStarEvents,
+      classroomToolSessions,
+      calendarPreferences: normalizeCalendarPreferences(existing.calendarPreferences)
     };
     return profileDb.tools;
+  }
+
+  function participationStarTotals(events, assignmentId, term) {
+    const totals = {};
+    (Array.isArray(events) ? events : []).forEach(event => {
+      if (String(event?.assignmentId || '') !== String(assignmentId || '')
+        || normalizedTerm(event?.term) !== normalizedTerm(term) || event?.reversedAt) return;
+      const learnerId = String(event.learnerId || '');
+      if (learnerId) totals[learnerId] = (totals[learnerId] || 0) + 1;
+    });
+    return totals;
+  }
+
+  function awardParticipationStar(tools, assignmentId, term, learnerId, options = {}) {
+    if (!tools || typeof tools !== 'object') throw new TypeError('Teacher Tools data is required.');
+    if (!assignmentId || !learnerId) throw new Error('A class and learner are required.');
+    if (!Array.isArray(tools.participationStarEvents)) tools.participationStarEvents = [];
+    const event = normalizeParticipationStarEvent({
+      id: createId('participation-star'), assignmentId, term: normalizedTerm(term), learnerId,
+      awardedAt: options.awardedAt || new Date().toISOString(), source: options.source || 'name-picker',
+      note: options.note || '', reversedAt: ''
+    });
+    tools.participationStarEvents.push(event);
+    return event;
+  }
+
+  function reverseParticipationStar(tools, eventId, reversedAt = new Date().toISOString()) {
+    const event = (tools?.participationStarEvents || []).find(item => String(item?.id) === String(eventId));
+    if (!event || event.reversedAt) return null;
+    event.reversedAt = reversedAt;
+    return event;
+  }
+
+  function undoLastParticipationStar(tools, assignmentId, term) {
+    const event = [...(tools?.participationStarEvents || [])].reverse().find(item =>
+      String(item?.assignmentId || '') === String(assignmentId || '')
+      && normalizedTerm(item?.term) === normalizedTerm(term) && !item?.reversedAt);
+    return event ? reverseParticipationStar(tools, event.id) : null;
+  }
+
+  function resetParticipationStars(tools, assignmentId, term, confirmation) {
+    if (String(confirmation || '') !== `RESET TERM ${normalizedTerm(term)}`) {
+      throw new Error(`Type RESET TERM ${normalizedTerm(term)} to confirm.`);
+    }
+    const reversedAt = new Date().toISOString();
+    let count = 0;
+    (tools?.participationStarEvents || []).forEach(event => {
+      if (String(event?.assignmentId || '') === String(assignmentId || '')
+        && normalizedTerm(event?.term) === normalizedTerm(term) && !event?.reversedAt) {
+        event.reversedAt = reversedAt;
+        count += 1;
+      }
+    });
+    return count;
   }
 
   function activeLearners(assignment) {
@@ -2006,7 +2175,19 @@
     CHECKLIST_ENTRY_HISTORY_LIMIT,
     CHECKLIST_COMPONENTS,
     CHECKLIST_SCORING_MODES,
+    TEACHER_TOOL_THEMES,
+    CLASSROOM_TOOL_TYPES,
     clone,
+    normalizeAppearancePreferences,
+    normalizeParticipationStarEvent,
+    normalizeClassroomToolSession,
+    normalizeCalendarPreferences,
+    normalizeChecklistItem,
+    participationStarTotals,
+    awardParticipationStar,
+    reverseParticipationStar,
+    undoLastParticipationStar,
+    resetParticipationStars,
     isStandardNumericalChecklistLabel,
     activeLearners,
     secureRandomInt,
