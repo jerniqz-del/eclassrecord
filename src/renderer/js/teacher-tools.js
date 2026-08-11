@@ -3198,6 +3198,7 @@ ${labels}`, '1')) - 1;
         <span><strong>${ready}</strong> ready</span><span><strong>${blocked}</strong> excluded</span>
       </div>
       <div class="checklist-contribution-card__actions">
+        <button class="btn btn-ghost btn-sm" type="button" data-create-activity-assessment="${esc(activity.activityId)}">Create New Assessment</button>
         <button class="btn btn-secondary btn-sm" type="button" data-save-activity="${esc(activity.activityId)}" ${selectable ? '' : 'disabled'}>Save Target</button>
         <button class="btn btn-primary btn-sm" type="button" data-review-activity="${esc(activity.activityId)}" ${selectable ? '' : 'disabled'}>Review Changes</button>
       </div>
@@ -3321,6 +3322,26 @@ ${labels}`, '1')) - 1;
         }
         modal.close();
         saveChecklistContributionTarget(component, assessmentId, true);
+      });
+    });
+    modal.overlay.querySelectorAll('[data-create-activity-assessment]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const activityId = button.dataset.createActivityAssessment;
+        const session = currentChecklist()?.sessions.find(item => String(item.activity?.id || item.id) === String(activityId));
+        const title = globalScope.prompt('Assessment title', session?.activity?.title || session?.title || 'Checklist Activity');
+        if (!title) return;
+        const hps = Number(globalScope.prompt('Highest Possible Score', String(session?.activity?.maxPoints || '')));
+        if (!Number.isFinite(hps) || hps <= 0) { globalScope.toast('Enter a positive HPS.', 'warning'); return; }
+        try {
+          const assessment = await runTransaction(() => {
+            const created = core.createChecklistActivityAssessment(currentChecklist(), activeAssignment(), activityId, { title, maxScore:hps });
+            core.linkChecklistActivityPublicationTarget(currentChecklist(), activeAssignment(), activityId, created.id);
+            return created;
+          });
+          modal.close();
+          globalScope.toast(assessment.title + ' created. Review learner-level changes before publishing.', 'success');
+          showChecklistPublicationPreview('', assessment.id, activityId);
+        } catch (error) { globalScope.toast(error.message, 'warning'); }
       });
     });
     modal.overlay.querySelectorAll('[data-save-activity]').forEach(button => {

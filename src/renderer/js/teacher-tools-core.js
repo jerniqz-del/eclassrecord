@@ -1998,7 +1998,7 @@
     };
   }
 
-  function applyChecklistActivityPublication(checklist, assignment, reviewedPlan) {
+  function applyChecklistActivityPublicationUnsafe(checklist, assignment, reviewedPlan) {
     const freshPlan = planChecklistActivityPublication(
       checklist,
       assignment,
@@ -2020,9 +2020,12 @@
     }
     assessment.title = freshPlan.assessmentAfter.title;
     assessment.maxScore = freshPlan.assessmentAfter.maxScore;
-    freshPlan.changes.forEach(change => {
+    freshPlan.changes.forEach((change, index) => {
       auditScoreChange(assignment, change, 'checklist-publication');
       writeScoreState(assignment.scores, change.key, change.after);
+      if (Number(reviewedPlan?._testFailAfter) > 0 && index + 1 >= Number(reviewedPlan._testFailAfter)) {
+        throw new Error('Injected checklist publication failure.');
+      }
     });
     const appliedAt = new Date().toISOString();
     freshPlan.publicationAfter.lastPublishedAt = appliedAt;
@@ -2054,6 +2057,44 @@
       status: 'applied',
       revertedAt: ''
     };
+  }
+
+  function restoreObjectSnapshot(target, snapshot) {
+    Object.keys(target).forEach(key => delete target[key]);
+    Object.assign(target, clone(snapshot));
+  }
+
+  function applyChecklistActivityPublication(checklist, assignment, reviewedPlan) {
+    const checklistSnapshot = clone(checklist);
+    const assignmentSnapshot = clone(assignment);
+    try {
+      return applyChecklistActivityPublicationUnsafe(checklist, assignment, reviewedPlan);
+    } catch (error) {
+      if (JSON.stringify(checklist) !== JSON.stringify(checklistSnapshot)) restoreObjectSnapshot(checklist, checklistSnapshot);
+      if (JSON.stringify(assignment) !== JSON.stringify(assignmentSnapshot)) restoreObjectSnapshot(assignment, assignmentSnapshot);
+      throw error;
+    }
+  }
+
+  function createChecklistActivityAssessment(checklist, assignment, activityId, options = {}) {
+    const context = checklistActivityPublicationContext(checklist, assignment, activityId);
+    const title = String(options.title || context.activity.title).trim();
+    const maxScore = optionalPositive(options.maxScore) || context.activity.maxPointsPerSession;
+    if (!title || !Number.isFinite(maxScore) || maxScore <= 0) throw new Error('Enter an assessment title and positive HPS.');
+    if (!Array.isArray(assignment.assessments)) assignment.assessments = [];
+    const assessment = {
+      id: createId(context.component.toLowerCase()),
+      title,
+      component: context.component,
+      term: checklist.term,
+      mapePart: checklist.mapePart || '',
+      maxScore,
+      createdFrom: 'performance-checklist',
+      createdAt: new Date().toISOString()
+    };
+    assignment.assessments.push(assessment);
+    checklist.updatedAt = new Date().toISOString();
+    return assessment;
   }
 
   function planChecklistPublicationRevert(historyEntry, checklist, assignment) {
@@ -2306,6 +2347,7 @@
     checklistActivityTargetSuggestions,
     planChecklistActivityPublication,
     applyChecklistActivityPublication,
+    createChecklistActivityAssessment,
     planChecklistPublicationRevert,
     revertChecklistPublication,
     planChecklistActivityUnlock,
@@ -2359,6 +2401,7 @@
     activityTargetSuggestions: checklistActivityTargetSuggestions,
     planActivityPublication: planChecklistActivityPublication,
     applyActivityPublication: applyChecklistActivityPublication,
+    createActivityAssessment: createChecklistActivityAssessment,
     planRevert: planChecklistPublicationRevert,
     revertPublication: revertChecklistPublication,
     planActivityUnlock: planChecklistActivityUnlock,
