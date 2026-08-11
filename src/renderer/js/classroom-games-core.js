@@ -1,0 +1,8 @@
+(function initClassroomGames(globalScope){
+  'use strict';
+  function teamsFromGroups(groups){return (Array.isArray(groups)?groups:[]).filter(Array.isArray).map((members,index)=>({id:`team-${index+1}`,name:`Team ${index+1}`,members:members.map(member=>({id:String(member?.id||''),name:String(member?.name||[member?.lastName,member?.firstName].filter(Boolean).join(', ')||'Learner')})).filter(member=>member.id)}));}
+  function duelParticipants(mode,learners,teams){if(mode==='teams')return (teams||[]).map(team=>({id:team.id,name:team.name,type:'team'}));return (learners||[]).map(learner=>({id:String(learner.id),name:String(learner.name||[learner.lastName,learner.firstName].filter(Boolean).join(', ')||'Learner'),type:'learner'}));}
+  function winner(totals,participantIds){const entries=(participantIds||[]).map(id=>({id,points:Number(totals?.[id]||0)})).sort((a,b)=>b.points-a.points);if(!entries.length)return {status:'none',ids:[],points:0};const best=entries[0].points,winners=entries.filter(item=>item.points===best).map(item=>item.id);return {status:winners.length===1?'winner':'tie',ids:winners,points:best};}
+  function roundHistory(session){const rounds=new Map();(session?.events||[]).filter(event=>event.type==='point').forEach(event=>{const round=Math.max(1,Number(event.round)||1);if(!rounds.has(round))rounds.set(round,[]);rounds.get(round).push({...event});});return Array.from(rounds,([round,events])=>({round,events})).sort((a,b)=>a.round-b.round);}
+  const api={teamsFromGroups,duelParticipants,winner,roundHistory};globalScope.ClassroomGames=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+})(typeof window!=='undefined'?window:globalThis);

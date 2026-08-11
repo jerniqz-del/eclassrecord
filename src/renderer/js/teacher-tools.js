@@ -3627,6 +3627,8 @@ ${labels}`, '1')) - 1;
     }
   }
 
+  function getRandomizerGroups(){return {assignmentId:groupState.assignmentId,groups:core.clone(groupState.groups)};}
+
   function registerTool(definition) {
     if (!definition?.id || typeof definition.render !== 'function') {
       throw new TypeError('A tool id and render function are required.');
