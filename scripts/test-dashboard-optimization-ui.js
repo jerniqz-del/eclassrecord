@@ -1,0 +1,10 @@
+const assert=require('assert'),fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'../src/renderer');
+const analytics=fs.readFileSync(path.join(root,'js/dashboard-optimization-ui.js'),'utf8');
+const ui=analytics;
+['Current Class','All Classes','Manage Assessments','Configured weights','missing HPS','No assessments:'].forEach(text=>assert(analytics.includes(text)));
+assert(!analytics.includes('workplace-donut'), 'Assessment Mix no longer renders the redundant donut');
+['slice(0,5)','Set HPS','Continue Grading','Review Conflict','Snooze','Dismiss'].forEach(text=>assert(ui.includes(text)));
+assert(ui.includes('if(!item?.dismissible)return'), 'integrity warnings cannot be dismissed');
+assert(ui.includes('scrollTop'), 'dashboard controls preserve scroll position');
+console.log('Dashboard compact assessment mix, attention filters/actions, dismissibility, and scroll-stability UI tests passed.');

@@ -39,7 +39,11 @@
     }));
     store.preferences = Object.assign({}, preferences, {
       collapsedPanels: Array.from(new Set((Array.isArray(preferences.collapsedPanels) ? preferences.collapsedPanels : []).map(clean).filter(Boolean))),
-      includeDuplicateLearners: preferences.includeDuplicateLearners !== false
+      includeDuplicateLearners: preferences.includeDuplicateLearners !== false,
+      analyticsScope: preferences.analyticsScope === 'all' ? 'all' : 'current',
+      attentionScope: preferences.attentionScope === 'all' ? 'all' : 'current',
+      dismissedAttention: Array.isArray(preferences.dismissedAttention) ? preferences.dismissedAttention.map(clean).filter(Boolean) : [],
+      snoozedAttention: preferences.snoozedAttention && typeof preferences.snoozedAttention === 'object' ? Object.assign({}, preferences.snoozedAttention) : {}
     });
     store.lastContext = Object.assign({}, context, {
       assignmentId: clean(context.assignmentId),
@@ -80,27 +84,56 @@
     return clean(assessment.title) || clean(assessment.name) || clean(assessment.component) || 'Untitled assessment';
   }
 
-  function buildAttention(assignments, today, currentTerm) {
-    const items = [];
+  function buildAttention(assignments, today, currentTerm, selectedAssignmentId) {
+    const groups = new Map();
+    const term = VALID_TERMS.has(clean(currentTerm)) ? clean(currentTerm) : '1';
+    const add = item => {
+      const key = [item.assignmentId || 'global', item.type].join('|');
+      const existing = groups.get(key);
+      if (existing) {
+        existing.count += Number(item.count || 1);
+        existing.assessmentIds = Array.from(new Set(existing.assessmentIds.concat(item.assessmentIds || [])));
+        existing.title = existing.titleForCount(existing.count);
+        return;
+      }
+      const created = Object.assign({ count:Number(item.count || 1), assessmentIds:[], priority:99 }, item, {
+        id:key,
+        assessmentIds:item.assessmentIds || [],
+        assessmentId:(item.assessmentIds || [])[0] || '',
+        titleForCount:item.titleForCount || (() => item.title)
+      });
+      created.title = created.titleForCount(created.count);
+      groups.set(key, created);
+    };
     assignments.forEach(assignment => {
-      const term = VALID_TERMS.has(clean(currentTerm)) ? clean(currentTerm) : '1';
+      const assignmentId = clean(assignment.id);
       const learners = activeLearners(assignment, term);
       const className = 'Grade ' + clean(assignment.gradeLevel) + ' - ' + clean(assignment.section) + ' · ' + clean(assignment.subject);
-      if (!learners.length) items.push({ type: 'empty-class', assignmentId: clean(assignment.id), term, title: 'Add learners to ' + className, detail: 'This class has no active learners yet.', severity: 'info' });
+      if (!learners.length) add({ type:'empty-class', assignmentId, term, priority:4, severity:'info', action:'learner', count:1, title:'Empty class roster', titleForCount:() => 'Add learners to ' + className, detail:'This class has no active learners yet.' });
       (Array.isArray(assignment.assessments) ? assignment.assessments : []).filter(item => clean(item.term) === term).forEach(assessment => {
+        const assessmentId = clean(assessment.id), label = assessmentLabel(assessment), rawHps = assessment.maxScore;
+        const hpsBlank = rawHps === undefined || rawHps === null || clean(rawHps) === '';
+        const hps = Number(rawHps);
+        let invalid = 0, missing = 0;
+        learners.forEach(learner => {
+          const value = (assignment.scores || {})[clean(learner.id) + '|' + assessmentId];
+          if (value === undefined || value === null || clean(value) === '') { missing++; return; }
+          const numeric = Number(value);
+          if (!Number.isFinite(numeric) || numeric < 0 || (!hpsBlank && Number.isFinite(hps) && hps > 0 && numeric > hps)) invalid++;
+        });
+        if (invalid) add({ type:'invalid-scores', assignmentId, assessmentIds:[assessmentId], term, priority:1, severity:'danger', action:'grading', count:invalid, titleForCount:count => count + ' invalid or HPS-exceeding score' + (count===1?'':'s'), detail:className });
+        if (hpsBlank || !Number.isFinite(hps) || hps <= 0) add({ type:'missing-hps', assignmentId, assessmentIds:[assessmentId], term, priority:2, severity:'warning', action:'grading', count:1, titleForCount:count => count + ' assessment' + (count===1?'':'s') + ' missing HPS', detail:className });
         const assessmentDate = dateKey(assessment.date);
-        const label = assessmentLabel(assessment);
-        const hpsBlank = assessment.maxScore === undefined || assessment.maxScore === null || clean(assessment.maxScore) === '';
-        if (hpsBlank) items.push({ type: 'missing-hps', assignmentId: clean(assignment.id), assessmentId: clean(assessment.id), term, title: 'Set HPS for ' + label, detail: className, severity: 'warning' });
-        if (!assessmentDate || assessmentDate > today || !learners.length) return;
-        const missing = learners.filter(learner => {
-          const value = (assignment.scores || {})[clean(learner.id) + '|' + clean(assessment.id)];
-          return value === undefined || value === null || clean(value) === '';
-        }).length;
-        if (missing) items.push({ type: 'incomplete-scores', assignmentId: clean(assignment.id), assessmentId: clean(assessment.id), term, title: missing + ' score' + (missing === 1 ? '' : 's') + ' still needed', detail: label + ' · ' + className, severity: 'warning' });
+        if (assessmentDate && assessmentDate <= today && learners.length && missing) add({ type:'incomplete-scores', assignmentId, assessmentIds:[assessmentId], term, priority:3, severity:'warning', action:'grading', count:missing, titleForCount:count => count + ' score' + (count===1?'':'s') + ' still needed', detail:className });
+        if (assessmentDate && assessmentDate > today) {
+          const days = Math.ceil((new Date(assessmentDate+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000);
+          if (days <= 7) add({ type:'upcoming-deadline', assignmentId, assessmentIds:[assessmentId], term, priority:6, severity:'info', action:'grading', count:1, titleForCount:count => count + ' assessment deadline' + (count===1?'':'s') + ' this week', detail:label + ' · ' + className, dismissible:true });
+        }
       });
     });
-    return items;
+    return Array.from(groups.values()).sort((left,right) =>
+      (left.assignmentId === selectedAssignmentId ? 0 : 1) - (right.assignmentId === selectedAssignmentId ? 0 : 1)
+      || left.priority - right.priority || left.title.localeCompare(right.title));
   }
 
   function buildUpcoming(profileDb, assignments, today) {
@@ -187,6 +220,8 @@
       };
     });
 
+    const missingHps = Math.max(0, assessments - hpsReady);
+    const emptyCategories = [['written','Written Work'],['performance','Performance Task'],['quarterly','Quarterly/Other']].filter(([key]) => key === 'quarterly' ? mix.quarterly + mix.other === 0 : mix[key] === 0).map(([,label]) => label);
     return {
       assessments,
       expectedScores,
@@ -198,7 +233,9 @@
       mix,
       termCounts,
       totalMissingScores,
-      missingByAssessment
+      missingByAssessment,
+      missingHps,
+      emptyCategories
     };
   }
 
@@ -210,11 +247,13 @@
     const assignments = (Array.isArray(profileDb.assignments) ? profileDb.assignments : []).filter(item => !activeYear || clean(item.schoolYear) === activeYear);
     const currentAssignment = assignments.find(item => clean(item.id) === clean(store.lastContext.assignmentId)) || assignments.find(item => clean(item.id) === clean(profileDb.currentAssignmentId)) || assignments[0] || null;
     const currentTerm = VALID_TERMS.has(clean(store.lastContext.term)) ? clean(store.lastContext.term) : (VALID_TERMS.has(clean(profileDb.currentTerm)) ? clean(profileDb.currentTerm) : '1');
-    const attention = buildAttention(assignments, today, currentTerm);
-    const analytics = buildAnalytics(assignments, currentTerm);
+    const analyticsAssignments = store.preferences.analyticsScope === 'all' || !currentAssignment ? assignments : [currentAssignment];
+    const attention = buildAttention(assignments, today, currentTerm, clean(currentAssignment?.id));
+    const analytics = buildAnalytics(analyticsAssignments, currentTerm);
     const advisory = settings.advisorySummary || {};
-    if (Number(advisory.conflicts) > 0) attention.unshift({ type: 'advisory-conflicts', title: Number(advisory.conflicts) + ' Advisory grade conflict' + (Number(advisory.conflicts) === 1 ? '' : 's'), detail: 'Review conflicting imported grades.', severity: 'danger' });
-    else if (Number(advisory.missingGrades) > 0) attention.push({ type: 'advisory-missing', title: Number(advisory.missingGrades) + ' Advisory grade' + (Number(advisory.missingGrades) === 1 ? '' : 's') + ' missing', detail: 'Open Advisory to continue grade consolidation.', severity: 'warning' });
+    if (Number(advisory.conflicts) > 0) attention.push({ id:'global|advisory-conflicts', priority:5, action:'advisory', type: 'advisory-conflicts', title: Number(advisory.conflicts) + ' Advisory grade conflict' + (Number(advisory.conflicts) === 1 ? '' : 's'), detail: 'Review conflicting imported grades.', severity: 'danger' });
+    else if (Number(advisory.missingGrades) > 0) attention.push({ id:'global|advisory-missing', priority:5, action:'advisory', type: 'advisory-missing', title: Number(advisory.missingGrades) + ' Advisory grade' + (Number(advisory.missingGrades) === 1 ? '' : 's') + ' missing', detail: 'Open Advisory to continue grade consolidation.', severity: 'warning' });
+    attention.sort((left,right) => (left.assignmentId === clean(currentAssignment?.id) ? 0 : 1) - (right.assignmentId === clean(currentAssignment?.id) ? 0 : 1) || Number(left.priority||99)-Number(right.priority||99));
     const learnerCounts = buildLearnerCounts(assignments, currentTerm);
     return {
       today, schoolYear: activeYear, assignments, currentAssignment, currentTerm, attention, analytics,
@@ -273,5 +312,5 @@
     return store.preferences.collapsedPanels;
   }
 
-  return { STORE_VERSION, createStore, normalize, snapshot, addTask, toggleTask, removeTask, rememberContext, togglePanel, todayKey };
+  return { STORE_VERSION, createStore, normalize, snapshot, addTask, toggleTask, removeTask, rememberContext, togglePanel, todayKey, buildAttention, buildAnalytics };
 });
