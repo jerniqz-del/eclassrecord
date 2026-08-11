@@ -328,6 +328,7 @@
       groupAnimationTimer = null;
     }
     groupAnimationToken++;
+    groupState.pendingGroups = [];
     if (groupState.animating) {
       groupState.groups = [];
       groupState.colors = [];
@@ -451,8 +452,10 @@
       cancelGroupAnimation();
       const finalGroups = core.randomizeGroups(learners, groupState.groupCount, groupState.mode);
       groupState.colors = randomGroupColors(finalGroups.length);
+      groupState.pendingGroups = finalGroups;
       if (learners.length < 2 || globalScope.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
         groupState.groups = finalGroups;
+        groupState.pendingGroups = [];
         refresh();
         return;
       }
@@ -471,6 +474,7 @@
         if (step >= delays.length) {
           groupAnimationTimer = null;
           groupState.animating = false;
+          groupState.pendingGroups = [];
           renderGroupArrangement(finalGroups, { duration: 540, settled: true });
           return;
         }
@@ -486,6 +490,18 @@
       cancelGroupAnimation();
       globalScope.toast(error.message, 'warning');
     }
+  }
+
+  function revealGroupsNow() {
+    if (!groupState.animating || !groupState.pendingGroups?.length) return false;
+    if (groupAnimationTimer) clearTimeout(groupAnimationTimer);
+    groupAnimationTimer = null;
+    groupAnimationToken++;
+    const finalGroups = groupState.pendingGroups;
+    groupState.pendingGroups = [];
+    groupState.animating = false;
+    renderGroupArrangement(finalGroups, { duration: 0, settled: true });
+    return true;
   }
 
   function groupText() {
@@ -3731,6 +3747,8 @@ ${labels}`, '1')) - 1;
     setGroupCount,
     setGroupMode,
     randomizeGroups: runGroupRandomizer,
+    revealGroupsNow,
+    launchSelectionConfetti,
     copyGroups,
     printGroups,
     pickName,

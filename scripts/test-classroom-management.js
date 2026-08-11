@@ -18,11 +18,13 @@ function fixture() {
 {
   const db = fixture();
   const tools = core.normalize(db);
-  assert.strictEqual(tools.schemaVersion, 7);
+  assert.strictEqual(tools.schemaVersion, 8);
   assert.deepStrictEqual(tools.futureField, { retained: true });
-  assert.strictEqual(tools.appearancePreferences.groupRandomizerTheme, 'ocean');
-  assert.strictEqual(tools.appearancePreferences.namePickerTheme, 'classic');
+  assert.strictEqual(tools.appearancePreferences.groupRandomizerTheme, 'island-expedition');
+  assert.strictEqual(tools.appearancePreferences.namePickerTheme, 'carnival-wheel');
   assert.strictEqual(tools.appearancePreferences.futureThemeField, 1);
+  assert.strictEqual(tools.appearancePreferences.groupRandomizerSound, true);
+  assert.strictEqual(tools.appearancePreferences.namePickerSound, true);
   assert.strictEqual(tools.participationStarEvents.length, 1);
   assert.strictEqual(tools.participationStarEvents[0].futureEventField, true);
   assert.strictEqual(tools.classroomToolSessions[0].futureSessionField, true);

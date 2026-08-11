@@ -6,13 +6,17 @@
 (function initTeacherToolsCore(globalScope) {
   'use strict';
 
-  const TOOLS_SCHEMA_VERSION = 7;
+  const TOOLS_SCHEMA_VERSION = 8;
   const SIMULATION_HISTORY_LIMIT = 10;
   const CHECKLIST_HISTORY_LIMIT = 20;
   const CHECKLIST_ENTRY_HISTORY_LIMIT = 50;
   const CHECKLIST_COMPONENTS = ['TRACKING', 'WW', 'PT'];
   const CHECKLIST_SCORING_MODES = ['CHECK', 'NUMERIC'];
-  const TEACHER_TOOL_THEMES = ['classic', 'chalkboard', 'ocean', 'space', 'fiesta', 'high-contrast'];
+  const PICKER_EXPERIENCE_THEMES = ['carnival-wheel', 'arcade-capsule', 'mystery-cards', 'galaxy-scanner', 'game-show'];
+  const GROUP_EXPERIENCE_THEMES = ['draft-arena', 'space-crew', 'island-expedition', 'house-sorting', 'puzzle-party'];
+  const TEACHER_TOOL_THEMES = [...new Set([...PICKER_EXPERIENCE_THEMES, ...GROUP_EXPERIENCE_THEMES])];
+  const LEGACY_PICKER_THEMES = { classic:'carnival-wheel', fiesta:'carnival-wheel', chalkboard:'mystery-cards', ocean:'game-show', space:'galaxy-scanner', 'high-contrast':'mystery-cards' };
+  const LEGACY_GROUP_THEMES = { classic:'draft-arena', fiesta:'puzzle-party', chalkboard:'house-sorting', ocean:'island-expedition', space:'space-crew', 'high-contrast':'draft-arena' };
   const CLASSROOM_TOOL_TYPES = [
     'timer-agenda', 'participation', 'noise-meter', 'seating-chart',
     'exit-ticket', 'anecdotal-notes', 'boat-race', 'class-duels'
@@ -116,17 +120,21 @@
     return ['1', '2', '3'].includes(String(value)) ? String(value) : '1';
   }
 
-  function normalizedTheme(value) {
+  function normalizedTheme(value, tool) {
     const theme = String(value || '').toLowerCase();
-    return TEACHER_TOOL_THEMES.includes(theme) ? theme : 'classic';
+    const available = tool === 'groups' ? GROUP_EXPERIENCE_THEMES : PICKER_EXPERIENCE_THEMES;
+    const legacy = tool === 'groups' ? LEGACY_GROUP_THEMES : LEGACY_PICKER_THEMES;
+    return available.includes(theme) ? theme : (legacy[theme] || available[0]);
   }
 
   function normalizeAppearancePreferences(value) {
     const existing = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     return {
       ...existing,
-      groupRandomizerTheme: normalizedTheme(existing.groupRandomizerTheme),
-      namePickerTheme: normalizedTheme(existing.namePickerTheme)
+      groupRandomizerTheme: normalizedTheme(existing.groupRandomizerTheme, 'groups'),
+      namePickerTheme: normalizedTheme(existing.namePickerTheme, 'picker'),
+      groupRandomizerSound: existing.groupRandomizerSound !== false,
+      namePickerSound: existing.namePickerSound !== false
     };
   }
 
@@ -2287,6 +2295,8 @@
     CHECKLIST_ENTRY_HISTORY_LIMIT,
     CHECKLIST_COMPONENTS,
     CHECKLIST_SCORING_MODES,
+    PICKER_EXPERIENCE_THEMES,
+    GROUP_EXPERIENCE_THEMES,
     TEACHER_TOOL_THEMES,
     CLASSROOM_TOOL_TYPES,
     clone,

@@ -2,9 +2,15 @@
   'use strict';
 
   const core = globalScope.TeacherToolsCore;
-  const themes = {
-    classic: 'Classic', chalkboard: 'Chalkboard', ocean: 'Ocean', space: 'Space',
-    fiesta: 'Fiesta', 'high-contrast': 'Minimal / High Contrast'
+  const pickerThemes = {
+    'carnival-wheel': 'Carnival Prize Wheel', 'arcade-capsule': 'Arcade Capsule Machine',
+    'mystery-cards': 'Mystery Card Deck', 'galaxy-scanner': 'Galaxy Scanner',
+    'game-show': 'Game Show Spotlight'
+  };
+  const groupThemes = {
+    'draft-arena': 'Team Draft Arena', 'space-crew': 'Space Crew Launch',
+    'island-expedition': 'Island Expedition', 'house-sorting': 'House Sorting Ceremony',
+    'puzzle-party': 'Puzzle Party'
   };
   const state = { assignmentId: '', mode: 'no-repeat', term: '', includeAbsent: false, selected: null, remaining: new Map() };
 
@@ -37,7 +43,8 @@
     const preferences = tools().appearancePreferences;
     return tool === 'groups' ? preferences.groupRandomizerTheme : preferences.namePickerTheme;
   }
-  function themeOptions(selected) {
+  function themeOptions(tool, selected) {
+    const themes = tool === 'groups' ? groupThemes : pickerThemes;
     return Object.entries(themes).map(([value, label]) =>
       `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`).join('');
   }
@@ -46,6 +53,7 @@
     if (saved === false) throw new Error('The change could not be saved.');
   }
   async function setTheme(tool, value, both) {
+    globalScope.TeacherToolExperiences?.revealPickerNow?.();
     const preferences = tools().appearancePreferences;
     if (tool === 'groups' || both) preferences.groupRandomizerTheme = value;
     if (tool === 'picker' || both) preferences.namePickerTheme = value;
@@ -58,10 +66,9 @@
     const wrapper = document.createElement('div');
     wrapper.className = 'field tool-theme-control';
     wrapper.dataset.themeControl = tool;
-    wrapper.innerHTML = `<label class="field-label">Theme</label><div class="tool-theme-control__row"><span class="tool-theme-preview" data-tool-theme="${selected}" aria-hidden="true"></span><select class="field-select">${themeOptions(selected)}</select></div><label class="tool-theme-control__both"><input type="checkbox"> Use for both tools</label>`;
+    wrapper.innerHTML = `<label class="field-label">Experience</label><div class="tool-theme-control__row"><span class="tool-theme-preview" data-tool-theme="${selected}" aria-hidden="true"></span><select class="field-select">${themeOptions(tool, selected)}</select></div>`;
     const select = wrapper.querySelector('select');
-    const both = wrapper.querySelector('input');
-    select.addEventListener('change', () => setTheme(tool, select.value, both.checked).catch(error => globalScope.toast(error.message, 'error')));
+    select.addEventListener('change', () => setTheme(tool, select.value, false).catch(error => globalScope.toast(error.message, 'error')));
     host.insertBefore(wrapper, host.querySelector('.tool-control-strip__actions'));
   }
   function applyTheme(tool, root) {
@@ -85,25 +92,31 @@
       state.remaining.set(key, remaining);
       candidates = learners.filter(item => item.id === id);
     }
-    state.selected = candidates[core.secureRandomInt(candidates.length)];
-    const name = document.getElementById('namePickerRouletteName');
-    const avatar = document.getElementById('namePickerRouletteAvatar');
-    if (name) { name.textContent = learnerName(state.selected); name.classList.add('is-revealed'); }
-    if (avatar) {
-      avatar.innerHTML = globalScope.LearnerAvatars?.renderLearner(state.selected, { size: 'xl' }) || '';
-      avatar.classList.remove('is-empty'); avatar.classList.add('is-revealed');
-    }
-    renderParticipation();
+    const selected = candidates[core.secureRandomInt(candidates.length)];
+    const root = document.getElementById('namePickerRouletteName')?.closest('.teacher-tool');
+    const complete = () => {
+      state.selected = selected;
+      const name = document.getElementById('namePickerRouletteName');
+      const avatar = document.getElementById('namePickerRouletteAvatar');
+      if (name) { name.textContent = learnerName(selected); name.classList.add('is-revealed'); }
+      if (avatar) {
+        avatar.innerHTML = globalScope.LearnerAvatars?.renderLearner(selected, { size: 'xl' }) || '';
+        avatar.classList.remove('is-empty'); avatar.classList.add('is-revealed');
+      }
+      renderParticipation();
+    };
+    if (globalScope.TeacherToolExperiences?.animatePicker?.({ root, learners, selected, onComplete: complete })) return;
+    complete();
+    globalScope.TeacherTools?.launchSelectionConfetti?.('#namePickerRouletteAvatar');
   }
   function pickerToolbar(stage) {
     if (!stage || stage.previousElementSibling?.classList.contains('picker-toolbar')) return;
     const bar = document.createElement('div');
     bar.className = 'picker-toolbar no-print';
-    bar.innerHTML = `<div class="field tool-theme-control" data-theme-control="picker"><label class="field-label">Theme</label><div class="tool-theme-control__row"><span class="tool-theme-preview" data-tool-theme="${theme('picker')}" aria-hidden="true"></span><select class="field-select">${themeOptions(theme('picker'))}</select></div><label class="tool-theme-control__both"><input type="checkbox"> Use for both tools</label></div><div class="field"><label class="field-label">Term</label><select data-picker-term class="field-select">${['1','2','3'].map(value => `<option value="${value}" ${value === term() ? 'selected' : ''}>Term ${value}</option>`).join('')}</select></div><div class="field"><label class="field-label">Picker mode</label><select data-picker-mode class="field-select"><option value="random">Random</option><option value="no-repeat">No Repeat</option><option value="least-stars">Least Stars First</option><option value="no-stars">No Stars Yet</option></select></div><label class="picker-attendance-filter"><input data-include-absent type="checkbox" ${state.includeAbsent ? 'checked' : ''}> Include absent learners</label>`;
+    bar.innerHTML = `<div class="field tool-theme-control" data-theme-control="picker"><label class="field-label">Experience</label><div class="tool-theme-control__row"><span class="tool-theme-preview" data-tool-theme="${theme('picker')}" aria-hidden="true"></span><select class="field-select">${themeOptions('picker', theme('picker'))}</select></div></div><div class="field"><label class="field-label">Term</label><select data-picker-term class="field-select">${['1','2','3'].map(value => `<option value="${value}" ${value === term() ? 'selected' : ''}>Term ${value}</option>`).join('')}</select></div><div class="field"><label class="field-label">Picker mode</label><select data-picker-mode class="field-select"><option value="random">Random</option><option value="no-repeat">No Repeat</option><option value="least-stars">Least Stars First</option><option value="no-stars">No Stars Yet</option></select></div><label class="picker-attendance-filter"><input data-include-absent type="checkbox" ${state.includeAbsent ? 'checked' : ''}> Include absent learners</label>`;
     bar.querySelector('[data-picker-mode]').value = state.mode;
     const themeSelect = bar.querySelector('[data-theme-control] select');
-    const both = bar.querySelector('[data-theme-control] input');
-    themeSelect.addEventListener('change', () => setTheme('picker', themeSelect.value, both.checked).catch(error => globalScope.toast(error.message, 'error')));
+    themeSelect.addEventListener('change', () => setTheme('picker', themeSelect.value, false).catch(error => globalScope.toast(error.message, 'error')));
     bar.querySelector('[data-picker-term]').addEventListener('change', event => { state.term = event.target.value; state.selected = null; renderParticipation(); });
     bar.querySelector('[data-picker-mode]').addEventListener('change', event => { state.mode = event.target.value; state.selected = null; renderParticipation(); });
     bar.querySelector('[data-include-absent]').addEventListener('change', event => { state.includeAbsent = event.target.checked; state.selected = null; });
@@ -155,13 +168,13 @@
   }
   function augment() {
     const groupRoot = document.getElementById('groupRandomizerCount')?.closest('.teacher-tool');
-    if (groupRoot) { applyTheme('groups', groupRoot); addThemeControl('groups', groupRoot.querySelector('.tool-control-strip')); }
+    if (groupRoot) { applyTheme('groups', groupRoot); addThemeControl('groups', groupRoot.querySelector('.tool-control-strip')); globalScope.TeacherToolExperiences?.enhanceGroups?.(groupRoot); }
     const pickerRoot = document.getElementById('namePickerRouletteName')?.closest('.teacher-tool');
     if (pickerRoot && !pickerRoot.dataset.participationAugmented) {
       pickerRoot.dataset.participationAugmented = 'true';
       if (state.assignmentId !== assignment()?.id) { state.assignmentId = assignment()?.id || ''; state.selected = null; }
       applyTheme('picker', pickerRoot);
-      const stage = pickerRoot.querySelector('.name-picker-stage'); pickerToolbar(stage); renderParticipation();
+      const stage = pickerRoot.querySelector('.name-picker-stage'); pickerToolbar(stage); globalScope.TeacherToolExperiences?.enhancePicker?.(pickerRoot, eligible()); renderParticipation();
       const pickButton = stage?.querySelector('.btn-primary.btn-lg');
       if (pickButton && !pickButton.dataset.participationBound) {
         pickButton.dataset.participationBound = 'true'; pickButton.removeAttribute('onclick'); pickButton.addEventListener('click', draw);
