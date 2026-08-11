@@ -1,0 +1,16 @@
+const assert=require('assert');
+const calendar=require('../src/renderer/js/official-calendar-pack.js');
+const pack=calendar.SOURCE_PACK;
+assert.strictEqual(pack.sourceId,'deped-do-009-s2026-sy2026-2027-v1');
+assert.strictEqual(pack.schoolYear,'2026-2027');
+assert.strictEqual(pack.totalClassDays,201);
+assert(pack.sourceUrl.endsWith('DO_s2026_009r.pdf'));
+const byId=suffix=>pack.events.find(item=>item.id.endsWith(suffix));
+[['term-1','2026-06-08','2026-09-15'],['opening-1','2026-06-08','2026-06-11'],['instruction-1','2026-06-15','2026-09-01'],['eot-1','2026-09-02','2026-09-15'],['term-2','2026-09-16','2026-12-18'],['instruction-2','2026-09-16','2026-12-04'],['eot-2','2026-12-07','2026-12-18'],['term-3','2027-01-04','2027-04-08'],['instruction-3','2027-01-04','2027-03-23'],['eot-3','2027-03-24','2027-04-08'],['eosy-break','2027-04-09','2027-05-09']].forEach(([id,start,end])=>{assert.strictEqual(byId(id).startDate,start);assert.strictEqual(byId(id).endDate,end);assert.strictEqual(byId(id).immutable,true);});
+assert(pack.sourceNote.includes('scanned Term 3 heading says 2026'));
+const local={id:'teacher-reminder',title:'Bring portfolio',date:'2026-07-07',futureField:true};
+const merged=calendar.mergeOfficialEvents([local,{...byId('term-1'),title:'tampered'}]);
+assert.strictEqual(merged.find(item=>item.id==='teacher-reminder').futureField,true);
+assert.strictEqual(merged.filter(item=>item.id===byId('term-1').id).length,1);
+assert.strictEqual(merged.find(item=>item.id===byId('term-1').id).title,'Term 1');
+console.log('Official DepEd calendar source metadata, exact boundaries, immutable refresh, and local-event preservation tests passed.');

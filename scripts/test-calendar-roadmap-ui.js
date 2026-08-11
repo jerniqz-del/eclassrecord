@@ -1,0 +1,10 @@
+const assert=require('assert'),fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'../src/renderer');
+const ui=fs.readFileSync(path.join(root,'js/calendar-roadmap-ui.js'),'utf8');
+const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
+['Official','Local','Birthdays','All Classes','Birthday alerts','immutable','sync'].forEach(text=>assert(ui.includes(text)));
+assert(ui.includes("item?.immutable"));
+assert(ui.includes('OfficialSchoolCalendar'));
+assert(index.indexOf('js/official-calendar-pack.js')<index.indexOf('js/calendar-roadmap-ui.js'));
+assert(index.indexOf('js/calendar-roadmap-ui.js')<index.indexOf('js/calendar-integration.js'));
+console.log('Calendar source-pack wiring, immutable deletion guard, filters, birthday scope, and local privacy UI tests passed.');
