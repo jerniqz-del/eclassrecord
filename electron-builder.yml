@@ -19,6 +19,7 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
+  differentialPackage: true
   deleteAppDataOnUninstall: false
 
 publish:

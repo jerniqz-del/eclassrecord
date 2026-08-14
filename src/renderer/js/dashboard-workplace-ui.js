@@ -13,8 +13,11 @@
     return assignment ? `Grade ${assignment.gradeLevel} - ${assignment.section} · ${assignment.subject}` : 'Choose a teaching load';
   }
 
-  function dateLabel(date) {
+  function dateLabel(date, today) {
+    if (date === today) return 'Today';
     const value = new Date(`${date}T00:00:00`);
+    const tomorrow = new Date(`${today}T00:00:00`); tomorrow.setDate(tomorrow.getDate() + 1);
+    if (!Number.isNaN(value.getTime()) && value.getTime() === tomorrow.getTime()) return 'Tomorrow';
     return Number.isNaN(value.getTime()) ? date : value.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
   }
 
@@ -71,7 +74,8 @@
   globalScope.openDashboardWorkplaceUpcoming = function openDashboardWorkplaceUpcoming(index) {
     const item = latestSnapshot?.upcoming?.[index];
     if (!item) return;
-    globalScope.openDashboardWorkplaceAction(item.assignmentId ? 'grading' : 'tools', item.assignmentId, item.term);
+    if (item.source === 'calendar') return globalScope.openCalendarDate?.(item.calendarDate || item.date);
+    globalScope.openDashboardWorkplaceAction('grading', item.assignmentId, item.term);
   };
 
   globalScope.showDashboardWorkplaceTaskModal = function showDashboardWorkplaceTaskModal() {
@@ -128,7 +132,11 @@
     } catch (error) {
       console.warn('Dashboard Advisory summary unavailable:', error);
     }
-    const snapshot = DashboardWorkplace.snapshot(db, { schoolYear: activeYear, advisorySummary });
+    const calendarPreferences = globalScope.TeacherToolsCore?.normalize(db)?.calendarPreferences || { filters:{ official:true, local:true, birthdays:true, assignmentId:'all' } };
+    const birthdayEvents = calendarPreferences.filters?.birthdays !== false && globalScope.OfficialSchoolCalendar
+      ? globalScope.OfficialSchoolCalendar.virtualBirthdays(db, { schoolYear:activeYear, assignmentId:calendarPreferences.filters?.assignmentId || 'all' })
+      : [];
+    const snapshot = DashboardWorkplace.snapshot(db, { schoolYear: activeYear, advisorySummary, calendarFilters:calendarPreferences.filters, calendarEvents:[...(db.calendarEvents || []), ...birthdayEvents] });
     latestSnapshot = snapshot;
     const selectedId = snapshot.currentAssignment?.id || '';
     const options = snapshot.assignments.map(item => `<option value="${esc(item.id)}" ${item.id === selectedId ? 'selected' : ''}>${esc(classLabel(item))}</option>`).join('');
@@ -136,23 +144,23 @@
       ? snapshot.attention.slice(0, 6).map((item, index) => `<li><button class="workplace-list__item" type="button" onclick="openDashboardWorkplaceAttention(${index})"><span class="workplace-list__marker workplace-list__marker--${esc(item.severity)}"></span><span class="workplace-list__content"><strong>${esc(item.title)}</strong><span>${esc(item.detail)}</span></span></button></li>`).join('')
       : '<li class="workplace-empty">You are caught up. No due grading work needs attention.</li>';
     const upcoming = snapshot.upcoming.length
-      ? snapshot.upcoming.map((item, index) => `<li><button class="workplace-list__item" type="button" onclick="openDashboardWorkplaceUpcoming(${index})"><span class="workplace-date">${esc(dateLabel(item.date))}</span><span class="workplace-list__content"><strong>${esc(item.title)}</strong><span>${esc(item.detail || 'Calendar')}</span></span></button></li>`).join('')
+      ? snapshot.upcoming.map((item, index) => `<li><button class="workplace-list__item workplace-upcoming workplace-upcoming--${esc(item.source)}" type="button" onclick="openDashboardWorkplaceUpcoming(${index})"><span class="workplace-date">${esc(dateLabel(item.date, snapshot.today))}</span><span class="workplace-list__content"><strong>${esc(item.title)}</strong><span>${esc(item.detail || 'Calendar')}${item.ongoing && item.endDate > item.date ? ` · Through ${esc(dateLabel(item.endDate, snapshot.today))}` : ''}</span></span><span class="workplace-upcoming__open">${item.source === 'calendar' ? 'Calendar' : 'Grade'}</span></button></li>`).join('')
       : '<li class="workplace-empty">No dated assessments or calendar events are coming up.</li>';
     const tasks = snapshot.tasks.length
       ? snapshot.tasks.map(item => `<li class="workplace-task ${item.completed ? 'workplace-task--complete' : ''}"><input type="checkbox" ${item.completed ? 'checked' : ''} aria-label="Mark ${esc(item.title)} complete" onchange="toggleDashboardWorkplaceTask('${esc(item.id)}')"><span class="workplace-task__content"><span class="workplace-task__title">${esc(item.title)}</span>${item.dueDate ? `<span class="workplace-task__due">Due ${esc(dateLabel(item.dueDate))}</span>` : ''}</span><button class="workplace-task__remove" type="button" aria-label="Remove ${esc(item.title)}" onclick="removeDashboardWorkplaceTask('${esc(item.id)}')">&times;</button></li>`).join('')
       : '<li class="workplace-empty">Add a reminder for work that is not already in a class record.</li>';
     const teacher = String(db.teacherName || '').trim().split(/\s+/)[0] || 'Teacher';
     target.innerHTML = `
-      <section class="workplace-hero">
-        <div><p class="workplace-hero__eyebrow">SY ${esc(activeYear)} · ${snapshot.stats.classes} classes · ${snapshot.stats.learners} learners</p><h2>${greeting()}, ${esc(teacher)}.</h2><p class="workplace-hero__copy">Continue Term ${esc(snapshot.currentTerm)} in ${esc(classLabel(snapshot.currentAssignment))}, or jump straight to a common task.</p></div>
-        <div class="workplace-context"><label class="field-label" for="dashboardWorkplaceClass">Working class</label><select id="dashboardWorkplaceClass" class="field-select" onchange="selectDashboardWorkplaceAssignment(this.value)" ${options ? '' : 'disabled'}>${options || '<option>No teaching loads yet</option>'}</select><button class="btn btn-primary btn-sm u-mt-2" type="button" onclick="openDashboardWorkplaceAction('grading', '${esc(selectedId)}', '${esc(snapshot.currentTerm)}')" ${selectedId ? '' : 'disabled'}>Continue grading</button></div>
+      <section class="workplace-hero" aria-labelledby="workplaceGreeting">
+        <div class="workplace-hero__intro"><p class="workplace-hero__eyebrow">SY ${esc(activeYear)} · ${snapshot.stats.classes} classes · ${snapshot.stats.learners} learners</p><h2 id="workplaceGreeting">${greeting()}, ${esc(teacher)}.</h2><p class="workplace-hero__copy">Term ${esc(snapshot.currentTerm)} · ${esc(classLabel(snapshot.currentAssignment))}</p></div>
+        <div class="workplace-context"><div class="workplace-context__selectors"><label><span class="field-label">Working class</span><select id="dashboardWorkplaceClass" class="field-select" onchange="selectDashboardWorkplaceAssignment(this.value)" ${options ? '' : 'disabled'}>${options || '<option>No teaching loads yet</option>'}</select></label><label><span class="field-label">Term</span><select id="dashboardWorkplaceTerm" class="field-select" aria-label="Dashboard term" onchange="setDashboardAnalyticsTerm(this.value)" ${selectedId ? '' : 'disabled'}>${['1','2','3'].map(term => `<option value="${term}" ${term === snapshot.currentTerm ? 'selected' : ''}>Term ${term}</option>`).join('')}</select></label></div><button class="btn btn-primary workplace-continue" type="button" onclick="openDashboardWorkplaceAction('grading', '${esc(selectedId)}', '${esc(snapshot.currentTerm)}')" ${selectedId ? '' : 'disabled'}>Continue grading</button></div>
       </section>
 
       <div class="workplace-scroll-content">
       <div class="workplace-grid">
-        <section class="workplace-panel"><header class="workplace-panel__header"><h3>Needs attention <span class="badge">${snapshot.attention.length}</span></h3></header><div class="workplace-panel__body"><ul class="workplace-list">${attention}</ul></div></section>
-        <section class="workplace-panel"><header class="workplace-panel__header"><h3>Today &amp; upcoming</h3></header><div class="workplace-panel__body"><ul class="workplace-list">${upcoming}</ul></div></section>
-        <section class="workplace-panel"><header class="workplace-panel__header"><h3>My tasks</h3><button class="btn btn-ghost btn-sm" type="button" onclick="showDashboardWorkplaceTaskModal()">Add task</button></header><div class="workplace-panel__body"><ul class="workplace-list">${tasks}</ul></div></section>
+        <section class="workplace-panel" aria-labelledby="workplaceAttentionTitle"><header class="workplace-panel__header"><h3 id="workplaceAttentionTitle">Needs attention <span class="badge">${snapshot.attention.length}</span></h3></header><div class="workplace-panel__body"><ul class="workplace-list">${attention}</ul></div></section>
+        <section class="workplace-panel" aria-labelledby="workplaceUpcomingTitle"><header class="workplace-panel__header"><h3 id="workplaceUpcomingTitle">Today &amp; upcoming</h3><button class="btn btn-ghost btn-sm" type="button" onclick="openCalendarView()">View calendar</button></header><div class="workplace-panel__body"><ul class="workplace-list">${upcoming}</ul></div></section>
+        <section class="workplace-panel" aria-labelledby="workplaceTasksTitle"><header class="workplace-panel__header"><h3 id="workplaceTasksTitle">My tasks</h3><button class="btn btn-ghost btn-sm" type="button" onclick="showDashboardWorkplaceTaskModal()">Add task</button></header><div class="workplace-panel__body"><ul class="workplace-list">${tasks}</ul></div></section>
       </div>
       </div>`;
   }

@@ -86,7 +86,8 @@ function renderQrPixels(payload) {
   assert.strictEqual(modernEncrypted.kdf.iterations, 310000);
   assert.deepStrictEqual(JSON.parse(await context.decryptPayload(modernEncrypted, '123456')), legacyProfile);
   const tamperedEncrypted = JSON.parse(JSON.stringify(modernEncrypted));
-  tamperedEncrypted.ciphertext = `${tamperedEncrypted.ciphertext.slice(0, -2)}00`;
+  const tamperReplacementByte = tamperedEncrypted.ciphertext.endsWith('00') ? '01' : '00';
+  tamperedEncrypted.ciphertext = `${tamperedEncrypted.ciphertext.slice(0, -2)}${tamperReplacementByte}`;
   await assert.rejects(() => context.decryptPayload(tamperedEncrypted, '123456'), /corrupted encrypted data/);
 
   // Version-2 backup envelopes detect accidental corruption before restore.

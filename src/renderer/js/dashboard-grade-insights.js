@@ -138,11 +138,9 @@
     const assignment = snapshot.currentAssignment;
     const classLabel = assignment ? `Grade ${assignment.gradeLevel || ''} - ${assignment.section || ''} · ${assignment.subject || ''}` : 'No working class selected';
     const totalMissing = scopedItems.reduce((sum, item) => sum + Number(item.missing || 0), 0);
-    const groupedRows = ['1', '2', '3'].map(term => {
-      const termItems = scopedItems.map((item, index) => ({ item, index })).filter(entry => entry.item.term === term);
-      if (!termItems.length) return '';
-      return `<tr class="workplace-term-separator workplace-term-separator--${term}"><th colspan="4"><span></span>Term ${term}<small>${termItems.length} assessment${termItems.length === 1 ? '' : 's'}</small></th></tr>${termItems.map(entry => missingRowMarkup(entry.item, entry.index)).join('')}`;
-    }).join('');
+    const groupedRows = scopedItems.length
+      ? `<tr class="workplace-term-separator workplace-term-separator--${escapeHtml(snapshot.currentTerm)}"><th colspan="4"><span></span>Term ${escapeHtml(snapshot.currentTerm)}<small>${scopedItems.length} assessment${scopedItems.length === 1 ? '' : 's'}</small></th></tr>${scopedItems.map((item, index) => missingRowMarkup(item, index)).join('')}`
+      : '';
     const body = scopedItems.length
       ? `<div class="workplace-missing-table-wrap"><table class="workplace-missing-table">
           <thead><tr><th>Assessment</th><th>Missing</th><th>Learners</th><th></th></tr></thead>
@@ -150,7 +148,7 @@
         </table></div>`
       : '<div class="workplace-chart-empty">No assessments are available for this class.</div>';
     return `<article class="workplace-insight-card workplace-grade-insight workplace-missing-card">
-      <header><div><h4>Learners with missing grades</h4><p>${escapeHtml(classLabel)} · all terms</p></div><span class="workplace-insight-chip workplace-insight-chip--warning">${totalMissing} missing</span></header>
+      <header><div><h4>Learners with missing grades</h4><p>${escapeHtml(classLabel)} · Term ${escapeHtml(snapshot.currentTerm)}</p></div><span class="workplace-insight-chip workplace-insight-chip--warning">${totalMissing} missing</span></header>
       ${body}
     </article>`;
   }
@@ -180,8 +178,8 @@
     if (!analyticsSection || analyticsSection.querySelector('.workplace-grade-insight')) return;
     const snapshot = DashboardWorkplace.snapshot(db, { schoolYear: db.schoolYear || '2026-2027' });
     const assignmentId = String(snapshot.currentAssignment?.id || '');
-    const scopedItems = (snapshot.analytics.missingByAssessment || []).filter(item => String(item.assignmentId) === assignmentId && item.hasHps);
-    analyticsSection.insertAdjacentHTML('beforeend', performanceMarkup(performanceFor(snapshot)) + missingMarkup(snapshot, scopedItems));
+    const scopedItems = (snapshot.analytics.missingByAssessment || []).filter(item => String(item.assignmentId) === assignmentId && String(item.term) === String(snapshot.currentTerm) && item.hasHps);
+    analyticsSection.insertAdjacentHTML('beforeend', missingMarkup(snapshot, scopedItems));
     bindInsightEvents(analyticsSection, snapshot, scopedItems);
   }
 

@@ -29,6 +29,10 @@ const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 
 assert.match(updater, /autoUpdater\.autoDownload\s*=\s*false/);
 assert.match(updater, /autoUpdater\.autoInstallOnAppQuit\s*=\s*true/);
+assert.match(updater, /autoUpdater\.disableDifferentialDownload\s*=\s*false/);
+assert.match(updater, /autoUpdater\.disableWebInstaller\s*=\s*true/);
+assert.match(updater, /autoUpdater\.quitAndInstall\(true,\s*true\)/);
+assert.doesNotMatch(updater, /autoUpdater\.quitAndInstall\(false,/);
 assert.match(updater, /automatic\s*&&\s*!app\.isPackaged/);
 assert.match(updater, /net\.isOnline\(\)/);
 assert.match(updater, /autoUpdater\.checkForUpdates\(\)/);
@@ -41,7 +45,7 @@ assert.match(html, /id="settingAutomaticUpdateChecks"/);
 assert.match(html, /id="settingAutomaticUpdateDownloads"/);
 assert.match(html, /src="js\/update-manager\.js"/);
 assert.match(html, /UpdateManager\.init\(\)/);
-assert.strictEqual(pkg.version, '1.9.0');
+assert.strictEqual(pkg.version, '1.9.5');
 
 (async () => {
   const values = new Map();

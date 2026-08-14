@@ -6,7 +6,8 @@
     'arcade-capsule': { duration: 3000, tickCount: 22, label: 'Mixing the capsules…' },
     'mystery-cards': { duration: 2800, tickCount: 18, label: 'Shuffling the mystery deck…' },
     'galaxy-scanner': { duration: 3200, tickCount: 24, label: 'Scanning learner signals…' },
-    'game-show': { duration: 3100, tickCount: 21, label: 'Searching with the spotlight…' }
+    'game-show': { duration: 3100, tickCount: 21, label: 'Searching with the spotlight…' },
+    'wheel-of-learners': { duration: 3900, tickCount: 28, label: 'Spinning the learner wheel…' }
   });
 
   const groups = Object.freeze({

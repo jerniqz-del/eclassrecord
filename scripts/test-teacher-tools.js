@@ -88,6 +88,17 @@ function fixture() {
 }
 
 {
+  const tools = { participationStarEvents: [
+    { id: 'star-1', assignmentId: 'class-a', learnerId: 'learner-1', term: '1', awardedAt: '2026-08-12T01:00:00.000Z' },
+    { id: 'star-2', assignmentId: 'class-a', learnerId: 'learner-2', term: 1, awardedAt: '2026-08-12T01:01:00.000Z' },
+    { id: 'star-3', assignmentId: 'class-b', learnerId: 'learner-3', term: '1', awardedAt: '2026-08-12T01:02:00.000Z' }
+  ] };
+  assert.strictEqual(core.resetParticipationStars(tools, 'class-a', '1', 'RESET TERM 1'), 2);
+  assert.deepStrictEqual(core.participationStarTotals(tools.participationStarEvents, 'class-a', '1'), {});
+  assert.deepStrictEqual(core.participationStarTotals(tools.participationStarEvents, 'class-b', '1'), { 'learner-3': 1 });
+}
+
+{
   const assignment = fixture();
   const database = {
     version: 6,
@@ -803,7 +814,7 @@ function fixture() {
   assert(ui.includes('Edit Active Activity'));
   assert(ui.includes('The app prioritizes empty assessments and identifies targets that have enough HPS capacity.'));
   const addActivityHandler = ui.match(
-    /function openAddChecklistActivity\(\) \{([\s\S]*?)\n  \}\n\n  function openEditChecklistActivity/
+    /function openAddChecklistActivity\(\) \{([\s\S]*?)\r?\n  \}\r?\n\r?\n  function openEditChecklistActivity/
   )?.[1] || '';
   assert(
     addActivityHandler.includes('checklist.criteria.filter(item => item.active)'),

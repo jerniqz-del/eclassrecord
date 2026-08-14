@@ -1,12 +1,15 @@
 (function initCalendarRoadmapUi(globalScope){
   'use strict';
   const api=globalScope.OfficialSchoolCalendar;if(!api)return;
-  const baseSeed=globalScope.seedCalendarEvents,baseRender=globalScope.renderCalendar,baseDelete=globalScope.deleteCalendarEvent;
+  const baseRender=globalScope.renderCalendar,baseDelete=globalScope.deleteCalendarEvent;
   const notifiedBirthdays=new Set();
+  const legacySeedIds=new Set(['deped-start','deped-q1-exam-1','deped-q1-exam-2','holiday-ninoy','holiday-heroes','deped-q2-exam-1','deped-q2-exam-2','holiday-saints','holiday-souls','holiday-bonifacio','holiday-christmas','holiday-rizal','holiday-newyear','deped-q3-exam-1','deped-q3-exam-2','deped-end']);
   const officialTitles=new Set(api.SOURCE_PACK.events.map(item=>item.title));
   function prefs(){const tools=globalScope.TeacherToolsCore?.normalize(db);return tools?.calendarPreferences||{filters:{official:true,local:true,birthdays:true,assignmentId:'all'},birthdayNotifications:false,sourcePacks:[]};}
-  function ensureOfficial(){if(!db||String(db.schoolYear||'')!==api.SOURCE_PACK.schoolYear)return;db.calendarEvents=api.mergeOfficialEvents(db.calendarEvents);const p=prefs();if(!p.sourcePacks.some(pack=>pack.sourceId===api.SOURCE_PACK.sourceId))p.sourcePacks.push({sourceId:api.SOURCE_PACK.sourceId,version:api.SOURCE_PACK.version,verifiedAt:api.SOURCE_PACK.verifiedAt,sourceUrl:api.SOURCE_PACK.sourceUrl});}
-  globalScope.seedCalendarEvents=function seedOfficialCalendarEvents(){if(typeof baseSeed==='function')baseSeed();ensureOfficial();};
+  function isMockCalendarEvent(item){const id=String(item?.id||'').toLowerCase(),source=String(item?.source||item?.origin||item?.createdBy||'').toLowerCase();return legacySeedIds.has(id)||item?.isMockTestData===true||item?.mock===true||item?.sample===true||/^(mock|sample|demo|test)(?:[-_:]|$)/.test(id)||['mock','sample','demo','test','fixture'].includes(source);}
+  function removeMockEvents(){if(!db)return;db.calendarEvents=(Array.isArray(db.calendarEvents)?db.calendarEvents:[]).filter(item=>!isMockCalendarEvent(item));}
+  function ensureOfficial(){if(!db)return;removeMockEvents();if(String(db.schoolYear||'')!==api.SOURCE_PACK.schoolYear)return;db.calendarEvents=api.mergeOfficialEvents(db.calendarEvents);const p=prefs();if(!p.sourcePacks.some(pack=>pack.sourceId===api.SOURCE_PACK.sourceId))p.sourcePacks.push({sourceId:api.SOURCE_PACK.sourceId,version:api.SOURCE_PACK.version,verifiedAt:api.SOURCE_PACK.verifiedAt,sourceUrl:api.SOURCE_PACK.sourceUrl});}
+  globalScope.seedCalendarEvents=function seedOfficialCalendarEvents(){ensureOfficial();globalScope.saveDatabase?.();};
   globalScope.deleteCalendarEvent=function deleteCalendarEventProtected(id){const item=(db.calendarEvents||[]).find(event=>event.id===id);if(item?.immutable){globalScope.toast?.('Official DepEd events cannot be deleted.','warning');return;}return baseDelete?.(id);};
   function rerender(mutator){mutator(prefs());globalScope.saveDatabase?.();globalScope.renderCalendar();}
   globalScope.setCalendarRoadmapFilter=(name,checked)=>rerender(p=>{p.filters[name]=Boolean(checked);});

@@ -574,6 +574,11 @@ function renderRecordTable() {
   }
   html += `</tr></thead><tbody>`;
   
+  // A first entry is not a revision. Only genuine later edits receive the history control.
+  const scoreChangeKeys = new Set((Array.isArray(a.scoreHistory) ? a.scoreHistory : [])
+    .filter(entry => entry && globalThis.ScoreHistory?.hasScore(entry.previousValue))
+    .map(entry => `${entry.learnerId}|${entry.assessmentId}`));
+
   // Roster Student Rows
   for (let r = 0; r < learnerRows.length; r++) {
     const learner = learnerRows[r].learner;
@@ -595,10 +600,11 @@ function renderRecordTable() {
       const overMax = maxNum !== null && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) > maxNum;
       const isPerfect = maxNum !== null && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) === maxNum;
       const isSimilar = maxNum > 0 && val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= maxNum * 0.9 && parseFloat(val) < maxNum;
+      const hasScoreChange = scoreChangeKeys.has(key);
       
       const scoreTitle = `${learnerDisplayName(learner)} - ${componentFullName(items[j].component)} ${assessmentHeaderLabel(items[j], items)} ${maxNum !== null ? '(max ' + maxNum + ')' : ''}`;
       
-      const historyButton = !isDisabled && globalThis.ScoreHistory?.hasScore(val)
+      const historyButton = !isDisabled && hasScoreChange
         ? `<button type="button" class="score-history-trigger" title="View score history" aria-label="View score history for ${esc(learnerDisplayName(learner))}" onclick="event.preventDefault(); event.stopPropagation(); openScoreHistory('${esc(learner.id)}', '${esc(items[j].id)}')">&#8635;</button>`
         : '';
       html += `<td class="c-score"><div class="score-cell-wrap">

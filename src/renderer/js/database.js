@@ -641,9 +641,11 @@ function promptPinVerification(onSuccess) {
     return;
   }
 
+  document.querySelector('[data-pin-verification-modal]')?.remove();
   const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.style.zIndex = '11000';
+  overlay.className = 'modal-overlay modal-z-pin';
+  overlay.dataset.pinVerificationModal = 'true';
+  overlay.style.zIndex = '13000';
   overlay.innerHTML = `
     <div class="modal">
       <div class="modal__title">Confirm PIN Code</div>
@@ -669,11 +671,14 @@ function promptPinVerification(onSuccess) {
   
   const pinInput = overlay.querySelector('#actionVerifyPin');
   const errorEl = overlay.querySelector('#actionVerifyPinErrorMsg');
+  pinInput.disabled = false;
+  pinInput.readOnly = false;
   
   const submit = async () => {
     const pin = pinInput.value;
     if (!pin || pin.length < 6 || !/^\d+$/.test(pin)) {
       errorEl.innerText = 'Please enter your 6-digit numeric PIN.';
+      pinInput.focus();
       return;
     }
     const verified = await verifyPin(pin, activeProfile.salt, activeProfile.pinHash);
@@ -689,10 +694,29 @@ function promptPinVerification(onSuccess) {
   
   overlay.querySelector('#btnCancelActionVerify').addEventListener('click', close);
   overlay.querySelector('#btnConfirmActionVerify').addEventListener('click', submit);
-  pinInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') submit();
+  pinInput.addEventListener('input', () => {
+    const numeric = pinInput.value.replace(/\D/g, '').slice(0, 6);
+    if (pinInput.value !== numeric) pinInput.value = numeric;
+    errorEl.innerText = '';
   });
-  setTimeout(() => pinInput.focus(), 80);
+  pinInput.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submit();
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    }
+  });
+  const focusPin = () => {
+    if (!overlay.isConnected) return;
+    pinInput.focus({ preventScroll: true });
+  };
+  focusPin();
+  requestAnimationFrame(focusPin);
+  setTimeout(focusPin, 80);
 }
 
 async function selectSecondaryBackupFolder() {

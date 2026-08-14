@@ -7,6 +7,7 @@
 
   const STORE_VERSION = 1;
   const VALID_TERMS = new Set(['1', '2', '3']);
+  const LEGACY_CALENDAR_IDS = new Set(['deped-start','deped-q1-exam-1','deped-q1-exam-2','holiday-ninoy','holiday-heroes','deped-q2-exam-1','deped-q2-exam-2','holiday-saints','holiday-souls','holiday-bonifacio','holiday-christmas','holiday-rizal','holiday-newyear','deped-q3-exam-1','deped-q3-exam-2','deped-end']);
   const clean = value => String(value == null ? '' : value).trim();
   const dateKey = value => (clean(value).match(/^(\d{4})-(\d{2})-(\d{2})/) || []).slice(1).join('-');
 
@@ -136,19 +137,125 @@
       || left.priority - right.priority || left.title.localeCompare(right.title));
   }
 
-  function buildUpcoming(profileDb, assignments, today) {
+  function isRuntimeMockRecord(item) {
+    const id = clean(item?.id).toLowerCase();
+    const source = clean(item?.source || item?.origin || item?.createdBy).toLowerCase();
+    return LEGACY_CALENDAR_IDS.has(id) || item?.isMockTestData === true || item?.mock === true || item?.sample === true
+      || /^(mock|sample|demo|test)(?:[-_:]|$)/.test(id) || ['mock','sample','demo','test','fixture'].includes(source);
+  }
+
+  function buildUpcoming(profileDb, assignments, today, options) {
     const events = [];
-    (Array.isArray(profileDb.calendarEvents) ? profileDb.calendarEvents : []).forEach(event => {
-      const date = dateKey(event.date);
-      if (date && date >= today) events.push({ id: clean(event.id) || 'calendar-' + events.length, source: 'calendar', date, title: clean(event.title) || 'Calendar event', detail: clean(event.type) });
+    const settings = options && typeof options === 'object' ? options : {};
+    const calendarItems = Array.isArray(settings.calendarEvents) ? settings.calendarEvents : (Array.isArray(profileDb.calendarEvents) ? profileDb.calendarEvents : []);
+    const filters = settings.calendarFilters && typeof settings.calendarFilters === 'object'
+      ? settings.calendarFilters
+      : profileDb.tools?.calendarPreferences?.filters || {};
+    calendarItems.forEach(event => {
+      if (isRuntimeMockRecord(event)) return;
+      const type = clean(event.type).toLowerCase();
+      const official = Boolean(event.immutable || event.sourceId || clean(event.id).startsWith('official-'));
+      const birthday = type === 'birthday' || event.virtual === true;
+      if ((official && filters.official === false) || (birthday && filters.birthdays === false) || (!official && !birthday && filters.local === false)) return;
+      const startDate = dateKey(event.startDate || event.date);
+      const endDate = dateKey(event.endDate || event.date || event.startDate) || startDate;
+      if (!startDate || !endDate || endDate < today) return;
+      const ongoing = startDate < today && endDate >= today;
+      events.push({
+        id: clean(event.id) || 'calendar-' + events.length,
+        source: 'calendar', date: ongoing ? today : startDate, calendarDate: ongoing ? today : startDate,
+        startDate, endDate, ongoing, official, birthday,
+        title: clean(event.title) || 'Calendar event',
+        detail: birthday ? 'Learner birthday' : (official ? 'Official school calendar' : clean(event.type) || 'Calendar')
+      });
     });
     assignments.forEach(assignment => (Array.isArray(assignment.assessments) ? assignment.assessments : []).forEach(assessment => {
       const date = dateKey(assessment.date);
       if (date && date >= today) events.push({ id: 'assessment-' + clean(assignment.id) + '-' + clean(assessment.id), source: 'assessment', date, title: assessmentLabel(assessment), detail: 'Grade ' + clean(assignment.gradeLevel) + ' - ' + clean(assignment.section) + ' · ' + clean(assignment.subject), assignmentId: clean(assignment.id), assessmentId: clean(assessment.id), term: clean(assessment.term) || '1' });
     }));
-    return events.sort((left, right) => left.date.localeCompare(right.date) || left.title.localeCompare(right.title)).slice(0, 6);
+    return events.sort((left, right) => left.date.localeCompare(right.date) || (left.source === 'calendar' ? -1 : 1) || left.title.localeCompare(right.title)).slice(0, 6);
   }
 
+
+  function componentKey(assessment) {
+    const component = clean(assessment?.component).toLowerCase();
+    if (component === 'ww' || component.includes('written')) return 'written';
+    if (component === 'pt' || component.includes('performance')) return 'performance';
+    if (['qa','sa','sa1','sa2','st1','st2','te'].includes(component) || component.includes('quarter') || component.includes('summative') || component.includes('exam')) return 'quarterly';
+    return 'other';
+  }
+
+  function buildScoreCoverage(assignments, term) {
+    const selectedTerm = VALID_TERMS.has(clean(term)) ? clean(term) : '1';
+    let entered = 0, expected = 0, assessments = 0;
+    const byClass = assignments.map(assignment => {
+      let classEntered = 0, classExpected = 0;
+      const allAssessments = (Array.isArray(assignment.assessments) ? assignment.assessments : []).filter(item => clean(item.term) === selectedTerm);
+      assessments += allAssessments.length;
+      allAssessments.forEach(assessment => {
+        const learners = activeLearners(assignment, assessment.term);
+        classExpected += learners.length;
+        learners.forEach(learner => {
+          const value = (assignment.scores || {})[clean(learner.id) + '|' + clean(assessment.id)];
+          if (!(value === undefined || value === null || clean(value) === '')) classEntered++;
+        });
+      });
+      entered += classEntered; expected += classExpected;
+      return {
+        id: clean(assignment.id), label: 'G' + clean(assignment.gradeLevel) + ' ' + clean(assignment.section), subject: clean(assignment.subject),
+        entered: classEntered, expected: classExpected, missing: Math.max(0, classExpected - classEntered),
+        percent: classExpected ? Math.round((classEntered / classExpected) * 100) : 0
+      };
+    });
+    return { entered, expected, missing: Math.max(0, expected - entered), assessments, percent: expected ? Math.round((entered / expected) * 100) : 0, completeClasses: byClass.filter(item => item.expected > 0 && item.entered === item.expected).length, byClass };
+  }
+
+  function buildComponentPerformance(assignment, term) {
+    const result = { written:{ earned:0, possible:0, entered:0, expected:0 }, performance:{ earned:0, possible:0, entered:0, expected:0 }, quarterly:{ earned:0, possible:0, entered:0, expected:0 } };
+    if (!assignment) return result;
+    const learners = activeLearners(assignment, term);
+    const examination = { ST1:{ earned:0, possible:0 }, ST2:{ earned:0, possible:0 }, TE:{ earned:0, possible:0 } };
+    (Array.isArray(assignment.assessments) ? assignment.assessments : []).filter(item => clean(item.term) === term).forEach(assessment => {
+      const key = componentKey(assessment);
+      if (!result[key]) return;
+      const hps = Number(assessment.maxScore);
+      if (!Number.isFinite(hps) || hps <= 0) return;
+      const canonical = clean(assessment.component).toUpperCase().replace('SA1','ST1').replace('SA2','ST2');
+      result[key].expected += learners.length;
+      result[key].possible += learners.length * hps;
+      if (examination[canonical]) examination[canonical].possible += learners.length * hps;
+      learners.forEach(learner => {
+        const value = (assignment.scores || {})[clean(learner.id) + '|' + clean(assessment.id)];
+        if (value === undefined || value === null || clean(value) === '' || !Number.isFinite(Number(value))) return;
+        const earned = Math.max(0, Math.min(hps, Number(value)));
+        result[key].entered++;
+        result[key].earned += earned;
+        if (examination[canonical]) examination[canonical].earned += earned;
+      });
+    });
+    Object.values(result).forEach(item => {
+      item.percent = item.possible ? Math.round((item.earned / item.possible) * 100) : null;
+      item.coverage = item.expected ? Math.round((item.entered / item.expected) * 100) : 0;
+    });
+
+    // Match the grading sheet: regular SA&TE is ST1 30% + ST2 30% + TE 40%.
+    // SHS Field subjects use TE only; Research/Work subjects do not use this component.
+    const grade = Number.parseInt(assignment.gradeLevel, 10);
+    const group = clean(assignment.shsSubjectGroup || assignment.subjectGroup).toUpperCase();
+    const examWeights = grade >= 11 && grade <= 12 && group === 'SHS_FIELD'
+      ? { TE:1 }
+      : grade >= 11 && grade <= 12 && (group === 'SHS_RESEARCH' || group === 'SHS_WORK')
+        ? {}
+        : { ST1:0.30, ST2:0.30, TE:0.40 };
+    const recognizedPossible = Object.keys(examWeights).reduce((sum, component) => sum + examination[component].possible, 0);
+    if (recognizedPossible > 0) {
+      result.quarterly.percent = Math.round(Object.entries(examWeights).reduce((sum, [component, weight]) => {
+        const item = examination[component];
+        return sum + (item.possible ? (item.earned / item.possible) * 100 * weight : 0);
+      }, 0));
+    }
+    return result;
+  }
 
   function buildAnalytics(assignments, currentTerm) {
     const term = VALID_TERMS.has(clean(currentTerm)) ? clean(currentTerm) : '1';
@@ -250,6 +357,8 @@
     const analyticsAssignments = store.preferences.analyticsScope === 'all' || !currentAssignment ? assignments : [currentAssignment];
     const attention = buildAttention(assignments, today, currentTerm, clean(currentAssignment?.id));
     const analytics = buildAnalytics(analyticsAssignments, currentTerm);
+    analytics.scoreCoverage = buildScoreCoverage(assignments, currentTerm);
+    analytics.componentPerformance = buildComponentPerformance(currentAssignment, currentTerm);
     const advisory = settings.advisorySummary || {};
     if (Number(advisory.conflicts) > 0) attention.push({ id:'global|advisory-conflicts', priority:5, action:'advisory', type: 'advisory-conflicts', title: Number(advisory.conflicts) + ' Advisory grade conflict' + (Number(advisory.conflicts) === 1 ? '' : 's'), detail: 'Review conflicting imported grades.', severity: 'danger' });
     else if (Number(advisory.missingGrades) > 0) attention.push({ id:'global|advisory-missing', priority:5, action:'advisory', type: 'advisory-missing', title: Number(advisory.missingGrades) + ' Advisory grade' + (Number(advisory.missingGrades) === 1 ? '' : 's') + ' missing', detail: 'Open Advisory to continue grade consolidation.', severity: 'warning' });
@@ -257,7 +366,7 @@
     const learnerCounts = buildLearnerCounts(assignments, currentTerm);
     return {
       today, schoolYear: activeYear, assignments, currentAssignment, currentTerm, attention, analytics,
-      upcoming: buildUpcoming(profileDb, assignments, today),
+      upcoming: buildUpcoming(profileDb, assignments, today, settings),
       tasks: store.tasks.slice().sort((left, right) => left.completed !== right.completed ? (left.completed ? 1 : -1) : (left.dueDate || '9999-99-99').localeCompare(right.dueDate || '9999-99-99')),
       preferences: store.preferences,
       stats: {
@@ -312,5 +421,5 @@
     return store.preferences.collapsedPanels;
   }
 
-  return { STORE_VERSION, createStore, normalize, snapshot, addTask, toggleTask, removeTask, rememberContext, togglePanel, todayKey, buildAttention, buildAnalytics };
+  return { STORE_VERSION, createStore, normalize, snapshot, addTask, toggleTask, removeTask, rememberContext, togglePanel, todayKey, buildAttention, buildAnalytics, buildScoreCoverage, buildComponentPerformance, buildUpcoming, isRuntimeMockRecord };
 });

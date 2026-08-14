@@ -34,12 +34,29 @@ assert(snapshot.attention.some(item => item.type === 'empty-class'));
 assert(snapshot.attention.some(item => item.type === 'advisory-missing'));
 assert(!snapshot.attention.some(item => item.assessmentId === 'a2' && item.type === 'incomplete-scores'));
 assert.deepEqual(snapshot.upcoming.map(item => item.title), ['Division meeting', 'Future Quiz']);
+const responsiveUpcoming = Workplace.buildUpcoming({ tools:{ calendarPreferences:{ filters:{ official:true, local:false, birthdays:true } } } }, [], '2026-08-12', { calendarEvents:[
+  {id:'official-range',title:'Instructional Block',startDate:'2026-08-10',endDate:'2026-08-14',immutable:true,type:'instruction'},
+  {id:'local-hidden',title:'Private reminder',date:'2026-08-12',type:'reminder'},
+  {id:'birthday',title:'Ana’s birthday',date:'2026-08-13',type:'birthday',virtual:true},
+  {id:'mock-reminder',title:'Mock reminder',date:'2026-08-12',type:'reminder'},
+  {id:'deped-q1-exam-1',title:'Legacy seeded exam',date:'2026-08-12',type:'milestone'}
+], calendarFilters:{ official:true, local:false, birthdays:true } });
+assert.deepEqual(responsiveUpcoming.map(item => item.title), ['Instructional Block','Ana’s birthday']);
+assert.equal(responsiveUpcoming[0].date, '2026-08-12');
+assert.equal(responsiveUpcoming[0].ongoing, true);
+assert(Workplace.isRuntimeMockRecord({id:'sample-event'}));
+assert(Workplace.isRuntimeMockRecord({id:'deped-end'}));
+assert(!Workplace.isRuntimeMockRecord({id:'teacher-reminder',type:'reminder'}));
 assert.equal(snapshot.analytics.assessments, 2);
 assert.equal(snapshot.analytics.expectedScores, 4);
 assert.equal(snapshot.analytics.enteredScores, 1);
 assert.equal(snapshot.analytics.completionPercent, 25);
 assert.equal(snapshot.analytics.hpsPercent, 50);
 assert.equal(snapshot.analytics.byClass[0].percent, 25);
+assert.equal(snapshot.analytics.scoreCoverage.percent, 25);
+assert.equal(snapshot.analytics.scoreCoverage.byClass.length, 2);
+assert.equal(snapshot.analytics.scoreCoverage.missing, 3);
+assert.equal(snapshot.analytics.componentPerformance.written.percent, null);
 assert.equal(snapshot.analytics.mix.other, 2);
 assert.equal(snapshot.analytics.termCounts['1'], 2);
 assert.equal(snapshot.analytics.totalMissingScores, 3);
@@ -105,7 +122,7 @@ assert(panelSource.includes('baseRenderDashboardOverview();'));
 assert(panelCss.includes('position:sticky'));
 assert(panelCss.includes('overflow-y:auto'));
 assert(panelCss.includes('top:0'));
-assert(panelCss.includes('100vh - var(--header-height) - 54px'));
+assert(panelCss.includes('100vh - var(--header-height) - var(--footer-height)'));
 assert(panelCss.includes('body[data-view="dashboard"] #dashboardViewToggle'));
 assert(panelCss.includes('height:auto; max-height:none'));
 assert(panelCss.includes('z-index:10000 !important'), 'The class full-view must stay below report and export dialogs.');
@@ -116,9 +133,19 @@ assert(componentsCss.includes('.modal-z-analysis { z-index: 10002; }'), 'Reports
 assert(advisoryCss.includes('.advisory-nested-modal { z-index: 12100; }'), 'Export Final Grades must stack above the class full-view.');
 assert(uiSource.includes('baseRenderDashboardOverview();'), 'Workplace wrapper must retain the existing dashboard cards.');
 assert(!uiSource.includes('workplace-command-bar'), 'The dashboard quick menu must remain removed.');
+assert(uiSource.includes('id="dashboardWorkplaceTerm"'));
+assert(uiSource.includes('workplace-context__selectors'));
+assert(uiSource.includes('workplace-continue'));
+assert(uiSource.includes('aria-labelledby="workplaceGreeting"'));
+assert(uiSource.includes('setDashboardAnalyticsTerm(this.value)'));
+assert(uiSource.includes('openCalendarDate?.'));
+assert(uiSource.includes('View calendar'));
+assert(uiSource.includes('virtualBirthdays'));
 assert(analyticsSource.includes('toggleDashboardLearnerDuplicates'));
 assert(analyticsSource.includes('Include duplicates'));
-assert(gradeInsightsSource.includes('Student performance'));
+assert(analyticsSource.includes('All active classes · Term ${esc(snapshot.currentTerm)}'));
+assert(analyticsSource.includes('Overall class performance'));
+assert(!gradeInsightsSource.includes("insertAdjacentHTML('beforeend', performanceMarkup"), 'Student Performance card must not be rendered.');
 assert(gradeInsightsSource.includes('Learners with missing grades'));
 assert(gradeInsightsSource.includes("openDashboardWorkplaceAction('grading'"));
 console.log('Dashboard workplace tests passed.');

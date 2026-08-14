@@ -38,6 +38,15 @@
     globalScope.setView('calendar');
   };
 
+  globalScope.openCalendarDate = function openCalendarDate(date) {
+    const normalized = String(date || '').match(/^\d{4}-\d{2}-\d{2}$/)?.[0];
+    globalScope.setView('calendar');
+    if (!normalized) return;
+    requestAnimationFrame(() => {
+      if (typeof globalScope.openCalendarDayModal === 'function') globalScope.openCalendarDayModal(normalized);
+    });
+  };
+
   globalScope.setView = function setViewWithCalendar(view) {
     baseSetView(view);
     const isCalendar = view === 'calendar';

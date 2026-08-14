@@ -14,8 +14,12 @@
     groupCount: 2,
     groups: [],
     colors: [],
+    originalGroups: [],
+    editHistory: [],
     animating: false
   };
+  let groupSortableInstances = [];
+  let groupDragStartGroups = null;
   let groupAnimationTimer = null;
   let groupAnimationToken = 0;
   let pickerState = {
@@ -247,6 +251,8 @@
       groupCount: 2,
       groups: [],
       colors: [],
+      originalGroups: [],
+      editHistory: [],
       animating: false
     };
     pickerState = {
@@ -346,7 +352,16 @@
     return `<div class="teacher-tool__empty"><div>${esc(message)}</div></div>`;
   }
 
+  function destroyGroupSortables() {
+    groupSortableInstances.forEach(instance => {
+      try { instance.destroy(); } catch (_) { /* Detached group lists are already harmless. */ }
+    });
+    groupSortableInstances = [];
+    groupDragStartGroups = null;
+  }
+
   function cancelGroupAnimation() {
+    destroyGroupSortables();
     globalScope.TeacherToolExperiences?.cancelGroups?.();
     if (groupAnimationTimer) {
       clearTimeout(groupAnimationTimer);
@@ -394,6 +409,7 @@
   }
 
   function renderGroupRandomizer(container) {
+    destroyGroupSortables();
     const assignment = activeAssignment();
     const learners = core.activeLearners(assignment);
     if (groupState.assignmentId !== assignment?.id) {
@@ -403,6 +419,8 @@
         groupCount: 2,
         groups: [],
         colors: [],
+        originalGroups: [],
+        editHistory: [],
         animating: false
       };
     }
@@ -429,14 +447,18 @@
             <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.randomizeGroups()" ${maximum < 2 || groupState.animating ? 'disabled' : ''}>${groupState.animating ? 'Randomizing...' : (groupState.groups.length ? 'Randomize Again' : 'Randomize')}</button>
             <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.copyGroups()" ${groupState.groups.length && !groupState.animating ? '' : 'disabled'} title="Copy group lists">Copy</button>
             <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.printGroups()" ${groupState.groups.length && !groupState.animating ? '' : 'disabled'} title="Print group lists">Print</button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.undoGroupMove()" ${groupState.editHistory.length && !groupState.animating ? '' : 'disabled'} title="Undo the last manual learner move">Undo Move</button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.restoreRandomizedGroups()" ${groupState.originalGroups.length && !sameGroupArrangement(groupState.groups, groupState.originalGroups) && !groupState.animating ? '' : 'disabled'} title="Restore the original randomized arrangement">Restore Randomized</button>
           </div>
         </div>
         ${groupState.animating ? '<div class="group-randomizer-status" role="status">Learners are moving between groups...</div>' : ''}
+        ${groupState.groups.length && !groupState.animating ? '<div class="group-edit-hint no-print"><span aria-hidden="true">&#8942;&#8942;</span> Drag learners by the grip to adjust the groups. Counts and balance update automatically.</div>' : ''}
         ${groupState.groups.length ? renderGroupResults(groupState.groups, groupState.colors, groupState.animating) : emptyTool(maximum < 2 ? 'Add at least two active learners to create groups.' : 'Choose the number of groups and randomize the class.')}`
         : emptyTool('Create a teaching load before using Group Randomizer.')}
       </div>
     </div>`;
     populateClassPickers();
+    if (groupState.groups.length && !groupState.animating) globalScope.requestAnimationFrame?.(initGroupSortables);
   }
 
   function renderGroupResults(groups, colors, animating = false) {
@@ -445,14 +467,93 @@
       const female = members.filter(item => ['F', 'FEMALE'].includes(String(item.sex || '').toUpperCase())).length;
       const unspecified = members.length - male - female;
       const color = colors[index] || GROUP_COLOR_SCHEMES[index % GROUP_COLOR_SCHEMES.length];
-      return `<section class="group-result" style="--group-accent:${esc(color.accent)}" data-group-color="${esc(color.name)}">
+      return `<section class="group-result" style="--group-accent:${esc(color.accent)}" data-group-index="${index}" data-group-color="${esc(color.name)}">
         <header class="group-result__header">
           <div><h2 class="group-result__title"><span class="group-result__swatch" title="${esc(`${color.name} group color`)}" aria-hidden="true"></span>Group ${index + 1}</h2><span class="group-result__sex">M ${male} · F ${female}${unspecified ? ` · Unspecified ${unspecified}` : ''}</span></div>
           <span class="group-result__count">${members.length}</span>
         </header>
-        <ol class="group-result__list">${members.map(learner => `<li data-group-learner-id="${esc(learner.id)}"><span class="group-result__learner">${learnerAvatar(learner)}<span>${esc(learnerName(learner))}</span></span></li>`).join('')}</ol>
+        <ol class="group-result__list" data-group-index="${index}">${members.map(learner => `<li data-group-learner-id="${esc(learner.id)}" title="Drag ${esc(learnerName(learner))} to another group"><span class="group-result__drag-handle" aria-hidden="true">&#8942;&#8942;</span><span class="group-result__learner">${learnerAvatar(learner)}<span>${esc(learnerName(learner))}</span></span></li>`).join('')}</ol>
       </section>`;
     }).join('')}</div>`;
+  }
+
+  function groupArrangementIds(groups = groupState.groups) {
+    return (groups || []).map(group => (group || []).map(learner => String(learner?.id || '')));
+  }
+
+  function sameGroupArrangement(left, right) {
+    return JSON.stringify(groupArrangementIds(left)) === JSON.stringify(groupArrangementIds(right));
+  }
+
+  function arrangementFromGroupLists() {
+    const roster = core.activeLearners(activeAssignment());
+    const byId = new Map(roster.map(learner => [String(learner.id), learner]));
+    const seen = new Set();
+    const groups = [...document.querySelectorAll('.group-result__list[data-group-index]')].map(list =>
+      [...list.querySelectorAll(':scope > [data-group-learner-id]')].map(item => {
+        const id = String(item.dataset.groupLearnerId || '');
+        if (!byId.has(id) || seen.has(id)) throw new Error('The group arrangement contains an invalid learner.');
+        seen.add(id);
+        return byId.get(id);
+      })
+    );
+    if (groups.length !== groupState.groups.length || seen.size !== roster.length) {
+      throw new Error('Every active learner must remain in exactly one group.');
+    }
+    return groups;
+  }
+
+  function commitGroupDrop() {
+    const before = groupDragStartGroups || core.clone(groupState.groups);
+    groupDragStartGroups = null;
+    try {
+      const next = arrangementFromGroupLists();
+      if (sameGroupArrangement(before, next)) return refresh();
+      groupState.editHistory.push(before);
+      if (groupState.editHistory.length > 30) groupState.editHistory.shift();
+      groupState.groups = next;
+      refresh();
+      globalScope.toast?.('Group arrangement updated.', 'success');
+    } catch (error) {
+      groupState.groups = before;
+      refresh();
+      globalScope.toast?.(error.message || 'The learner could not be moved.', 'error');
+    }
+  }
+
+  function initGroupSortables() {
+    destroyGroupSortables();
+    if (!globalScope.Sortable || groupState.animating || !groupState.groups.length) return;
+    document.querySelectorAll('.group-result__list[data-group-index]').forEach(list => {
+      const sortable = globalScope.Sortable.create(list, {
+        group: { name: 'teacher-tool-groups', pull: true, put: true },
+        draggable: 'li[data-group-learner-id]',
+        handle: '.group-result__drag-handle',
+        dataIdAttr: 'data-group-learner-id',
+        animation: 180,
+        easing: 'cubic-bezier(.2,.8,.2,1)',
+        emptyInsertThreshold: 24,
+        ghostClass: 'group-learner--ghost',
+        chosenClass: 'group-learner--chosen',
+        dragClass: 'group-learner--dragging',
+        onStart: () => { groupDragStartGroups = core.clone(groupState.groups); },
+        onEnd: commitGroupDrop
+      });
+      groupSortableInstances.push(sortable);
+    });
+  }
+
+  function undoGroupMove() {
+    if (groupState.animating || !groupState.editHistory.length) return;
+    const previous = groupState.editHistory.pop();
+    renderGroupArrangement(previous, { settled: true });
+  }
+
+  function restoreRandomizedGroups() {
+    if (groupState.animating || !groupState.originalGroups.length || sameGroupArrangement(groupState.groups, groupState.originalGroups)) return;
+    groupState.editHistory.push(core.clone(groupState.groups));
+    if (groupState.editHistory.length > 30) groupState.editHistory.shift();
+    renderGroupArrangement(core.clone(groupState.originalGroups), { settled: true });
   }
 
   function setGroupCount(value) {
@@ -460,6 +561,8 @@
     groupState.groupCount = Number(value);
     groupState.groups = [];
     groupState.colors = [];
+    groupState.originalGroups = [];
+    groupState.editHistory = [];
     refresh();
   }
 
@@ -468,6 +571,8 @@
     groupState.mode = mode === 'balanced' ? 'balanced' : 'random';
     groupState.groups = [];
     groupState.colors = [];
+    groupState.originalGroups = [];
+    groupState.editHistory = [];
     refresh();
   }
 
@@ -477,6 +582,8 @@
       cancelGroupAnimation();
       const finalGroups = core.randomizeGroups(learners, groupState.groupCount, groupState.mode);
       groupState.colors = randomGroupColors(finalGroups.length);
+      groupState.originalGroups = core.clone(finalGroups);
+      groupState.editHistory = [];
       groupState.pendingGroups = finalGroups;
       if (learners.length < 2 || globalScope.TeacherToolsAnimationEngine?.prefersReducedMotion?.()) {
         groupState.groups = finalGroups;
@@ -1118,8 +1225,7 @@
           <option value="pe_health" ${checklistState.mapePart === 'pe_health' ? 'selected' : ''}>PE &amp; Health</option>
         </select>
       </label>` : '';
-    return `${classPicker('performanceChecklistClassSelect', 'Choose the class for the performance checklist')}
-      <label class="simulator-toolbar__term">
+    return `<label class="simulator-toolbar__term">
         <span class="field-label">Term</span>
         <select class="field-select" onchange="TeacherTools.changeChecklistTerm(this.value)">
           ${['1', '2', '3'].map(term => `<option value="${term}" ${checklistState.term === term ? 'selected' : ''}>Term ${term}</option>`).join('')}
@@ -1286,6 +1392,22 @@
     </div>`;
   }
 
+  function checklistActionIcon(name) {
+    const paths = {
+      add: '<path d="M12 5v14M5 12h14"/>',
+      bulk: '<path d="M4 6h16M4 12h10M4 18h16"/><path d="m16 11 2 2 3-4"/>',
+      picker: '<circle cx="9" cy="8" r="3"/><path d="M3 19c.7-4 3-6 6-6s5.3 2 6 6m2-10 1.5 1.5L21 7"/>',
+      review: '<path d="M5 19V9m7 10V5m7 14v-7"/><path d="M3 21h18"/>',
+      more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+      edit: '<path d="m4 20 4.5-1 10-10-3.5-3.5-10 10L4 20Z"/><path d="m13.5 7 3.5 3.5"/>',
+      copy: '<rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+      delete: '<path d="M4 7h16m-10 4v6m4-6v6M8 7l1-3h6l1 3m2 0-1 14H7L6 7"/>',
+      undo: '<path d="M9 7 4 12l5 5"/><path d="M5 12h8a6 6 0 0 1 6 6"/>',
+      unlock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M9 10V7a4 4 0 0 1 7-2.5"/>'
+    };
+    return `<svg class="checklist-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name] || paths.more}</svg>`;
+  }
+
   function renderPerformanceChecklist(container) {
     const assignment = activeAssignment();
     ensureChecklistState(assignment);
@@ -1295,17 +1417,17 @@
     const activityPublished = core.isChecklistActivityPublished(session);
 
     container.innerHTML = `<div class="teacher-tool checklist-tool">
-      <div class="simulator-toolbar no-print">
-        ${renderChecklistContextControls(assignment)}
-        <div class="simulator-toolbar__actions">
+      <div class="checklist-primary-toolbar no-print">
+        <div class="checklist-primary-toolbar__context">${renderChecklistContextControls(assignment)}</div>
+        <div class="checklist-primary-toolbar__actions">
           ${checklist ? `
             ${session
-              ? '<button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.openAddChecklistActivity()">Add Activity</button>'
-              : '<button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.startTodayChecklistSession()">Start Today’s Session</button>'}
-            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--bulk" type="button" onclick="TeacherTools.openChecklistBulkMark()" title="${activityPublished ? 'Unlock the published activity before changing points.' : ''}" ${session && !activityPublished ? '' : 'disabled'}>Bulk Mark</button>
-            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--picker" type="button" onclick="TeacherTools.openChecklistPicker()" title="${activityPublished ? 'Unlock the published activity before changing points.' : ''}" ${session && !activityPublished ? '' : 'disabled'}>Mini Name Picker</button>
-            <button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.openGradeContributionDashboard()">Review Grade Contributions</button>
-            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--more" type="button" onclick="TeacherTools.openChecklistMoreActions()">More Actions</button>` : ''}
+              ? `<button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.openAddChecklistActivity()">${checklistActionIcon('add')}<span>Add Activity</span></button>`
+              : `<button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.startTodayChecklistSession()">${checklistActionIcon('add')}<span>Start Today’s Session</span></button>`}
+            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--bulk" type="button" onclick="TeacherTools.openChecklistBulkMark()" title="${activityPublished ? 'Unlock the published activity before changing points.' : 'Mark several learners at once'}" ${session && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('bulk')}<span>Bulk Mark</span></button>
+            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--picker" type="button" onclick="TeacherTools.openChecklistPicker()" title="${activityPublished ? 'Unlock the published activity before changing points.' : 'Select a learner from this class'}" ${session && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('picker')}<span>Mini Name Picker</span></button>
+            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--review" type="button" onclick="TeacherTools.openGradeContributionDashboard()">${checklistActionIcon('review')}<span>Review Grade Contributions</span></button>
+            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--more" type="button" onclick="TeacherTools.openChecklistMoreActions()">${checklistActionIcon('more')}<span>More Actions</span></button>` : ''}
         </div>
       </div>
       <div class="teacher-tool__body">
@@ -1353,16 +1475,18 @@
     const criteria = session ? core.checklistSessionCriteria(checklist, session) : [];
     const tableColumns = core.checklistTableColumns(checklist);
     const status = checklistStatus(checklist, assignment);
+    const activeSessions = checklist.sessions.filter(item => !item.activity?.deletedAt);
+    const activeCriteria = checklist.criteria.filter(item => item.active !== false);
     const gridCriteria = criteria.filter(item => item.active);
     if (!gridCriteria.some(item => item.id === checklistState.gridCriterionId)) {
       checklistState.gridCriterionId = gridCriteria[0]?.id || '';
     }
     const filterCriterion = checklistCriterion(checklist, checklistState.gridCriterionId);
     const activityPublished = core.isChecklistActivityPublished(session);
+    const activeDefinition = session ? core.checklistActivityDefinition(checklist, session) : null;
     const entryHistory = core.normalize(profileDb()).performanceChecklistEntryHistory
       .find(item => item.checklistId === checklist.id && item.status === 'applied');
-    const activityOptions = checklist.sessions
-      .filter(item => !item.activity?.deletedAt)
+    const activityOptions = activeSessions
       .slice()
       .sort((left, right) => String(right.date).localeCompare(String(left.date)))
       .map(item => {
@@ -1372,85 +1496,73 @@
           : 'Legacy combined session';
         return `<option value="${esc(item.id)}" ${item.id === session?.id ? 'selected' : ''}>${esc(item.title)} · ${esc(item.date)} · ${esc(detail)}</option>`;
       }).join('');
-    return `<div class="checklist-summary">
-        <div>
-          <div class="checklist-title-row">
-            <h2 class="checklist-title">${esc(checklist.title)}</h2>
-            <span class="checklist-status checklist-status--${esc(status.tone)}">${esc(status.label)}</span>
+    const restoredAction = (checklist.sessions || []).some(item => item.activity?.deletedAt)
+      ? `<button class="checklist-quick-action" type="button" onclick="TeacherTools.restoreChecklistActivity()">${checklistActionIcon('undo')}<span>Restore</span></button>`
+      : '';
+    const activityActions = session?.activity
+      ? activityPublished
+        ? `<button class="checklist-quick-action checklist-quick-action--warning" type="button" onclick="TeacherTools.reviewChecklistActivityUnlock('${esc(session.activity.id || session.id)}')">${checklistActionIcon('unlock')}<span>Unlock</span></button>`
+        : `<button class="checklist-quick-action" type="button" onclick="TeacherTools.openEditChecklistActivity()">${checklistActionIcon('edit')}<span>Edit</span></button>
+          <button class="checklist-quick-action" type="button" onclick="TeacherTools.duplicateChecklistActivity()">${checklistActionIcon('copy')}<span>Duplicate</span></button>
+          <button class="checklist-quick-action checklist-quick-action--danger" type="button" onclick="TeacherTools.deleteChecklistActivity()">${checklistActionIcon('delete')}<span>Delete</span></button>`
+      : '';
+    return `<div class="checklist-overview-grid">
+        <section class="checklist-overview-card checklist-overview-card--summary">
+          <div class="checklist-overview-card__heading">
+            <div><span class="checklist-eyebrow">Performance checklist</span><div class="checklist-title-row"><h2 class="checklist-title">${esc(checklist.title)}</h2><span class="checklist-status checklist-status--${esc(status.tone)}">${esc(status.label)}</span></div></div>
           </div>
-          <p class="text-muted text-sm">${checklist.criteria.length} activity types · ${checklist.sessions.filter(item => !item.activity?.deletedAt).length} active activities · ${learners.length} active learners</p>
-        </div>
-        <div class="checklist-summary__actions no-print">
-          ${session?.activity
-            ? activityPublished
-              ? `<button class="btn btn-warning btn-sm" type="button" onclick="TeacherTools.reviewChecklistActivityUnlock('${esc(session.activity.id || session.id)}')">Unlock Activity</button>`
-              : '<button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.openEditChecklistActivity()">Edit Activity</button><button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.duplicateChecklistActivity()">Duplicate</button><button class="btn btn-danger btn-sm" type="button" onclick="TeacherTools.deleteChecklistActivity()">Delete</button>'
-            : ''}
-          ${(checklist.sessions || []).some(item => item.activity?.deletedAt) ? '<button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.restoreChecklistActivity()">Restore Deleted</button>' : ''}
-          <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.undoLastChecklistEntryChange()" ${entryHistory && !activityPublished ? '' : 'disabled'}>Undo Last Entry</button>
-        </div>
+          <div class="checklist-stat-row">
+            <div class="checklist-stat"><span class="checklist-stat__icon">A</span><strong>${activeCriteria.length}</strong><small>Activity types</small></div>
+            <div class="checklist-stat"><span class="checklist-stat__icon">✓</span><strong>${activeSessions.length}</strong><small>Active activities</small></div>
+            <div class="checklist-stat"><span class="checklist-stat__icon">♙</span><strong>${learners.length}</strong><small>Active learners</small></div>
+          </div>
+        </section>
+        <section class="checklist-overview-card checklist-overview-card--actions no-print">
+          <span class="checklist-eyebrow">Quick actions</span>
+          <div class="checklist-quick-actions">${activityActions}${restoredAction}<button class="checklist-quick-action" type="button" onclick="TeacherTools.undoLastChecklistEntryChange()" ${entryHistory && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('undo')}<span>Undo entry</span></button></div>
+        </section>
+        <section class="checklist-overview-card checklist-overview-card--active no-print">
+          <span class="checklist-eyebrow">Active activity</span>
+          ${session ? `<label class="checklist-active-activity"><span class="checklist-active-activity__icon">▤</span><span><select class="field-select" onchange="TeacherTools.changeChecklistSession(this.value)" aria-label="Active checklist activity">${activityOptions}</select><small>${esc(session.date)} · ${esc(checklistComponentLabel(activeDefinition?.destinationComponent))} · HPS ${esc(activeDefinition?.maxPointsPerSession || 0)}</small></span></label>` : `<div class="checklist-empty-activity"><strong>No activity selected</strong><span>Add or restore an activity to start recording.</span></div>`}
+        </section>
+        <section class="checklist-overview-card checklist-overview-card--save">
+          <span class="checklist-eyebrow">Saved status</span>
+          <div class="checklist-save-card"><span class="checklist-save-card__icon">${activityPublished ? '✓' : '☁'}</span><span><strong>${activityPublished ? 'Published and locked' : 'Saved locally'}</strong><small>${activityPublished ? 'Points are in the official grading sheet.' : 'Official grades remain unchanged.'}</small></span></div>
+        </section>
       </div>
-      ${session ? `<div class="checklist-session-bar no-print">
-        <label>
-          <span class="field-label">Active activity</span>
-          <select class="field-select" onchange="TeacherTools.changeChecklistSession(this.value)">
-            ${activityOptions}
-          </select>
-        </label>
-        ${activityPublished
-          ? '<span class="checklist-session-lock"><strong>Published and locked</strong><span>Points are in the official grading sheet.</span></span>'
-          : '<span class="checklist-save-state text-muted text-sm">Saved locally · official grades unchanged</span>'}
-      </div>` : `<div class="checklist-no-session">
+      ${!session ? `<div class="checklist-no-session">
         <div><strong>No activity selected</strong><span>Add a Recitation, Notebook, Assignment, or custom activity for this term.</span></div>
         <div class="checklist-no-session__actions">
-          <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.openAddChecklistActivity()">Add Activity</button>
-          ${checklist.sessions.length ? `<select class="field-select" onchange="if(this.value) TeacherTools.changeChecklistSession(this.value)">
-            <option value="">Open Existing Activity...</option>
-            ${checklist.sessions.filter(item => !item.activity?.deletedAt).slice().sort((left, right) => String(right.date).localeCompare(String(left.date))).map(item => `<option value="${esc(item.id)}">${esc(item.date)} · ${esc(item.title)}</option>`).join('')}
-          </select>` : ''}
+          <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.openAddChecklistActivity()">${checklistActionIcon('add')} Add Activity</button>
+          ${activeSessions.length ? `<select class="field-select" onchange="if(this.value) TeacherTools.changeChecklistSession(this.value)"><option value="">Open Existing Activity...</option>${activeSessions.slice().sort((left, right) => String(right.date).localeCompare(String(left.date))).map(item => `<option value="${esc(item.id)}">${esc(item.date)} · ${esc(item.title)}</option>`).join('')}</select>` : ''}
         </div>
-      </div>`}
-      ${session && criteria.length ? `<div class="checklist-entry-toolbar no-print">
-        <input id="checklistLearnerSearch" class="field-input" type="search" value="${esc(checklistState.search)}" placeholder="Search learner…" oninput="TeacherTools.filterChecklistRows(this.value)">
-        <select class="field-select" onchange="TeacherTools.changeChecklistGridCriterion(this.value)">
-          ${gridCriteria.map(item => `<option value="${esc(item.id)}" ${item.id === checklistState.gridCriterionId ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}
-        </select>
-        <select id="checklistEntryFilter" class="field-select" onchange="TeacherTools.changeChecklistFilter(this.value)">
-          <option value="all" ${checklistState.filter === 'all' ? 'selected' : ''}>All learners</option>
-          <option value="missing" ${checklistState.filter === 'missing' ? 'selected' : ''}>Not yet recorded</option>
-          <option value="recorded" ${checklistState.filter === 'recorded' ? 'selected' : ''}>Has an entry</option>
-        </select>
-      </div>
-      <div class="checklist-table-wrap">
-        <table class="checklist-table">
-          <thead><tr>
-            <th class="checklist-learner-column">Learner</th>
-            ${tableColumns.map(column => {
-              const published = core.isChecklistActivityPublished(column.session);
-              return `<th class="checklist-activity-column${column.sessionId === session.id ? ' is-active' : ''}${published ? ' is-published' : ''}" data-checklist-activity-column="${esc(column.sessionId)}" title="${esc(`${column.title}, ${column.date}${published ? ', published and locked' : ''}`)}">
-                <span>${esc(column.title)}</span>
-                <small>${esc(column.date)} · ${esc(checklistComponentLabel(column.definition.destinationComponent))} · HPS ${esc(column.definition.maxPointsPerSession)}${column.definition.active ? '' : ' · Archived'}</small>
-                ${published ? '<span class="checklist-published-badge">Published · Locked</span>' : ''}
-              </th>`;
-            }).join('')}
-            <th>WW Total</th><th>PT Total</th>
-          </tr></thead>
-          <tbody>${learners.map(learner => {
-            const filterEntry = filterCriterion
-              ? core.checklistEntry(checklist, session.id, learner.id, filterCriterion.id)
-              : null;
-            return `<tr id="checklistLearner-${esc(learner.id)}" data-checklist-row data-name="${esc(learnerName(learner).toLowerCase())}" data-recorded="${filterEntry ? 'true' : 'false'}" class="${checklistState.selected?.id === learner.id ? 'is-picker-selected' : ''}">
-            <td class="checklist-learner-column"><span class="checklist-learner-identity">${learnerAvatar(learner)}<span>${esc(learnerName(learner))}</span></span></td>
-            ${tableColumns.map(column => `<td class="${column.sessionId === session.id ? 'is-active-activity' : ''}${core.isChecklistActivityPublished(column.session) ? ' is-published-activity' : ''}">${checklistEntryControl(checklist, column.session, learner, column.definition)}</td>`).join('')}
-            <td class="checklist-total">${esc(totals[learner.id]?.WW || 0)}</td>
-            <td class="checklist-total">${esc(totals[learner.id]?.PT || 0)}</td>
-          </tr>`;
-          }).join('')}</tbody>
-        </table>
-      </div>` : emptyTool('Add an activity to begin recording learner points.')}
-      <div class="checklist-integrity-note">
-        <strong>Grade integrity:</strong> Tracking Only entries never affect grades. WW and PT points require a target assessment, valid HPS, PIN verification, and a before-and-after review.
-      </div>
+      </div>` : ''}
+      ${session && criteria.length ? `<section class="checklist-grid-shell">
+        <div class="checklist-entry-toolbar no-print">
+          <label class="checklist-filter checklist-filter--search"><span class="sr-only">Search learner</span><span class="checklist-filter__icon">⌕</span><input id="checklistLearnerSearch" class="field-input" type="search" value="${esc(checklistState.search)}" placeholder="Search learner…" oninput="TeacherTools.filterChecklistRows(this.value)"></label>
+          <label class="checklist-filter"><span class="sr-only">Entry status activity</span><select class="field-select" onchange="TeacherTools.changeChecklistGridCriterion(this.value)">${gridCriteria.map(item => `<option value="${esc(item.id)}" ${item.id === checklistState.gridCriterionId ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select></label>
+          <label class="checklist-filter"><span class="sr-only">Learner entry filter</span><select id="checklistEntryFilter" class="field-select" onchange="TeacherTools.changeChecklistFilter(this.value)"><option value="all" ${checklistState.filter === 'all' ? 'selected' : ''}>All learners</option><option value="missing" ${checklistState.filter === 'missing' ? 'selected' : ''}>Not yet recorded</option><option value="recorded" ${checklistState.filter === 'recorded' ? 'selected' : ''}>Has an entry</option></select></label>
+          <span class="checklist-column-count">${tableColumns.length} activity column${tableColumns.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="checklist-table-wrap">
+          <table class="checklist-table">
+            <thead><tr>
+              <th class="checklist-learner-column">Learner</th>
+              ${tableColumns.map(column => {
+                const published = core.isChecklistActivityPublished(column.session);
+                return `<th class="checklist-activity-column${column.sessionId === session.id ? ' is-active' : ''}${published ? ' is-published' : ''}" data-checklist-activity-column="${esc(column.sessionId)}" title="${esc(column.title + ', ' + column.date + (published ? ', published and locked' : ''))}"><span>${esc(column.title)}</span><small>${esc(column.date)} · ${esc(checklistComponentLabel(column.definition.destinationComponent))}</small><small>HPS ${esc(column.definition.maxPointsPerSession)}${column.definition.active ? '' : ' · Archived'}</small>${column.sessionId === session.id ? '<span class="checklist-active-badge">Active</span>' : ''}${published ? '<span class="checklist-published-badge">Published · Locked</span>' : ''}</th>`;
+              }).join('')}
+              <th class="checklist-total-heading">WW Total</th><th class="checklist-total-heading">PT Total</th>
+            </tr></thead>
+            <tbody>${learners.map(learner => {
+              const filterEntry = filterCriterion ? core.checklistEntry(checklist, session.id, learner.id, filterCriterion.id) : null;
+              return `<tr id="checklistLearner-${esc(learner.id)}" data-checklist-row data-name="${esc(learnerName(learner).toLowerCase())}" data-recorded="${filterEntry ? 'true' : 'false'}" class="${checklistState.selected?.id === learner.id ? 'is-picker-selected' : ''}"><td class="checklist-learner-column"><span class="checklist-learner-identity">${learnerAvatar(learner)}<span>${esc(learnerName(learner))}</span></span></td>${tableColumns.map(column => `<td class="${column.sessionId === session.id ? 'is-active-activity' : ''}${core.isChecklistActivityPublished(column.session) ? ' is-published-activity' : ''}">${checklistEntryControl(checklist, column.session, learner, column.definition)}</td>`).join('')}<td class="checklist-total">${esc(totals[learner.id]?.WW || 0)}</td><td class="checklist-total">${esc(totals[learner.id]?.PT || 0)}</td></tr>`;
+            }).join('')}</tbody>
+          </table>
+        </div>
+        <footer class="checklist-grid-footer"><div class="checklist-legend"><strong>Legend:</strong><span><i class="checklist-legend__add">+</i>Add points</span><span><i class="checklist-legend__remove">−</i>Remove points</span><span><i class="checklist-legend__note">●</i>Add note</span><span><b>HPS</b> Highest Possible Score</span></div><span>Showing ${learners.length} learner${learners.length === 1 ? '' : 's'}</span></footer>
+      </section>` : emptyTool('Add an activity to begin recording learner points.')}
+      <div class="checklist-integrity-note"><strong>Grade integrity:</strong> Tracking Only entries never affect grades. WW and PT points require a target assessment, valid HPS, PIN verification, and a before-and-after review.</div>
       ${renderChecklistHistory(checklist, assignment)}`;
   }
 
@@ -2169,8 +2281,19 @@
     if (!session?.activity) return;
     if (core.isChecklistActivityPublished(session)) { globalScope.toast('Unlock and revert official changes before deleting this published activity.', 'warning'); return; }
     const count = core.checklistEntryCount(session);
-    if (!globalScope.confirm(count ? `Delete this activity? ${count} learner entry record(s) will be hidden but retained for restoration.` : 'Delete this empty, unpublished activity?')) return;
-    globalScope.promptPinVerification(async () => { core.deleteChecklistActivity(checklist, session.activity.id, { confirmed:true }); await globalScope.saveDatabase(); checklistState.sessionId=''; activate('checklist'); globalScope.toast('Activity deleted. It can be restored.', 'success'); });
+    const message = count
+      ? `Delete this activity? ${count} learner entry record(s) will be hidden but retained for restoration.`
+      : 'Delete this empty, unpublished activity?';
+    globalScope.confirmModal('Delete Activity', message, () => {
+      // Let the confirmation overlay release focus before opening PIN verification.
+      globalScope.setTimeout(() => globalScope.promptPinVerification(async () => {
+        core.deleteChecklistActivity(checklist, session.activity.id, { confirmed:true });
+        await globalScope.saveDatabase();
+        checklistState.sessionId='';
+        activate('checklist');
+        globalScope.toast('Activity deleted. It can be restored.', 'success');
+      }), 0);
+    });
   }
 
   function restoreChecklistActivity() {
@@ -3796,6 +3919,8 @@ ${labels}`, '1')) - 1;
     setGroupMode,
     randomizeGroups: runGroupRandomizer,
     revealGroupsNow,
+    undoGroupMove,
+    restoreRandomizedGroups,
     launchSelectionConfetti,
     copyGroups,
     printGroups,

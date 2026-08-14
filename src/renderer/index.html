@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="css/calendar.css" />
   <link rel="stylesheet" href="css/calendar-integration.css" />
 <link rel="stylesheet" href="css/calendar-roadmap.css" />
+  <link rel="stylesheet" href="css/calendar-reference.css" />
   <link rel="stylesheet" href="css/dashboard-workplace.css" />
   <link rel="stylesheet" href="css/dashboard-workplace-static.css" />
   <link rel="stylesheet" href="css/dashboard-workplace-analytics.css" />
@@ -38,6 +39,8 @@
   <link rel="stylesheet" href="css/teacher-tools-workspace.css" />
   <link rel="stylesheet" href="css/classroom-management.css" />
   <link rel="stylesheet" href="css/teacher-tools-polish.css" />
+  <link rel="stylesheet" href="css/name-picker-reference.css" />
+  <link rel="stylesheet" href="css/spin-wheel-picker.css" />
   <link rel="stylesheet" href="css/print.css" media="print" />
   <link rel="stylesheet" href="css/admin.css" />
   <link rel="stylesheet" href="css/pin-recovery.css" />
@@ -685,7 +688,14 @@
       <!-- Performance Checklist View -->
       <section class="view-section view-section--flex" data-view="performance-checklist" style="display:none">
         <div class="performance-checklist-page panel-fill">
-          <header class="performance-checklist-page__header no-print"><div><h1>Performance Checklist</h1><p>Track activities, edit or delete them, and publish reviewed points to the official class record.</p></div></header>
+          <div class="record-header-row performance-checklist-class-row no-print">
+            <div class="record-header-main">
+              <div class="record-class-selector u-mb-0">
+                <span class="record-class-label">Active Class:</span>
+                <select id="performanceChecklistClassSelect" class="field-select select-class-dropdown" onchange="TeacherTools.handleActiveClassChange(this.value, this)" title="Choose the class for the performance checklist"></select>
+              </div>
+            </div>
+          </div>
           <div id="performanceChecklistContent"></div>
         </div>
       </section>
@@ -1023,8 +1033,9 @@
       <!-- Footer Info Row -->
       <footer class="app-footer no-print">
         <div class="app-footer__content">
-          <div class="app-footer__text"><a href="#" onclick="openDonateExternal('https://www.facebook.com/profile.php?id=61591204673647'); return false;" class="app-footer__link">E-Class Record App <span id="footerVersion"></span></a></div>
-          <div class="app-footer__info-text">Compliant with DepEd Order No. 15 s. 2026 — Developer: <a href="#" onclick="openDonateExternal('https://www.facebook.com/marasa.p.man'); return false;" class="app-footer__link">JOHN EDWARD A. ENRIQUEZ</a>, T-II</div>
+          <div class="app-footer__text"><a href="#" onclick="openDonateExternal('https://www.facebook.com/profile.php?id=61591204673647'); return false;" class="app-footer__link">E-Class Record <span id="footerVersion"></span></a></div>
+          <span class="app-footer__separator" aria-hidden="true">•</span>
+          <div class="app-footer__info-text" title="Compliant with DepEd Order No. 15 s. 2026 — Developer: JOHN EDWARD A. ENRIQUEZ, T-II">Local-first · DepEd Order No. 15 s. 2026 · <a href="#" onclick="openDonateExternal('https://www.facebook.com/marasa.p.man'); return false;" class="app-footer__link">Developer</a></div>
         </div>
       </footer>
 
@@ -2012,7 +2023,7 @@
           console.log('Mock saveDatabase:', data);
           return true;
         },
-        getVersion: async () => '1.9.0-mock',
+        getVersion: async () => '1.9.5-mock',
         getPerformanceProfile: async () => ({
           totalMemoryBytes: 8 * 1024 ** 3,
           freeMemoryBytes: 4 * 1024 ** 3,
@@ -2098,10 +2109,13 @@
   <script src="js/attendance-excused.js"></script>
   <script src="js/app.js"></script>
   <script src="js/calendar-roadmap-ui.js"></script>
+  <script src="js/calendar-reference.js"></script>
 <script src="js/calendar-integration.js"></script>
+  <script src="vendor/sortablejs/Sortable.min.js"></script>
   <script src="js/teacher-tools.js"></script>
   <script src="js/teacher-tools-participation.js"></script>
   <script src="js/teacher-tools-animation-engine.js"></script>
+  <script type="module" src="js/spin-wheel-runtime.js"></script>
   <script src="js/teacher-tools-experience-adapters.js"></script>
   <script src="js/teacher-tools-experiences.js"></script>
   <script src="js/classroom-management-ui.js"></script>

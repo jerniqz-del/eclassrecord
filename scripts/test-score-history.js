@@ -39,9 +39,17 @@ const quickGrade = read('src/renderer/js/quick-grade.js');
 const mobileSync = read('src/renderer/js/mobile-sync.js');
 const teacherTools = read('src/renderer/js/teacher-tools-core.js');
 const index = read('src/renderer/index.html');
+const recordTableCss = read('src/renderer/css/record-table.css');
 
 assert.match(recordTable, /ScoreHistory\?\.record\(a,/);
 assert.match(recordTable, /score-history-trigger/);
+assert.match(recordTable, /const historyButton = !isDisabled && hasScoreChange/);
+assert.doesNotMatch(recordTable, /const historyButton = !isDisabled && globalThis\.ScoreHistory\?\.hasScore\(val\)/);
+assert.match(recordTable, /ScoreHistory\?\.hasScore\(entry\.previousValue\)/);
+assert.match(recordTable, /scoreChangeKeys/);
+assert.doesNotMatch(recordTable, /score-cell--changed/);
+assert.doesNotMatch(recordTableCss, /td\.score-cell--changed/);
+assert.doesNotMatch(recordTableCss, /#f59e0b/);
 assert.match(quickGrade, /'quick-grade'/);
 assert.match(mobileSync, /source: 'mobile-sync'/);
 assert.match(teacherTools, /function auditScoreChange/);

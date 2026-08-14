@@ -3,10 +3,7 @@
 
   const pickerThemes = Object.freeze({
     'carnival-wheel': 'Carnival Prize Wheel',
-    'arcade-capsule': 'Arcade Capsule Machine',
-    'mystery-cards': 'Mystery Card Deck',
-    'galaxy-scanner': 'Galaxy Scanner',
-    'game-show': 'Game Show Spotlight'
+    'wheel-of-learners': 'Wheel of Learners'
   });
   const groupThemes = Object.freeze({
     'draft-arena': 'Team Draft Arena',
@@ -16,8 +13,10 @@
     'puzzle-party': 'Puzzle Party'
   });
   const legacyPickerThemes = Object.freeze({
-    classic: 'carnival-wheel', fiesta: 'carnival-wheel', chalkboard: 'mystery-cards',
-    ocean: 'game-show', space: 'galaxy-scanner', 'high-contrast': 'mystery-cards'
+    classic: 'carnival-wheel', fiesta: 'carnival-wheel',
+    chalkboard: 'wheel-of-learners', ocean: 'wheel-of-learners', space: 'wheel-of-learners',
+    'high-contrast': 'wheel-of-learners', 'arcade-capsule': 'wheel-of-learners',
+    'mystery-cards': 'wheel-of-learners', 'galaxy-scanner': 'wheel-of-learners', 'game-show': 'wheel-of-learners'
   });
   const legacyGroupThemes = Object.freeze({
     classic: 'draft-arena', fiesta: 'puzzle-party', chalkboard: 'house-sorting',
@@ -25,7 +24,7 @@
   });
   const state = {
     pickerAnimation: null, groupAnimation: null, audioContext: null,
-    pickerRoot: null, groupRoot: null, lastPicker: null, lastGroup: null
+    pickerRoot: null, groupRoot: null, lastGroup: null
   };
 
   function database() { return globalScope.getActiveProfileDatabase?.(); }
@@ -63,6 +62,10 @@
       ? preferences().namePickerAnimationSpeed || 'normal'
       : preferences().groupRandomizerAnimationSpeed || 'normal';
   }
+  function wheelSize() {
+    const value = preferences().namePickerWheelSize;
+    return ['small', 'medium', 'large'].includes(value) ? value : 'medium';
+  }
   async function setSound(tool, enabled) {
     const prefs = preferences();
     if (tool === 'picker') prefs.namePickerSound = Boolean(enabled);
@@ -74,6 +77,15 @@
     const prefs = preferences();
     if (tool === 'picker') prefs.namePickerAnimationSpeed = speed;
     else prefs.groupRandomizerAnimationSpeed = speed;
+    await globalScope.saveDatabase?.();
+  }
+  async function setWheelSize(value, root = state.pickerRoot) {
+    const size = ['small', 'medium', 'large'].includes(value) ? value : 'medium';
+    preferences().namePickerWheelSize = size;
+    const stage = root?.querySelector('.name-picker-stage');
+    if (stage) stage.dataset.wheelSize = size;
+    const wheel = stage?.querySelector('.picker-experience-scene')?._pickerWheel;
+    globalScope.requestAnimationFrame?.(() => wheel?.resize?.());
     await globalScope.saveDatabase?.();
   }
   function tone(kind = 'tick') {
@@ -107,16 +119,90 @@
       return `<i class="carnival-board__learner carnival-board__learner--${ringIndex ? 'inner' : 'outer'}" data-carnival-learner="${esc(learner.id)}" style="--item:${index};--items:${Math.max(ring.length, 1)}" title="${esc(learnerName(learner))}">${avatar(learner, 'sm')}<b>${esc(shortName)}</b></i>`;
     }).join('')).join('');
   }
+  const wheelColors = ['#7c3aed', '#22c7d9', '#f472b6', '#fbbf24', '#34d399', '#60a5fa'];
+  function wheelLabel(learner) {
+    const first = String(learner?.firstName || '').trim();
+    const last = String(learner?.lastName || '').trim();
+    const label = first && last ? first + ' ' + last.slice(0, 1) + '.' : first || last || learnerName(learner);
+    return label.length > 20 ? label.slice(0, 19) + '…' : label;
+  }
+  function wheelSceneMarkup() {
+    return '<div class="picker-wheel-scene" aria-hidden="true"><div class="picker-wheel-shell"><div class="picker-wheel-canvas-host" data-picker-wheel></div><span class="picker-wheel-pointer"></span><span class="picker-wheel-hub">?</span></div><span class="picker-wheel-caption">Every learner has an equal slice</span></div>';
+  }
+  function disposePickerWheel(scene) {
+    if (!scene?._pickerWheel) return;
+    try { scene._pickerWheel.remove(); } catch (_) { /* Detached canvas is already harmless. */ }
+    scene._pickerWheel = null;
+  }
+  function initPickerWheelScene(scene, learners) {
+    const wheelScene = scene?.querySelector('.picker-wheel-scene');
+    const host = scene?.querySelector('[data-picker-wheel]');
+    if (!wheelScene || !host || !learners?.length) return null;
+    if (scene._pickerWheel) return scene._pickerWheel;
+    if (!globalScope.SpinWheel) {
+      if (!scene.dataset.wheelWaiting) {
+        scene.dataset.wheelWaiting = 'true';
+        globalScope.addEventListener('spin-wheel-ready', () => {
+          delete scene.dataset.wheelWaiting;
+          if (scene.isConnected) initPickerWheelScene(scene, learners);
+        }, { once: true });
+      }
+      return null;
+    }
+    try {
+      const wheel = new globalScope.SpinWheel(host, {
+        items: learners.map(learner => ({ label: wheelLabel(learner), value: String(learner.id) })),
+        itemBackgroundColors: wheelColors,
+        itemLabelColors: ['#ffffff'],
+        itemLabelFont: 'Inter, Segoe UI, sans-serif',
+        itemLabelFontSizeMax: learners.length > 24 ? 14 : 19,
+        itemLabelRadius: .93,
+        itemLabelRadiusMax: .37,
+        itemLabelStrokeColor: 'rgb(52 18 122 / .3)',
+        itemLabelStrokeWidth: 1,
+        lineColor: '#ffffff',
+        lineWidth: 2,
+        borderColor: '#6d28d9',
+        borderWidth: 4,
+        radius: .92,
+        pointerAngle: 0,
+        isInteractive: false
+      });
+      scene._pickerWheel = wheel;
+      return wheel;
+    } catch (error) {
+      console.error('Could not initialize the offline learner wheel:', error);
+      wheelScene.classList.add('picker-wheel-scene--unavailable');
+      return null;
+    }
+  }
+  function capsuleMarkup(names) {
+    return names.map((name, index) => {
+      const row = Math.floor(index / 9);
+      const column = index % 9;
+      const x = 6 + column * 10.5 + (row % 2 ? 2.5 : 0);
+      const y = 49 + row * 9;
+      const tilt = (index * 17) % 30 - 15;
+      return `<i style="--item:${index};--capsule-x:${x}%;--capsule-y:${y}%;--capsule-tilt:${tilt}deg" title="${esc(name)}"><span>${esc(name.slice(0, 1))}</span></i>`;
+    }).join('');
+  }
   function sceneMarkup(theme, learners) {
     const names = learners.slice(0, 36).map(learner => learnerName(learner).split(/[ ,]/)[0]).filter(Boolean);
-    if (theme === 'carnival-wheel') return `<div class="carnival-board" aria-hidden="true"><div class="carnival-board__canopy"></div><div class="carnival-board__roster">${carnivalRoster(learners)}</div><div class="carnival-board__center"><span>LUCKY LEARNER</span></div></div>`;
-    if (theme === 'arcade-capsule') return `<div class="capsule-machine" aria-hidden="true"><div class="capsule-machine__glass">${names.map((name, index) => `<i style="--item:${index}" title="${esc(name)}"><span>${esc(name.slice(0, 1))}</span></i>`).join('')}</div><div class="capsule-machine__chute"><b></b><span class="capsule-machine__winner"></span></div></div>`;
+    if (theme === 'carnival-wheel') return `<div class="carnival-board" aria-hidden="true"><div class="carnival-board__canopy"></div><div class="carnival-board__roster">${carnivalRoster(learners)}</div></div>`;
+    if (theme === 'arcade-capsule') return `<div class="capsule-machine" aria-hidden="true"><div class="capsule-machine__glass">${capsuleMarkup(names)}</div><div class="capsule-machine__chute"><b></b><span class="capsule-machine__winner"></span></div></div>`;
+    if (theme === 'wheel-of-learners') return wheelSceneMarkup();
     if (theme === 'mystery-cards') return `<div class="mystery-deck" aria-hidden="true">${Array.from({ length: 7 }, (_, index) => `<i style="--item:${index}"><span>?</span></i>`).join('')}<b class="mystery-deck__winner"></b></div>`;
     if (theme === 'galaxy-scanner') return `<div class="galaxy-field" aria-hidden="true"><i class="galaxy-field__planet"></i><b class="galaxy-field__planet-name"></b><i class="galaxy-field__beam"></i>${names.slice(0, 10).map((name, index) => `<span style="--item:${index};--items:${Math.max(Math.min(names.length, 10), 1)}">${esc(name.slice(0, 1))}</span>`).join('')}</div>`;
     return `<div class="game-show-stage" aria-hidden="true"><i class="game-show-stage__curtain game-show-stage__curtain--left"></i><i class="game-show-stage__curtain game-show-stage__curtain--right"></i><i class="game-show-stage__spotlight"></i><span>WHO WILL IT BE?</span><div class="game-show-roster">${learners.slice(0,40).map(learner => `<i class="game-show-roster__learner" data-roster-learner="${esc(learner.id)}">${avatar(learner,'sm')}<b>${esc(learnerName(learner))}</b></i>`).join('')}</div></div>`;
   }
-  function speedOptions(selected) {
-    return [['relaxed','Relaxed'],['normal','Normal'],['quick','Quick']]
+  function speedOptions(selected, tool) {
+    const speeds = tool === 'picker'
+      ? [['quick','Fast'],['normal','Average'],['relaxed','Slow']]
+      : [['relaxed','Relaxed'],['normal','Normal'],['quick','Quick']];
+    return speeds.map(([value, label]) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`).join('');
+  }
+  function wheelSizeOptions(selected) {
+    return [['small','Small'],['medium','Medium'],['large','Large']]
       .map(([value, label]) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`).join('');
   }
   function addExperienceToolbar(tool, root) {
@@ -126,26 +212,28 @@
       : root.querySelector('.tool-control-strip__actions');
     if (!host) return;
     const toolbar = document.createElement('div');
-    toolbar.className = 'experience-toolbar no-print';
+    const isWheelPicker = tool === 'picker' && selectedTheme('picker') === 'wheel-of-learners';
+    toolbar.className = 'experience-toolbar' + (isWheelPicker ? ' experience-toolbar--wheel' : '') + ' no-print';
     toolbar.dataset.experienceToolbar = tool;
-    toolbar.innerHTML = `<label class="experience-sound"><input type="checkbox" ${soundEnabled(tool) ? 'checked' : ''}> Sound</label><label class="experience-toolbar__speed">Speed <select class="field-select" data-animation-speed>${speedOptions(animationSpeed(tool))}</select></label><button class="btn btn-ghost btn-sm" type="button" data-present>Presentation Mode</button><button class="btn btn-ghost btn-sm" type="button" data-reveal hidden>Reveal Now</button><button class="btn btn-ghost btn-sm" type="button" data-replay disabled>Replay Animation</button>`;
+    const animationActions = tool === 'groups'
+      ? '<button class="btn btn-ghost btn-sm" type="button" data-reveal hidden>Reveal Now</button><button class="btn btn-ghost btn-sm" type="button" data-replay disabled>Replay Animation</button>'
+      : '';
+    toolbar.innerHTML = `<label class="experience-sound"><input type="checkbox" ${soundEnabled(tool) ? 'checked' : ''}> Sound</label><label class="experience-toolbar__speed">${isWheelPicker ? 'Wheel speed' : 'Speed'} <select class="field-select" data-animation-speed>${speedOptions(animationSpeed(tool), tool)}</select></label>${isWheelPicker ? `<label class="experience-toolbar__size">Wheel size <select class="field-select" data-wheel-size>${wheelSizeOptions(wheelSize())}</select></label>` : ''}<button class="btn btn-primary btn-sm" type="button" data-present>${tool === 'picker' ? 'Present Picker' : 'Presentation Mode'}</button>${animationActions}`;
     toolbar.querySelector('input').addEventListener('change', event => setSound(tool, event.target.checked));
     toolbar.querySelector('[data-animation-speed]').addEventListener('change', event => setAnimationSpeed(tool, event.target.value));
-    toolbar.querySelector('[data-present]').addEventListener('click', () => fullscreen(root));
-    toolbar.querySelector('[data-reveal]').addEventListener('click', () => {
-      if (tool === 'picker') revealPickerNow();
-      else if (!revealGroupsNow()) globalScope.TeacherTools?.revealGroupsNow?.();
+    toolbar.querySelector('[data-wheel-size]')?.addEventListener('change', event => setWheelSize(event.target.value, root));
+    toolbar.querySelector('[data-present]').addEventListener('click', () => fullscreen(tool === 'picker' ? root.querySelector('.name-picker-stage') : root));
+    toolbar.querySelector('[data-reveal]')?.addEventListener('click', () => {
+      if (!revealGroupsNow()) globalScope.TeacherTools?.revealGroupsNow?.();
     });
-    toolbar.querySelector('[data-replay]').addEventListener('click', () => tool === 'picker' ? replayPicker() : replayGroups());
+    toolbar.querySelector('[data-replay]')?.addEventListener('click', replayGroups);
     host.appendChild(toolbar);
   }
   function enhancePicker(root, learners = []) {
     if (!root) return;
     if (state.pickerRoot && state.pickerRoot !== root) {
       cancelPicker();
-      if (state.lastPicker && learners.some(item => item.id === state.lastPicker.selected?.id)) {
-        state.lastPicker = { ...state.lastPicker, root, learners };
-      } else state.lastPicker = null;
+      disposePickerWheel(state.pickerRoot.querySelector('.picker-experience-scene'));
     }
     state.pickerRoot = root;
     const theme = selectedTheme('picker');
@@ -156,14 +244,17 @@
     let scene = stage.querySelector('.picker-experience-scene');
     const rosterKey = learners.map(learner => String(learner.id)).join('|');
     if (!scene || scene.dataset.sceneTheme !== theme || scene.dataset.rosterKey !== rosterKey) {
+      disposePickerWheel(scene);
       scene?.remove(); scene = document.createElement('div');
       scene.className = 'picker-experience-scene'; scene.dataset.sceneTheme = theme; scene.dataset.rosterKey = rosterKey;
       scene.innerHTML = sceneMarkup(theme, learners); stage.prepend(scene);
     }
+    if (theme === 'wheel-of-learners') {
+      stage.dataset.wheelSize = wheelSize();
+      initPickerWheelScene(scene, learners);
+    } else delete stage.dataset.wheelSize;
     stage.dataset.experienceLabel = pickerThemes[theme];
     addExperienceToolbar('picker', root);
-    const replay = root.querySelector('[data-experience-toolbar="picker"] [data-replay]');
-    if (replay) replay.disabled = !state.lastPicker;
   }
   function groupIcon(theme) {
     return { 'draft-arena':'🏆', 'space-crew':'🚀', 'island-expedition':'🏝️', 'house-sorting':'🛡️', 'puzzle-party':'🧩' }[theme] || '★';
@@ -253,6 +344,10 @@
     stage?.removeAttribute('data-motion-phase');
     const pick = stage?.querySelector('.btn-primary.btn-lg'); if (pick) pick.disabled = false;
     root?.querySelector('[data-experience-toolbar="picker"] [data-reveal]')?.setAttribute('hidden', '');
+    if (animation?.wheelInstance) {
+      animation.wheelInstance.onCurrentIndexChange = null;
+      animation.wheelInstance.onRest = null;
+    }
     if (!animation?.done) resetCarnivalScene(root);
   }
   function finishPicker(animation, skipped = false) {
@@ -267,15 +362,55 @@
     root.querySelectorAll('.capsule-machine__winner,.mystery-deck__winner').forEach(node => { node.textContent = luckyName; });
     const planet = root.querySelector('.galaxy-field__planet-name'); if (planet) planet.textContent = 'Planet ' + (animation.selected.firstName || luckyName.split(/[ ,]/)[0]);
     root.querySelectorAll('.game-show-roster__learner').forEach(node => node.classList.toggle('is-lucky', node.dataset.rosterLearner === String(animation.selected.id)));
+    const wheelScene = root.querySelector('.picker-wheel-scene');
+    wheelScene?.classList.add('is-revealed');
+    const wheelHub = wheelScene?.querySelector('.picker-wheel-hub');
+    if (wheelHub) wheelHub.textContent = (animation.selected.firstName || luckyName).slice(0, 1).toUpperCase();
     cleanPicker(animation);
     stage?.classList.add('experience-revealed');
     if (selectedTheme('picker') === 'carnival-wheel') promoteCarnivalWinner(animation);
     if (soundEnabled('picker')) tone('reveal');
     if (!isReduced()) globalScope.TeacherTools?.launchSelectionConfetti?.(avatarNode || stage);
     state.pickerAnimation = null;
-    state.lastPicker = { root, learners: animation.learners, selected: animation.selected };
-    const replay = root.querySelector('[data-experience-toolbar="picker"] [data-replay]'); if (replay) replay.disabled = false;
     animation.onComplete?.({ skipped });
+  }
+  function startWheelPicker(root, stage, learners, selected, onComplete, profile, pick) {
+    const scene = stage?.querySelector('.picker-experience-scene');
+    const wheel = initPickerWheelScene(scene, learners);
+    const selectedIndex = wheel?.items?.findIndex(item => String(item.value) === String(selected.id)) ?? -1;
+    if (!wheel || selectedIndex < 0) {
+      if (pick) pick.disabled = false;
+      return false;
+    }
+    root.classList.add('experience-running');
+    root.setAttribute('aria-busy', 'true');
+    stage.classList.remove('experience-revealed');
+    const wheelScene = scene.querySelector('.picker-wheel-scene');
+    wheelScene?.classList.remove('is-revealed');
+    const status = root.querySelector('.name-picker-stage__status');
+    if (status) {
+      status.textContent = profile.label;
+      status.setAttribute('aria-live', 'polite');
+    }
+    const animation = {
+      root, stage, learners, selected, onComplete, done: false,
+      selectedIndex, wheelInstance: wheel
+    };
+    state.pickerAnimation = animation;
+    wheel.onCurrentIndexChange = ({ currentIndex }) => {
+      const learner = learners[currentIndex];
+      const hub = wheelScene?.querySelector('.picker-wheel-hub');
+      if (hub && learner) hub.textContent = wheelLabel(learner).slice(0, 1).toUpperCase();
+      if (soundEnabled('picker')) tone('tick');
+    };
+    wheel.onRest = () => finishPicker(animation, false);
+    const speedProfile = {
+      quick: { duration: 1800, revolutions: 3 },
+      normal: { duration: 3500, revolutions: 5 },
+      relaxed: { duration: 6000, revolutions: 7 }
+    }[animationSpeed('picker')] || { duration: 3500, revolutions: 5 };
+    wheel.spinToItem(selectedIndex, speedProfile.duration, true, speedProfile.revolutions, 1, value => 1 - Math.pow(1 - value, 4));
+    return true;
   }
   function animatePicker({ root, learners, selected, onComplete }) {
     if (!root || !selected || !learners?.length) return false;
@@ -289,6 +424,7 @@
     const stage = root.querySelector('.name-picker-stage');
     const pick = stage?.querySelector('.btn-primary.btn-lg'); if (pick) pick.disabled = true;
     resetCarnivalScene(root);
+    if (theme === 'wheel-of-learners') return startWheelPicker(root, stage, learners, selected, onComplete, profile, pick);
     if (theme === 'carnival-wheel') {
       const name = root.querySelector('#namePickerRouletteName');
       const avatarNode = root.querySelector('#namePickerRouletteAvatar');
@@ -296,8 +432,6 @@
       if (avatarNode) { avatarNode.innerHTML = ''; avatarNode.classList.add('is-empty'); avatarNode.classList.remove('is-revealed', 'is-ticking'); }
     }
     root.classList.add('experience-running'); root.setAttribute('aria-busy', 'true'); stage?.classList.remove('experience-revealed');
-    const reveal = root.querySelector('[data-experience-toolbar="picker"] [data-reveal]'); if (reveal) reveal.hidden = false;
-    const replay = root.querySelector('[data-experience-toolbar="picker"] [data-replay]'); if (replay) replay.disabled = true;
     const status = root.querySelector('.name-picker-stage__status');
     if (status) { status.textContent = profile.label; status.setAttribute('aria-live', 'polite'); }
     const animation = {
@@ -322,18 +456,20 @@
     });
     return true;
   }
-  function revealPickerNow() { return globalScope.TeacherToolsAnimationEngine?.finish('name-picker') || false; }
   function cancelPicker() {
+    const wheelAnimation = state.pickerAnimation?.wheelInstance ? state.pickerAnimation : null;
+    if (wheelAnimation) {
+      wheelAnimation.wheelInstance.onRest = null;
+      wheelAnimation.wheelInstance.onCurrentIndexChange = null;
+      wheelAnimation.wheelInstance.stop();
+      cleanPicker(wheelAnimation);
+      state.pickerAnimation = null;
+      return true;
+    }
     const cancelled = globalScope.TeacherToolsAnimationEngine?.cancel('name-picker') || false;
     if (cancelled) state.pickerAnimation = null;
     return cancelled;
   }
-  function replayPicker() {
-    const previous = state.lastPicker;
-    if (!previous || !document.contains(previous.root)) return false;
-    return animatePicker({ ...previous, onComplete: () => {} });
-  }
-
   function cleanGroups(animation, finishAnimations = false) {
     animation?.animations?.forEach(item => {
       try { finishAnimations ? item.finish() : item.cancel(); } catch (_) { /* Detached learner card. */ }
@@ -416,14 +552,14 @@
 
   globalScope.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
-    const completed = revealPickerNow() || revealGroupsNow();
+    const completed = revealGroupsNow();
     if (document.fullscreenElement) document.exitFullscreen?.();
     if (completed) event.preventDefault();
   });
 
   const api = {
     pickerThemes, groupThemes, legacyPickerThemes, legacyGroupThemes,
-    selectedTheme, enhancePicker, enhanceGroups, animatePicker, revealPickerNow, cancelPicker, replayPicker,
+    selectedTheme, enhancePicker, enhanceGroups, animatePicker, cancelPicker,
     animateGroups, revealGroupsNow, cancelGroups, replayGroups, fullscreen
   };
   globalScope.TeacherToolExperiences = api;

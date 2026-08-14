@@ -28,6 +28,7 @@ function fixture() {
   assert.strictEqual(tools.appearancePreferences.namePickerSound, true);
   assert.strictEqual(tools.appearancePreferences.groupRandomizerAnimationSpeed, 'normal');
   assert.strictEqual(tools.appearancePreferences.namePickerAnimationSpeed, 'normal');
+  assert.strictEqual(tools.appearancePreferences.namePickerWheelSize, 'medium');
   assert.strictEqual(tools.participationStarEvents.length, 1);
   assert.strictEqual(tools.participationStarEvents[0].futureEventField, true);
   assert.strictEqual(tools.classroomToolSessions[0].futureSessionField, true);
@@ -48,6 +49,14 @@ function fixture() {
   const normalizedAgain = core.normalize(JSON.parse(JSON.stringify(db)));
   assert.strictEqual(normalizedAgain.participationStarEvents.length, 4);
   assert.strictEqual(normalizedAgain.futureField.retained, true);
+}
+
+{
+  const db = { assignments: [], tools: { appearancePreferences: { namePickerWheelSize: 'large', namePickerAnimationSpeed: 'quick' } } };
+  assert.strictEqual(core.normalize(db).appearancePreferences.namePickerWheelSize, 'large');
+  assert.strictEqual(db.tools.appearancePreferences.namePickerAnimationSpeed, 'quick');
+  db.tools.appearancePreferences.namePickerWheelSize = 'oversized';
+  assert.strictEqual(core.normalize(db).appearancePreferences.namePickerWheelSize, 'medium');
 }
 
 {

@@ -57,6 +57,10 @@ function initAutoUpdater(window) {
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
+  // NSIS releases include blockmaps, so download only the changed blocks.
+  // Web installers are not published by this app and would bypass this path.
+  autoUpdater.disableDifferentialDownload = false;
+  autoUpdater.disableWebInstaller = true;
   autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'jerniqz-del',
@@ -181,7 +185,9 @@ function downloadUpdate(options = {}) {
 function quitAndInstall() {
   if (!updateDownloaded) return { started: false, reason: 'not-downloaded' };
   console.log('Quitting and installing update...');
-  autoUpdater.quitAndInstall(false, true);
+  // Apply the downloaded update as silent maintenance instead of reopening the
+  // assisted installer and making the user step through a full installation.
+  autoUpdater.quitAndInstall(true, true);
   return { started: true };
 }
 

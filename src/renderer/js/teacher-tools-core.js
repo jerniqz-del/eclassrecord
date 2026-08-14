@@ -12,10 +12,10 @@
   const CHECKLIST_ENTRY_HISTORY_LIMIT = 50;
   const CHECKLIST_COMPONENTS = ['TRACKING', 'WW', 'PT'];
   const CHECKLIST_SCORING_MODES = ['CHECK', 'NUMERIC'];
-  const PICKER_EXPERIENCE_THEMES = ['carnival-wheel', 'arcade-capsule', 'mystery-cards', 'galaxy-scanner', 'game-show'];
+  const PICKER_EXPERIENCE_THEMES = ['carnival-wheel', 'wheel-of-learners'];
   const GROUP_EXPERIENCE_THEMES = ['draft-arena', 'space-crew', 'island-expedition', 'house-sorting', 'puzzle-party'];
   const TEACHER_TOOL_THEMES = [...new Set([...PICKER_EXPERIENCE_THEMES, ...GROUP_EXPERIENCE_THEMES])];
-  const LEGACY_PICKER_THEMES = { classic:'carnival-wheel', fiesta:'carnival-wheel', chalkboard:'mystery-cards', ocean:'game-show', space:'galaxy-scanner', 'high-contrast':'mystery-cards' };
+  const LEGACY_PICKER_THEMES = { classic:'carnival-wheel', fiesta:'carnival-wheel', chalkboard:'wheel-of-learners', ocean:'wheel-of-learners', space:'wheel-of-learners', 'high-contrast':'wheel-of-learners', 'arcade-capsule':'wheel-of-learners', 'mystery-cards':'wheel-of-learners', 'galaxy-scanner':'wheel-of-learners', 'game-show':'wheel-of-learners' };
   const LEGACY_GROUP_THEMES = { classic:'draft-arena', fiesta:'puzzle-party', chalkboard:'house-sorting', ocean:'island-expedition', space:'space-crew', 'high-contrast':'draft-arena' };
   const CLASSROOM_TOOL_TYPES = [
     'timer-agenda', 'participation', 'noise-meter', 'seating-chart',
@@ -131,6 +131,10 @@
     return ['relaxed', 'normal', 'quick'].includes(String(value)) ? String(value) : 'normal';
   }
 
+  function normalizeWheelSize(value) {
+    return ['small', 'medium', 'large'].includes(String(value)) ? String(value) : 'medium';
+  }
+
   function normalizeWorkspaceMotionStyle(value) {
     return ['calm', 'standard', 'playful'].includes(String(value)) ? String(value) : 'standard';
   }
@@ -145,6 +149,7 @@
       namePickerSound: existing.namePickerSound !== false,
       groupRandomizerAnimationSpeed: normalizeAnimationSpeed(existing.groupRandomizerAnimationSpeed),
       namePickerAnimationSpeed: normalizeAnimationSpeed(existing.namePickerAnimationSpeed),
+      namePickerWheelSize: normalizeWheelSize(existing.namePickerWheelSize),
       workspaceMotionStyle: normalizeWorkspaceMotionStyle(existing.workspaceMotionStyle)
     };
   }

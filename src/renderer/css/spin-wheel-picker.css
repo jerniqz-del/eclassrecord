@@ -1,0 +1,303 @@
+.tool-theme[data-tool-theme="wheel-of-learners"] {
+  --experience-accent: #7c3aed;
+  --experience-accent-2: #22d3ee;
+  --experience-bg: #f5f3ff;
+  --experience-ink: #34127a;
+}
+
+#teacherToolsContent[data-active-tool="picker"] {
+  --tool-polish-accent: #7040d8;
+  --tool-polish-soft: #f4efff;
+}
+
+/* Compact two-row controls at desktop widths. */
+@media (min-width: 1251px) {
+  #teacherToolsContent[data-active-tool="picker"] .name-picker-reference-controls {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: .55rem .75rem;
+    padding: .7rem .85rem;
+  }
+
+  #teacherToolsContent[data-active-tool="picker"] .name-picker-reference-controls > .record-class-selector,
+  #teacherToolsContent[data-active-tool="picker"] .name-picker-reference-controls > .tool-theme-control,
+  #teacherToolsContent[data-active-tool="picker"] .name-picker-reference-controls > .field:has([data-picker-pool]) {
+    grid-column: span 2;
+  }
+
+  #teacherToolsContent[data-active-tool="picker"] .name-picker-reference-controls > .field:has([data-picker-term]),
+  #teacherToolsContent[data-active-tool="picker"] .name-picker-reference-controls > .field:has([data-picker-mode]) {
+    grid-column: span 1;
+  }
+
+  #teacherToolsContent[data-active-tool="picker"] .name-picker-reference-controls > .picker-attendance-filter {
+    grid-column: span 2;
+  }
+
+  #teacherToolsContent[data-active-tool="picker"] .name-picker-reference-controls > .experience-toolbar {
+    grid-column: span 6;
+    display: grid;
+    grid-template-columns: auto minmax(7rem, .8fr) minmax(7rem, .8fr) minmax(12rem, 1.2fr);
+    gap: .7rem;
+    align-items: end;
+    padding-left: .85rem;
+    border-left: 1px dashed #d8deea;
+  }
+
+  #teacherToolsContent[data-active-tool="picker"] .name-picker-reference-controls [data-present] {
+    grid-column: auto;
+  }
+}
+
+.picker-wheel-scene {
+  position: absolute;
+  inset: 0 50% 0 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem 1rem 1.75rem;
+  opacity: .98;
+}
+
+.tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage {
+  --picker-wheel-size: 22.5rem;
+  --picker-wheel-fullscreen-size: 30rem;
+}
+
+.tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage[data-wheel-size="small"] {
+  --picker-wheel-size: 18.5rem;
+  --picker-wheel-fullscreen-size: 24rem;
+}
+
+.tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage[data-wheel-size="large"] {
+  --picker-wheel-size: 27rem;
+  --picker-wheel-fullscreen-size: 34rem;
+}
+
+.picker-wheel-shell {
+  position: relative;
+  width: min(var(--picker-wheel-size, 22.5rem), calc(100% - 2rem));
+  aspect-ratio: 1;
+  filter: drop-shadow(0 1rem 1.2rem rgb(76 29 149 / .17));
+}
+
+.picker-wheel-canvas-host {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: .5rem solid rgb(255 255 255 / .94);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 .24rem #7c3aed, inset 0 0 0 1px rgb(124 58 237 / .2);
+}
+
+.picker-wheel-canvas-host canvas { display: block; width: 100%; height: 100%; }
+
+.picker-wheel-pointer {
+  position: absolute;
+  top: -.15rem;
+  left: 50%;
+  z-index: 4;
+  width: 2rem;
+  height: 2.75rem;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #fb7185, #e11d48);
+  box-shadow: 0 .35rem .75rem rgb(159 18 57 / .28), inset 0 2px 0 rgb(255 255 255 / .6);
+  clip-path: polygon(8% 0, 92% 0, 50% 100%);
+}
+
+.picker-wheel-hub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 4.1rem;
+  height: 4.1rem;
+  transform: translate(-50%, -50%);
+  border: .4rem solid #fff;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #8b5cf6, #5723bd);
+  box-shadow: 0 .45rem 1rem rgb(76 29 149 / .3);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.picker-wheel-caption {
+  position: absolute;
+  bottom: .65rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: .32rem .7rem;
+  border: 1px solid rgb(124 58 237 / .12);
+  border-radius: 999px;
+  background: rgb(255 255 255 / .84);
+  color: #6843a8;
+  font-size: .68rem;
+  font-weight: 750;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+
+/* The stage content owns the right column; the wheel owns the left. */
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(24rem, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: .65rem 1rem;
+  width: 100%;
+  max-width: none;
+  min-height: 31rem;
+  padding: 1.25rem;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage__status {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  justify-self: center;
+  max-width: 100%;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage__selection {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+  width: calc(100% - 1rem);
+  min-width: 0;
+  margin: 0 auto;
+  padding: .9rem 1rem;
+  border-radius: 1.4rem;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage__avatar,
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage__avatar .learner-avatar {
+  width: 4.75rem;
+  height: 4.75rem;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage__name {
+  min-width: 0;
+  font-size: clamp(1.65rem, 2.35vw, 2.45rem);
+  line-height: 1.02;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-overflow: clip;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-action-dock {
+  grid-column: 2;
+  grid-row: 3;
+  align-self: end;
+  width: 100%;
+  gap: .45rem;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-action-dock .btn {
+  min-height: 2.45rem;
+  padding-inline: .9rem;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"].experience-running .picker-wheel-pointer {
+  animation: picker-wheel-pointer-tick .12s ease-in-out infinite alternate;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .picker-wheel-scene.is-revealed .picker-wheel-hub {
+  animation: picker-wheel-hub-win .65s cubic-bezier(.2, .9, .2, 1);
+  background: linear-gradient(145deg, #fbbf24, #f97316);
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage:fullscreen .name-picker-stage__content {
+  width: calc(100% - 22rem);
+  max-width: none;
+  min-height: min(42rem, 100vh);
+  margin: 0;
+  padding: clamp(3.75rem, 6vh, 5rem) clamp(1.25rem, 2.5vw, 2.75rem) 2rem;
+  grid-template-columns: minmax(0, 1.15fr) minmax(25rem, .85fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  justify-self: start;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage:fullscreen .name-picker-stage__selection {
+  width: min(34rem, 100%);
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage:fullscreen .name-picker-stage__avatar,
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage:fullscreen .name-picker-stage__avatar .learner-avatar {
+  width: 5.5rem;
+  height: 5.5rem;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage:fullscreen .name-picker-stage__name {
+  max-width: 100%;
+  max-height: 2.04em;
+  font-size: clamp(2.15rem, 3vw, 3.35rem);
+  line-height: 1.02;
+  white-space: normal;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage:fullscreen .name-picker-action-dock {
+  width: min(36rem, 100%);
+  margin-inline: auto;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage:fullscreen .picker-wheel-scene {
+  right: 55%;
+}
+
+#teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage:fullscreen .picker-wheel-shell {
+  width: min(var(--picker-wheel-fullscreen-size, 30rem), calc(100% - 2rem));
+}
+
+@keyframes picker-wheel-pointer-tick {
+  to { transform: translateX(-50%) rotate(5deg); }
+}
+
+@keyframes picker-wheel-hub-win {
+  0% { transform: translate(-50%, -50%) scale(.72); }
+  55% { transform: translate(-50%, -50%) scale(1.2); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+@media (max-width: 1120px) {
+  .picker-wheel-scene { inset: 0; opacity: .22; }
+
+  #teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage:fullscreen .name-picker-stage__content {
+    width: calc(100% - 17rem);
+    min-height: 100vh;
+    padding-inline: 1rem;
+  }
+  .picker-wheel-shell { width: min(var(--picker-wheel-size, 22.5rem), 24rem, calc(100% - 3rem)); }
+
+  #teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage__content {
+    grid-template-columns: 1fr;
+  }
+
+  #teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage__status,
+  #teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage__selection,
+  #teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-action-dock {
+    grid-column: 1;
+    width: min(35rem, 92%);
+    justify-self: center;
+  }
+}
+
+@media (max-width: 680px) {
+  .picker-wheel-shell { width: min(var(--picker-wheel-size, 22.5rem), 21rem, calc(100% - 2rem)); }
+
+  #teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage__content {
+    padding: .85rem;
+  }
+
+  #teacherToolsContent[data-active-tool="picker"] .tool-theme[data-tool-theme="wheel-of-learners"] .name-picker-stage__selection {
+    grid-template-columns: 4rem minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .picker-wheel-pointer,
+  .picker-wheel-hub { animation: none !important; }
+}

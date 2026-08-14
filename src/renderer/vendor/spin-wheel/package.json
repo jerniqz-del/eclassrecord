@@ -1,0 +1,7 @@
+{
+  "name": "spin-wheel-vendored",
+  "version": "5.0.2",
+  "private": true,
+  "type": "module",
+  "license": "MIT"
+}
