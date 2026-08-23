@@ -77,6 +77,27 @@ function scheduleRecordTableRefresh() {
   }
 }
 
+function bindScoreHistoryTriggers(container) {
+  if (!container) return;
+  container.querySelectorAll('.score-history-trigger').forEach(trigger => {
+    trigger.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const learnerId = trigger.dataset.learnerId;
+      const assessmentId = trigger.dataset.assessmentId;
+      if (!learnerId || !assessmentId) return;
+      if (typeof globalThis.openScoreHistory !== 'function') {
+        console.warn('Score history dialog is unavailable.');
+        if (typeof toast === 'function') {
+          toast('Score history could not be opened. Please reopen the grading sheet and try again.', 'error');
+        }
+        return;
+      }
+      globalThis.openScoreHistory(learnerId, assessmentId);
+    });
+  });
+}
+
 function assessmentHpsLimit(assignment, assessmentId) {
   const assessment = assignment?.assessments?.find(item => item.id === assessmentId);
   const rawMax = assessment?.maxScore;
@@ -605,7 +626,8 @@ function renderRecordTable() {
       const scoreTitle = `${learnerDisplayName(learner)} - ${componentFullName(items[j].component)} ${assessmentHeaderLabel(items[j], items)} ${maxNum !== null ? '(max ' + maxNum + ')' : ''}`;
       
       const historyButton = !isDisabled && hasScoreChange
-        ? `<button type="button" class="score-history-trigger" title="View score history" aria-label="View score history for ${esc(learnerDisplayName(learner))}" onclick="event.preventDefault(); event.stopPropagation(); openScoreHistory('${esc(learner.id)}', '${esc(items[j].id)}')">&#8635;</button>`
+        ? `<button type="button" class="score-history-trigger" title="View score history" aria-label="View score history for ${esc(learnerDisplayName(learner))}"
+            data-learner-id="${esc(learner.id)}" data-assessment-id="${esc(items[j].id)}">&#8635;</button>`
         : '';
       html += `<td class="c-score"><div class="score-cell-wrap">
         <input id="sc-${r}-${j}" class="score-input${overMax ? ' invalid' : ''}${isPerfect ? ' perfect' : ''}${isSimilar ? ' similar' : ''}" title="${esc(scoreTitle)}" value="${isDisabled ? '' : esc(val)}"
@@ -655,7 +677,9 @@ function renderRecordTable() {
   if (a.policy === 'DO15_DESCRIPTIVE') {
     html += `<div class="compliance-footnote" style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
   }
-  document.getElementById('recordTable').innerHTML = html;
+  const recordTableRoot = document.getElementById('recordTable');
+  recordTableRoot.innerHTML = html;
+  bindScoreHistoryTriggers(recordTableRoot);
   
   // Dynamically align HPS row sticky top position below the header row
   adjustHpsStickyTop();

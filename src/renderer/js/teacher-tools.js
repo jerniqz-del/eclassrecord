@@ -2290,7 +2290,7 @@
         core.deleteChecklistActivity(checklist, session.activity.id, { confirmed:true });
         await globalScope.saveDatabase();
         checklistState.sessionId='';
-        activate('checklist');
+        openPerformanceChecklistPage();
         globalScope.toast('Activity deleted. It can be restored.', 'success');
       }), 0);
     });

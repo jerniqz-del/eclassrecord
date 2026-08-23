@@ -20,6 +20,8 @@ const database = fs.readFileSync(path.join(root, 'src/renderer/js/database.js'),
 assert(ui.includes('promptPinVerification'));
 assert(ui.includes("globalScope.confirmModal('Delete Activity'"));
 assert(ui.includes('globalScope.setTimeout(() => globalScope.promptPinVerification'));
+assert.match(ui, /checklistState\.sessionId='';\r?\n\s+openPerformanceChecklistPage\(\);/);
+assert.doesNotMatch(ui, /checklistState\.sessionId='';\r?\n\s+activate\('checklist'\);/);
 assert(!ui.includes("if (!globalScope.confirm(count ? "));
 assert(database.includes("overlay.dataset.pinVerificationModal = 'true'"));
 assert(database.includes("overlay.style.zIndex = '13000'"));

@@ -15,6 +15,12 @@ function requireRecoveryPayload(payload) {
   return text;
 }
 
+function requireCompanionPayload(payload) {
+  const text = String(payload || '');
+  if (!text.startsWith('ECLASS-COMPANION|1|') || text.length > 2048) throw new Error('Invalid companion QR payload.');
+  return text;
+}
+
 contextBridge.exposeInMainWorld('electronAPI', {
   // Authenticated Admin panel
   adminAuth: (passphrase) => ipcRenderer.invoke('admin:authenticate', passphrase),
@@ -24,6 +30,33 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Database Operations
   loadDatabase: () => ipcRenderer.invoke('db:load'),
   saveDatabase: (data) => ipcRenderer.invoke('db:save', data),
+
+  // School-owned encrypted Cloudflare relay (pilot feature flag)
+  getSchoolCloudFeatureStatus: () => ipcRenderer.invoke('school-cloud:feature-status'),
+  configureSchoolCloud: (schoolId, connection) => ipcRenderer.invoke('school-cloud:configure', schoolId, connection),
+  activateSchoolCloud: (schoolId, connection) => ipcRenderer.invoke('school-cloud:activate', schoolId, connection),
+  bootstrapSchoolCloud: (setup) => ipcRenderer.invoke('school-cloud:bootstrap', setup),
+  getSchoolCloudStatus: (schoolId) => ipcRenderer.invoke('school-cloud:status', schoolId),
+  listSchoolCloudConnections: () => ipcRenderer.invoke('school-cloud:connections'),
+  disconnectSchoolCloud: (schoolId) => ipcRenderer.invoke('school-cloud:disconnect', schoolId),
+  requestSchoolCloud: (schoolId, request) => ipcRenderer.invoke('school-cloud:request', schoolId, request),
+  backupSchoolCloudProfile: (schoolId, database) => ipcRenderer.invoke('school-cloud:backup-profile', schoolId, database),
+  restoreSchoolCloudProfile: (schoolId) => ipcRenderer.invoke('school-cloud:restore-profile', schoolId),
+
+  // Android companion sync
+  startCompanionWlan: () => ipcRenderer.invoke('companion:wlan-start'),
+  startCompanionBluetooth: () => ipcRenderer.invoke('companion:bluetooth-start'),
+  stopCompanionWlan: () => ipcRenderer.invoke('companion:wlan-stop'),
+  getCompanionWlanStatus: () => ipcRenderer.invoke('companion:wlan-status'),
+  publishCompanionSnapshot: (snapshot) => ipcRenderer.invoke('companion:publish-snapshot', snapshot),
+  generateCompanionQr: (payload) => QRCode.toDataURL(requireCompanionPayload(payload), {
+    errorCorrectionLevel: 'M', type: 'image/png', width: 420, margin: 3,
+    color: { dark: '#0f172a', light: '#ffffff' }
+  }),
+  sendCompanionChangesResult: (requestId, result) => ipcRenderer.send('companion:changes-result', requestId, result),
+  onCompanionApplyChanges: (callback) => ipcRenderer.on('companion:apply-changes', (_event, request) => callback(request)),
+  onCompanionToolCommand: (callback) => ipcRenderer.on('companion:tool-command', (_event, command) => callback(command)),
+  onCompanionClientActivity: (callback) => ipcRenderer.on('companion:client-activity', (_event, activity) => callback(activity)),
 
   // File Backup & Migration Dialogs
   exportJson: (jsonString, defaultFileName) => ipcRenderer.invoke('dialog:export-json', jsonString, defaultFileName),

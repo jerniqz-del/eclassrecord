@@ -1,0 +1,20 @@
+name = "eclassrecord-school-cloud"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+
+[vars]
+SERVICE_VERSION = "0.2.0"
+ADMIN_LEASE_SECONDS = "180"
+SESSION_DAYS = "14"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "eclassrecord-school-cloud"
+database_id = "REPLACE_DURING_GUIDED_SETUP"
+
+[[r2_buckets]]
+binding = "SNAPSHOTS"
+bucket_name = "eclassrecord-school-cloud-snapshots"
+
+[triggers]
+crons = ["*/5 * * * *"]

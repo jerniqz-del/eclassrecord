@@ -18,7 +18,13 @@ let rxChar = null;
 let txChar = null;
 
 let isSyncConnecting = false;
+let isBleAuthorized = false;
+let bluetoothPublishTimer = null;
+let bleWriteQueue = Promise.resolve();
 let syncLogs = [];
+let pendingSnapshotRevision = null;
+let snapshotAckTimer = null;
+let hasCompletedInitialSnapshot = false;
 
 // Reassembly buffer (Mobile -> Desktop)
 let mobileRxBuffer = '';
@@ -63,6 +69,11 @@ function updateSyncStatusUI(status, label, details) {
 async function startScanBleDevices() {
   if (window.AdminTestMode?.blockExternalAction?.('Bluetooth scanning')) return;
   try {
+    const pairing = await window.electronAPI.getCompanionWlanStatus();
+    if (!pairing.running || pairing.transport !== 'bluetooth') {
+      toast('Start Bluetooth Pairing and let Android scan the QR first.', 'warning');
+      return;
+    }
     isSyncConnecting = true;
     addSyncLog('Starting Bluetooth scan for companion app...');
     updateSyncStatusUI('scanning', 'Bluetooth: Scanning...', 'Searching for E-Class mobile applications...');
@@ -78,7 +89,7 @@ async function startScanBleDevices() {
     // Call navigator.bluetooth.requestDevice. 
     // This blocks until main process calls the callback via selectBluetoothDevice.
     const device = await navigator.bluetooth.requestDevice({
-      filters: [{ namePrefix: 'EClass-' }],
+      filters: [{ services: [BLE_SERVICE_UUID] }],
       optionalServices: [BLE_SERVICE_UUID]
     });
     
@@ -104,16 +115,10 @@ async function startScanBleDevices() {
     
     addSyncLog('GATT characteristics mapped.');
     
-    // Connection established but needs authorization code
-    updateSyncStatusUI('scanning', 'Bluetooth: Verifying Link...', 'Waiting for validation PIN input...');
-    showEl('syncPinPanel', true);
+    // Android already received the desktop PIN; authorize automatically.
+    updateSyncStatusUI('scanning', 'Bluetooth: Verifying Link...', 'Confirming the PIN entered on Android...');
     showEl('btnDisconnectBle', true);
-    
-    const pinInput = document.getElementById('syncPinInput');
-    if (pinInput) {
-      pinInput.value = '';
-      pinInput.focus();
-    }
+    await submitHandshakePin();
   } catch (error) {
     if (error.name === 'NotFoundError' || error.message.includes('User cancelled')) {
       addSyncLog('Bluetooth scanning cancelled by user.');
@@ -134,40 +139,31 @@ async function startScanBleDevices() {
  */
 async function submitHandshakePin() {
   if (window.AdminTestMode?.blockExternalAction?.('Bluetooth authorization')) return;
-  const pinInput = document.getElementById('syncPinInput');
-  if (!pinInput || !handshakeChar) return;
-  
-  const pin = pinInput.value.trim();
-  if (pin.length !== 6 || isNaN(parseInt(pin))) {
-    toast('Please enter a valid 6-digit number PIN.', 'warning');
-    return;
-  }
-  
-  addSyncLog(`Submitting confirmation PIN code: ${pin}...`);
-  
+  if (!handshakeChar) return;
   try {
-    const encoder = new TextEncoder();
-    await handshakeChar.writeValue(encoder.encode(pin));
-    
-    // PIN validated successfully!
-    addSyncLog('Authorization check passed! Link established securely.');
-    updateSyncStatusUI('connected', 'Bluetooth: Connected & Authorized', `Linked to ${activeGattDevice.name}`);
-    
-    showEl('syncPinPanel', false);
+    const pairing = await window.electronAPI.getCompanionWlanStatus();
+    const pin = String(pairing.pin || '');
+    if (!pairing.running || pairing.transport !== 'bluetooth' || !/^\d{6}$/.test(pin)) {
+      throw new Error('The desktop Bluetooth pairing session has ended.');
+    }
+    addSyncLog('Confirming the PIN entered on Android...');
+    await handshakeChar.writeValue(new TextEncoder().encode(pin));
+    isBleAuthorized = true;
+    addSyncLog('Authorization passed. The Bluetooth link is secure.');
+    const companionName = activeGattDevice?.name || 'Android companion';
+    updateSyncStatusUI('scanning', 'Bluetooth: Authorized · Synchronizing', `Linked to ${companionName}`);
     showEl('btnSyncToPhone', true);
     showEl('btnScanBle', false);
-    
-    // Subscribe to TX notifications (scores notifications)
-    addSyncLog('Subscribing to score notifications from phone...');
+    addSyncLog('Subscribing to mobile entry notifications...');
     await txChar.startNotifications();
     txChar.addEventListener('characteristicvaluechanged', handleMobileScoresNotification);
-    addSyncLog('Subscribed successfully! Listening for score inputs.');
-    
-    toast('Phone connected and synced successfully!', 'success');
-  } catch (err) {
-    addSyncLog(`Authorization failed: ${err.message}. Refused connection.`);
-    updateSyncStatusUI('error', 'Bluetooth: Connection Refused', 'Verification PIN is incorrect.');
-    toast('Handshake verification failed. Check phone screen PIN.', 'error');
+    addSyncLog('Subscribed successfully. Listening for mobile entries.');
+    await syncDataToMobile({ silent: true });
+    addSyncLog('Initial snapshot sent. Waiting for the Android app to confirm it was imported...');
+  } catch (error) {
+    addSyncLog(`Authorization failed: ${error.message}`);
+    updateSyncStatusUI('error', 'Bluetooth: Connection Refused', 'Check the PIN entered on Android and try pairing again.');
+    toast('Bluetooth authorization failed. Re-enter the desktop PIN on Android.', 'error');
     disconnectBleDevice();
   }
 }
@@ -190,8 +186,11 @@ function handleMobileScoresNotification(event) {
     addSyncLog(`Upload transfer complete. Processing data (${mobileRxBuffer.length} bytes)...`);
     
     try {
-      const scoresPayload = JSON.parse(mobileRxBuffer);
-      mergeUploadedScores(scoresPayload);
+      const payload = JSON.parse(mobileRxBuffer);
+      handleMobilePayload(payload).catch((error) => {
+        addSyncLog(`Mobile payload failed: ${error.message}`);
+        toast(error.message || 'The mobile payload was rejected.', 'error');
+      });
     } catch (parseErr) {
       addSyncLog(`Error: Failed to parse uploaded scores: ${parseErr.message}`);
       toast('Failed to parse uploaded score payload.', 'error');
@@ -203,8 +202,48 @@ function handleMobileScoresNotification(event) {
   }
 }
 
+async function handleMobilePayload(payload) {
+  if (payload?.kind === 'snapshot-ack') {
+    const revision = Number(payload.revision || 0);
+    if (payload.success) {
+      const isInitialSync = !hasCompletedInitialSnapshot;
+      clearTimeout(snapshotAckTimer);
+      snapshotAckTimer = null;
+      pendingSnapshotRevision = null;
+      hasCompletedInitialSnapshot = true;
+      const companionName = activeGattDevice?.name || 'Android companion';
+      updateSyncStatusUI('connected', 'Bluetooth: Connected & Synchronized', `Linked to ${companionName} · desktop revision ${revision}`);
+      addSyncLog(`Android imported desktop revision ${revision} successfully.`);
+      if (isInitialSync) toast('Phone connected and synchronized.', 'success');
+    } else {
+      clearTimeout(snapshotAckTimer);
+      snapshotAckTimer = null;
+      const reason = payload.error || 'The Android app could not import the desktop records.';
+      updateSyncStatusUI('error', 'Bluetooth: Sync Incomplete', reason);
+      addSyncLog(`Android rejected desktop revision ${revision}: ${reason}`);
+      toast(reason, 'error');
+    }
+    return;
+  }
+  if (payload?.kind === 'changes') {
+    try {
+      const result = await window.MobileSyncBridge.applyBluetoothEnvelope(payload);
+      await sendPayloadToMobile({ kind: 'change-result', success: true, accepted: result.accepted || 0 }, 'change result');
+    } catch (error) {
+      await sendPayloadToMobile({ kind: 'change-result', success: false, accepted: 0, error: error.message || 'Mobile entries were rejected.' }, 'change rejection');
+      throw error;
+    }
+    return;
+  }
+  if (payload?.kind === 'tool-command') {
+    window.MobileSyncBridge.handleToolCommand(payload);
+    return;
+  }
+  mergeUploadedScores(payload);
+}
+
 /**
- * Safely merges synced scores back into the desktop DB assignments.
+ * Safely merges legacy score-only uploads back into the desktop DB assignments.
  */
 function mergeUploadedScores(payload) {
   if (window.AdminTestMode?.blockExternalAction?.('Mobile score imports')) return;
@@ -250,93 +289,111 @@ function mergeUploadedScores(payload) {
   }
 }
 
-/**
- * Packs active class loads and sends them in chunks to the mobile app.
- */
-async function syncDataToMobile() {
-  if (window.AdminTestMode?.blockExternalAction?.('Mobile synchronization')) return;
-  if (!rxChar) {
-    toast('No active companion connection found.', 'warning');
-    return;
+function bytesToBase64(bytes) {
+  let binary = '';
+  const blockSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += blockSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + blockSize, bytes.length)));
   }
-  
-  addSyncLog('Packing class records for synchronization...');
-  
-  // Extract and send ONLY assignments belonging to active year
-  const activeYear = db.schoolYear || '2026-2027';
-  const filteredAssignments = db.assignments.filter(a => a.schoolYear === activeYear);
-  
-  const payload = {
-    teacherName: db.teacherName || '',
-    schoolName: db.schoolName || '',
-    schoolYear: activeYear,
-    assignments: filteredAssignments.map(a => ({
-      id: a.id,
-      gradeLevel: a.gradeLevel,
-      section: a.section,
-      subject: a.subject,
-      subjectGroup: a.subjectGroup || '',
-      policy: a.policy || '',
-      schoolYear: a.schoolYear || '',
-      learners: a.learners.map(l => ({
-        id: l.id,
-        name: l.name,
-        sex: l.sex,
-        lrn: l.lrn || '',
-        avatarPresetId: l.avatarPresetId || '',
-        avatarAssignment: l.avatarAssignment === 'manual' ? 'manual' : 'auto'
-      })),
-      assessments: a.assessments.map(ast => ({
-        id: ast.id,
-        term: ast.term,
-        component: ast.component,
-        title: ast.title,
-        maxScore: ast.maxScore,
-        date: ast.date || '',
-        mapePart: ast.mapePart
-      })),
-      scores: a.scores || {}
-    }))
-  };
-  
-  const dataStr = JSON.stringify(payload);
-  addSyncLog(`Payload prepared. Size: ${dataStr.length} characters.`);
-  
+  return btoa(binary);
+}
+
+async function buildBluetoothSnapshotPayload(snapshot, revision) {
+  const raw = JSON.stringify(snapshot);
+  if (typeof CompressionStream !== 'function') {
+    addSyncLog('Bluetooth compression is unavailable; sending the standard snapshot.');
+    return { kind: 'snapshot', revision, snapshot };
+  }
   try {
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(dataStr);
-    const mtu = 400; // Safe chunk size for write
-    
-    addSyncLog('Writing transfer payload initialization header...');
-    await rxChar.writeValue(encoder.encode(`START:${bytes.length}`));
-    
-    // Write chunks
-    let offset = 0;
-    let chunkIndex = 0;
-    const totalChunks = Math.ceil(bytes.length / mtu);
-    
-    while (offset < bytes.length) {
-      const size = Math.min(mtu, bytes.length - offset);
-      const chunk = bytes.slice(offset, offset + size);
-      
-      await rxChar.writeValue(chunk);
-      offset += size;
-      chunkIndex++;
-      
-      const pct = Math.round((offset / bytes.length) * 100);
-      addSyncLog(`Sending chunks: ${chunkIndex}/${totalChunks} (${pct}%)`);
-    }
-    
-    addSyncLog('Writing transfer payload completion header...');
-    await rxChar.writeValue(encoder.encode('END'));
-    
-    addSyncLog('Rosters and existing grades synced to phone successfully!');
-    toast('Rosters synced to phone successfully!', 'success');
-  } catch (err) {
-    addSyncLog(`Sync failed: ${err.message}`);
-    toast('Failed to transfer class files to mobile: ' + err.message, 'error');
+    const stream = new Blob([raw], { type: 'application/json' })
+      .stream()
+      .pipeThrough(new CompressionStream('gzip'));
+    const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
+    const encoded = bytesToBase64(compressed);
+    const standardSize = new TextEncoder().encode(JSON.stringify({ kind: 'snapshot', revision, snapshot })).length;
+    const compressedSize = new TextEncoder().encode(encoded).length;
+    if (compressedSize >= standardSize) return { kind: 'snapshot', revision, snapshot };
+    const saved = Math.max(0, Math.round((1 - compressedSize / standardSize) * 100));
+    addSyncLog(`Compressed desktop snapshot from ${standardSize} to ${compressedSize} bytes (${saved}% smaller).`);
+    return { kind: 'snapshot-gzip', revision, encoding: 'gzip-base64', data: encoded };
+  } catch (error) {
+    addSyncLog(`Snapshot compression was skipped: ${error.message}`);
+    return { kind: 'snapshot', revision, snapshot };
   }
 }
+
+/**
+ * Sends a framed JSON payload to the Android GATT server.
+ */
+async function sendPayloadToMobile(payload, label = 'payload') {
+  if (!rxChar || !isBleAuthorized) throw new Error('No authorized Bluetooth companion is connected.');
+  const task = bleWriteQueue.catch(() => {}).then(async () => {
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(JSON.stringify(payload));
+    addSyncLog(`Sending Bluetooth ${label}: ${bytes.length} bytes.`);
+    const write = (value) => typeof rxChar.writeValueWithResponse === 'function'
+      ? rxChar.writeValueWithResponse(value)
+      : rxChar.writeValue(value);
+    await write(encoder.encode(`START:${bytes.length}`));
+    let lastProgressBucket = -1;
+    for (let offset = 0; offset < bytes.length; offset += 160) {
+      const end = Math.min(offset + 160, bytes.length);
+      await write(bytes.slice(offset, end));
+      if (label === 'desktop snapshot') {
+        const bucket = Math.floor((end / bytes.length) * 10);
+        if (bucket > lastProgressBucket) {
+          lastProgressBucket = bucket;
+          addSyncLog(`Bluetooth snapshot transfer ${Math.min(bucket * 10, 100)}%...`);
+        }
+      }
+    }
+    await write(encoder.encode('END'));
+    addSyncLog(`Bluetooth ${label} sent successfully.`);
+  });
+  bleWriteQueue = task;
+  return task;
+}
+
+/**
+ * Publishes the authoritative desktop snapshot, then transfers it automatically.
+ */
+async function syncDataToMobile(options = {}) {
+  if (window.AdminTestMode?.blockExternalAction?.('Mobile synchronization')) return;
+  if (!rxChar || !isBleAuthorized) {
+    if (!options.silent) toast('No authorized Bluetooth companion is connected.', 'warning');
+    return;
+  }
+  try {
+    const status = await window.electronAPI.getCompanionWlanStatus();
+    const snapshot = window.MobileSyncBridge?.buildCompanionSnapshot?.();
+    if (!snapshot) throw new Error('The desktop snapshot is not ready.');
+    const revision = Number(status.revision || 0);
+    pendingSnapshotRevision = revision;
+    const companionName = activeGattDevice?.name || 'Android companion';
+    updateSyncStatusUI('scanning', 'Bluetooth: Authorized · Synchronizing', `Sending desktop revision ${revision} to ${companionName}...`);
+    const payload = await buildBluetoothSnapshotPayload(snapshot, revision);
+    await sendPayloadToMobile(payload, 'desktop snapshot');
+    clearTimeout(snapshotAckTimer);
+    snapshotAckTimer = setTimeout(() => {
+      if (pendingSnapshotRevision !== revision) return;
+      updateSyncStatusUI('error', 'Bluetooth: Sync Incomplete', 'The phone did not confirm the desktop records. Press Refresh Phone to retry.');
+      addSyncLog(`Android did not confirm desktop revision ${revision}; the Bluetooth link remains authorized.`);
+    }, 30000);
+    if (!options.silent) toast('Desktop records sent. Waiting for confirmation from the phone.', 'info');
+  } catch (error) {
+    addSyncLog(`Sync failed: ${error.message}`);
+    if (!options.silent) toast('Failed to transfer class records: ' + error.message, 'error');
+    throw error;
+  }
+}
+
+function scheduleBluetoothSnapshot() {
+  if (!rxChar || !isBleAuthorized) return;
+  clearTimeout(bluetoothPublishTimer);
+  bluetoothPublishTimer = setTimeout(() => syncDataToMobile({ silent: true }).catch(() => {}), 900);
+}
+
+window.scheduleBluetoothSnapshot = scheduleBluetoothSnapshot;
 
 /**
  * Disconnects the active BLE connection.
@@ -361,6 +418,12 @@ function onBleDisconnected() {
   rxChar = null;
   txChar = null;
   isSyncConnecting = false;
+  isBleAuthorized = false;
+  pendingSnapshotRevision = null;
+  clearTimeout(snapshotAckTimer);
+  snapshotAckTimer = null;
+  hasCompletedInitialSnapshot = false;
+  clearTimeout(bluetoothPublishTimer);
   
   showEl('syncPinPanel', false);
   showEl('btnSyncToPhone', false);
@@ -396,9 +459,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       
       // Filter out empty names or non-matching names
-      const companions = deviceList.filter(d => d.deviceName && d.deviceName.startsWith('EClass-'));
+      const companions = deviceList.filter(d => d.deviceName);
       if (companions.length === 0) {
-        list.innerHTML = '<li class="device-item text-muted">No compatible E-Class devices broadcasting nearby.</li>';
+        list.innerHTML = '<li class="device-item text-muted">No compatible E-Class companion service found nearby.</li>';
         return;
       }
       

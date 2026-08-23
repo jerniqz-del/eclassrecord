@@ -1,6 +1,6 @@
 {
   "name": "eclass-record",
-  "version": "1.9.5",
+  "version": "2.0.0",
   "description": "Local, teacher-owned class record for DepEd three-term and legacy grading workflows",
   "author": "E-Class Record App",
   "license": "MIT",
@@ -52,6 +52,7 @@
     "test:advisory-roster": "node scripts/test-advisory-roster.js",
     "test:grade-transfer": "node scripts/test-grade-transfer.js",
     "test:cloud-grade-pilot": "node scripts/test-cloud-grade-pilot.js",
+    "test:school-cloud": "node scripts/test-school-cloud-relay.js && node scripts/test-school-cloud-vault.js && node scripts/test-school-cloud-service.js && node scripts/test-school-cloud-client.js && node scripts/test-school-cloud-ui.js",
     "test:adviser-grade-permission": "node scripts/test-adviser-grade-permission.js",
     "test:grade-conflicts": "node scripts/test-grade-conflicts.js",
     "test:advisory-backup": "node scripts/test-advisory-backup.js",
@@ -89,6 +90,7 @@
     "minesjs": "1.0.2",
     "pdf-parse": "^2.4.5",
     "qrcode": "^1.5.4",
+    "selfsigned": "^5.5.0",
     "sortablejs": "1.15.7",
     "spin-wheel": "5.0.2",
     "sudoku-gen": "1.0.2",

@@ -8,6 +8,15 @@
 let quickGradeLearnerIndex = 0;
 let quickGradeAssessmentId = '';
 
+function quickGradeComponentName(component) {
+  const normalized = String(component || '').toUpperCase();
+  if (normalized === 'SA1' || normalized === 'ST1') return 'Summative Test 1';
+  if (normalized === 'SA2' || normalized === 'ST2') return 'Summative Test 2';
+  return typeof componentFullName === 'function'
+    ? componentFullName(component)
+    : componentLabel(component);
+}
+
 /**
  * Shows the Quick Grade Entry modal, initializing select list and active indices.
  */
@@ -62,7 +71,7 @@ function showQuickGradeModal() {
       const comp = item.component;
       const title = (item.title || '').trim();
       
-      const compName = typeof componentFullName === 'function' ? componentFullName(comp) : componentLabel(comp);
+      const compName = quickGradeComponentName(comp);
       
       const cleanTitle = title.toUpperCase();
       const cleanComp = comp.toUpperCase();
@@ -155,7 +164,7 @@ function updateQuickGradeAssessmentDetails() {
   const attachmentCount = assessment.attachments ? assessment.attachments.length : 0;
   
   const comp = assessment.component;
-  const compName = typeof componentFullName === 'function' ? componentFullName(comp) : componentLabel(comp);
+  const compName = quickGradeComponentName(comp);
   
   detailsEl.innerHTML = `
     <div class="quick-grade-assessment-card">

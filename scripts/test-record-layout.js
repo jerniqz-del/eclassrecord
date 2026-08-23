@@ -98,6 +98,10 @@ assert(source.includes('hpsLimit !== null && parseFloat(clean) > hpsLimit'),
   'the central score update must reject scores above a populated HPS');
 assert(quickGradeSource.includes('if (!saveActiveScore()) return;'),
   'Quick Grade must not navigate away from a rejected score');
+assert.match(
+  quickGradeSource,
+  /SA1.*ST1.*Summative Test 1[\s\S]*SA2.*ST2.*Summative Test 2/,
+  'Quick Grade must distinguish Summative Test 1 from Summative Test 2');
 
 assert.match(
   learnerGradesSource,

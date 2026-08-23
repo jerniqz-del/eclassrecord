@@ -14,11 +14,13 @@
   <link rel="stylesheet" href="css/design-tokens.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/school-cloud.css" />
   <link rel="stylesheet" href="css/advisory.css" />
   <link rel="stylesheet" href="css/record-table.css" />
   <link rel="stylesheet" href="css/score-history.css" />
   <link rel="stylesheet" href="css/animations.css" />
   <link rel="stylesheet" href="css/mobile-sync.css" />
+  <link rel="stylesheet" href="css/mobile-sync-companion.css" />
   <link rel="stylesheet" href="css/calendar.css" />
   <link rel="stylesheet" href="css/calendar-integration.css" />
 <link rel="stylesheet" href="css/calendar-roadmap.css" />
@@ -163,7 +165,7 @@
           </svg>
           <span class="nav-btn__label">Tools</span>
         </button>
-        <button id="navSync" class="nav-btn" onclick="setView('sync')" title="Mobile Sync" style="display: none;">
+        <button id="navSync" class="nav-btn" onclick="openMobileSyncView()" title="Mobile Sync">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
             <line x1="12" y1="18" x2="12.01" y2="18"></line>
@@ -356,9 +358,6 @@
               <div class="calendar-toolbar-actions">
                 <span id="calendarSyncOffline" class="calendar-local-mode" hidden>Local calendar active</span>
                 <span id="calendarSyncStatus" class="calendar-sync-status" style="display:none"></span>
-                <button id="btnCalendarSync" class="btn btn-ghost btn-sm" type="button" onclick="syncCalendarFromRemote()" hidden>
-                  Sync DepEd Calendar
-                </button>
               </div>
             </header>
             <div class="calendar-grid-container">
@@ -408,10 +407,45 @@
         <div class="card sync-panel">
           <div class="sync-panel__header">
             <h2 class="card-title card-title--inline">Mobile Companion Synchronization</h2>
-            <div class="text-muted text-xs">Link your Android phone to transfer rosters offline and upload entered scores.</div>
+            <div class="text-muted text-xs">The desktop is authoritative. Phones receive updates automatically and send reviewed drafts only when you approve them.</div>
           </div>
           
           <div class="sync-panel__body">
+            <section class="companion-transport-card companion-transport-card--wlan">
+              <div class="companion-transport-card__heading">
+                <div><span class="companion-transport-card__eyebrow">RECOMMENDED</span><h3>WLAN / Wi-Fi pairing</h3><p id="companionWlanDetails">Create a QR for phones connected to the same trusted Wi-Fi network.</p></div>
+                <span class="companion-state" id="companionWlanStatus">WLAN sync is off</span>
+              </div>
+              <div class="sync-actions-row">
+                <button class="btn btn-primary" id="btnStartCompanionWlan" onclick="startCompanionWlan()">Show WLAN QR</button>
+                <button class="btn btn-ghost" id="btnStopCompanionWlan" onclick="stopCompanionWlan()" style="display:none">Stop WLAN Pairing</button>
+              </div>
+              <div class="companion-pairing" id="companionPairingPanel" style="display:none">
+                <div class="companion-pairing__qr"><img id="companionPairingQr" alt="Android companion pairing QR code"></div>
+                <div class="companion-pairing__instructions">
+                  <strong>Scan this QR code from the Android app</strong>
+                  <ol><li>Connect the desktop and phone to the same trusted Wi-Fi.</li><li>On Android choose Connect to Desktop App → WLAN / Wi-Fi.</li><li>Scan this QR. Desktop updates will refresh automatically on the phone.</li></ol>
+                  <div class="companion-pin-display"><span>PIN required when sending mobile entries</span><strong id="companionPairingPin">------</strong></div>
+                  <small>Do not photograph or share this QR code. It contains the encrypted session key.</small>
+                </div>
+              </div>
+            </section>
+            <section class="companion-transport-card companion-transport-card--bluetooth">
+              <div class="companion-transport-card__heading"><div><span class="companion-transport-card__eyebrow">NEARBY</span><h3>Bluetooth pairing</h3><p>Generate the Bluetooth QR first. After Android scans it and begins advertising, scan for the phone.</p></div></div>
+            <div class="sync-actions-row">
+              <button class="btn btn-primary" id="btnStartCompanionBluetooth" onclick="startCompanionBluetoothPairing()">1. Start Bluetooth Pairing</button>
+              <button class="btn btn-ghost" id="btnStopCompanionBluetooth" onclick="stopCompanionWlan()" style="display:none">Stop Bluetooth Pairing</button>
+            </div>
+            <div class="companion-pairing" id="companionBluetoothPairingPanel" style="display:none">
+              <div class="companion-pairing__qr"><img id="companionBluetoothPairingQr" alt="Android companion Bluetooth pairing QR code"></div>
+              <div class="companion-pairing__instructions">
+                <strong>Scan this Bluetooth QR from the Android app</strong>
+                <ol><li>On Android choose Connect to Desktop App → Bluetooth and scan this QR.</li><li>Android will ask for the six-digit PIN shown below. Enter it on the phone.</li><li>Allow Nearby devices, then click Scan for Phone. Authorization is automatic.</li></ol>
+                <div class="companion-pin-display"><span>Enter this PIN on the Android app</span><strong id="companionBluetoothPairingPin">------</strong></div>
+                <small>Keep this desktop pairing session open while using the companion app.</small>
+              </div>
+            </div>
+
             <div class="sync-status-card" id="syncStatusCard">
               <div class="sync-status-indicator sync-status-indicator--inactive" id="syncIndicator"></div>
               <div class="sync-status-details">
@@ -421,11 +455,11 @@
             </div>
 
             <div class="sync-actions-row">
-              <button class="btn btn-primary" id="btnScanBle" onclick="startScanBleDevices()">
+              <button class="btn btn-primary" id="btnScanBle" onclick="startScanBleDevices()" style="display:none">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9-9a9 9 0 0 1-9 9m9-9V3m0 18v-3"></path>
                 </svg>
-                Scan for Phone
+                2. Scan for Phone
               </button>
               <button class="btn btn-ghost" id="btnDisconnectBle" onclick="disconnectBleDevice()" style="display:none;">
                 Disconnect
@@ -434,20 +468,8 @@
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M17 3a2.82 2.82 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                 </svg>
-                Sync Rosters to Phone
+                Refresh Phone Now
               </button>
-            </div>
-
-            <!-- PIN Code Entry (Displayed when verifying link) -->
-            <div class="sync-pin-panel" id="syncPinPanel" style="display:none;">
-              <div class="field">
-                <label class="field-label">Verification PIN Code</label>
-                <div class="text-xs text-muted u-mb-2">Type the 6-digit PIN code currently displayed on your phone's screen.</div>
-                <div class="pin-input-group">
-                  <input type="text" id="syncPinInput" class="field-input pin-field" maxlength="6" placeholder="000000" />
-                  <button class="btn btn-primary btn-sm" onclick="submitHandshakePin()">Verify & Authorize</button>
-                </div>
-              </div>
             </div>
 
             <!-- Discovered Devices Selector Modal Overlay/Popup -->
@@ -458,6 +480,8 @@
               </ul>
               <button class="btn btn-ghost btn-sm u-mt-2" onclick="cancelBleDiscovery()">Cancel Search</button>
             </div>
+
+            </section>
 
             <!-- Bluetooth Logs -->
             <div class="sync-logs-panel">
@@ -2023,7 +2047,7 @@
           console.log('Mock saveDatabase:', data);
           return true;
         },
-        getVersion: async () => '1.9.5-mock',
+        getVersion: async () => '2.0.0-mock',
         getPerformanceProfile: async () => ({
           totalMemoryBytes: 8 * 1024 ** 3,
           freeMemoryBytes: 4 * 1024 ** 3,
@@ -2087,6 +2111,8 @@
   <script src="js/dashboard-optimization-ui.js"></script>
   <script src="js/advisory-roster.js"></script>
   <script src="js/cloud-grade-pilot.js"></script>
+  <script src="js/school-cloud-client.js"></script>
+  <script src="js/school-cloud-ui.js"></script>
   <script src="js/advisory-grade-transfer.js"></script>
   <script src="js/advisory-grade-report.js"></script>
   <script src="js/advisory-reset.js"></script>
@@ -2095,6 +2121,7 @@
   <script src="js/learner-grades.js"></script>
   <script src="js/support-tracker.js"></script>
   <script src="js/mobile-sync.js"></script>
+  <script src="js/mobile-sync-companion.js"></script>
   <script src="js/integrity.js"></script>
   <script src="js/advisory-integrity.js"></script>
   <script src="js/calendar.js"></script>
@@ -2126,6 +2153,7 @@
   <script src="js/backup-recovery.js"></script>
   <script src="js/shared-folder-sync.js"></script>
   <script src="js/admin-testing.js"></script>
+  <script src="js/mobile-sync-navigation.js"></script>
   <script>PerformanceMode.init(); initFontSize(); initSidebarResizer(); if (typeof initSidebarAd === 'function') initSidebarAd(); initTeacherTools(); initPinRecovery(); initBackupRecovery(); initSharedFolderSync(); CloudGradePilot.init(); UsageAnalytics.init(); UpdateManager.init();</script>
 </body>
 </html>

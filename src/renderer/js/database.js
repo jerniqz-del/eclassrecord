@@ -404,6 +404,8 @@ async function saveDatabase() {
   if (saved && typeof window !== 'undefined') {
     window.UsageAnalytics?.scheduleProfileSummary?.(db);
     window.SharedFolderSync?.schedulePublish?.();
+    window.MobileSyncBridge?.schedulePublish?.();
+    window.scheduleBluetoothSnapshot?.();
   }
   return saved;
 }

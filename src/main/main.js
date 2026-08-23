@@ -5,7 +5,7 @@
  * file I/O and native dialogs, and initialises auto-updates.
  */
 
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -28,6 +28,9 @@ const zipArchive = require('./zip-archive');
 const recoveryQr = require('./recovery-qr');
 const adminSession = require('./admin-session');
 const { verifyAdminPassphrase } = require('./admin-auth');
+const { CompanionSyncService } = require('./companion-sync-service');
+const { SchoolCloudVault } = require('./school-cloud-vault');
+const { SchoolCloudService } = require('./school-cloud-service');
 
 let mainWindow = null;
 let isConfirmedExit = false;
@@ -35,6 +38,53 @@ let selectBluetoothDeviceCallback = null;
 const discoveredBackupHandles = new Map();
 const DISCOVERED_BACKUP_HANDLE_TTL_MS = 10 * 60 * 1000;
 const sharedSyncWatchers = new Map();
+const companionRendererRequests = new Map();
+const isSchoolCloudFeatureEnabled = process.argv.includes('--enable-school-cloud')
+  || process.env.ECLASS_ENABLE_SCHOOL_CLOUD === '1';
+let schoolCloudService = null;
+
+function requireSchoolCloudService() {
+  if (!isSchoolCloudFeatureEnabled) {
+    throw new Error('School Cloud is disabled in this build. Start the pilot with --enable-school-cloud.');
+  }
+  if (!schoolCloudService) {
+    const rootDir = path.join(app.getPath('userData'), 'school-cloud');
+    schoolCloudService = new SchoolCloudService({
+      vault: new SchoolCloudVault({ safeStorage, rootDir }),
+      allowLocalhost: process.argv.includes('--dev')
+    });
+  }
+  return schoolCloudService;
+}
+
+function requestCompanionRenderer(channel, payload, timeoutMs = 15000) {
+  if (!mainWindow?.webContents || mainWindow.webContents.isDestroyed()) {
+    return Promise.reject(new Error('The desktop workspace is not ready.'));
+  }
+  const requestId = crypto.randomUUID();
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      companionRendererRequests.delete(requestId);
+      reject(new Error('The desktop did not finish processing the mobile request.'));
+    }, timeoutMs);
+    companionRendererRequests.set(requestId, { resolve, reject, timer });
+    mainWindow.webContents.send(channel, { requestId, ...payload });
+  });
+}
+
+const companionSyncService = new CompanionSyncService({
+  onChanges: (payload) => requestCompanionRenderer('companion:apply-changes', payload, 30000),
+  onToolCommand: async (payload) => {
+    if (!mainWindow?.webContents || mainWindow.webContents.isDestroyed()) throw new Error('The desktop workspace is not ready.');
+    mainWindow.webContents.send('companion:tool-command', payload);
+    return { accepted: true };
+  },
+  onClientActivity: (activity) => {
+    if (mainWindow?.webContents && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send('companion:client-activity', activity);
+    }
+  }
+});
 
 function attachmentRoot() {
   return path.join(app.getPath('appData'), 'EClassRecordPortable', 'attachments');
@@ -1175,11 +1225,66 @@ ipcMain.handle('admin:logout', async () => {
 });
 
 ipcMain.handle('db:load', async () => {
-  return fileIO.loadDatabase();
+return fileIO.loadDatabase();
+});
+
+ipcMain.handle('school-cloud:feature-status', async () => ({
+  enabled: isSchoolCloudFeatureEnabled
+}));
+
+ipcMain.handle('school-cloud:configure', async (_event, schoolId, connection) => {
+  return requireSchoolCloudService().configure(schoolId, connection);
+});
+
+ipcMain.handle('school-cloud:activate', async (_event, schoolId, connection) => {
+  return requireSchoolCloudService().activate(schoolId, connection);
+});
+
+ipcMain.handle('school-cloud:bootstrap', async (_event, setup) => {
+  return requireSchoolCloudService().bootstrap(setup);
+});
+
+ipcMain.handle('school-cloud:status', async (_event, schoolId) => {
+  return requireSchoolCloudService().status(schoolId);
+});
+
+ipcMain.handle('school-cloud:connections', async () => {
+  return requireSchoolCloudService().connections();
+});
+
+ipcMain.handle('school-cloud:disconnect', async (_event, schoolId) => {
+  return requireSchoolCloudService().disconnect(schoolId);
+});
+
+ipcMain.handle('school-cloud:request', async (_event, schoolId, request) => {
+  return requireSchoolCloudService().request(schoolId, request);
+});
+
+ipcMain.handle('school-cloud:backup-profile', async (_event, schoolId, database) => {
+  return requireSchoolCloudService().uploadProfileBackup(schoolId, database);
+});
+
+ipcMain.handle('school-cloud:restore-profile', async (_event, schoolId) => {
+  return requireSchoolCloudService().downloadProfileBackup(schoolId);
 });
 
 ipcMain.handle('db:save', async (_event, data) => {
   return fileIO.saveDatabase(data);
+});
+
+ipcMain.handle('companion:wlan-start', async () => companionSyncService.start());
+ipcMain.handle('companion:bluetooth-start', async () => companionSyncService.startBluetooth());
+ipcMain.handle('companion:wlan-stop', async () => companionSyncService.stop());
+ipcMain.handle('companion:wlan-status', async () => companionSyncService.publicStatus());
+ipcMain.handle('companion:publish-snapshot', async (_event, snapshot) => companionSyncService.publish(snapshot));
+ipcMain.on('companion:changes-result', (_event, requestId, result) => {
+  const key = String(requestId || '');
+  const pending = companionRendererRequests.get(key);
+  if (!pending) return;
+  clearTimeout(pending.timer);
+  companionRendererRequests.delete(key);
+  if (result?.success) pending.resolve(result);
+  else pending.reject(new Error(result?.error || 'Mobile changes were rejected.'));
 });
 
 ipcMain.handle('dialog:export-json', async (_event, jsonString, defaultFileName) => {
@@ -1852,6 +1957,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   isConfirmedExit = true;
+  companionSyncService.stop().catch(() => {});
 });
 
 app.on('window-all-closed', () => {

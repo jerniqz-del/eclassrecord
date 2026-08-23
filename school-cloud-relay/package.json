@@ -1,0 +1,9 @@
+{
+  "name": "eclassrecord-school-cloud-relay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node ../scripts/test-school-cloud-relay.js"
+  }
+}

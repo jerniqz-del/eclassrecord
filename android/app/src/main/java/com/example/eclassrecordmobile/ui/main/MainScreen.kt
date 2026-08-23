@@ -150,7 +150,7 @@ fun MainScreen(
                             Icons.Default.Info,
                             contentDescription = "Empty",
                             modifier = Modifier.size(64.dp),
-                            color = MaterialTheme.colorScheme.outline
+                            tint = MaterialTheme.colorScheme.outline
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(

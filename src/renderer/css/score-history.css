@@ -19,6 +19,7 @@
 }
 .c-score:hover .score-history-trigger,
 .score-history-trigger:focus-visible { opacity: 1; }
+.score-history-modal { z-index: calc(var(--z-modal, 50) + 5); }
 .score-history-dialog { width: min(620px, calc(100vw - 32px)); max-height: min(720px, calc(100vh - 40px)); }
 .score-history-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .score-history-subtitle { margin-top: 3px; color: var(--text-secondary); font-size: 13px; }

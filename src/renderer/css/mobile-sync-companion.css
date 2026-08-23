@@ -1,0 +1,110 @@
+.companion-transport-card {
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 16px;
+  background: #fff;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.companion-transport-card--wlan {
+  border-color: #67e8f9;
+  background: linear-gradient(135deg, #ecfeff 0%, #fff 48%);
+}
+
+.companion-transport-card__heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.companion-transport-card__heading h3 {
+  color: #0f172a;
+  margin: 2px 0 4px;
+}
+
+.companion-transport-card__heading p {
+  color: #64748b;
+  margin: 0;
+  font-size: 13px;
+}
+
+.companion-transport-card__eyebrow {
+  color: #0891b2;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.companion-state {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 7px 11px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.companion-pairing {
+  display: grid;
+  grid-template-columns: minmax(210px, 300px) 1fr;
+  gap: 24px;
+  align-items: center;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #a5f3fc;
+}
+
+.companion-pairing__qr {
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+  background: #fff;
+  padding: 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .08);
+}
+
+.companion-pairing__qr img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.companion-pairing__instructions ol {
+  margin: 12px 0;
+  padding-left: 20px;
+  color: #475569;
+  line-height: 1.65;
+}
+
+.companion-pairing__instructions small {
+  color: #b45309;
+}
+
+.companion-pin-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  border-radius: 12px;
+  background: #111827;
+  color: #fff;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.companion-pin-display span {
+  font-size: 12px;
+}
+
+.companion-pin-display strong {
+  color: #67e8f9;
+  font-size: 22px;
+  letter-spacing: .18em;
+}
+
+@media (max-width: 780px) {
+  .companion-pairing { grid-template-columns: 1fr; }
+  .companion-pairing__qr { max-width: 280px; }
+}

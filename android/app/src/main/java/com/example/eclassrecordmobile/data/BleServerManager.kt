@@ -11,6 +11,8 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.nio.charset.StandardCharsets
 import java.util.*
 import kotlin.random.Random
@@ -301,16 +303,7 @@ object BleServerManager {
         }
 
         syncLog = "Uploading scores..."
-        val payloadStr = kotlinx.serialization.json.Json.encodeToString(
-            kotlinx.serialization.builtins.MapSerializer(
-                kotlinx.serialization.builtins.serializer<String>(),
-                kotlinx.serialization.builtins.MapSerializer(
-                    kotlinx.serialization.builtins.serializer<String>(),
-                    kotlinx.serialization.builtins.serializer<String>()
-                )
-            ),
-            unsynced
-        )
+        val payloadStr = Json.encodeToString(unsynced)
         
         // Chunk and send notifications
         sendDataToDesktop(payloadStr)

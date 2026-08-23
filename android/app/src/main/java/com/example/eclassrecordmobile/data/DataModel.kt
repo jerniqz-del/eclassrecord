@@ -29,7 +29,9 @@ data class Learner(
     val id: String,
     val name: String,
     val sex: String,
-    val lrn: String = ""
+    val lrn: String = "",
+    val avatarPresetId: String = "",
+    val avatarAssignment: String = "automatic"
 )
 
 @Serializable

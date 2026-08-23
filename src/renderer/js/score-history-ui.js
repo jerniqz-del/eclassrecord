@@ -57,9 +57,6 @@
   function openScoreHistory(learnerId, assessmentId) {
     const assignment = typeof currentAssignment === 'function' ? currentAssignment() : null;
     if (!assignment || !globalThis.ScoreHistory) return;
-    const scoreKey = `${learnerId}|${assessmentId}`;
-    if (!ScoreHistory.hasScore(assignment.scores?.[scoreKey])) return;
-
     const learner = (assignment.learners || []).find(item => String(item.id) === String(learnerId));
     const assessment = (assignment.assessments || []).find(item => String(item.id) === String(assessmentId));
     const entries = ScoreHistory.forCell(assignment, learnerId, assessmentId);

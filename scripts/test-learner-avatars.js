@@ -96,7 +96,8 @@ const databaseSource = read('src/renderer/js/database.js');
 const learnerSource = read('src/renderer/js/learners.js');
 const componentStyles = read('src/renderer/css/components.css');
 const transferSource = read('src/renderer/js/import-export.js');
-const mobileSyncSource = read('src/renderer/js/mobile-sync.js');
+const mobileSyncSource = read('src/renderer/js/mobile-sync.js')
+  + read('src/renderer/js/mobile-sync-companion.js');
 const recordSource = read('src/renderer/js/record-table.js');
 const toolsSource = read('src/renderer/js/teacher-tools.js');
 const mainSource = read('src/main/main.js');

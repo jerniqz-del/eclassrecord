@@ -2,6 +2,7 @@ package com.example.eclassrecordmobile.data
 
 import android.content.Context
 import android.util.Log
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -16,6 +17,8 @@ object DatabaseHelper {
     }
 
     private var currentPayload: SyncPayload? = null
+    private var storageBlocked = false
+    private var storageError: String? = null
     
     // Key: assignmentId, Value: Map of (learnerId|assessmentId -> score)
     private var unsyncedScores: MutableMap<String, MutableMap<String, String>> = mutableMapOf()
@@ -44,50 +47,69 @@ object DatabaseHelper {
         return unsyncedScores.values.any { it.isNotEmpty() }
     }
 
+    fun getStorageError(): String? = storageError
+
+    private fun recordStorageError(message: String, error: Exception) {
+        storageBlocked = true
+        storageError = message
+        Log.e(TAG, message, error)
+    }
+
     @Synchronized
     fun loadData(context: Context) {
+        storageBlocked = false
+        storageError = null
         try {
             val dbFile = getDbFile(context)
             if (dbFile.exists()) {
-                val content = dbFile.readText()
-                currentPayload = json.decodeFromString(SyncPayload.serializer(), content)
+                val stored = SecureFileStore.readText(dbFile)
+                currentPayload = json.decodeFromString(SyncPayload.serializer(), stored.text)
+                if (stored.wasPlaintext) SecureFileStore.writeText(dbFile, stored.text)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading database", e)
+            recordStorageError("Encrypted local records could not be opened. Do not clear app data.", e)
         }
 
         try {
             val unsyncedFile = getUnsyncedFile(context)
             if (unsyncedFile.exists()) {
-                val content = unsyncedFile.readText()
-                unsyncedScores = json.decodeFromString<MutableMap<String, MutableMap<String, String>>>(content)
+                val stored = SecureFileStore.readText(unsyncedFile)
+                unsyncedScores = json.decodeFromString<MutableMap<String, MutableMap<String, String>>>(stored.text)
+                if (stored.wasPlaintext) SecureFileStore.writeText(unsyncedFile, stored.text)
             } else {
                 unsyncedScores = mutableMapOf()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading unsynced scores", e)
-            unsyncedScores = mutableMapOf()
+            recordStorageError("Pending mobile entries could not be decrypted. They were not overwritten.", e)
         }
     }
 
     @Synchronized
     fun savePayload(context: Context, payload: SyncPayload) {
+        if (storageBlocked) {
+            Log.e(TAG, "Local encrypted storage is blocked; refusing to overwrite protected records.")
+            return
+        }
         try {
             currentPayload = payload
             val dbFile = getDbFile(context)
-            dbFile.writeText(json.encodeToString(SyncPayload.serializer(), payload))
+            SecureFileStore.writeText(dbFile, json.encodeToString(SyncPayload.serializer(), payload))
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving database", e)
+            recordStorageError("Error saving encrypted local records.", e)
         }
     }
 
     @Synchronized
     fun saveUnsyncedScores(context: Context) {
+        if (storageBlocked) {
+            Log.e(TAG, "Local encrypted storage is blocked; refusing to overwrite pending entries.")
+            return
+        }
         try {
             val unsyncedFile = getUnsyncedFile(context)
-            unsyncedFile.writeText(json.encodeToString(unsyncedScores))
+            SecureFileStore.writeText(unsyncedFile, json.encodeToString(unsyncedScores))
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving unsynced scores", e)
+            recordStorageError("Error saving encrypted pending mobile entries.", e)
         }
     }
 

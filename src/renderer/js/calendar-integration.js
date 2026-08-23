@@ -12,12 +12,9 @@
   }
 
   function configureCalendarSync() {
-    const button = document.getElementById('btnCalendarSync');
     const offline = document.getElementById('calendarSyncOffline');
-    const hasRemoteBridge = typeof globalScope.electronAPI?.syncCalendarRemote === 'function';
-    if (button) button.hidden = !hasRemoteBridge;
     if (offline) {
-      offline.hidden = hasRemoteBridge;
+      offline.hidden = false;
       offline.textContent = 'Local calendar active';
     }
   }

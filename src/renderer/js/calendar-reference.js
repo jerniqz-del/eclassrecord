@@ -133,7 +133,7 @@
   }
 
   function syncNow() {
-    if (typeof globalScope.syncCalendarFromRemote === 'function' && !document.getElementById('btnCalendarSync')?.hidden) {
+    if (typeof globalScope.syncCalendarFromRemote === 'function') {
       globalScope.syncCalendarFromRemote();
       return;
     }
