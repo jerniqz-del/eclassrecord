@@ -10,7 +10,7 @@ const { CompanionSyncService } = require('../src/main/companion-sync-service');
   assert.strictEqual(status.port, 0);
   assert.strictEqual(status.pairingPayload.split('|')[2], 'bluetooth');
   assert.ok(/^\d{6}$/.test(status.pin));
-  assert.strictEqual(status.pairingPayload.includes(status.pin), false, 'PIN must be entered separately on Android, not embedded in the QR.');
+  assert.strictEqual(status.pairingPayload.split('|').at(-1), status.pin, 'QR must carry the one-time PIN for automatic Android pairing.');
   assert.strictEqual(service.server, null, 'Bluetooth pairing must not open the WLAN HTTPS listener.');
 
   const published = service.publish({ format: 'eclass-companion-snapshot', formatVersion: 3 });

@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import com.example.eclassrecordmobile.data.BleServerManager
 import com.example.eclassrecordmobile.data.DatabaseHelper
 import com.example.eclassrecordmobile.theme.EClassRecordMobileTheme
+import com.example.eclassrecordmobile.ui.main.MobileUiPreferences
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,10 +20,20 @@ class MainActivity : ComponentActivity() {
     // Initialize databases and Bluetooth manager
     DatabaseHelper.init(applicationContext)
     BleServerManager.init(applicationContext)
+    if (BleServerManager.isPaired && MobileUiPreferences.autoReconnect(applicationContext)) {
+      runCatching { BleServerManager.ensureAdvertising(applicationContext) }
+    }
 
     enableEdgeToEdge()
     setContent {
       EClassRecordMobileTheme { Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { MainNavigation() } }
+    }
+  }
+
+  override fun onStart() {
+    super.onStart()
+    if (BleServerManager.isPaired && MobileUiPreferences.autoReconnect(applicationContext)) {
+      runCatching { BleServerManager.ensureAdvertising(applicationContext) }
     }
   }
 }

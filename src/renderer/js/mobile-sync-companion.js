@@ -28,6 +28,48 @@
     });
   }
 
+  function companionCalendar(database, schoolYear) {
+    const api = globalScope.OfficialSchoolCalendar;
+    const stored = Array.isArray(database.calendarEvents) ? database.calendarEvents : [];
+    const events = api?.SOURCE_PACK?.schoolYear === schoolYear
+      ? api.mergeOfficialEvents(stored)
+      : stored.slice();
+    const preferences = globalScope.TeacherToolsCore?.normalize?.(database)?.calendarPreferences;
+    const filters = preferences?.filters || { official: true, local: true };
+    const seen = new Set();
+
+    return events
+      .filter((event) => {
+        if (!event || event.virtual || event.localOnly || event.syncByDefault === false) return false;
+        if (event.schoolYear && String(event.schoolYear) !== schoolYear) return false;
+        const official = Boolean(event.immutable || event.sourceId || String(event.id || '').startsWith('official-'));
+        if (official && filters.official === false) return false;
+        if (!official && filters.local === false) return false;
+        return true;
+      })
+      .map((event, index) => {
+        const date = String(event.startDate || event.date || '');
+        const endDate = String(event.endDate || date);
+        return {
+          id: String(event.id || `calendar-${index}-${date}`),
+          title: String(event.title || 'School event'),
+          date,
+          endDate,
+          type: String(event.type || event.category || 'local'),
+          details: String(event.details || event.description || ''),
+          classId: event.classId ? String(event.classId) : null
+        };
+      })
+      .filter((event) => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(event.date)) return false;
+        const key = `${event.id}|${event.date}|${event.endDate}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((left, right) => left.date.localeCompare(right.date) || left.title.localeCompare(right.title));
+  }
+
   function buildCompanionSnapshot() {
     const database = activeProfile();
     if (!database) throw new Error('Open an E-Class Record profile first.');
@@ -70,9 +112,40 @@
 
     return {
       format: 'eclass-companion-snapshot',
-      formatVersion: 3,
+      formatVersion: 4,
       exportedAt: new Date().toISOString(),
       sourceAppVersion: String(document.title.match(/v([\d.]+)/)?.[1] || 'desktop'),
+      teacherName: String(database.teacherName || 'Teacher'),
+      schoolName: String(database.schoolName || 'E-Class Record School'),
+      schoolYear,
+      assignments: assignments.map((assignment) => ({
+        id: assignment.id,
+        gradeLevel: String(assignment.gradeLevel || ''),
+        section: String(assignment.section || ''),
+        subject: String(assignment.subject || ''),
+        subjectGroup: String(assignment.subjectGroup || ''),
+        policy: String(assignment.policy || ''),
+        schoolYear: String(assignment.schoolYear || schoolYear),
+        learners: (assignment.learners || []).map((learner) => ({
+          id: learner.id,
+          name: learnerName(learner),
+          sex: String(learner.sex || ''),
+          lrn: String(learner.lrn || ''),
+          avatarPresetId: String(learner.avatarPresetId || ''),
+          avatarAssignment: String(learner.avatarAssignment || 'automatic')
+        })),
+        assessments: (assignment.assessments || []).map((assessment) => ({
+          id: assessment.id,
+          term: String(assessment.term || '1'),
+          component: String(assessment.component || ''),
+          title: String(assessment.title || assessment.component || 'Assessment'),
+          maxScore: String(assessment.maxScore || ''),
+          date: String(assessment.date || ''),
+          mapePart: assessment.mapePart ? String(assessment.mapePart) : null
+        })),
+        scores: Object.fromEntries(Object.entries(assignment.scores || {}).map(([key, value]) => [key, String(value)])),
+        attendance: attendance.filter((session) => session.classId === assignment.id)
+      })),
       school: {
         name: String(database.schoolName || 'E-Class Record School'),
         schoolYear,
@@ -86,7 +159,7 @@
         learnerCount: (assignment.learners || []).length
       })),
       learners,
-      calendar: [],
+      calendar: companionCalendar(database, schoolYear),
       summaries: assignments.map((assignment) => ({
         classId: assignment.id,
         term: String(database.currentTerm || '1'),
@@ -96,8 +169,33 @@
         classAverage: null
       })),
       dashboard: { currentTerm: String(database.currentTerm || '1'), attention: [] },
-      grades: [],
-      checklist: [],
+      grades: assignments.flatMap((assignment) => (assignment.learners || []).flatMap((learner) =>
+        ['1', '2', '3'].flatMap((term) => {
+          if (typeof globalScope.computeTerm !== 'function' && typeof computeTerm !== 'function') return [];
+          const result = (globalScope.computeTerm || computeTerm)(assignment, learner.id, term);
+          if (!result?.hasData) return [];
+          return [{
+            learnerId: learner.id,
+            classId: assignment.id,
+            term,
+            initialGrade: Number(result.initialGrade || 0),
+            quarterlyGrade: result.termGrade == null ? null : String(result.termGrade),
+            remark: typeof descriptor === 'function' ? String(descriptor(result.termGrade) || '') : ''
+          }];
+        }))),
+      checklist: (database.teacherTools?.performanceChecklists || []).flatMap((checklist) => {
+        const classId = String(checklist.assignmentId || checklist.classId || '');
+        const assignment = assignments.find((item) => item.id === classId);
+        return (checklist.criteria || []).map((criterion) => ({
+          id: `${checklist.id}-${criterion.id}`,
+          classId,
+          title: String(criterion.label || criterion.title || 'Checklist item'),
+          category: String(checklist.title || checklist.activityTitle || 'Performance Checklist'),
+          completedLearners: 0,
+          totalLearners: (assignment?.learners || []).length,
+          completed: false
+        }));
+      }),
       assessments,
       scores,
       attendance
@@ -294,6 +392,9 @@
 
   async function restoreStatus() {
     wlanStatus = await globalScope.electronAPI.getCompanionWlanStatus();
+    if (!wlanStatus.running) {
+      wlanStatus = await globalScope.electronAPI.startCompanionBluetooth();
+    }
     if (wlanStatus.running) {
       const image = await globalScope.electronAPI.generateCompanionQr(wlanStatus.pairingPayload);
       const bluetooth = wlanStatus.transport === 'bluetooth';
@@ -303,26 +404,15 @@
       if (pin) pin.textContent = wlanStatus.pin;
       if (bluetooth) document.getElementById('btnScanBle')?.style.setProperty('display', '');
       await publish();
+      if (bluetooth) {
+        setTimeout(() => globalScope.attemptKnownBluetoothReconnect?.(), 600);
+      }
     }
     renderWlanStatus();
   }
 
-  let bluetoothPinFailures = 0;
-  let bluetoothPinLockedUntil = 0;
-
-  async function applyBluetoothEnvelope(payload) {
-    const now = Date.now();
-    if (now < bluetoothPinLockedUntil) throw new Error('Too many incorrect PIN attempts. Wait 30 seconds and try again.');
-    const latestStatus = await globalScope.electronAPI.getCompanionWlanStatus();
-    if (!latestStatus.running || String(payload.pin || '') !== String(latestStatus.pin || '')) {
-      bluetoothPinFailures += 1;
-      if (bluetoothPinFailures >= 5) {
-        bluetoothPinFailures = 0;
-        bluetoothPinLockedUntil = now + 30000;
-      }
-      throw new Error('The desktop PIN is incorrect or the pairing session has ended.');
-    }
-    bluetoothPinFailures = 0;
+  async function applyBluetoothEnvelope(payload, transportAuthorized = false) {
+    if (!transportAuthorized) throw new Error('The Bluetooth link is not authorized.');
     return applyChanges(payload);
   }
 

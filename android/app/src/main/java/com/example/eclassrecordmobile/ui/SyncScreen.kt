@@ -6,9 +6,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -24,10 +27,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.eclassrecordmobile.data.BleServerManager
 import com.example.eclassrecordmobile.data.DatabaseHelper
+import com.example.eclassrecordmobile.data.BluetoothPairingQrParser
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +47,17 @@ fun SyncScreen(
     var hasPermissions by remember {
         mutableStateOf(checkBlePermissions(context))
     }
+    var desktopPin by rememberSaveable { mutableStateOf("") }
+    var pairingError by rememberSaveable { mutableStateOf("") }
+    var isQrScanning by rememberSaveable { mutableStateOf(false) }
+    val qrScanner = remember(context) {
+        val options = GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .enableAutoZoom()
+            .build()
+        GmsBarcodeScanning.getClient(context, options)
+    }
+
 
     val permissionsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -54,10 +73,18 @@ fun SyncScreen(
     val syncLog = BleServerManager.syncLog
     val hasUnsynced = DatabaseHelper.hasUnsyncedChanges()
 
+    val isPaired = BleServerManager.isPaired
+    val pairedDesktopName = BleServerManager.pairedDesktopName
+    val linkQuality = BleServerManager.linkQuality
+    val roundTripMs = BleServerManager.roundTripMs
+    val connectionProgress = BleServerManager.connectionProgress
+    val connectionProgressLabel = BleServerManager.connectionProgressLabel
+    val animatedProgress by animateFloatAsState(connectionProgress / 100f, label = "connection-progress")
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Bluetooth Synchronization", fontWeight = FontWeight.Bold) },
+                title = { Text("Desktop Bluetooth Link", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -124,6 +151,26 @@ fun SyncScreen(
                             fontWeight = FontWeight.ExtraBold,
                             color = if (isAuthorized) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Text(
+                            text = "Connection strength: $linkQuality" +
+                                (roundTripMs?.let { " - ${it} ms" } ?: ""),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        if (connectionProgress > 0) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(connectionProgressLabel, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text("$connectionProgress%", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            LinearProgressIndicator(
+                                progress = { animatedProgress },
+                                modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(8.dp)),
+                            )
+                        }
+                        if (isPaired) Text("Paired with $pairedDesktopName", fontSize = 12.sp)
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
@@ -135,7 +182,7 @@ fun SyncScreen(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             
-                            // Display random PIN
+                            if (!isPaired) {
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
@@ -147,9 +194,9 @@ fun SyncScreen(
                                     .padding(vertical = 12.dp, horizontal = 24.dp)
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("PAIRS PIN CODE", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text("DESKTOP PIN", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                     Text(
-                                        text = pinCode,
+                                        text = pinCode.ifBlank { "------" },
                                         color = Color.White,
                                         fontSize = 32.sp,
                                         fontWeight = FontWeight.Black,
@@ -159,10 +206,11 @@ fun SyncScreen(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                "Enter this code on your computer screen to authorize link.",
+                                "This must match the six-digit PIN shown by the desktop app.",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
+                            }
                         } else {
                             Text("Broadcasting is currently offline.", color = MaterialTheme.colorScheme.outline)
                         }
@@ -171,13 +219,72 @@ fun SyncScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                if (!isPaired && !isAdvertising) {
+                    Button(
+                        onClick = {
+                            pairingError = ""
+                            isQrScanning = true
+                            qrScanner.startScan()
+                                .addOnSuccessListener { barcode ->
+                                    isQrScanning = false
+                                    runCatching {
+                                        BluetoothPairingQrParser.parse(barcode.rawValue.orEmpty())
+                                    }.onSuccess { pairing ->
+                                        desktopPin = pairing.pin
+                                        BleServerManager.prepareFirstPairing(pairing.pin)
+                                        BleServerManager.startAdvertising(context)
+                                    }.onFailure { error ->
+                                        pairingError = error.message ?: "The QR code could not be used."
+                                    }
+                                }
+                                .addOnCanceledListener { isQrScanning = false }
+                                .addOnFailureListener { error ->
+                                    isQrScanning = false
+                                    pairingError = error.message ?: "QR scanner unavailable. Enter the PIN manually."
+                                }
+                        },
+                        enabled = !isQrScanning,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                    ) {
+                        Text(if (isQrScanning) "Opening Scanner..." else "Scan Desktop QR")
+                    }
+                    Text(
+                        "Recommended for first pairing. You can enter the PIN manually below.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = desktopPin,
+                        onValueChange = {
+                            desktopPin = it.filter(Char::isDigit).take(6)
+                            pairingError = ""
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("PIN shown on desktop") },
+                        supportingText = {
+                            Text(pairingError.ifBlank { "Manual fallback. Future connections reconnect automatically." })
+                        },
+                        isError = pairingError.isNotBlank(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
                 // Toggle advertising button
                 Button(
                     onClick = {
                         if (isAdvertising) {
                             BleServerManager.stopAdvertising()
                         } else {
-                            BleServerManager.startAdvertising(context)
+                            if (!isPaired && desktopPin.length != 6) {
+                                pairingError = "Enter the complete six-digit desktop PIN."
+                            } else {
+                                if (!isPaired) BleServerManager.prepareFirstPairing(desktopPin)
+                                BleServerManager.startAdvertising(context)
+                            }
                         }
                     },
                     modifier = Modifier
@@ -197,9 +304,23 @@ fun SyncScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                if (isPaired && !isAuthorized) {
+                    TextButton(
+                        onClick = {
+                            BleServerManager.stopAdvertising()
+                            BleServerManager.forgetDesktop(context)
+                            desktopPin = ""
+                        },
+                    ) {
+                        Text("Forget paired desktop", color = MaterialTheme.colorScheme.error)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
                 // Upload scores button (Visible if authorized and has unsynced changes)
                 Button(
                     onClick = {
+
                         BleServerManager.syncScoresToDesktop(context)
                     },
                     enabled = isAuthorized && hasUnsynced,

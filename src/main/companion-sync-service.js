@@ -68,7 +68,8 @@ function pairingPayload(status) {
     status.port,
     status.sessionId,
     status.secret,
-    status.certificateFingerprint
+    status.certificateFingerprint,
+    status.pin
   ].join('|');
 }
 

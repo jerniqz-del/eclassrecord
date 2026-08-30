@@ -50,6 +50,7 @@ function requestJson(port, method, path, headers, body = '') {
     assert(/^\d{6}$/.test(status.pin));
     assert(/^[a-f0-9]{64}$/.test(status.certificateFingerprint));
     assert(status.pairingPayload.startsWith('ECLASS-COMPANION|1|wlan|'));
+    assert.strictEqual(status.pairingPayload.split('|').at(-1), status.pin);
     service.publish({ format: 'eclass-companion-snapshot', formatVersion: 3, marker: 'desktop-truth' });
 
     const snapshotPath = `/v1/snapshot?session=${encodeURIComponent(status.sessionId)}&revision=0`;

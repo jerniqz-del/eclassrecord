@@ -9,6 +9,9 @@ const BLE_SERVICE_UUID = 'e3c1a8e0-0251-412e-a4b5-559d871fbdf2';
 const HANDSHAKE_CHAR_UUID = 'e3c1a8e3-0251-412e-a4b5-559d871fbdf2';
 const RX_CHAR_UUID = 'e3c1a8e1-0251-412e-a4b5-559d871fbdf2';
 const TX_CHAR_UUID = 'e3c1a8e2-0251-412e-a4b5-559d871fbdf2';
+const BLE_PAIRING_STORAGE_KEY = 'eclass.bluetooth.pairing.v1';
+const BLE_DESKTOP_ID_KEY = 'eclass.bluetooth.desktop-id.v1';
+
 
 let activeGattDevice = null;
 let activeGattServer = null;
@@ -24,12 +27,42 @@ let bleWriteQueue = Promise.resolve();
 let syncLogs = [];
 let pendingSnapshotRevision = null;
 let snapshotAckTimer = null;
+let linkQualityTimer = null;
+let reconnectTimer = null;
+let reconnectAttempts = 0;
 let hasCompletedInitialSnapshot = false;
 
 // Reassembly buffer (Mobile -> Desktop)
 let mobileRxBuffer = '';
 let mobileExpectedLen = 0;
 let mobileIsReceiving = false;
+
+let mobileIsBase64 = false;
+function bluetoothDesktopId() {
+  let value = localStorage.getItem(BLE_DESKTOP_ID_KEY);
+  if (!value) {
+    value = crypto.randomUUID();
+    localStorage.setItem(BLE_DESKTOP_ID_KEY, value);
+  }
+  return value;
+}
+
+function storedBluetoothPairing() {
+  try {
+    const value = JSON.parse(localStorage.getItem(BLE_PAIRING_STORAGE_KEY) || 'null');
+    return value?.deviceId && value?.reconnectToken ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveBluetoothPairing(value) {
+  localStorage.setItem(BLE_PAIRING_STORAGE_KEY, JSON.stringify({
+    ...value,
+    desktopId: bluetoothDesktopId(),
+    pairedAt: new Date().toISOString()
+  }));
+}
 
 function addSyncLog(message) {
   const timestamp = new Date().toLocaleTimeString();
@@ -60,6 +93,79 @@ function updateSyncStatusUI(status, label, details) {
   
   if (labelEl) labelEl.textContent = label;
   if (subEl) subEl.textContent = details;
+}
+
+function bluetoothQualityLabel(roundTripMs) {
+  if (roundTripMs <= 100) return 'Excellent';
+  if (roundTripMs <= 250) return 'Good';
+  if (roundTripMs <= 600) return 'Fair';
+  return 'Weak';
+}
+
+async function measureBluetoothLink() {
+  if (!handshakeChar || !isBleAuthorized) return;
+  const started = Date.now();
+  await handshakeChar.writeValue(new TextEncoder().encode(JSON.stringify({ kind: 'ping', sentAt: started })));
+  const response = JSON.parse(new TextDecoder().decode(await handshakeChar.readValue()));
+  if (response.status !== 'pong') throw new Error('No heartbeat response');
+  const roundTripMs = Date.now() - started;
+  const label = bluetoothQualityLabel(roundTripMs);
+  const quality = document.getElementById('syncLinkQuality');
+  if (quality) quality.textContent = `${label} - ${roundTripMs} ms`;
+  await handshakeChar.writeValue(new TextEncoder().encode(JSON.stringify({ kind: 'quality', label, roundTripMs })));
+}
+
+function startBluetoothLinkMonitor() {
+  clearInterval(linkQualityTimer);
+  const run = () => measureBluetoothLink().catch(() => {
+    const quality = document.getElementById('syncLinkQuality');
+    if (quality) quality.textContent = 'Weak - heartbeat delayed';
+  });
+  run();
+  linkQualityTimer = setInterval(run, 5000);
+}
+
+function scheduleBluetoothReconnect() {
+  clearTimeout(reconnectTimer);
+  if (!storedBluetoothPairing()) return;
+  reconnectAttempts += 1;
+  const delay = Math.min(30000, 1000 * (2 ** Math.min(reconnectAttempts, 5)));
+  reconnectTimer = setTimeout(() => {
+    attemptKnownBluetoothReconnect().catch(() => {});
+  }, delay);
+}
+
+async function mapBluetoothDevice(device) {
+  activeGattDevice = device;
+  device.removeEventListener('gattserverdisconnected', onBleDisconnected);
+  device.addEventListener('gattserverdisconnected', onBleDisconnected);
+  activeGattServer = device.gatt.connected ? device.gatt : await device.gatt.connect();
+  activeGattService = await activeGattServer.getPrimaryService(BLE_SERVICE_UUID);
+  handshakeChar = await activeGattService.getCharacteristic(HANDSHAKE_CHAR_UUID);
+  rxChar = await activeGattService.getCharacteristic(RX_CHAR_UUID);
+  txChar = await activeGattService.getCharacteristic(TX_CHAR_UUID);
+}
+
+async function attemptKnownBluetoothReconnect() {
+  const pairing = storedBluetoothPairing();
+  if (!pairing || typeof navigator.bluetooth?.getDevices !== 'function') return false;
+  if (activeGattDevice?.gatt?.connected && isBleAuthorized) return true;
+  try {
+    const devices = await navigator.bluetooth.getDevices();
+    const device = devices.find((item) => item.id === pairing.deviceId);
+    if (!device) return false;
+    isSyncConnecting = true;
+    updateSyncStatusUI('scanning', 'Bluetooth: Reconnecting...', `Looking for ${pairing.deviceName || 'paired Android companion'}`);
+    await mapBluetoothDevice(device);
+    await authorizeKnownBluetoothDevice(pairing);
+    isSyncConnecting = false;
+    return true;
+  } catch (error) {
+    isSyncConnecting = false;
+    addSyncLog(`Automatic reconnect waiting: ${error.message}`);
+    scheduleBluetoothReconnect();
+    return false;
+  }
 }
 
 /**
@@ -118,7 +224,12 @@ async function startScanBleDevices() {
     // Android already received the desktop PIN; authorize automatically.
     updateSyncStatusUI('scanning', 'Bluetooth: Verifying Link...', 'Confirming the PIN entered on Android...');
     showEl('btnDisconnectBle', true);
-    await submitHandshakePin();
+    const knownPairing = storedBluetoothPairing();
+    if (knownPairing?.deviceId === device.id) {
+      await authorizeKnownBluetoothDevice(knownPairing);
+    } else {
+      await submitHandshakePin();
+    }
   } catch (error) {
     if (error.name === 'NotFoundError' || error.message.includes('User cancelled')) {
       addSyncLog('Bluetooth scanning cancelled by user.');
@@ -134,9 +245,41 @@ async function startScanBleDevices() {
   }
 }
 
-/**
- * Submits the application-level PIN code handshake to authorize the link.
- */
+async function finishBluetoothAuthorization(message) {
+  isBleAuthorized = true;
+  reconnectAttempts = 0;
+  addSyncLog(message);
+  const companionName = activeGattDevice?.name || 'Android companion';
+  updateSyncStatusUI('scanning', 'Bluetooth: Authorized - Synchronizing', `Linked to ${companionName}`);
+  showEl('btnSyncToPhone', true);
+  showEl('btnScanBle', false);
+  showEl('btnDisconnectBle', true);
+  await txChar.startNotifications();
+  txChar.removeEventListener('characteristicvaluechanged', handleMobileScoresNotification);
+  txChar.addEventListener('characteristicvaluechanged', handleMobileScoresNotification);
+  startBluetoothLinkMonitor();
+  await syncDataToMobile({ silent: true });
+  addSyncLog('Authoritative desktop snapshot sent; waiting for Android confirmation.');
+}
+
+async function authorizeKnownBluetoothDevice(pairing) {
+  const request = {
+    kind: 'reconnect',
+    desktopId: bluetoothDesktopId(),
+    reconnectToken: pairing.reconnectToken
+  };
+  addSyncLog(`Reconnecting securely to ${pairing.deviceName || 'known Android companion'}...`);
+  await handshakeChar.writeValue(new TextEncoder().encode(JSON.stringify(request)));
+  const responseValue = await handshakeChar.readValue();
+  const response = JSON.parse(new TextDecoder().decode(responseValue));
+  if (response.status !== 'reconnected') {
+    localStorage.removeItem(BLE_PAIRING_STORAGE_KEY);
+    throw new Error('The saved Bluetooth pairing is no longer valid. Pair once more.');
+  }
+  await finishBluetoothAuthorization('Known Android companion reconnected automatically.');
+}
+
+// Submits the first-pairing PIN and persists the returned reconnect credential.
 async function submitHandshakePin() {
   if (window.AdminTestMode?.blockExternalAction?.('Bluetooth authorization')) return;
   if (!handshakeChar) return;
@@ -146,6 +289,26 @@ async function submitHandshakePin() {
     if (!pairing.running || pairing.transport !== 'bluetooth' || !/^\d{6}$/.test(pin)) {
       throw new Error('The desktop Bluetooth pairing session has ended.');
     }
+    const request = {
+      kind: 'pair',
+      pin,
+      desktopId: bluetoothDesktopId(),
+      desktopName: 'E-Class Record Desktop'
+    };
+    addSyncLog('Confirming the desktop PIN entered on Android...');
+    await handshakeChar.writeValue(new TextEncoder().encode(JSON.stringify(request)));
+    const responseValue = await handshakeChar.readValue();
+    const response = JSON.parse(new TextDecoder().decode(responseValue));
+    if (response.status !== 'paired' || !response.reconnectToken) {
+      throw new Error('Android did not return a reconnect credential.');
+    }
+    saveBluetoothPairing({
+      deviceId: activeGattDevice.id,
+      deviceName: activeGattDevice.name || 'Android companion',
+      reconnectToken: response.reconnectToken
+    });
+    await finishBluetoothAuthorization('First pairing complete. Future reconnection is automatic.');
+    return;
     addSyncLog('Confirming the PIN entered on Android...');
     await handshakeChar.writeValue(new TextEncoder().encode(pin));
     isBleAuthorized = true;
@@ -175,8 +338,9 @@ function handleMobileScoresNotification(event) {
   const value = event.target.value;
   const chunk = new TextDecoder().decode(value);
   
-  if (chunk.startsWith('START:')) {
-    const lenStr = chunk.split(':')[1];
+  if (chunk.startsWith('START:') || chunk.startsWith('B64START:')) {
+    mobileIsBase64 = chunk.startsWith('B64START:');
+    const lenStr = chunk.slice(chunk.indexOf(':') + 1);
     mobileExpectedLen = parseInt(lenStr, 10);
     mobileRxBuffer = '';
     mobileIsReceiving = true;
@@ -186,7 +350,10 @@ function handleMobileScoresNotification(event) {
     addSyncLog(`Upload transfer complete. Processing data (${mobileRxBuffer.length} bytes)...`);
     
     try {
-      const payload = JSON.parse(mobileRxBuffer);
+      const jsonText = mobileIsBase64
+        ? new TextDecoder().decode(Uint8Array.from(atob(mobileRxBuffer), (char) => char.charCodeAt(0)))
+        : mobileRxBuffer;
+      const payload = JSON.parse(jsonText);
       handleMobilePayload(payload).catch((error) => {
         addSyncLog(`Mobile payload failed: ${error.message}`);
         toast(error.message || 'The mobile payload was rejected.', 'error');
@@ -227,8 +394,10 @@ async function handleMobilePayload(payload) {
   }
   if (payload?.kind === 'changes') {
     try {
-      const result = await window.MobileSyncBridge.applyBluetoothEnvelope(payload);
+      const result = await window.MobileSyncBridge.applyBluetoothEnvelope(payload, isBleAuthorized);
       await sendPayloadToMobile({ kind: 'change-result', success: true, accepted: result.accepted || 0 }, 'change result');
+      await window.MobileSyncBridge.publish();
+      await syncDataToMobile({ silent: true });
     } catch (error) {
       await sendPayloadToMobile({ kind: 'change-result', success: false, accepted: 0, error: error.message || 'Mobile entries were rejected.' }, 'change rejection');
       throw error;
@@ -329,12 +498,13 @@ async function sendPayloadToMobile(payload, label = 'payload') {
   if (!rxChar || !isBleAuthorized) throw new Error('No authorized Bluetooth companion is connected.');
   const task = bleWriteQueue.catch(() => {}).then(async () => {
     const encoder = new TextEncoder();
-    const bytes = encoder.encode(JSON.stringify(payload));
-    addSyncLog(`Sending Bluetooth ${label}: ${bytes.length} bytes.`);
+    const rawBytes = encoder.encode(JSON.stringify(payload));
+    const bytes = encoder.encode(bytesToBase64(rawBytes));
+    addSyncLog(`Sending Bluetooth ${label}: ${rawBytes.length} data bytes (${bytes.length} bytes on wire).`);
     const write = (value) => typeof rxChar.writeValueWithResponse === 'function'
       ? rxChar.writeValueWithResponse(value)
       : rxChar.writeValue(value);
-    await write(encoder.encode(`START:${bytes.length}`));
+    await write(encoder.encode(`B64START:${bytes.length}`));
     let lastProgressBucket = -1;
     for (let offset = 0; offset < bytes.length; offset += 160) {
       const end = Math.min(offset + 160, bytes.length);
@@ -392,6 +562,7 @@ function scheduleBluetoothSnapshot() {
   clearTimeout(bluetoothPublishTimer);
   bluetoothPublishTimer = setTimeout(() => syncDataToMobile({ silent: true }).catch(() => {}), 900);
 }
+window.attemptKnownBluetoothReconnect = attemptKnownBluetoothReconnect;
 
 window.scheduleBluetoothSnapshot = scheduleBluetoothSnapshot;
 
@@ -424,6 +595,10 @@ function onBleDisconnected() {
   snapshotAckTimer = null;
   hasCompletedInitialSnapshot = false;
   clearTimeout(bluetoothPublishTimer);
+  clearInterval(linkQualityTimer);
+  const quality = document.getElementById('syncLinkQuality');
+  if (quality) quality.textContent = storedBluetoothPairing() ? 'Reconnecting...' : 'Not paired';
+  scheduleBluetoothReconnect();
   
   showEl('syncPinPanel', false);
   showEl('btnSyncToPhone', false);

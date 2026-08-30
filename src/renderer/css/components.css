@@ -6097,6 +6097,143 @@ body[data-active-view="attendance"] .attendance-monthly-card {
   gap: var(--space-3);
 }
 
+.attendance-date-carousel {
+  flex: 0 0 auto;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-primary-500) 22%, var(--border-subtle));
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--bg-surface), color-mix(in srgb, var(--color-primary-50) 70%, var(--bg-surface)));
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
+}
+
+.attendance-date-carousel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: 10px;
+}
+
+.attendance-date-carousel > header div {
+  display: grid;
+  gap: 2px;
+}
+
+.attendance-date-carousel > header span {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.attendance-date-carousel > header strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+}
+
+.attendance-date-carousel > header button {
+  min-height: 48px;
+  padding: 7px 12px;
+  border: 1px solid var(--color-primary-200);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--color-primary-700);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.attendance-date-carousel > header button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.attendance-date-carousel__row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.attendance-date-carousel__track {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(64px, 1fr));
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+}
+
+.attendance-date-carousel__nav {
+  min-width: 48px;
+  min-height: 64px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  color: var(--color-primary-700);
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.attendance-date-card {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  min-height: 72px;
+  padding: 7px 5px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  scroll-snap-align: center;
+  transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.attendance-date-card span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.attendance-date-card strong {
+  color: var(--text-primary);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.attendance-date-card small {
+  min-height: 12px;
+  color: var(--color-primary-700);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.attendance-date-card:hover,
+.attendance-date-carousel__nav:hover {
+  border-color: var(--color-primary-400);
+  transform: translateY(-1px);
+}
+
+.attendance-date-card.is-selected {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-600);
+  color: #fff;
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--color-primary-600) 28%, transparent);
+}
+
+.attendance-date-card.is-selected strong,
+.attendance-date-card.is-selected small {
+  color: #fff;
+}
+
+.attendance-date-card:focus-visible,
+.attendance-date-carousel button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary-500) 34%, transparent);
+  outline-offset: 2px;
+}
+
 .attendance-roll-call-modal {
   width: min(1040px, calc(100vw - 32px));
   max-width: calc(100vw - 32px);
@@ -6335,7 +6472,7 @@ body[data-active-view="attendance"] .attendance-monthly-card {
 
 .attendance-roll-table th,
 .attendance-roll-table td {
-  padding: 8px 10px;
+  padding: 11px 12px;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-primary);
   font-size: var(--font-size-sm);
@@ -6357,7 +6494,7 @@ body[data-active-view="attendance"] .attendance-monthly-card {
 
 .attendance-roll-table th:last-child,
 .attendance-roll-table td:last-child {
-  min-width: 310px;
+  min-width: 390px;
   white-space: nowrap;
 }
 
@@ -6480,26 +6617,57 @@ body[data-active-view="attendance"] .attendance-monthly-card {
 .attendance-status-controls {
   display: inline-flex;
   flex-wrap: nowrap;
-  gap: var(--space-1);
+  gap: 6px;
   min-width: max-content;
 }
 
 .attendance-status-btn {
-  min-height: 28px;
-  padding: 4px 9px;
+  min-width: 72px;
+  min-height: 48px;
+  padding: 9px 14px;
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   background: var(--bg-surface);
   color: var(--text-secondary);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   line-height: 1;
   cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
 }
 
-.attendance-status-btn:hover {
+@media (max-width: 760px) {
+  .attendance-date-carousel__track {
+    grid-template-columns: repeat(7, minmax(62px, 76px));
+  }
+
+  .attendance-date-carousel {
+    padding: 12px 10px;
+  }
+
+  .attendance-date-carousel > header {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attendance-date-card,
+  .attendance-date-carousel__nav,
+  .attendance-status-btn {
+    transition: none;
+  }
+}
+
+.attendance-status-btn:hover:not(:disabled) {
   background: var(--color-neutral-50);
   color: var(--text-primary);
+  border-color: var(--color-primary-300);
+  transform: translateY(-1px);
+}
+
+.attendance-status-btn:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary-500) 32%, transparent);
+  outline-offset: 2px;
 }
 
 .attendance-status-btn--present.attendance-status-btn--active {
@@ -6539,7 +6707,8 @@ body[data-active-view="attendance"] .attendance-monthly-card {
 }
 
 .attendance-status-controls--quick .attendance-status-btn {
-  width: 32px;
+  width: 48px;
+  min-width: 48px;
   padding-inline: 0;
 }
 

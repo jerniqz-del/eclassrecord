@@ -418,6 +418,78 @@
     `;
   }
 
+  function attendanceDateValue(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function attendanceDateFromValue(value) {
+    const [year, month, day] = String(value || '').split('-').map(Number);
+    return year && month && day ? new Date(year, month - 1, day, 12) : new Date();
+  }
+
+  function shiftAttendanceDate(value, days) {
+    const date = attendanceDateFromValue(value);
+    date.setDate(date.getDate() + days);
+    return attendanceDateValue(date);
+  }
+
+  function attendanceDateButton(d, selected, today) {
+    const value = attendanceDateValue(d);
+    return `<button type='button' class='attendance-date-card${selected ? ' is-selected' : ''}' data-attendance-date='${value}' aria-label='${escapeHtml(d.toDateString())}' aria-pressed='${selected}'><span>${d.toLocaleDateString(undefined,{weekday:'short'})}</span><strong>${d.getDate()}</strong><small>${today?'Today':''}</small></button>`;
+  }
+
+  function renderAttendanceDateCarousel() {
+    const selected = currentRollCallDate();
+    const center = attendanceDateFromValue(selected);
+    const today = typeof supportToday === 'function' ? supportToday() : attendanceDateValue(new Date());
+    const month = center.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    const dates = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(center);
+      date.setDate(center.getDate() + i - 3);
+      const value = attendanceDateValue(date);
+      return attendanceDateButton(date, value === selected, value === today);
+    }).join('');
+    return `<section class='attendance-date-carousel' aria-label='Choose attendance date'>
+      <header><div><span>Attendance date</span><strong>${escapeHtml(month)}</strong></div><button type='button' data-attendance-today ${selected===today?'disabled':''}>Go to today</button></header>
+      <div class='attendance-date-carousel__row'>
+        <button type='button' class='attendance-date-carousel__nav' data-attendance-date-step='-7' aria-label='Previous week'>&#8249;</button>
+        <div class='attendance-date-carousel__track' role='group'>${dates}</div>
+        <button type='button' class='attendance-date-carousel__nav' data-attendance-date-step='7' aria-label='Next week'>&#8250;</button>
+      </div>
+    </section>`;
+  }
+
+  function decorateAttendanceDateCarousel(modal) {
+    const rollCall = modal.querySelector('.attendance-roll-call');
+    if (!rollCall) return;
+    if (!rollCall.querySelector('.attendance-date-carousel')) {
+      rollCall.insertAdjacentHTML('afterbegin', renderAttendanceDateCarousel());
+    }
+    const carousel = rollCall.querySelector('.attendance-date-carousel');
+    const setDate = (value) => {
+      if (value && value !== currentRollCallDate() && typeof setAttendanceRollCallDate === 'function') {
+        setAttendanceRollCallDate(value);
+      }
+    };
+    carousel.querySelectorAll('[data-attendance-date]').forEach((button) => {
+      button.addEventListener('click', () => setDate(button.dataset.attendanceDate));
+      button.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return;
+        event.preventDefault();
+        const value = event.key === 'Home' ? supportToday() : shiftAttendanceDate(button.dataset.attendanceDate, event.key === 'ArrowRight' ? 1 : -1);
+        setDate(value);
+      });
+    });
+    carousel.querySelectorAll('[data-attendance-date-step]').forEach((button) => {
+      button.addEventListener('click', () => setDate(shiftAttendanceDate(currentRollCallDate(), Number(button.dataset.attendanceDateStep))));
+    });
+    carousel.querySelector('[data-attendance-today]')?.addEventListener('click', () => setDate(supportToday()));
+    modal.querySelector('.attendance-roll-call__summary')?.setAttribute('aria-live', 'polite');
+  }
+
   function renderNoClassPanel() {
     const assignment = activeAssignment();
     const day = noClassDayFor(assignment, currentRollCallDate(), currentRollCallTermValue());
@@ -456,6 +528,7 @@
   function decorateRollCallModal() {
     const modal = document.getElementById('attendanceRollCallModal');
     if (!modal) return;
+    decorateAttendanceDateCarousel(modal);
     hideRollCallTermControl(modal);
     const toolbar = modal.querySelector('.attendance-roll-call__toolbar');
     if (toolbar && !modal.querySelector('#attendanceNoClassPanel')) {

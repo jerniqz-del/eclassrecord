@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.eclassrecordmobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "2.0.2"
     }
 
     buildTypes {
@@ -78,6 +78,9 @@ dependencies {
   androidTestImplementation(libs.androidx.test.ext.junit)
   androidTestImplementation(libs.androidx.test.runner)
   androidTestImplementation(libs.androidx.test.espresso.core)
+
+  // Google Play services scanner: camera permission is handled outside this app.
+  implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 
   // Navigation
   implementation(libs.androidx.navigation3.ui)

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,9 +24,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
 import com.example.eclassrecordmobile.ClassDetail
+import com.example.eclassrecordmobile.DesktopFeature
 import com.example.eclassrecordmobile.Sync
 import com.example.eclassrecordmobile.data.Assignment
 import com.example.eclassrecordmobile.data.DatabaseHelper
+import com.example.eclassrecordmobile.ui.DesktopFeatureNames
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -178,6 +181,24 @@ fun MainScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    item {
+                        Text(
+                            text = "Desktop Features",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(vertical = 8.dp),
+                        ) {
+                            items(DesktopFeatureNames.menu) { (key, label) ->
+                                AssistChip(
+                                    onClick = { onNavigate(DesktopFeature(key)) },
+                                    label = { Text(label) },
+                                )
+                            }
+                        }
+                    }
                     item {
                         Text(
                             text = "Your Teaching Loads",

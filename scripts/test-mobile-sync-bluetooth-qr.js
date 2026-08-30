@@ -23,6 +23,12 @@ assert.match(bridge, /globalScope\.startCompanionBluetoothPairing = startCompani
 assert.doesNotMatch(html, /id="syncPinInput"/, 'Desktop must not ask the user to type the Bluetooth PIN.');
 const bluetoothController = fs.readFileSync(path.join(root, 'src', 'renderer', 'js', 'mobile-sync.js'), 'utf8');
 assert.match(bluetoothController, /getCompanionWlanStatus\(\)/);
-assert.match(bluetoothController, /handshakeChar\.writeValue\(new TextEncoder\(\)\.encode\(pin\)\)/);
-assert.match(bluetoothController, /Re-enter the desktop PIN on Android/);
+assert.match(bluetoothController, /kind: 'pair'/);
+assert.match(bluetoothController, /kind: 'reconnect'/);
+assert.match(bluetoothController, /reconnectToken/);
+assert.match(bluetoothController, /navigator\.bluetooth\.getDevices\(\)/);
+assert.match(bluetoothController, /startBluetoothLinkMonitor\(\)/);
+assert.match(bluetoothController, /B64START:/);
+assert.match(html, /id="syncLinkQuality"/);
+assert.match(bluetoothController, /desktopId: bluetoothDesktopId\(\)/);
 console.log('Mobile Sync Bluetooth QR tests passed.');

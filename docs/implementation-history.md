@@ -2,7 +2,7 @@
 
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
-Current app version: 2.0.0
+Current app version: 2.0.2
 Last reviewed: 2026-08-23
 
 ## 1. Project Foundation
@@ -248,6 +248,7 @@ Adjusted patches:
 | v1.9.0 | Added the dashboard workplace and analytics, static working-class hero, scrollable Classes & Advisory panel with full view, learner performance and missing-grade insights, School Calendar restoration, HPS enforcement, grading focus stability, persistent score history across all score-writing paths, learner-avatar modal scrolling fixes, optional school grade-submission pilot, and corrected nested report/export modal stacking. | Minor feature release focused on daily teacher workflow visibility, score accountability, safer grade entry, calendar planning, optional school coordination, and compatibility with existing local profiles, encrypted backups, Advisory records, and offline Grade Transfer files. |
 | v1.9.5 | Redesigned the Name Picker and presentation mode with Wheel of Learners, Carnival Prize Wheel, picking history, star leaderboard, configurable pick retention, wheel sizing and speed; added drag-and-drop Group Randomizer controls; replicated the new School Calendar; refined Performance Checklist deletion; limited score-history actions to changed cells; removed score-change highlighting; and enabled differential silent updates. | Feature and maintenance release focused on classroom presentation, fair learner selection, flexible grouping, calendar usability, cleaner grading feedback, and update delivery without a full reinstall. |
 | v2.0.0 | Added secure School Cloud services and announcements; expanded Bluetooth, QR, and relay-based desktop-to-mobile companion synchronization; strengthened calendar integration, score history, learner avatars, and Performance Checklist behavior; and distinguished Summative Test 1 from Summative Test 2 in Quick Grade Entry. | Major release focused on secure connected workflows across desktop and mobile while preserving teacher ownership, offline operation, existing records, backups, and Grade Transfer compatibility. |
+| v2.0.2 | Unified the desktop and Android companion workspace; added Bluetooth QR pairing, retained personal checklists, expanded mobile teaching tools, introduced a shared premium desktop and Material 3 visual system, and redesigned attendance checking around an accessible date carousel. | Patch release focused on a cohesive cross-platform teacher experience, clearer attendance workflows, reliable companion reconnection, and premium UI consistency while retaining offline and reduced-motion safeguards. |
 
 ## Current Follow-Up Checks
 
