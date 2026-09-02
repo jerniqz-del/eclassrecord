@@ -1536,6 +1536,19 @@ body.admin-test-mode .checklist-publication-preview-overlay {
   background: var(--color-primary-50);
 }
 
+.checklist-more-actions .checklist-more-actions__danger {
+  border-color: var(--color-error-300);
+}
+
+.checklist-more-actions .checklist-more-actions__danger strong {
+  color: var(--color-error-700);
+}
+
+.checklist-more-actions .checklist-more-actions__danger:hover {
+  border-color: var(--color-error-500);
+  background: var(--color-error-50);
+}
+
 .checklist-more-actions strong,
 .checklist-more-actions span {
   display: block;

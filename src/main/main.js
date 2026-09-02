@@ -35,6 +35,19 @@ const { SchoolCloudService } = require('./school-cloud-service');
 let mainWindow = null;
 let isConfirmedExit = false;
 let selectBluetoothDeviceCallback = null;
+let automaticBluetoothScanPending = false;
+let automaticBluetoothDiscoveryTag = '';
+
+function cancelPendingBluetoothSelection() {
+  automaticBluetoothScanPending = false;
+  automaticBluetoothDiscoveryTag = '';
+  if (!selectBluetoothDeviceCallback) return false;
+  const callback = selectBluetoothDeviceCallback;
+  selectBluetoothDeviceCallback = null;
+  callback('');
+  return true;
+}
+
 const discoveredBackupHandles = new Map();
 const DISCOVERED_BACKUP_HANDLE_TTL_MS = 10 * 60 * 1000;
 const sharedSyncWatchers = new Map();
@@ -72,7 +85,29 @@ function requestCompanionRenderer(channel, payload, timeoutMs = 15000) {
   });
 }
 
+function mobileUpdatePackage() {
+  const fileName = `E-Class-Record-Mobile-v${app.getVersion()}.apk`;
+  const candidates = [
+    path.join(process.resourcesPath, 'mobile', fileName),
+    path.join(__dirname, '..', '..', 'android', 'app', 'build', 'outputs', 'apk', 'debug', fileName)
+  ];
+  const apkPath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!apkPath) return null;
+  const bytes = fs.readFileSync(apkPath);
+  return {
+    path: apkPath,
+    fileName,
+    packageName: 'com.example.eclassrecordmobile',
+    versionName: app.getVersion(),
+    versionCode: 4,
+    size: bytes.length,
+    sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+    releaseNotes: 'QR pairing confirmation and automatic WLAN/Bluetooth QR recognition fixes.'
+  };
+}
+
 const companionSyncService = new CompanionSyncService({
+  identityPath: path.join(app.getPath('userData'), 'companion-lan-identity.json'),
   onChanges: (payload) => requestCompanionRenderer('companion:apply-changes', payload, 30000),
   onToolCommand: async (payload) => {
     if (!mainWindow?.webContents || mainWindow.webContents.isDestroyed()) throw new Error('The desktop workspace is not ready.');
@@ -83,7 +118,8 @@ const companionSyncService = new CompanionSyncService({
     if (mainWindow?.webContents && !mainWindow.webContents.isDestroyed()) {
       mainWindow.webContents.send('companion:client-activity', activity);
     }
-  }
+  },
+  getMobileUpdate: mobileUpdatePackage
 });
 
 function attachmentRoot() {
@@ -1078,8 +1114,27 @@ function createWindow() {
   mainWindow.webContents.on('select-bluetooth-device', (event, deviceList, callback) => {
     event.preventDefault();
     selectBluetoothDeviceCallback = callback;
+    const devices = Array.isArray(deviceList)
+      ? deviceList.filter((device) => device && device.deviceId)
+      : [];
+    if (automaticBluetoothScanPending && devices.length) {
+      const exactMatch = devices.find((device) => (
+        String(device.deviceName || '').trim().toUpperCase() === automaticBluetoothDiscoveryTag
+      ));
+      // requestDevice already filters by the private E-Class service UUID. A
+      // sole nameless/cached-name result is therefore safe to try; the PIN
+      // handshake still has to pass before the phone becomes trusted.
+      const candidate = exactMatch || (devices.length === 1 ? devices[0] : null);
+      if (candidate) {
+        automaticBluetoothScanPending = false;
+        automaticBluetoothDiscoveryTag = '';
+        selectBluetoothDeviceCallback = null;
+        callback(candidate.deviceId);
+        return;
+      }
+    }
     // Send list of discovered devices to the renderer process
-    mainWindow.webContents.send('bluetooth:device-list', deviceList);
+    mainWindow.webContents.send('bluetooth:device-list', devices);
   });
 
   mainWindow.once('ready-to-show', () => {
@@ -1937,10 +1992,25 @@ ipcMain.on('bluetooth:select-device', (_event, deviceId) => {
 });
 
 ipcMain.on('bluetooth:cancel-device', () => {
-  if (selectBluetoothDeviceCallback) {
-    selectBluetoothDeviceCallback('');
-    selectBluetoothDeviceCallback = null;
+  cancelPendingBluetoothSelection();
+});
+
+ipcMain.handle('bluetooth:reset-scan', () => cancelPendingBluetoothSelection());
+ipcMain.handle('bluetooth:auto-scan', (_event, discoveryTag) => {
+  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) {
+    return { started: false };
   }
+  automaticBluetoothScanPending = true;
+  automaticBluetoothDiscoveryTag = String(discoveryTag || '').trim().toUpperCase();
+  mainWindow.webContents.executeJavaScript(
+    'window.startAutomaticBluetoothDiscoveryFromDesktopGesture?.()',
+    true,
+  ).catch((error) => {
+    automaticBluetoothScanPending = false;
+    automaticBluetoothDiscoveryTag = '';
+    console.error('Automatic Bluetooth scan failed:', error);
+  });
+  return { started: true };
 });
 
 // ── App Lifecycle ─────────────────────────────────────────

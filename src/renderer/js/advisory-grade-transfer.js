@@ -205,7 +205,7 @@
     }
     if (grade === 1) return ['Language', 'Reading and Literacy', 'Mathematics', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Arts and Physical Education'];
     if (grade === 2) return ['Filipino', 'English', 'Mathematics', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Music & Arts', 'PE & Health'];
-    if (grade === 3) return ['Filipino', 'English', 'Mathematics', 'Science', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Music & Arts', 'PE & Health'];
+    if (grade === 3) return ['Filipino', 'English', 'Mathematics', 'Science', 'Makabansa', 'Good Manners and Right Conduct (GMRC)'];
     if (grade >= 4 && grade <= 5) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Good Manners and Right Conduct (GMRC)', 'Edukasyong Pantahanan at Pangkabuhayan (EPP)', 'Music & Arts', 'PE & Health'];
     if (grade === 6) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Good Manners and Right Conduct (GMRC)', 'Technology and Livelihood Education (TLE)', 'Music & Arts', 'PE & Health'];
     if (grade >= 7 && grade <= 10) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Values Education', 'Technology and Livelihood Education (TLE)', 'Music & Arts', 'PE & Health'];
@@ -363,10 +363,12 @@
   function ensureGradeLevelSubjects(profileDb, advisoryClass) {
     if (!profileDb || !advisoryClass) return [];
     if (isSeniorHighGrade(advisoryClass.gradeLevel)) return [];
+    const grade = Number.parseInt(advisoryClass.gradeLevel, 10);
+    const isGrade3 = grade === 3;
     const store = globalScope.AdvisoryData.normalizeAdvisoryData(profileDb);
     let existing = store.subjects.filter(item => item.advisoryClassId === advisoryClass.id);
     const legacyMapeh = existing.find(item => item.normalizedSubjectKey === 'MAPEH' || /MUSIC ARTS PHYSICAL EDUCATION AND HEALTH/.test(item.normalizedSubjectKey));
-    if (legacyMapeh && !store.grades.some(grade => grade.advisorySubjectId === legacyMapeh.id)) {
+    if (!isGrade3 && legacyMapeh && !store.grades.some(gradeRecord => gradeRecord.advisorySubjectId === legacyMapeh.id)) {
       globalScope.AdvisoryData.updateSubject(profileDb, legacyMapeh.id, {
         subjectName: 'Music & Arts',
         normalizedSubjectKey: normalizeSubjectKey('Music & Arts')
@@ -375,7 +377,21 @@
     }
     const existingKeys = new Set(existing.map(item => item.normalizedSubjectKey));
     const standardKeys = new Set(standardSubjectsForGrade(advisoryClass.gradeLevel).map(normalizeSubjectKey));
+    const changed = [];
     existing.forEach(subject => {
+      const key = subject.normalizedSubjectKey;
+      const obsoleteGrade3Mapeh = isGrade3 && (
+        /^(MAPEH|MUSIC ARTS|MUSIC & ARTS|MUSIC AND ARTS|PE HEALTH|PE & HEALTH|PE AND HEALTH)$/.test(key)
+        || /MUSIC ARTS PHYSICAL EDUCATION AND HEALTH/.test(key)
+      );
+      if (obsoleteGrade3Mapeh) {
+        if (!subject.isArchived || !subject.isLegacySubject) {
+          changed.push(globalScope.AdvisoryData.updateSubject(profileDb, subject.id, {
+            isLegacySubject: true, isArchived: true
+          }));
+        }
+        return;
+      }
       if (!standardKeys.has(subject.normalizedSubjectKey)
         && !subject.isSpecialProgramSubject
         && !subject.isLegacySubject) {
@@ -413,7 +429,7 @@
       }));
       existingKeys.add(normalizedSubjectKey);
     });
-    return created;
+    return [...changed, ...created];
   }
 
   function syncSpecialProgramSubjects(profileDb, advisoryClass, requestedSubjects) {

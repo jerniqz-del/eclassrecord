@@ -1,5 +1,9 @@
 package com.example.eclassrecordmobile.ui.main
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Color as AndroidColor
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
@@ -7,14 +11,69 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.eclassrecordmobile.R
 import com.example.eclassrecordmobile.data.Assignment
+
+private val transparentSubjectIconCache = mutableMapOf<Int, ImageBitmap>()
+
+private fun subjectIconWithoutWhiteBackground(context: Context, @DrawableRes resourceId: Int): ImageBitmap =
+    synchronized(transparentSubjectIconCache) {
+        transparentSubjectIconCache.getOrPut(resourceId) {
+            val source = BitmapFactory.decodeResource(context.resources, resourceId)
+            val bitmap = source.copy(Bitmap.Config.ARGB_8888, true)
+            val width = bitmap.width
+            val height = bitmap.height
+            val pixels = IntArray(width * height)
+            val background = BooleanArray(pixels.size)
+            val queue = IntArray(pixels.size)
+            var head = 0
+            var tail = 0
+            bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+            fun isBackgroundWhite(color: Int): Boolean {
+                val red = AndroidColor.red(color)
+                val green = AndroidColor.green(color)
+                val blue = AndroidColor.blue(color)
+                return minOf(red, green, blue) >= 238 && maxOf(red, green, blue) - minOf(red, green, blue) <= 14
+            }
+            fun enqueue(index: Int) {
+                if (index !in pixels.indices || background[index] || !isBackgroundWhite(pixels[index])) return
+                background[index] = true
+                queue[tail++] = index
+            }
+
+            for (x in 0 until width) {
+                enqueue(x)
+                enqueue((height - 1) * width + x)
+            }
+            for (y in 0 until height) {
+                enqueue(y * width)
+                enqueue(y * width + width - 1)
+            }
+            while (head < tail) {
+                val index = queue[head++]
+                val x = index % width
+                if (x > 0) enqueue(index - 1)
+                if (x < width - 1) enqueue(index + 1)
+                if (index >= width) enqueue(index - width)
+                if (index < pixels.size - width) enqueue(index + width)
+            }
+            background.forEachIndexed { index, remove ->
+                if (remove) pixels[index] = pixels[index] and 0x00FFFFFF
+            }
+            bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+            bitmap.asImageBitmap()
+        }
+    }
 
 data class SubjectVisual(
     val key: String,
@@ -113,9 +172,14 @@ object SubjectVisuals {
 fun SubjectIcon(assignment: Assignment, modifier: Modifier = Modifier, size: Dp = 44.dp) {
     val visual = SubjectVisuals.forAssignment(assignment)
     val iconModifier = modifier.size(size)
-    if (visual.iconRes != null) {
+    val iconRes = visual.iconRes
+    if (iconRes != null) {
+        val context = LocalContext.current
+        val transparentIcon = remember(iconRes) {
+            subjectIconWithoutWhiteBackground(context, iconRes)
+        }
         Image(
-            painter = painterResource(visual.iconRes),
+            bitmap = transparentIcon,
             contentDescription = "${assignment.subject} subject icon",
             modifier = iconModifier,
             contentScale = ContentScale.Fit,

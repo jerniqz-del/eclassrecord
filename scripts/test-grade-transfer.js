@@ -189,7 +189,7 @@ function validPayload(data = fixture()) {
   const plan = Transfer.planImport(data.profile, data.advisoryClass, validPayload(data), 'math-t1.json');
   assert.strictEqual(plan.subject?.subjectName, 'Mathematics', 'file metadata should identify the preconfigured subject automatically');
   assert.strictEqual(plan.payload.term.number, 1, 'file metadata should identify the term automatically');
-  [['1', 6], ['2', 7], ['3', 8], ['4', 9], ['5', 9], ['6', 9], ['7', 9], ['10', 9]].forEach(([grade, count]) => {
+  [['1', 6], ['2', 7], ['3', 6], ['4', 9], ['5', 9], ['6', 9], ['7', 9], ['10', 9]].forEach(([grade, count]) => {
     assert.strictEqual(Transfer.standardSubjectsForGrade(grade).length, count, `Grade ${grade} should have its standard subject list`);
   });
   assert.deepStrictEqual(Transfer.standardSubjectsForGrade('11'), []);

@@ -186,6 +186,25 @@ function getCurrentProfilePin() {
   return currentProfilePin;
 }
 
+function activeProfileRequiresPin() {
+  const profile = dbRoot.profiles.find(item => item.id === dbRoot.activeProfileId);
+  return Boolean(profile?.pinEnabled);
+}
+
+async function verifyActiveProfilePinForMobile(pin) {
+  const profile = dbRoot.profiles.find(item => item.id === dbRoot.activeProfileId);
+  if (!profile) return false;
+  if (!profile.pinEnabled) return true;
+  const candidate = String(pin || '');
+  if (!/^\d{6}$/.test(candidate)) return false;
+  return verifyPin(candidate, profile.salt, profile.pinHash);
+}
+
+if (typeof window !== 'undefined') {
+  window.activeProfileRequiresPin = activeProfileRequiresPin;
+  window.verifyActiveProfilePinForMobile = verifyActiveProfilePinForMobile;
+}
+
 async function replaceActiveProfilePin(nextPin) {
   const pin = String(nextPin || '');
   if (!/^\d{6}$/.test(pin)) throw new Error('A valid six-digit profile PIN is required.');

@@ -239,7 +239,7 @@
     const common = ['FILIPINO', 'ENGLISH', 'MATHEMATICS', 'SCIENCE', 'ARALING PANLIPUNAN', 'MUSIC ARTS', 'PE HEALTH', 'MAPEH'];
     if (grade === 1) return new Set(['LANGUAGE', 'READING AND LITERACY', 'MATHEMATICS', 'MAKABANSA', 'GOOD MANNERS AND RIGHT CONDUCT GMRC', 'ARTS AND PHYSICAL EDUCATION']);
     if (grade === 2) return new Set([...common, 'MAKABANSA', 'GOOD MANNERS AND RIGHT CONDUCT GMRC']);
-    if (grade === 3) return new Set([...common, 'MAKABANSA', 'GOOD MANNERS AND RIGHT CONDUCT GMRC']);
+    if (grade === 3) return new Set(['FILIPINO', 'ENGLISH', 'MATHEMATICS', 'SCIENCE', 'MAKABANSA', 'GOOD MANNERS AND RIGHT CONDUCT GMRC']);
     if (grade >= 4 && grade <= 5) return new Set([...common, 'GOOD MANNERS AND RIGHT CONDUCT GMRC', 'EDUKASYONG PANTAHANAN AT PANGKABUHAYAN EPP']);
     if (grade === 6) return new Set([...common, 'GOOD MANNERS AND RIGHT CONDUCT GMRC', 'TECHNOLOGY AND LIVELIHOOD EDUCATION TLE']);
     if (grade >= 7 && grade <= 10) return new Set([...common, 'VALUES EDUCATION', 'TECHNOLOGY AND LIVELIHOOD EDUCATION TLE']);

@@ -1,7 +1,9 @@
 package com.example.eclassrecordmobile.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -29,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -45,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
@@ -125,11 +133,12 @@ fun ClassDetailScreen(
                     )
                 }
             }
-            TabRow(
+            ScrollableTabRow(
                 selectedTabIndex = selectedSheetTab,
                 containerColor = MaterialTheme.colorScheme.surface,
+                edgePadding = 8.dp,
             ) {
-                listOf("Assessments", "Summary").forEachIndexed { index, label ->
+                listOf("Assessments", "Individual", "Grid", "Summary").forEachIndexed { index, label ->
                     Tab(
                         selected = selectedSheetTab == index,
                         onClick = { selectedSheetTab = index },
@@ -138,8 +147,7 @@ fun ClassDetailScreen(
                 }
             }
 
-            if (selectedSheetTab == 0) {
-                if (isMapeh) {
+            if (isMapeh && selectedSheetTab < 3) {
                     TabRow(
                         selectedTabIndex = if (selectedMapePart == "music_arts") 0 else 1,
                         containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -156,19 +164,33 @@ fun ClassDetailScreen(
                             text = { Text("PE & Health", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
                         )
                     }
-                }
+            }
+            when (selectedSheetTab) {
+              0 -> {
                 AssessmentList(
                     assignment = assignment,
                     term = selectedTerm,
                     mapePart = selectedMapePart.takeIf { isMapeh },
                     onOpen = { onNavigate(ScoreEntry(assignment.id, it)) },
                 )
-            } else {
+              }
+              1 -> IndividualGradeView(
+                  assignment = assignment,
+                  term = selectedTerm,
+                  mapePart = selectedMapePart.takeIf { isMapeh },
+              )
+              2 -> GridGradeSheet(
+                  assignment = assignment,
+                  term = selectedTerm,
+                  mapePart = selectedMapePart.takeIf { isMapeh },
+              )
+              else -> {
                 GradeSummary(
                     assignment = assignment,
                     term = selectedTerm,
                     grades = payload.grades,
                 )
+              }
             }
         }
     }
@@ -205,7 +227,7 @@ private fun AssessmentList(
     ) {
         items(assessments, key = { it.id }) { assessment ->
             val gradedCount = assignment.learners.count { learner ->
-                !assignment.scores["${learner.id}|${assessment.id}"].isNullOrEmpty()
+                assignment.scores["${learner.id}|${assessment.id}"].orEmpty().trim().isNotEmpty()
             }
             val totalLearners = assignment.learners.size
             val percent = if (totalLearners > 0) gradedCount * 100 / totalLearners else 0
@@ -217,6 +239,139 @@ private fun AssessmentList(
                 onClick = { onOpen(assessment.id) },
             )
         }
+    }
+}
+
+private fun visibleAssessments(assignment: Assignment, term: String, mapePart: String?): List<Assessment> =
+    assignment.assessments.filter { assessment ->
+        assessment.term == term && (mapePart == null || assessment.mapePart == mapePart)
+    }
+
+@Composable
+private fun IndividualGradeView(assignment: Assignment, term: String, mapePart: String?) {
+    val assessments = visibleAssessments(assignment, term, mapePart)
+    if (assessments.isEmpty()) {
+        EmptyGradeView("No assessments configured for this term.")
+        return
+    }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        gridItems(assignment.learners, key = { it.id }) { learner ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp),
+                ) {
+                    Text(learner.name, fontWeight = FontWeight.ExtraBold, maxLines = 2)
+                    HorizontalDivider()
+                    assessments.forEach { assessment ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                assessment.title,
+                                modifier = Modifier.weight(1f),
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                assignment.scores["${learner.id}|${assessment.id}"].orEmpty().ifBlank { "—" },
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GridGradeSheet(assignment: Assignment, term: String, mapePart: String?) {
+    val assessments = visibleAssessments(assignment, term, mapePart)
+    if (assessments.isEmpty()) {
+        EmptyGradeView("No assessments configured for this term.")
+        return
+    }
+    val nameWidth = 176.dp
+    val scoreWidth = 96.dp
+    val sheetWidth = nameWidth + scoreWidth * assessments.size
+    val horizontal = rememberScrollState()
+    Box(
+        modifier = Modifier.fillMaxSize().horizontalScroll(horizontal),
+    ) {
+        Column(modifier = Modifier.width(sheetWidth).fillMaxSize()) {
+            Row {
+                GradeSheetCell("Learner", nameWidth, header = true)
+                assessments.forEach { assessment ->
+                    GradeSheetCell(
+                        "${assessment.title}\nHPS ${assessment.maxScore}",
+                        scoreWidth,
+                        header = true,
+                    )
+                }
+            }
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(assignment.learners, key = { it.id }) { learner ->
+                    Row {
+                        GradeSheetCell(learner.name, nameWidth)
+                        assessments.forEach { assessment ->
+                            GradeSheetCell(
+                                assignment.scores["${learner.id}|${assessment.id}"].orEmpty(),
+                                scoreWidth,
+                                centered = true,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GradeSheetCell(
+    text: String,
+    width: androidx.compose.ui.unit.Dp,
+    header: Boolean = false,
+    centered: Boolean = false,
+) {
+    Box(
+        modifier = Modifier
+            .width(width)
+            .height(if (header) 62.dp else 50.dp)
+            .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+            .background(if (header) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        contentAlignment = if (header || centered) Alignment.Center else Alignment.CenterStart,
+    ) {
+        Text(
+            text.ifBlank { "—" },
+            fontSize = if (header) 11.sp else 12.sp,
+            fontWeight = if (header) FontWeight.ExtraBold else FontWeight.Medium,
+            color = if (header) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
+            textAlign = if (header || centered) TextAlign.Center else TextAlign.Start,
+        )
+    }
+}
+
+@Composable
+private fun EmptyGradeView(message: String) {
+    Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+        Text(message, color = MaterialTheme.colorScheme.outline, fontWeight = FontWeight.Medium)
     }
 }
 

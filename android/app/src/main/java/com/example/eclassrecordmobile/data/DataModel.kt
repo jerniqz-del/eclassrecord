@@ -11,6 +11,7 @@ data class SyncPayload(
     val revision: Long = 0,
     val exportedAt: String = "",
     val sourceAppVersion: String = "",
+    val pushPinRequired: Boolean = false,
     val calendar: List<CalendarEntry> = emptyList(),
     val checklist: List<ChecklistEntry> = emptyList(),
     val grades: List<LearnerGradeSummary> = emptyList()
@@ -131,7 +132,8 @@ data class ToolCommand(
 data class MobileChangesEnvelope(
     val kind: String = "changes",
     val baseRevision: Long,
-    val changes: List<MobileChange>
+    val changes: List<MobileChange>,
+    val authorizationPin: String = ""
 )
 
 @Serializable

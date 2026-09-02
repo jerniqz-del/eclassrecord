@@ -45,11 +45,23 @@
       return result;
     };
   }
+  function handleMobileSyncShortcut(event) {
+    const key = String(event?.key || '').toLocaleLowerCase();
+    const commandKey = event?.ctrlKey === true || event?.metaKey === true;
+    if (!commandKey || event?.shiftKey !== true || event?.altKey === true || key !== 'm' || event?.repeat) return;
+    event.preventDefault?.();
+    globalScope.openMobileSyncView();
+  }
+
+  // The sidebar entry is intentionally hidden for now; keep the complete
+  // Mobile Sync workspace available through Ctrl/Cmd+Shift+M.
+  globalScope.addEventListener?.('keydown', handleMobileSyncShortcut, true);
+
 
   globalScope.openMobileSyncView = function openMobileSyncView() {
     if (typeof globalScope.setView === 'function') globalScope.setView('sync');
     else activateMobileSyncView();
   };
 
-  globalScope.MobileSyncNavigation = { activate: activateMobileSyncView };
+  globalScope.MobileSyncNavigation = { activate: activateMobileSyncView, handleShortcut: handleMobileSyncShortcut };
 })(window);

@@ -378,8 +378,7 @@ function getSubjectsForGrade(gradeLevel) {
       'Mathematics',
       'Science',
       'Makabansa',
-      'Good Manners and Right Conduct (GMRC)',
-      'Music, Arts, Physical Education, and Health (MAPEH)'
+      'Good Manners and Right Conduct (GMRC)'
     ];
   } else if (grade >= 4 && grade <= 5) {
     return [
@@ -554,20 +553,10 @@ function determinePolicy(gradeLevel, subject, sy) {
     return 'DO15_ZERO';
   }
   
-  // For SY 2026-2027:
-  // Grade 11-12 TVL / Work Immersion / Electives
-  if (grade >= 11) {
-    if (/immersion|work|field|exposure|techpro|tvl/i.test(s)) {
-      return 'DO15_ZERO';
-    }
-    return 'DO15_TRANSITION';
-  }
-  
-  // Grades 7-10 TLE / EPP / Skills-heavy subjects
-  if (/tle|epp|livelihood|technology/i.test(s)) {
-    return 'DO15_ZERO';
-  }
-  
+  // DO 15, s. 2026 paragraph 48 applies the adjusted transmutation table
+  // uniformly to applicable numerically graded learning areas in SY 2026-2027.
+  // Assessment-component weights may vary by subject, but the transmutation
+  // policy does not. Zero-based grading begins in SY 2027-2028 (paragraph 50).
   return 'DO15_TRANSITION';
 }
 
@@ -961,7 +950,11 @@ function computeTerm(a, learnerId, term, mapePart) {
  * Transmutes initial grade into final reported grade.
  */
 function transmute(a, ig) {
-  const isZeroBased = isZeroBasedSy(a.schoolYear || db.schoolYear) || a.policy === 'DO15_ZERO';
+  const schoolYear = a.schoolYear || db.schoolYear;
+  // Re-resolve the policy from authoritative class fields so a stale policy
+  // persisted by an older release cannot silently produce incorrect TGs.
+  const policy = determinePolicy(a.gradeLevel, a.subject, schoolYear);
+  const isZeroBased = isZeroBasedSy(schoolYear) || policy === 'DO15_ZERO';
   
   if (isKeyStage2(a)) {
     if (isZeroBased) {
@@ -970,7 +963,7 @@ function transmute(a, ig) {
     return keyStage2Grade(ig);
   }
   
-  if (a.policy === 'DO15_DESCRIPTIVE') {
+  if (policy === 'DO15_DESCRIPTIVE') {
     return transmuteDescriptive(ig);
   }
   
@@ -978,22 +971,30 @@ function transmute(a, ig) {
     return Math.round(ig);
   }
   
+  const roundedIg = roundInitialGradeForTable(ig);
   const table = adjusted2026;
   for (let i = 0; i < table.length; i++) {
-    if (ig >= table[i][0] && ig <= table[i][1]) {
+    if (roundedIg >= table[i][0]) {
       return table[i][2];
     }
   }
-  return ig >= 100 ? 100 : 60;
+  return 60;
 }
 
 function keyStage2Grade(ig) {
+  const roundedIg = roundInitialGradeForTable(ig);
   for (let i = 0; i < keyStage2Transmutation.length; i++) {
-    if (ig >= keyStage2Transmutation[i][0]) {
+    if (roundedIg >= keyStage2Transmutation[i][0]) {
       return keyStage2Transmutation[i][1];
     }
   }
   return 60;
+}
+
+function roundInitialGradeForTable(ig) {
+  const numeric = Number(ig);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.round((numeric + Number.EPSILON) * 100) / 100;
 }
 
 function termDescription(a, grade) {

@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.example.eclassrecordmobile.data.BleServerManager
 import com.example.eclassrecordmobile.data.DatabaseHelper
+import com.example.eclassrecordmobile.data.LanSyncManager
 import com.example.eclassrecordmobile.theme.EClassRecordMobileTheme
 import com.example.eclassrecordmobile.ui.main.MobileUiPreferences
 
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
     // Initialize databases and Bluetooth manager
     DatabaseHelper.init(applicationContext)
     BleServerManager.init(applicationContext)
+    LanSyncManager.init(applicationContext)
     if (BleServerManager.isPaired && MobileUiPreferences.autoReconnect(applicationContext)) {
       runCatching { BleServerManager.ensureAdvertising(applicationContext) }
     }
@@ -35,5 +37,6 @@ class MainActivity : ComponentActivity() {
     if (BleServerManager.isPaired && MobileUiPreferences.autoReconnect(applicationContext)) {
       runCatching { BleServerManager.ensureAdvertising(applicationContext) }
     }
+    if (LanSyncManager.isPaired) LanSyncManager.start(applicationContext)
   }
 }

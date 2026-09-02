@@ -26,6 +26,7 @@ import java.time.Instant
 @SuppressLint("MissingPermission")
 object BleServerManager {
     private const val TAG = "BleServerManager"
+    private val outboundJson = Json { encodeDefaults = true }
 
     val SERVICE_UUID: UUID = UUID.fromString("e3c1a8e0-0251-412e-a4b5-559d871fbdf2")
     val HANDSHAKE_CHAR_UUID: UUID = UUID.fromString("e3c1a8e3-0251-412e-a4b5-559d871fbdf2")
@@ -57,15 +58,29 @@ object BleServerManager {
     private var handshakeResponse = """{"status":"idle"}"""
     private val mainHandler = Handler(Looper.getMainLooper())
     private var advertisingRetryCount = 0
+    private var pairingDiscoveryTag = ""
+    private var isPreparingAdvertising = false
+    private var pendingAdvertiseSettings: AdvertiseSettings? = null
+    private var pendingAdvertiseData: AdvertiseData? = null
+    private var pendingScanResponse: AdvertiseData? = null
 
     // Chunking buffers
     private val rxBuffer = StringBuilder()
     private var expectedLength = 0
     private var isReceiving = false
     private var isReceivingBase64 = false
+    private var lastPayloadWasChangeResult = false
+    private var lastPayloadError = ""
 
-    // TX chunks (for sending data back to desktop)
-    private var txBufferQueue: Queue<ByteArray> = LinkedList()
+    private data class TxFrame(val label: String, val chunks: List<ByteArray>)
+
+    // BLE notifications must be serialized and advanced by onNotificationSent.
+    private val pendingTxFrames: Queue<TxFrame> = LinkedList()
+    private var activeTxFrame: TxFrame? = null
+    private var activeTxIndex = 0
+    private var txNotificationInFlight = false
+    private var txRetryCount = 0
+    private var negotiatedMtu = 23
 
     fun init(context: Context) {
         contextRef = context.applicationContext
@@ -81,9 +96,10 @@ object BleServerManager {
         connectionProgressLabel = if (isPaired) "Trusted desktop remembered" else "Ready to pair"
     }
 
-    fun prepareFirstPairing(pin: String) {
+    fun prepareFirstPairing(pin: String, sessionId: String = "") {
         require(pin.matches(Regex("\\d{6}"))) { "Enter the six-digit PIN shown on the desktop." }
         pinCode = pin
+        pairingDiscoveryTag = sessionId.replace("-", "").take(6).uppercase(Locale.ROOT)
         syncLog = "Pairing code saved. Waiting for the desktop to connect."
         connectionProgress = 12
         connectionProgressLabel = "Pairing details ready"
@@ -94,6 +110,7 @@ object BleServerManager {
         isPaired = false
         pairedDesktopName = ""
         pinCode = ""
+        pairingDiscoveryTag = ""
         linkQuality = "Not paired"
         connectionProgress = 0
         connectionProgressLabel = "Ready to pair"
@@ -115,7 +132,7 @@ object BleServerManager {
 
     fun startAdvertising(context: Context) {
         contextRef = context.applicationContext
-        if (isAdvertising) return
+        if (isAdvertising || isPreparingAdvertising) return
         val adapter = bluetoothAdapter ?: return
         if (!adapter.isEnabled) {
             connectionState = "Bluetooth Disabled"
@@ -126,10 +143,12 @@ object BleServerManager {
         connectionState = "Advertising..."
         syncLog = "Broadcasting started. Waiting for desktop app to connect..."
         connectionProgress = 20
-        connectionProgressLabel = "Starting Bluetooth broadcast"
+        connectionProgressLabel = "Preparing secure Bluetooth service"
+        isPreparingAdvertising = true
 
         // Keep the advertised name short for OEMs with a strict legacy payload limit.
-        runCatching { adapter.name = "EC-$deviceCode" }
+        val advertisedCode = pairingDiscoveryTag.ifBlank { deviceCode }
+        runCatching { adapter.name = "EC-$advertisedCode" }
 
         advertiser = adapter.bluetoothLeAdvertiser
         if (advertiser == null) {
@@ -152,14 +171,44 @@ object BleServerManager {
             .setIncludeDeviceName(true)
             .build()
 
-        setupGattServer(context)
+        pendingAdvertiseSettings = settings
+        pendingAdvertiseData = data
+        pendingScanResponse = scanResponse
+        if (!setupGattServer(context)) {
+            failAdvertisingPreparation("Bluetooth sync service could not be registered")
+        }
+    }
 
+    private fun startPreparedAdvertising() {
+        val settings = pendingAdvertiseSettings ?: return
+        val data = pendingAdvertiseData ?: return
+        val scanResponse = pendingScanResponse ?: return
+        pendingAdvertiseSettings = null
+        pendingAdvertiseData = null
+        pendingScanResponse = null
+        isPreparingAdvertising = false
         advertiser?.startAdvertising(settings, data, scanResponse, advertiseCallback)
         isAdvertising = true
     }
 
+    private fun failAdvertisingPreparation(message: String) {
+        isPreparingAdvertising = false
+        isAdvertising = false
+        pendingAdvertiseSettings = null
+        pendingAdvertiseData = null
+        pendingScanResponse = null
+        closeGattServer()
+        connectionState = "Bluetooth advertising unavailable"
+        connectionProgress = 0
+        connectionProgressLabel = message
+    }
+
     fun stopAdvertising() {
         advertiser?.stopAdvertising(advertiseCallback)
+        isPreparingAdvertising = false
+        pendingAdvertiseSettings = null
+        pendingAdvertiseData = null
+        pendingScanResponse = null
         closeGattServer()
         isAdvertising = false
         connectionState = "Disconnected"
@@ -196,9 +245,10 @@ object BleServerManager {
         }
     }
 
-    private fun setupGattServer(context: Context) {
-        val manager = bluetoothManager ?: return
+    private fun setupGattServer(context: Context): Boolean {
+        val manager = bluetoothManager ?: return false
         bluetoothGattServer = manager.openGattServer(context, gattServerCallback)
+        if (bluetoothGattServer == null) return false
 
         val service = BluetoothGattService(SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
 
@@ -233,7 +283,7 @@ object BleServerManager {
         service.addCharacteristic(rxChar)
         service.addCharacteristic(txChar)
 
-        bluetoothGattServer?.addService(service)
+        return bluetoothGattServer?.addService(service) == true
     }
 
     private fun handleHandshake(data: String): Boolean {
@@ -286,12 +336,24 @@ object BleServerManager {
 
 
     private fun closeGattServer() {
+        resetTxState()
         bluetoothGattServer?.clearServices()
         bluetoothGattServer?.close()
         bluetoothGattServer = null
     }
 
     private val gattServerCallback = object : BluetoothGattServerCallback() {
+        override fun onServiceAdded(status: Int, service: BluetoothGattService?) {
+            if (service?.uuid != SERVICE_UUID) return
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                connectionProgressLabel = "Bluetooth service ready - broadcasting"
+                startPreparedAdvertising()
+            } else {
+                Log.e(TAG, "GATT service registration failed: $status")
+                failAdvertisingPreparation("Bluetooth sync service registration failed ($status)")
+            }
+        }
+
         override fun onConnectionStateChange(device: BluetoothDevice?, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 connectedDevice = device
@@ -302,6 +364,7 @@ object BleServerManager {
                 connectionProgressLabel = "Desktop found - verifying"
                 Log.d(TAG, "Device connected: ${device?.address}")
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                resetTxState()
                 connectedDevice = null
                 connectionState = if (isAdvertising) "Advertising..." else "Disconnected"
                 isAuthorized = false
@@ -310,6 +373,31 @@ object BleServerManager {
                 linkQuality = if (isPaired) "Ready to reconnect" else "Offline"
                 connectionProgress = if (isAdvertising) 35 else 0
                 connectionProgressLabel = if (isAdvertising) "Waiting to reconnect" else "Disconnected"
+            }
+        }
+
+        override fun onMtuChanged(device: BluetoothDevice?, mtu: Int) {
+            negotiatedMtu = mtu.coerceAtLeast(23)
+            Log.d(TAG, "Negotiated BLE MTU: $negotiatedMtu")
+        }
+
+        override fun onNotificationSent(device: BluetoothDevice?, status: Int) {
+            mainHandler.post {
+                if (!txNotificationInFlight) return@post
+                txNotificationInFlight = false
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    activeTxIndex += 1
+                    txRetryCount = 0
+                } else {
+                    txRetryCount += 1
+                    if (txRetryCount > 3) {
+                        syncLog = "Grade transfer failed while waiting for Bluetooth delivery. Please try again."
+                        activeTxFrame = null
+                        activeTxIndex = 0
+                        txRetryCount = 0
+                    }
+                }
+                sendNextTxNotification()
             }
         }
 
@@ -340,16 +428,19 @@ object BleServerManager {
             Log.d(TAG, "Write request on ${characteristic?.uuid}: $dataStr")
 
             if (characteristic?.uuid == HANDSHAKE_CHAR_UUID) {
+                val wasAuthorized = isAuthorized
                 val authorized = handleHandshake(dataStr)
-                isAuthorized = authorized || isAuthorized
-                connectionState = if (isAuthorized) "Connected & Authorized" else "Authorization Failed"
-                linkQuality = if (isAuthorized) "Measuring..." else "Offline"
-                connectionProgress = if (isAuthorized) 70 else 0
-                connectionProgressLabel = if (isAuthorized) "Secure link verified" else "Authorization failed"
-                syncLog = if (isAuthorized) {
-                    "Secure Bluetooth link ready. Desktop is the source of truth."
-                } else {
-                    "Unauthorized desktop connection rejected."
+                isAuthorized = authorized || wasAuthorized
+                if (!wasAuthorized) {
+                    connectionState = if (authorized) "Connected & Authorized" else "Authorization Failed"
+                    linkQuality = if (authorized) "Measuring..." else "Offline"
+                    connectionProgress = if (authorized) 70 else 0
+                    connectionProgressLabel = if (authorized) "Secure link verified" else "Authorization failed"
+                    syncLog = if (authorized) {
+                        "Secure Bluetooth link ready. Desktop is the source of truth."
+                    } else {
+                        "Unauthorized desktop connection rejected."
+                    }
                 }
                 if (responseNeeded) bluetoothGattServer?.sendResponse(
                     device, requestId, if (authorized) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_FAILURE,
@@ -388,7 +479,10 @@ object BleServerManager {
                     bluetoothGattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, null)
                 }
                 Log.d(TAG, "CCCD descriptor written (Notifications enabled/disabled)")
-                if (isAuthorized) { connectionProgress = 76; connectionProgressLabel = "Secure data channel ready" }
+                if (isAuthorized && connectionProgress < 76) {
+                    connectionProgress = 76
+                    connectionProgressLabel = "Secure data channel ready"
+                }
             }
         }
     }
@@ -401,7 +495,7 @@ object BleServerManager {
             rxBuffer.clear()
             isReceiving = true
             syncLog = "Syncing class records from desktop..."
-            connectionProgress = 80
+            connectionProgress = 1
             connectionProgressLabel = "Receiving desktop records"
             Log.d(TAG, "Start rx data. Expected len: $expectedLength")
         } else if (chunk == "END") {
@@ -417,7 +511,12 @@ object BleServerManager {
                 String(Base64.decode(rxBuffer.toString(), Base64.DEFAULT), StandardCharsets.UTF_8)
             } else rxBuffer.toString()
             val success = if (ctx != null) parseAndSavePayload(payload, ctx) else false
-            if (success) {
+            if (lastPayloadWasChangeResult) {
+                connectionState = "Connected & Authorized"
+                connectionProgress = if (success) 92 else 76
+                connectionProgressLabel = if (success) "Grades accepted; refreshing records" else "Grade push rejected"
+                if (!success && lastPayloadError.isNotBlank()) syncLog = lastPayloadError
+            } else if (success) {
                 syncLog = "Sync complete! Rosters and classes updated."
                 connectionState = "Synced"
                 connectionProgress = 100
@@ -432,7 +531,8 @@ object BleServerManager {
             if (isReceiving) {
                 rxBuffer.append(chunk)
                 if (expectedLength > 0) {
-                    connectionProgress = (80 + (rxBuffer.length.toFloat() / expectedLength * 18).toInt()).coerceIn(80, 97)
+                    val receivedRatio = (rxBuffer.length.toFloat() / expectedLength).coerceIn(0f, 1f)
+                    connectionProgress = (1 + (receivedRatio * 94).toInt()).coerceIn(1, 95)
                     connectionProgressLabel = "Receiving desktop records"
                 }
                 Log.d(TAG, "Chunk appended. Current len: ${rxBuffer.length}")
@@ -441,6 +541,8 @@ object BleServerManager {
     }
 
     private fun parseAndSavePayload(jsonStr: String, context: Context): Boolean {
+        lastPayloadWasChangeResult = false
+        lastPayloadError = ""
         return try {
             val codec = Json { ignoreUnknownKeys = true }
             val root = JSONObject(jsonStr)
@@ -449,9 +551,9 @@ object BleServerManager {
                     val envelope = codec.decodeFromString(BluetoothEnvelope.serializer(), jsonStr)
                     val snapshot = requireNotNull(envelope.snapshot).copy(revision = envelope.revision)
                     DatabaseHelper.saveAuthoritativePayload(context, snapshot)
-                    sendDataToDesktop(Json.encodeToString(
+                    sendDataToDesktop(outboundJson.encodeToString(
                         SnapshotAcknowledgement(revision = envelope.revision, success = true)
-                    ))
+                    ), "snapshot acknowledgement")
                 }
                 "snapshot-gzip" -> {
                     val revision = root.optLong("revision")
@@ -460,15 +562,20 @@ object BleServerManager {
 
                     val snapshot = codec.decodeFromString(SyncPayload.serializer(), decoded).copy(revision = revision)
                     DatabaseHelper.saveAuthoritativePayload(context, snapshot)
-                    sendDataToDesktop(Json.encodeToString(
+                    sendDataToDesktop(outboundJson.encodeToString(
                         SnapshotAcknowledgement(revision = revision, success = true)
-                    ))
+                    ), "snapshot acknowledgement")
                 }
                 "change-result" -> {
+                    lastPayloadWasChangeResult = true
                     val envelope = codec.decodeFromString(BluetoothEnvelope.serializer(), jsonStr)
-                    if (!envelope.success) throw IllegalStateException(envelope.error.ifBlank { "Desktop rejected mobile changes." })
+                    if (!envelope.success) {
+                        lastPayloadError = envelope.error.ifBlank { "Desktop rejected mobile changes." }
+                        syncLog = lastPayloadError
+                        return false
+                    }
                     DatabaseHelper.clearUnsyncedScores(context)
-                    syncLog = "Desktop accepted ${envelope.accepted} mobile changes. Waiting for canonical refresh."
+                    syncLog = "${envelope.accepted} mobile change${if (envelope.accepted == 1) "" else "s"} saved on the desktop."
                 }
                 else -> {
                     val payload = codec.decodeFromString(SyncPayload.serializer(), jsonStr)
@@ -478,12 +585,13 @@ object BleServerManager {
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse payload", e)
+            lastPayloadError = e.message ?: "The desktop response could not be processed."
             false
         }
     }
 
     // Trigger score sync back to desktop
-    fun syncScoresToDesktop(context: Context): Boolean {
+    fun syncScoresToDesktop(context: Context, authorizationPin: String = ""): Boolean {
         val device = connectedDevice
         val server = bluetoothGattServer
         if (device == null || server == null || !isAuthorized) {
@@ -497,14 +605,21 @@ object BleServerManager {
             return true
         }
 
-        syncLog = "Submitting ${changes.size} changes for desktop validation..."
-        val payloadStr = Json.encodeToString(
+        val pinRequired = DatabaseHelper.getPayload()?.pushPinRequired ?: true
+        if (pinRequired && !authorizationPin.matches(Regex("\\d{6}"))) {
+            syncLog = "Enter the six-digit desktop profile PIN to authorize this push."
+            return false
+        }
+
+        syncLog = "Sending ${changes.size} authorized change${if (changes.size == 1) "" else "s"} to the desktop..."
+        val payloadStr = outboundJson.encodeToString(
             MobileChangesEnvelope(
                 baseRevision = DatabaseHelper.getRevision(),
                 changes = changes,
+                authorizationPin = authorizationPin,
             )
         )
-        sendDataToDesktop(payloadStr)
+        sendDataToDesktop(payloadStr, "mobile changes")
         return true
     }
 
@@ -521,56 +636,77 @@ object BleServerManager {
             syncLog = "Connect to the paired desktop before using remote teacher tools."
             return false
         }
-        sendDataToDesktop(Json.encodeToString(ToolCommand(command = command)))
+        sendDataToDesktop(outboundJson.encodeToString(ToolCommand(command = command)), "tool command")
         syncLog = "Approved teacher tool command sent to the desktop."
         return true
     }
 
-    private fun sendDataToDesktop(data: String) {
-        val txChar = bluetoothGattServer
+    private fun sendDataToDesktop(data: String, label: String) {
+        bluetoothGattServer
             ?.getService(SERVICE_UUID)
             ?.getCharacteristic(TX_CHAR_UUID) ?: return
 
         val rawBytes = data.toByteArray(StandardCharsets.UTF_8)
         val bytes = Base64.encode(rawBytes, Base64.NO_WRAP)
-        val mtu = 200 // Default safe BLE chunk size (negotiated can be higher)
-        
-        txBufferQueue.clear()
-        
-        // Queue START
-        txBufferQueue.offer("B64START:${bytes.size}".toByteArray(StandardCharsets.UTF_8))
-        
-        // Queue Chunks
+        val payloadSize = (negotiatedMtu - 3).coerceIn(20, 180)
+        val chunks = mutableListOf<ByteArray>()
+        chunks += "B64START:${bytes.size}".toByteArray(StandardCharsets.UTF_8)
         var offset = 0
         while (offset < bytes.size) {
-            val chunkSize = Math.min(mtu, bytes.size - offset)
-            val chunk = bytes.copyOfRange(offset, offset + chunkSize)
-            txBufferQueue.offer(chunk)
+            val chunkSize = minOf(payloadSize, bytes.size - offset)
+            chunks += bytes.copyOfRange(offset, offset + chunkSize)
             offset += chunkSize
         }
-        
-        // Queue END
-        txBufferQueue.offer("END".toByteArray(StandardCharsets.UTF_8))
-        
-        // Start sending notifications
-        sendNextTxNotification(txChar)
+        chunks += "END".toByteArray(StandardCharsets.UTF_8)
+
+        mainHandler.post {
+            pendingTxFrames.offer(TxFrame(label, chunks))
+            sendNextTxNotification()
+        }
     }
 
-    private fun sendNextTxNotification(characteristic: BluetoothGattCharacteristic) {
+    private fun sendNextTxNotification() {
+        if (txNotificationInFlight) return
         val device = connectedDevice ?: return
         val server = bluetoothGattServer ?: return
+        val characteristic = server.getService(SERVICE_UUID)?.getCharacteristic(TX_CHAR_UUID) ?: return
 
-        val nextChunk = txBufferQueue.poll()
-        if (nextChunk != null) {
-            characteristic.setValue(nextChunk)
-            server.notifyCharacteristicChanged(device, characteristic, false)
-            
-            // To prevent congestion, wait 30ms between notifications
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                sendNextTxNotification(characteristic)
-            }, 30)
-        } else {
-            syncLog = "Transfer complete. Waiting for desktop acknowledgment."
+        if (activeTxFrame == null) {
+            activeTxFrame = pendingTxFrames.poll() ?: return
+            activeTxIndex = 0
+            txRetryCount = 0
         }
+        val frame = activeTxFrame ?: return
+        if (activeTxIndex >= frame.chunks.size) {
+            if (frame.label == "mobile changes") {
+                syncLog = "Grades sent securely. The desktop is applying them now."
+            }
+            activeTxFrame = null
+            activeTxIndex = 0
+            sendNextTxNotification()
+            return
+        }
+
+        characteristic.setValue(frame.chunks[activeTxIndex])
+        txNotificationInFlight = server.notifyCharacteristicChanged(device, characteristic, false)
+        if (!txNotificationInFlight) {
+            txRetryCount += 1
+            if (txRetryCount > 3) {
+                syncLog = "Bluetooth is busy. Grade transfer was not sent; please try again."
+                activeTxFrame = null
+                activeTxIndex = 0
+                txRetryCount = 0
+            }
+            mainHandler.postDelayed({ sendNextTxNotification() }, 80)
+        }
+    }
+
+    private fun resetTxState() {
+        pendingTxFrames.clear()
+        activeTxFrame = null
+        activeTxIndex = 0
+        txNotificationInFlight = false
+        txRetryCount = 0
+        negotiatedMtu = 23
     }
 }

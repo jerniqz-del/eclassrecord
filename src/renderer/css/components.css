@@ -3533,6 +3533,24 @@
 
 #welcomeModal .welcome-modal-footer {
   flex: 0 0 auto;
+  gap: var(--space-4);
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-surface);
+}
+
+#welcomeCloseBtn {
+  flex: 0 0 auto;
+  min-width: 7rem;
+  color: var(--text-inverse);
+  background: linear-gradient(135deg, var(--color-error-500), var(--color-error-700));
+  box-shadow: var(--shadow-sm);
+}
+
+#welcomeCloseBtn:disabled {
+  opacity: 0.72;
+  color: var(--text-inverse);
+  background: var(--color-error-500);
+  box-shadow: none;
 }
 
 .welcome-features-list {

@@ -796,9 +796,13 @@ function fixture() {
   assert(ui.includes("label: 'Performance Checklist'"));
   assert(ui.includes('Mini Name Picker'));
   assert(ui.includes('Use Standard Checklist'));
-  assert(ui.includes('Add Activity'));
-  assert(ui.includes('Add Performance Activity'));
-  assert(ui.includes('Edit Performance Activity'));
+  assert(ui.includes('Create Checklist'));
+  assert(ui.includes('Create Performance Checklist'));
+  assert(ui.includes('Edit Performance Checklist'));
+  assert(ui.includes('Choose checklist to conduct'));
+  assert(ui.includes('selectChecklistToConduct'));
+  assert(!ui.includes('startTodayChecklistSession'));
+  assert(!ui.includes('openAddChecklistSession'));
   assert(ui.includes('Unlock Published Activity'));
   assert(ui.includes('Verify PIN and Unlock'));
   assert(ui.includes('reviewChecklistActivityUnlock'));
@@ -818,11 +822,11 @@ function fixture() {
   )?.[1] || '';
   assert(
     addActivityHandler.includes('checklist.criteria.filter(item => item.active)'),
-    'Add Activity must load all active activity types before a session exists'
+    'Create Checklist must load all active checklist types before a checklist is selected'
   );
   assert(
     !addActivityHandler.includes('checklistSessionCriteria(checklist, session)'),
-    'Add Activity must not reference an undefined activity session'
+    'Create Checklist must not reference an undefined selected checklist'
   );
   assert(ui.includes('Bulk Mark'));
   assert(ui.includes('Undo Last Entry'));
@@ -839,8 +843,8 @@ function fixture() {
   assert(ui.includes('Checklist learner note'));
   assert(ui.includes('Save as Template'));
   assert(ui.includes('Reset Checklist'));
-  assert(ui.includes('Clear Current Session'));
-  assert(ui.includes('Clear All Term Sessions'));
+  assert(ui.includes('Clear Selected Checklist'));
+  assert(ui.includes('Clear All Term Checklists'));
   assert(ui.includes('Reset Mini Name Picker Only'));
   assert(ui.includes('let checklistPickerAnimationTimer = null'));
   assert(ui.includes('function cancelChecklistPickerAnimation()'));

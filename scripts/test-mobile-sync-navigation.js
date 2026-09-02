@@ -25,6 +25,7 @@ const sections = [
   element({ view: 'calendar', classes: ['view-section', 'view-section--flex'] }),
   element({ view: 'sync', classes: ['view-section'] }),
 ];
+let keydownHandler = null;
 const buttons = [
   element({ id: 'navDashboard', classes: ['nav-btn', 'nav-btn--active'] }),
   element({ id: 'navSync', classes: ['nav-btn'] }),
@@ -33,6 +34,9 @@ let baseView = '';
 let runtimeState = { currentView: 'dashboard', recordTab: '1' };
 const window = {
   db: { activeView: 'dashboard' },
+  addEventListener(type, handler) {
+    if (type === 'keydown') keydownHandler = handler;
+  },
   setView(view) { baseView = view; },
   getRuntimeNavigationState: () => runtimeState,
   replaceRuntimeNavigationState(next) { runtimeState = next; },
@@ -63,6 +67,20 @@ assert.strictEqual(runtimeState.currentView, 'sync');
 assert.strictEqual(window.db.activeView, 'sync');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'index.html'), 'utf8');
+let shortcutPrevented = false;
+baseView = '';
+keydownHandler({
+  key: 'M',
+  ctrlKey: true,
+  shiftKey: true,
+  altKey: false,
+  repeat: false,
+  preventDefault() { shortcutPrevented = true; },
+});
+assert.strictEqual(baseView, 'sync', 'Ctrl+Shift+M should open Mobile Sync.');
+assert.strictEqual(shortcutPrevented, true, 'The browser-level shortcut must be consumed.');
+
 assert.match(html, /id="navSync"[^>]+onclick="openMobileSyncView\(\)"/);
 assert.match(html, /<script src="js\/mobile-sync-navigation\.js"><\/script>/);
 console.log('Mobile Sync navigation tests passed.');
+assert.match(html, /id="navSync"[^>]+hidden[^>]+aria-hidden="true"[^>]+style="display:none"/);

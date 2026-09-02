@@ -10,6 +10,12 @@ files:
   - src/**/*
   - "!src/**/*.map"
 
+extraResources:
+  - from: android/app/build/outputs/apk/debug
+    to: mobile
+    filter:
+      - E-Class-Record-Mobile-v*.apk
+
 win:
   target: nsis
   icon: src/assets/icon.png
@@ -21,6 +27,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   differentialPackage: true
   deleteAppDataOnUninstall: false
+  include: build/installer.nsh
 
 publish:
   provider: github

@@ -24,6 +24,7 @@ let isSyncConnecting = false;
 let isBleAuthorized = false;
 let bluetoothPublishTimer = null;
 let bleWriteQueue = Promise.resolve();
+let lastSentBluetoothSnapshotKey = '';
 let syncLogs = [];
 let pendingSnapshotRevision = null;
 let snapshotAckTimer = null;
@@ -31,6 +32,34 @@ let linkQualityTimer = null;
 let reconnectTimer = null;
 let reconnectAttempts = 0;
 let hasCompletedInitialSnapshot = false;
+let bleScanCancelledFromPanel = false;
+let automaticBluetoothDiscoveryTag = '';
+let automaticBluetoothSelectionPending = false;
+let preparedAutomaticBluetoothPairing = null;
+let automaticPairingMode = false;
+let automaticDiscoveryRetryTimer = null;
+
+function bluetoothDiscoveryTag(sessionId) {
+  const compact = String(sessionId || '').replace(/-/g, '').slice(0, 6).toUpperCase();
+  return compact ? `EC-${compact}` : '';
+}
+
+function scheduleAutomaticBluetoothDiscoveryRetry() {
+  clearTimeout(automaticDiscoveryRetryTimer);
+  automaticDiscoveryRetryTimer = setTimeout(() => {
+    automaticDiscoveryRetryTimer = null;
+    startAutomaticBluetoothDiscovery().catch((error) => {
+      addSyncLog(`Automatic detection retry waiting: ${error.message}`);
+    });
+  }, 2500);
+}
+
+function setBluetoothScanBusy(busy) {
+  const button = document.getElementById('btnScanBle');
+  if (!button) return;
+  button.disabled = Boolean(busy);
+  button.setAttribute('aria-busy', busy ? 'true' : 'false');
+}
 
 // Reassembly buffer (Mobile -> Desktop)
 let mobileRxBuffer = '';
@@ -172,21 +201,37 @@ async function attemptKnownBluetoothReconnect() {
  * Initiates BLE scanning using Chromium Web Bluetooth API.
  * In Electron, this will emit 'select-bluetooth-device' in main process.
  */
-async function startScanBleDevices() {
+async function startScanBleDevices(options = {}) {
   if (window.AdminTestMode?.blockExternalAction?.('Bluetooth scanning')) return;
+  if (isSyncConnecting) return;
+  const automatic = Boolean(options.automatic);
+  automaticPairingMode = automatic;
+  isSyncConnecting = true;
+  bleScanCancelledFromPanel = false;
+  setBluetoothScanBusy(true);
   try {
-    const pairing = await window.electronAPI.getCompanionWlanStatus();
+    if (!options.skipReset && typeof window.electronAPI.resetBluetoothScan === 'function') {
+      await window.electronAPI.resetBluetoothScan();
+    }
+    const pairing = options.preparedPairing || await window.electronAPI.getCompanionWlanStatus();
     if (!pairing.running || pairing.transport !== 'bluetooth') {
       toast('Start Bluetooth Pairing and let Android scan the QR first.', 'warning');
       return;
     }
-    isSyncConnecting = true;
-    addSyncLog('Starting Bluetooth scan for companion app...');
-    updateSyncStatusUI('scanning', 'Bluetooth: Scanning...', 'Searching for E-Class mobile applications...');
+    automaticBluetoothDiscoveryTag = automatic ? bluetoothDiscoveryTag(pairing.sessionId) : '';
+    automaticBluetoothSelectionPending = automatic && Boolean(automaticBluetoothDiscoveryTag);
+    addSyncLog(automatic
+      ? `Automatic discovery started for QR session ${automaticBluetoothDiscoveryTag}.`
+      : 'Starting Bluetooth scan for companion app...');
+    updateSyncStatusUI(
+      'scanning',
+      automatic ? 'Bluetooth: Waiting for Phone...' : 'Bluetooth: Scanning...',
+      automatic ? 'Scan the desktop QR on Android; this desktop will connect automatically.' : 'Searching for E-Class mobile applications...'
+    );
     
     // Clear list and display discovery panel
     const list = document.getElementById('discoveredDevicesList');
-    if (list) list.innerHTML = '<li class="device-item text-muted">Searching for E-Class companions...</li>';
+    if (list) list.innerHTML = `<li class="device-item text-muted">${automatic ? 'Waiting for the phone that scanned this QR...' : 'Searching for E-Class companions...'}</li>`;
     showEl('deviceDiscoveryPanel', true);
     showEl('syncPinPanel', false);
     showEl('btnSyncToPhone', false);
@@ -198,6 +243,7 @@ async function startScanBleDevices() {
       filters: [{ services: [BLE_SERVICE_UUID] }],
       optionalServices: [BLE_SERVICE_UUID]
     });
+    automaticBluetoothSelectionPending = false;
     
     // Discovered and selected!
     showEl('deviceDiscoveryPanel', false);
@@ -232,20 +278,58 @@ async function startScanBleDevices() {
     }
   } catch (error) {
     if (error.name === 'NotFoundError' || error.message.includes('User cancelled')) {
-      addSyncLog('Bluetooth scanning cancelled by user.');
+      addSyncLog(bleScanCancelledFromPanel
+        ? 'Bluetooth search cancelled.'
+        : 'Bluetooth scan closed without selecting a phone.');
       updateSyncStatusUI('inactive', 'Bluetooth: Disconnected', 'Scan cancelled.');
     } else {
       addSyncLog(`Bluetooth error: ${error.message}`);
       updateSyncStatusUI('error', 'Bluetooth: Error', error.message);
       toast('Bluetooth scanning failed: ' + error.message, 'error');
     }
-    isSyncConnecting = false;
     showEl('deviceDiscoveryPanel', false);
     showEl('syncPinPanel', false);
+    if (automatic && !bleScanCancelledFromPanel && !isBleAuthorized) {
+      addSyncLog('Automatic phone detection will retry. Keep the Android Bluetooth screen open.');
+      scheduleAutomaticBluetoothDiscoveryRetry();
+    }
+  } finally {
+    if (!isBleAuthorized) {
+      isSyncConnecting = false;
+      setBluetoothScanBusy(false);
+      automaticBluetoothSelectionPending = false;
+      automaticBluetoothDiscoveryTag = '';
+    }
   }
 }
 
+async function startAutomaticBluetoothDiscovery() {
+  if (isSyncConnecting) return false;
+  clearTimeout(automaticDiscoveryRetryTimer);
+  if (typeof window.electronAPI.resetBluetoothScan === 'function') {
+    await window.electronAPI.resetBluetoothScan();
+  }
+  const pairing = await window.electronAPI.getCompanionWlanStatus();
+  if (!pairing.running || pairing.transport !== 'bluetooth') return false;
+  preparedAutomaticBluetoothPairing = pairing;
+  const result = await window.electronAPI.startAutomaticBluetoothScan(bluetoothDiscoveryTag(pairing.sessionId));
+  if (!result?.started) preparedAutomaticBluetoothPairing = null;
+  return Boolean(result?.started);
+}
+
+function startAutomaticBluetoothDiscoveryFromDesktopGesture() {
+  const pairing = preparedAutomaticBluetoothPairing;
+  preparedAutomaticBluetoothPairing = null;
+  if (!pairing) return false;
+  startScanBleDevices({ automatic: true, preparedPairing: pairing, skipReset: true }).catch((error) => {
+    addSyncLog(`Automatic phone detection failed: ${error.message}`);
+  });
+  return true;
+}
+
 async function finishBluetoothAuthorization(message) {
+  clearTimeout(automaticDiscoveryRetryTimer);
+  automaticPairingMode = false;
   isBleAuthorized = true;
   reconnectAttempts = 0;
   addSyncLog(message);
@@ -328,6 +412,9 @@ async function submitHandshakePin() {
     updateSyncStatusUI('error', 'Bluetooth: Connection Refused', 'Check the PIN entered on Android and try pairing again.');
     toast('Bluetooth authorization failed. Re-enter the desktop PIN on Android.', 'error');
     disconnectBleDevice();
+    if (automaticPairingMode && !bleScanCancelledFromPanel) {
+      scheduleAutomaticBluetoothDiscoveryRetry();
+    }
   }
 }
 
@@ -370,7 +457,11 @@ function handleMobileScoresNotification(event) {
 }
 
 async function handleMobilePayload(payload) {
-  if (payload?.kind === 'snapshot-ack') {
+  const payloadKind = payload?.kind
+    || (Array.isArray(payload?.changes) ? 'changes' : '')
+    || (payload?.command ? 'tool-command' : '')
+    || (Object.hasOwn(payload || {}, 'revision') && Object.hasOwn(payload || {}, 'success') ? 'snapshot-ack' : '');
+  if (payloadKind === 'snapshot-ack') {
     const revision = Number(payload.revision || 0);
     if (payload.success) {
       const isInitialSync = !hasCompletedInitialSnapshot;
@@ -392,19 +483,18 @@ async function handleMobilePayload(payload) {
     }
     return;
   }
-  if (payload?.kind === 'changes') {
+  if (payloadKind === 'changes') {
     try {
       const result = await window.MobileSyncBridge.applyBluetoothEnvelope(payload, isBleAuthorized);
       await sendPayloadToMobile({ kind: 'change-result', success: true, accepted: result.accepted || 0 }, 'change result');
-      await window.MobileSyncBridge.publish();
-      await syncDataToMobile({ silent: true });
+      addSyncLog(`${result.accepted || 0} authorized mobile change${result.accepted === 1 ? '' : 's'} saved automatically.`);
     } catch (error) {
       await sendPayloadToMobile({ kind: 'change-result', success: false, accepted: 0, error: error.message || 'Mobile entries were rejected.' }, 'change rejection');
       throw error;
     }
     return;
   }
-  if (payload?.kind === 'tool-command') {
+  if (payloadKind === 'tool-command') {
     window.MobileSyncBridge.handleToolCommand(payload);
     return;
   }
@@ -501,14 +591,31 @@ async function sendPayloadToMobile(payload, label = 'payload') {
     const rawBytes = encoder.encode(JSON.stringify(payload));
     const bytes = encoder.encode(bytesToBase64(rawBytes));
     addSyncLog(`Sending Bluetooth ${label}: ${rawBytes.length} data bytes (${bytes.length} bytes on wire).`);
-    const write = (value) => typeof rxChar.writeValueWithResponse === 'function'
-      ? rxChar.writeValueWithResponse(value)
-      : rxChar.writeValue(value);
+    const canWriteWithoutResponse = typeof rxChar.writeValueWithoutResponse === 'function';
+    const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+    const write = async (value) => {
+      let lastError;
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        try {
+          if (canWriteWithoutResponse) await rxChar.writeValueWithoutResponse(value);
+          else if (typeof rxChar.writeValueWithResponse === 'function') await rxChar.writeValueWithResponse(value);
+          else await rxChar.writeValue(value);
+          return;
+        } catch (error) {
+          lastError = error;
+          await wait(15 * (attempt + 1));
+        }
+      }
+      throw lastError || new Error('Bluetooth write failed.');
+    };
     await write(encoder.encode(`B64START:${bytes.length}`));
     let lastProgressBucket = -1;
+    let chunkIndex = 0;
     for (let offset = 0; offset < bytes.length; offset += 160) {
       const end = Math.min(offset + 160, bytes.length);
       await write(bytes.slice(offset, end));
+      chunkIndex += 1;
+      if (canWriteWithoutResponse && chunkIndex % 8 === 0) await wait(8);
       if (label === 'desktop snapshot') {
         const bucket = Math.floor((end / bytes.length) * 10);
         if (bucket > lastProgressBucket) {
@@ -533,10 +640,15 @@ async function syncDataToMobile(options = {}) {
     if (!options.silent) toast('No authorized Bluetooth companion is connected.', 'warning');
     return;
   }
+  let claimedSnapshotKey = '';
   try {
     const status = await window.electronAPI.getCompanionWlanStatus();
     const snapshot = window.MobileSyncBridge?.buildCompanionSnapshot?.();
     if (!snapshot) throw new Error('The desktop snapshot is not ready.');
+    const snapshotKey = JSON.stringify({ ...snapshot, exportedAt: '' });
+    if (options.silent && snapshotKey === lastSentBluetoothSnapshotKey) return;
+    lastSentBluetoothSnapshotKey = snapshotKey;
+    claimedSnapshotKey = snapshotKey;
     const revision = Number(status.revision || 0);
     pendingSnapshotRevision = revision;
     const companionName = activeGattDevice?.name || 'Android companion';
@@ -549,8 +661,11 @@ async function syncDataToMobile(options = {}) {
       updateSyncStatusUI('error', 'Bluetooth: Sync Incomplete', 'The phone did not confirm the desktop records. Press Refresh Phone to retry.');
       addSyncLog(`Android did not confirm desktop revision ${revision}; the Bluetooth link remains authorized.`);
     }, 30000);
-    if (!options.silent) toast('Desktop records sent. Waiting for confirmation from the phone.', 'info');
+    if (!options.silent) toast('Desktop records sent to the connected phone.', 'success');
   } catch (error) {
+    if (claimedSnapshotKey && lastSentBluetoothSnapshotKey === claimedSnapshotKey) {
+      lastSentBluetoothSnapshotKey = '';
+    }
     addSyncLog(`Sync failed: ${error.message}`);
     if (!options.silent) toast('Failed to transfer class records: ' + error.message, 'error');
     throw error;
@@ -560,7 +675,14 @@ async function syncDataToMobile(options = {}) {
 function scheduleBluetoothSnapshot() {
   if (!rxChar || !isBleAuthorized) return;
   clearTimeout(bluetoothPublishTimer);
-  bluetoothPublishTimer = setTimeout(() => syncDataToMobile({ silent: true }).catch(() => {}), 900);
+  bluetoothPublishTimer = setTimeout(async () => {
+    try {
+      await window.MobileSyncBridge?.flushPublish?.();
+      await syncDataToMobile({ silent: true });
+    } catch (_) {
+      // The next desktop save or manual refresh retries without interrupting editing.
+    }
+  }, 250);
 }
 window.attemptKnownBluetoothReconnect = attemptKnownBluetoothReconnect;
 
@@ -590,6 +712,7 @@ function onBleDisconnected() {
   txChar = null;
   isSyncConnecting = false;
   isBleAuthorized = false;
+  lastSentBluetoothSnapshotKey = '';
   pendingSnapshotRevision = null;
   clearTimeout(snapshotAckTimer);
   snapshotAckTimer = null;
@@ -609,12 +732,17 @@ function onBleDisconnected() {
 // ── Electron main process device listing callbacks ──
 
 function cancelBleDiscovery() {
+  if (!isSyncConnecting) return;
+  bleScanCancelledFromPanel = true;
+  automaticBluetoothSelectionPending = false;
+  automaticPairingMode = false;
+  clearTimeout(automaticDiscoveryRetryTimer);
   window.electronAPI.cancelBluetoothDevice();
-  showEl('deviceDiscoveryPanel', false);
-  updateSyncStatusUI('inactive', 'Bluetooth: Disconnected', 'Search cancelled.');
+  updateSyncStatusUI('scanning', 'Bluetooth: Cancelling...', 'Closing the current phone search...');
 }
 
 function selectDiscoveredDevice(deviceId) {
+  automaticBluetoothSelectionPending = false;
   window.electronAPI.selectBluetoothDevice(deviceId);
   showEl('deviceDiscoveryPanel', false);
   addSyncLog(`Device selected: ${deviceId}. Pairing...`);
@@ -633,18 +761,32 @@ window.addEventListener('DOMContentLoaded', () => {
         return;
       }
       
-      // Filter out empty names or non-matching names
-      const companions = deviceList.filter(d => d.deviceName);
+      // The private service UUID already filters compatible companions. Keep
+      // nameless devices because Windows may not refresh an Android BLE name.
+      const companions = deviceList.filter(d => d?.deviceId);
       if (companions.length === 0) {
         list.innerHTML = '<li class="device-item text-muted">No compatible E-Class companion service found nearby.</li>';
         return;
+      }
+
+      if (automaticBluetoothSelectionPending && automaticBluetoothDiscoveryTag) {
+        const exactMatch = companions.find((device) =>
+          String(device.deviceName || '').trim().toUpperCase() === automaticBluetoothDiscoveryTag
+        );
+        const match = exactMatch || (companions.length === 1 ? companions[0] : null);
+        if (match) {
+          automaticBluetoothSelectionPending = false;
+          addSyncLog(`${exactMatch ? 'QR-matched' : 'Compatible'} phone detected: ${match.deviceName}. Connecting automatically...`);
+          selectDiscoveredDevice(match.deviceId);
+          return;
+        }
       }
       
       companions.forEach(device => {
         const li = document.createElement('li');
         li.className = 'device-item';
         li.innerHTML = `
-          <span>📱 ${esc(device.deviceName)}</span>
+          <span>📱 ${esc(device.deviceName || 'E-Class Android companion')}</span>
           <span class="device-item__rssi">ID: ${esc(device.deviceId)}</span>
         `;
         li.onclick = () => selectDiscoveredDevice(device.deviceId);
@@ -653,3 +795,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+window.startAutomaticBluetoothDiscovery = startAutomaticBluetoothDiscovery;
+window.startAutomaticBluetoothDiscoveryFromDesktopGesture = startAutomaticBluetoothDiscoveryFromDesktopGesture;

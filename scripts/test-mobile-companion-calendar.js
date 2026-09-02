@@ -42,7 +42,7 @@ const window = {
   addEventListener() {},
 };
 const document = {
-  title: 'E-Class Record v2.0.2',
+  title: 'E-Class Record v1.9.6',
   getElementById: () => null,
 };
 const context = {

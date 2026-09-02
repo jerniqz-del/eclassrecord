@@ -166,7 +166,7 @@
           </svg>
           <span class="nav-btn__label">Tools</span>
         </button>
-        <button id="navSync" class="nav-btn" onclick="openMobileSyncView()" title="Mobile Sync">
+        <button id="navSync" class="nav-btn" onclick="openMobileSyncView()" title="Mobile Sync (Ctrl+Shift+M)" hidden aria-hidden="true" tabindex="-1" style="display:none">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
             <line x1="12" y1="18" x2="12.01" y2="18"></line>
@@ -414,7 +414,7 @@
           <div class="sync-panel__body">
             <section class="companion-transport-card companion-transport-card--wlan">
               <div class="companion-transport-card__heading">
-                <div><span class="companion-transport-card__eyebrow">SECONDARY</span><h3>WLAN / Wi-Fi pairing</h3><p id="companionWlanDetails">Optional fallback for phones connected to the same trusted Wi-Fi network.</p></div>
+                <div><span class="companion-transport-card__eyebrow">PRIMARY · LIVE SYNC</span><h3>WLAN / Wi-Fi pairing</h3><p id="companionWlanDetails">Fast automatic two-way synchronization for devices on the same trusted network.</p></div>
                 <span class="companion-state" id="companionWlanStatus">WLAN sync is off</span>
               </div>
               <div class="sync-actions-row">
@@ -426,13 +426,13 @@
                 <div class="companion-pairing__instructions">
                   <strong>Scan this QR code from the Android app</strong>
                   <ol><li>Connect the desktop and phone to the same trusted Wi-Fi.</li><li>On Android choose Connect to Desktop App → WLAN / Wi-Fi.</li><li>Scan this QR. Desktop updates will refresh automatically on the phone.</li></ol>
-                  <div class="companion-pin-display"><span>PIN required when sending mobile entries</span><strong id="companionPairingPin">------</strong></div>
+                  <div class="companion-pin-display"><span>Mobile entries use your desktop profile PIN</span><strong id="companionPairingPin">Secure</strong></div>
                   <small>Do not photograph or share this QR code. It contains the encrypted session key.</small>
                 </div>
               </div>
             </section>
             <section class="companion-transport-card companion-transport-card--bluetooth">
-              <div class="companion-transport-card__heading"><div><span class="companion-transport-card__eyebrow">PRIMARY ? AUTO RECONNECT</span><h3>Bluetooth pairing</h3><p>Pair once with the desktop PIN. The same desktop and Android device reconnect automatically next time.</p></div></div>
+              <div class="companion-transport-card__heading"><div><span class="companion-transport-card__eyebrow">FALLBACK · AUTO RECONNECT</span><h3>Bluetooth pairing</h3><p>Bluetooth remains available when the trusted local network cannot be reached.</p></div></div>
             <div class="sync-actions-row">
               <button class="btn btn-primary" id="btnStartCompanionBluetooth" onclick="startCompanionBluetoothPairing()">1. Start Bluetooth Pairing</button>
               <button class="btn btn-ghost" id="btnStopCompanionBluetooth" onclick="stopCompanionWlan()" style="display:none">Stop Bluetooth Pairing</button>
@@ -441,7 +441,7 @@
               <div class="companion-pairing__qr"><img id="companionBluetoothPairingQr" alt="Android companion Bluetooth pairing QR code"></div>
               <div class="companion-pairing__instructions">
                 <strong>Scan this Bluetooth QR from the Android app</strong>
-                <ol><li>On Android choose Connect to Desktop App → Bluetooth and scan this QR.</li><li>The QR loads the PIN and starts the phone connection automatically.</li><li>Allow Nearby devices, then click Scan for Phone. Authorization is automatic.</li></ol>
+                <ol><li>On Android choose Connect to Desktop App → Bluetooth and scan this QR.</li><li>The phone advertises this QR session automatically.</li><li>The desktop detects the matching phone, authorizes it, and synchronizes without another click.</li></ol>
                 <div class="companion-pin-display"><span>Manual pairing PIN</span><strong id="companionBluetoothPairingPin">------</strong></div>
                 <small>Keep this desktop pairing session open while using the companion app.</small>
               </div>
@@ -451,7 +451,7 @@
               <div class="sync-status-indicator sync-status-indicator--inactive" id="syncIndicator"></div>
               <div class="sync-status-details">
                 <div class="sync-status-label" id="syncStatusLabel">Bluetooth: Disconnected</div>
-                <div class="sync-status-sub" id="syncStatusSub">Click Scan to search for your E-Class mobile app.</div>
+                <div class="sync-status-sub" id="syncStatusSub">Scan the Bluetooth QR on Android for automatic detection.</div>
                 <div class="sync-status-sub">Connection strength: <strong id="syncLinkQuality">Not paired</strong></div>
               </div>
             </div>
@@ -461,7 +461,7 @@
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9-9a9 9 0 0 1-9 9m9-9V3m0 18v-3"></path>
                 </svg>
-                2. Scan for Phone
+                Retry Phone Detection
               </button>
               <button class="btn btn-ghost" id="btnDisconnectBle" onclick="disconnectBleDevice()" style="display:none;">
                 Disconnect
@@ -476,7 +476,7 @@
 
             <!-- Discovered Devices Selector Modal Overlay/Popup -->
             <div class="device-discovery-panel" id="deviceDiscoveryPanel" style="display:none;">
-              <div class="device-discovery-title">Select Your Device</div>
+              <div class="device-discovery-title">Automatic Phone Detection</div>
               <ul class="device-list" id="discoveredDevicesList">
                 <li class="device-item text-muted">Searching for E-Class companions...</li>
               </ul>
@@ -488,7 +488,7 @@
             <!-- Bluetooth Logs -->
             <div class="sync-logs-panel">
               <div class="sync-logs-title">Bluetooth Connection Log</div>
-              <pre class="sync-logs-output" id="syncLogsOutput">No active link logs. Press 'Scan for Phone' to begin...</pre>
+              <pre class="sync-logs-output" id="syncLogsOutput">Waiting for the Android app to scan the Bluetooth QR...</pre>
             </div>
           </div>
         </div>
@@ -2049,7 +2049,7 @@
           console.log('Mock saveDatabase:', data);
           return true;
         },
-        getVersion: async () => '2.0.2-mock',
+        getVersion: async () => '1.9.6-mock',
         getPerformanceProfile: async () => ({
           totalMemoryBytes: 8 * 1024 ** 3,
           freeMemoryBytes: 4 * 1024 ** 3,

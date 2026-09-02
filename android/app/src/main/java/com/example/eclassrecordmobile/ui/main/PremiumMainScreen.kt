@@ -96,6 +96,7 @@ import com.example.eclassrecordmobile.data.BleServerManager
 import com.example.eclassrecordmobile.data.DatabaseHelper
 import com.example.eclassrecordmobile.data.SyncPayload
 import com.example.eclassrecordmobile.ui.DesktopFeatureNames
+import kotlin.math.roundToInt
 
 private enum class HomeTab(val label: String, val icon: ImageVector) {
     Dashboard("Dashboard", Icons.Default.Home),
@@ -103,6 +104,23 @@ private enum class HomeTab(val label: String, val icon: ImageVector) {
     Grading("Grading", Icons.Default.List),
     Tools("Tools", Icons.Default.Build),
     Settings("Settings", Icons.Default.Settings),
+}
+
+private enum class ClassLayout { List, Grid }
+
+private data class CompletionStats(val entered: Int, val expected: Int) {
+    val fraction: Float = if (expected == 0) 0f else (entered.toFloat() / expected).coerceIn(0f, 1f)
+    val percent: Int = (fraction * 100).roundToInt()
+}
+
+private fun gradingCompletion(assignment: Assignment, term: String? = null): CompletionStats {
+    val assessments = assignment.assessments.filter { term == null || it.term == term }
+    val entered = assessments.sumOf { assessment ->
+        assignment.learners.count { learner ->
+            assignment.scores["${learner.id}|${assessment.id}"].orEmpty().trim().isNotEmpty()
+        }
+    }
+    return CompletionStats(entered = entered, expected = assessments.size * assignment.learners.size)
 }
 
 object MobileUiPreferences {
@@ -275,10 +293,12 @@ private fun DashboardTab(
 ) {
     val assignments = payload?.assignments.orEmpty()
     val learnerCount = assignments.flatMap { it.learners }.distinctBy { it.id }.size
-    val expectedScores = assignments.sumOf { it.learners.size * it.assessments.size }
-    val enteredScores = assignments.sumOf { it.scores.values.count(String::isNotBlank) }
-    val completion = if (expectedScores == 0) 0f else enteredScores.toFloat() / expectedScores
+    val completionStats = assignments.map { gradingCompletion(it) }
+    val expectedScores = completionStats.sumOf { it.expected }
+    val enteredScores = completionStats.sumOf { it.entered }
+    val completion = CompletionStats(enteredScores, expectedScores).fraction
     val animatedCompletion by animateFloatAsState(completion, label = "grading-completion")
+    var classLayout by rememberSaveable { mutableStateOf(ClassLayout.List) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -334,7 +354,7 @@ private fun DashboardTab(
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Grading progress", fontWeight = FontWeight.Bold)
-                        Text("${(completion * 100).toInt()}%", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
+                        Text("${(completion * 100).roundToInt()}%", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
                     }
                     LinearProgressIndicator(
                         progress = { animatedCompletion },
@@ -373,8 +393,48 @@ private fun DashboardTab(
         }
         if (assignments.isNotEmpty()) {
             item { SectionHeader("My classes", "Synced teaching loads") }
-            items(assignments.take(4), key = { it.id }) { assignment ->
-                PremiumClassCard(item = assignment, onClick = { onOpenClass(assignment.id) })
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = classLayout == ClassLayout.List,
+                        onClick = { classLayout = ClassLayout.List },
+                        label = { Text("List") },
+                    )
+                    FilterChip(
+                        selected = classLayout == ClassLayout.Grid,
+                        onClick = { classLayout = ClassLayout.Grid },
+                        label = { Text("Grid") },
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "${assignments.size} classes",
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (classLayout == ClassLayout.List) {
+                items(assignments, key = { it.id }) { assignment ->
+                    PremiumClassCard(item = assignment, onClick = { onOpenClass(assignment.id) })
+                }
+            } else {
+                items(assignments.chunked(2), key = { row -> row.joinToString("|") { it.id } }) { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        row.forEach { assignment ->
+                            PremiumClassCard(
+                                item = assignment,
+                                onClick = { onOpenClass(assignment.id) },
+                                modifier = Modifier.weight(1f),
+                                compact = true,
+                            )
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
             }
         }
         payload?.calendar?.sortedBy { it.date }?.take(3)?.takeIf { it.isNotEmpty() }?.let { events ->
@@ -407,14 +467,15 @@ private fun GradingTab(payload: SyncPayload?, onOpen: (String) -> Unit) {
   if(assignments.isEmpty())item{EmptyState("No grading sheets","Sync classes from the desktop app.")}
   items(assignments,key={it.id}){assignment->
    val assessments=assignment.assessments.filter{it.term==term}
-   val expected=assessments.size*assignment.learners.size
-   val entered=assessments.sumOf{assessment->assignment.learners.count{assignment.scores["${it.id}|${assessment.id}"].orEmpty().isNotBlank()}}
-   val progress=if(expected==0)0f else entered.toFloat()/expected
+   val stats=gradingCompletion(assignment,term)
+   val expected=stats.expected
+   val entered=stats.entered
+   val progress=stats.fraction
    ElevatedCard(Modifier.fillMaxWidth().clickable{onOpen(assignment.id)},shape=RoundedCornerShape(20.dp)){
     Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
      Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
       Column{Text(assignment.subject,fontWeight=FontWeight.ExtraBold,fontSize=17.sp);Text("Grade ${assignment.gradeLevel} - ${assignment.section}",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-      Text("${(progress*100).toInt()}%",fontWeight=FontWeight.ExtraBold,color=MaterialTheme.colorScheme.primary)
+      Text("${stats.percent}%",fontWeight=FontWeight.ExtraBold,color=MaterialTheme.colorScheme.primary)
      }
      LinearProgressIndicator({progress},Modifier.fillMaxWidth().height(8.dp).clip(CircleShape))
      Text("${assessments.size} assessments - $entered/$expected scores",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -494,21 +555,21 @@ private fun SettingsTab(payload: SyncPayload?,smoothMotion:Boolean,onSmoothMotio
 @Composable private fun AttentionCard(title:String,detail:String,onClick:()->Unit){
  Card(Modifier.fillMaxWidth().clickable(onClick=onClick),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Color(0xFFFFF7ED))){Row(Modifier.padding(17.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Warning,null,tint=Color(0xFFEA580C));Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(title,fontWeight=FontWeight.Bold,color=Color(0xFF9A3412));Text(detail,fontSize=12.sp,color=Color(0xFF9A3412))};Icon(Icons.Default.ArrowForward,null,tint=Color(0xFFEA580C))}}
 }
-@Composable private fun PremiumClassCard(item:Assignment,onClick:()->Unit){
+@Composable private fun PremiumClassCard(item:Assignment,modifier:Modifier=Modifier,compact:Boolean=false,onClick:()->Unit){
  val males=item.learners.count{it.sex.equals("M",true)}
  val females=item.learners.count{it.sex.equals("F",true)}
  val visual=SubjectVisuals.forAssignment(item)
  Card(
-  modifier=Modifier.fillMaxWidth().clickable(onClick=onClick),
+  modifier=modifier.fillMaxWidth().clickable(onClick=onClick),
   shape=RoundedCornerShape(22.dp),
   border=BorderStroke(1.dp,visual.color.copy(alpha=0.38f)),
  ){
   Column{
    Box(Modifier.fillMaxWidth().height(4.dp).background(visual.color.copy(alpha=0.85f)))
-   Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+   Column(Modifier.padding(if(compact) 13.dp else 18.dp),verticalArrangement=Arrangement.spacedBy(if(compact) 7.dp else 10.dp)){
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-     SubjectIcon(item,size=46.dp)
-     Spacer(Modifier.width(12.dp))
+     SubjectIcon(item,size=if(compact) 36.dp else 46.dp)
+     Spacer(Modifier.width(if(compact) 8.dp else 12.dp))
      Column(Modifier.weight(1f)){
       Text(item.subject,fontWeight=FontWeight.ExtraBold)
       Text(
@@ -518,12 +579,12 @@ private fun SettingsTab(payload: SyncPayload?,smoothMotion:Boolean,onSmoothMotio
        fontWeight=FontWeight.SemiBold,
       )
      }
-     Icon(Icons.Default.ArrowForward,null,tint=visual.color)
+     if(!compact)Icon(Icons.Default.ArrowForward,null,tint=visual.color)
     }
     HorizontalDivider(color=visual.color.copy(alpha=0.18f))
     Text(
-     "${item.learners.size} learners - M $males / F $females - ${item.assessments.size} assessments",
-     fontSize=12.sp,
+     if(compact) "${item.learners.size} learners\n${item.assessments.size} assessments" else "${item.learners.size} learners - M $males / F $females - ${item.assessments.size} assessments",
+     fontSize=if(compact) 11.sp else 12.sp,
      color=MaterialTheme.colorScheme.onSurfaceVariant,
     )
    }

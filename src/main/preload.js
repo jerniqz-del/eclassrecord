@@ -141,5 +141,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Bluetooth Sync APIs
   selectBluetoothDevice: (deviceId) => ipcRenderer.send('bluetooth:select-device', deviceId),
   cancelBluetoothDevice: () => ipcRenderer.send('bluetooth:cancel-device'),
+  resetBluetoothScan: () => ipcRenderer.invoke('bluetooth:reset-scan'),
+  startAutomaticBluetoothScan: (discoveryTag) => ipcRenderer.invoke('bluetooth:auto-scan', discoveryTag),
   onBluetoothDeviceList: (callback) => ipcRenderer.on('bluetooth:device-list', (_event, deviceList) => callback(deviceList))
 });

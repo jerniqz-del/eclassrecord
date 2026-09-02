@@ -3,6 +3,8 @@ package com.example.eclassrecordmobile.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +23,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -77,6 +80,8 @@ fun ScoreEntryScreen(
     // Keyboard and Focus management
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    val density = LocalDensity.current
+    val keyboardVisible = WindowInsets.ime.getBottom(density) > 0
 
     // Bottom sheet for quick jump roster list
     val sheetState = rememberModalBottomSheetState()
@@ -164,9 +169,11 @@ fun ScoreEntryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(24.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = if (keyboardVisible) 14.dp else 24.dp)
+                .padding(vertical = if (keyboardVisible) 10.dp else 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(if (keyboardVisible) 12.dp else 24.dp)
         ) {
             // Student Card Header (Top)
             Card(
@@ -175,7 +182,7 @@ fun ScoreEntryScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(if (keyboardVisible) 12.dp else 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -185,14 +192,15 @@ fun ScoreEntryScreen(
                         color = MaterialTheme.colorScheme.primary,
                         letterSpacing = 1.5.sp
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(if (keyboardVisible) 4.dp else 10.dp))
                     Text(
                         text = activeLearner.name,
-                        fontSize = 20.sp,
+                        fontSize = if (keyboardVisible) 17.sp else 20.sp,
                         fontWeight = FontWeight.ExtraBold,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (!keyboardVisible) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -217,14 +225,15 @@ fun ScoreEntryScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                     }
+                    }
                 }
             }
 
             // Score Input Area (Center)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
+                modifier = Modifier.fillMaxWidth().padding(vertical = if (keyboardVisible) 2.dp else 28.dp),
+                verticalArrangement = Arrangement.Center,
             ) {
                 Row(
                     verticalAlignment = Alignment.Bottom,

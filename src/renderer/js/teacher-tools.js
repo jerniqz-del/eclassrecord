@@ -1196,20 +1196,9 @@
 
   function checklistSession(checklist) {
     if (!checklist) return null;
-    let session = (checklist.sessions || []).find(item => item.id === checklistState.sessionId && !item.activity?.deletedAt);
-    if (!session) {
-      const sessions = (checklist.sessions || []).filter(item => !item.activity?.deletedAt).slice();
-      session = sessions
-        .filter(item => !item.activity?.deletedAt && item.date === checklistToday())
-        .sort((left, right) => String(right.updatedAt || '').localeCompare(String(left.updatedAt || '')))[0]
-        || sessions.sort((left, right) =>
-          String(right.date || '').localeCompare(String(left.date || ''))
-          || String(right.updatedAt || '').localeCompare(String(left.updatedAt || ''))
-        )[0]
-        || null;
-      checklistState.sessionId = session?.id || '';
-    }
-    return session;
+    return (checklist.sessions || []).find(item =>
+      item.id === checklistState.sessionId && !item.activity?.deletedAt
+    ) || null;
   }
 
   function checklistCriterion(checklist, criterionId = checklistState.selectedCriterionId) {
@@ -1421,9 +1410,7 @@
         <div class="checklist-primary-toolbar__context">${renderChecklistContextControls(assignment)}</div>
         <div class="checklist-primary-toolbar__actions">
           ${checklist ? `
-            ${session
-              ? `<button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.openAddChecklistActivity()">${checklistActionIcon('add')}<span>Add Activity</span></button>`
-              : `<button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.startTodayChecklistSession()">${checklistActionIcon('add')}<span>Start Today’s Session</span></button>`}
+            <button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.openAddChecklistActivity()">${checklistActionIcon('add')}<span>Create Checklist</span></button>
             <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--bulk" type="button" onclick="TeacherTools.openChecklistBulkMark()" title="${activityPublished ? 'Unlock the published activity before changing points.' : 'Mark several learners at once'}" ${session && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('bulk')}<span>Bulk Mark</span></button>
             <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--picker" type="button" onclick="TeacherTools.openChecklistPicker()" title="${activityPublished ? 'Unlock the published activity before changing points.' : 'Select a learner from this class'}" ${session && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('picker')}<span>Mini Name Picker</span></button>
             <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--review" type="button" onclick="TeacherTools.openGradeContributionDashboard()">${checklistActionIcon('review')}<span>Review Grade Contributions</span></button>
@@ -1462,9 +1449,9 @@
         tools.performanceChecklists.push(created);
         return created;
       });
-      checklistState.sessionId = checklist.sessions[0].id;
+      checklistState.sessionId = '';
       openPerformanceChecklistPage();
-      globalScope.toast('Today’s performance checklist is ready.', 'success');
+      globalScope.toast('Checklist setup created. Select a checklist to conduct.', 'success');
     } catch (error) {
       globalScope.toast(error.message || 'The checklist could not be created.', 'error');
     }
@@ -1473,7 +1460,9 @@
   function renderChecklistWorkspace(checklist, assignment, learners, session) {
     const totals = core.checklistLearnerTotals(checklist, assignment);
     const criteria = session ? core.checklistSessionCriteria(checklist, session) : [];
-    const tableColumns = core.checklistTableColumns(checklist);
+    const tableColumns = session
+      ? core.checklistTableColumns(checklist).filter(column => column.sessionId === session.id)
+      : [];
     const status = checklistStatus(checklist, assignment);
     const activeSessions = checklist.sessions.filter(item => !item.activity?.deletedAt);
     const activeCriteria = checklist.criteria.filter(item => item.active !== false);
@@ -1493,7 +1482,7 @@
         const activity = core.checklistActivityDefinition(checklist, item);
         const detail = activity
           ? `${checklistComponentLabel(activity.destinationComponent)} · HPS ${activity.maxPointsPerSession}`
-          : 'Legacy combined session';
+          : 'Legacy combined checklist';
         return `<option value="${esc(item.id)}" ${item.id === session?.id ? 'selected' : ''}>${esc(item.title)} · ${esc(item.date)} · ${esc(detail)}</option>`;
       }).join('');
     const restoredAction = (checklist.sessions || []).some(item => item.activity?.deletedAt)
@@ -1512,8 +1501,8 @@
             <div><span class="checklist-eyebrow">Performance checklist</span><div class="checklist-title-row"><h2 class="checklist-title">${esc(checklist.title)}</h2><span class="checklist-status checklist-status--${esc(status.tone)}">${esc(status.label)}</span></div></div>
           </div>
           <div class="checklist-stat-row">
-            <div class="checklist-stat"><span class="checklist-stat__icon">A</span><strong>${activeCriteria.length}</strong><small>Activity types</small></div>
-            <div class="checklist-stat"><span class="checklist-stat__icon">✓</span><strong>${activeSessions.length}</strong><small>Active activities</small></div>
+            <div class="checklist-stat"><span class="checklist-stat__icon">A</span><strong>${activeCriteria.length}</strong><small>Checklist types</small></div>
+            <div class="checklist-stat"><span class="checklist-stat__icon">✓</span><strong>${activeSessions.length}</strong><small>Available checklists</small></div>
             <div class="checklist-stat"><span class="checklist-stat__icon">♙</span><strong>${learners.length}</strong><small>Active learners</small></div>
           </div>
         </section>
@@ -1522,8 +1511,8 @@
           <div class="checklist-quick-actions">${activityActions}${restoredAction}<button class="checklist-quick-action" type="button" onclick="TeacherTools.undoLastChecklistEntryChange()" ${entryHistory && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('undo')}<span>Undo entry</span></button></div>
         </section>
         <section class="checklist-overview-card checklist-overview-card--active no-print">
-          <span class="checklist-eyebrow">Active activity</span>
-          ${session ? `<label class="checklist-active-activity"><span class="checklist-active-activity__icon">▤</span><span><select class="field-select" onchange="TeacherTools.changeChecklistSession(this.value)" aria-label="Active checklist activity">${activityOptions}</select><small>${esc(session.date)} · ${esc(checklistComponentLabel(activeDefinition?.destinationComponent))} · HPS ${esc(activeDefinition?.maxPointsPerSession || 0)}</small></span></label>` : `<div class="checklist-empty-activity"><strong>No activity selected</strong><span>Add or restore an activity to start recording.</span></div>`}
+          <span class="checklist-eyebrow">Choose checklist to conduct</span>
+          <label class="checklist-active-activity"><span class="checklist-active-activity__icon">▤</span><span><select class="field-select" onchange="TeacherTools.selectChecklistToConduct(this.value)" aria-label="Checklist to conduct"><option value="">Select a checklist…</option>${activityOptions}</select><small>${session ? `${esc(session.date)} · ${esc(checklistComponentLabel(activeDefinition?.destinationComponent))} · HPS ${esc(activeDefinition?.maxPointsPerSession || 0)}` : 'Select one checklist before recording learner results.'}</small></span></label>
         </section>
         <section class="checklist-overview-card checklist-overview-card--save">
           <span class="checklist-eyebrow">Saved status</span>
@@ -1531,18 +1520,17 @@
         </section>
       </div>
       ${!session ? `<div class="checklist-no-session">
-        <div><strong>No activity selected</strong><span>Add a Recitation, Notebook, Assignment, or custom activity for this term.</span></div>
+        <div><strong>No checklist selected</strong><span>Choose the specific checklist you want to conduct, or create a new one.</span></div>
         <div class="checklist-no-session__actions">
-          <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.openAddChecklistActivity()">${checklistActionIcon('add')} Add Activity</button>
-          ${activeSessions.length ? `<select class="field-select" onchange="if(this.value) TeacherTools.changeChecklistSession(this.value)"><option value="">Open Existing Activity...</option>${activeSessions.slice().sort((left, right) => String(right.date).localeCompare(String(left.date))).map(item => `<option value="${esc(item.id)}">${esc(item.date)} · ${esc(item.title)}</option>`).join('')}</select>` : ''}
+          <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.openAddChecklistActivity()">${checklistActionIcon('add')} Create Checklist</button>
         </div>
       </div>` : ''}
       ${session && criteria.length ? `<section class="checklist-grid-shell">
         <div class="checklist-entry-toolbar no-print">
           <label class="checklist-filter checklist-filter--search"><span class="sr-only">Search learner</span><span class="checklist-filter__icon">⌕</span><input id="checklistLearnerSearch" class="field-input" type="search" value="${esc(checklistState.search)}" placeholder="Search learner…" oninput="TeacherTools.filterChecklistRows(this.value)"></label>
-          <label class="checklist-filter"><span class="sr-only">Entry status activity</span><select class="field-select" onchange="TeacherTools.changeChecklistGridCriterion(this.value)">${gridCriteria.map(item => `<option value="${esc(item.id)}" ${item.id === checklistState.gridCriterionId ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select></label>
+          <label class="checklist-filter"><span class="sr-only">Checklist entry type</span><select class="field-select" onchange="TeacherTools.changeChecklistGridCriterion(this.value)">${gridCriteria.map(item => `<option value="${esc(item.id)}" ${item.id === checklistState.gridCriterionId ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select></label>
           <label class="checklist-filter"><span class="sr-only">Learner entry filter</span><select id="checklistEntryFilter" class="field-select" onchange="TeacherTools.changeChecklistFilter(this.value)"><option value="all" ${checklistState.filter === 'all' ? 'selected' : ''}>All learners</option><option value="missing" ${checklistState.filter === 'missing' ? 'selected' : ''}>Not yet recorded</option><option value="recorded" ${checklistState.filter === 'recorded' ? 'selected' : ''}>Has an entry</option></select></label>
-          <span class="checklist-column-count">${tableColumns.length} activity column${tableColumns.length === 1 ? '' : 's'}</span>
+          <span class="checklist-column-count">Conducting 1 checklist</span>
         </div>
         <div class="checklist-table-wrap">
           <table class="checklist-table">
@@ -1561,7 +1549,7 @@
           </table>
         </div>
         <footer class="checklist-grid-footer"><div class="checklist-legend"><strong>Legend:</strong><span><i class="checklist-legend__add">+</i>Add points</span><span><i class="checklist-legend__remove">−</i>Remove points</span><span><i class="checklist-legend__note">●</i>Add note</span><span><b>HPS</b> Highest Possible Score</span></div><span>Showing ${learners.length} learner${learners.length === 1 ? '' : 's'}</span></footer>
-      </section>` : emptyTool('Add an activity to begin recording learner points.')}
+      </section>` : emptyTool('Select a checklist to conduct before recording learner results.')}
       <div class="checklist-integrity-note"><strong>Grade integrity:</strong> Tracking Only entries never affect grades. WW and PT points require a target assessment, valid HPS, PIN verification, and a before-and-after review.</div>
       ${renderChecklistHistory(checklist, assignment)}`;
   }
@@ -1582,7 +1570,7 @@
     refresh();
   }
 
-  function changeChecklistSession(sessionId) {
+  function selectChecklistToConduct(sessionId) {
     checklistState.sessionId = String(sessionId || '');
     checklistState.selected = null;
     checklistState.picker = null;
@@ -1592,30 +1580,6 @@
     checklistState.gridCriterionId = activity?.criterionId || '';
     checklistState.selectedCriterionId = activity?.criterionId || '';
     refresh();
-  }
-
-  async function startTodayChecklistSession() {
-    const checklist = currentChecklist();
-    if (!checklist) return;
-    const existing = (checklist.sessions || [])
-      .filter(item => item.date === checklistToday())
-      .sort((left, right) => String(right.updatedAt || '').localeCompare(String(left.updatedAt || '')))[0];
-    if (existing) {
-      checklistState.sessionId = existing.id;
-      refresh();
-      return;
-    }
-    try {
-      const session = await runTransaction(() => core.addChecklistSession(currentChecklist(), {
-        title: 'Today',
-        date: checklistToday()
-      }));
-      checklistState.sessionId = session.id;
-      openPerformanceChecklistPage();
-      globalScope.toast('Today’s checklist session started.', 'success');
-    } catch (error) {
-      globalScope.toast(error.message || 'Today’s session could not be created.', 'error');
-    }
   }
 
   function changeChecklistGridCriterion(criterionId) {
@@ -1813,7 +1777,7 @@
         const session = checklist.sessions.find(item => item.id === sessionId);
         const criterion = checklist.criteria.find(item => item.id === criterionId && item.active);
         if (!session || !criterion) {
-          throw new Error('The selected checklist session or criterion is no longer available.');
+      throw new Error('The selected checklist or criterion is no longer available.');
         }
         const eligibleIds = new Set(core.activeLearners(activeAssignment()).map(item => item.id));
         const changes = learnerIds.filter(learnerId =>
@@ -1927,7 +1891,7 @@
           });
           const tools = core.normalize(profileDb());
           tools.performanceChecklists.push(checklist);
-          checklistState.sessionId = checklist.sessions[0].id;
+          checklistState.sessionId = '';
           return checklist;
         });
         openPerformanceChecklistPage();
@@ -1945,7 +1909,7 @@
     const body = `${locked ? '<div class="checklist-warning">Revert published checklist points before changing criterion scoring or destinations.</div>' : ''}
       <div class="checklist-settings-list">${checklist.criteria.map(criterion => `
         <div class="checklist-settings-row" data-criterion-row data-id="${esc(criterion.id)}">
-          <label><span class="field-label">Activity type</span><input class="field-input" data-label value="${esc(criterion.label)}" ${locked ? 'disabled' : ''}></label>
+        <label><span class="field-label">Checklist type</span><input class="field-input" data-label value="${esc(criterion.label)}" ${locked ? 'disabled' : ''}></label>
           <label><span class="field-label">Default destination</span><select class="field-select" data-destination ${locked ? 'disabled' : ''}>
             ${['TRACKING', 'WW', 'PT'].map(component => `<option value="${component}" ${criterion.destinationComponent === component ? 'selected' : ''}>${esc(checklistComponentLabel(component))}</option>`).join('')}
           </select></label>
@@ -2018,7 +1982,7 @@
       <label><span class="field-label">Entry type</span><select id="newChecklistCriterionMode" class="field-select">
         <option value="CHECK">Check mark</option><option value="NUMERIC">Numeric</option>
       </select></label>
-      <label><span class="field-label">Maximum per session</span><input id="newChecklistCriterionMax" class="field-input" type="number" min="0.01" step="any" value="1"></label>
+      <label><span class="field-label">Default HPS</span><input id="newChecklistCriterionMax" class="field-input" type="number" min="0.01" step="any" value="1"></label>
       <label><span class="field-label">Optional term cap</span><input id="newChecklistCriterionTermMax" class="field-input" type="number" min="0.01" step="any" placeholder="No cap"></label>
       <label class="checklist-active-toggle"><input id="newChecklistCriterionNotes" type="checkbox"> Allow learner notes</label>
     </div>`;
@@ -2065,45 +2029,12 @@
     });
   }
 
-  function openAddChecklistSession() {
-    const checklist = currentChecklist();
-    if (!checklist) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const body = `<div class="checklist-add-grid">
-      <label><span class="field-label">Session title</span><input id="newChecklistSessionTitle" class="field-input" value="Session ${checklist.sessions.length + 1}"></label>
-      <label><span class="field-label">Date</span><input id="newChecklistSessionDate" class="field-input" type="date" value="${today}"></label>
-    </div>`;
-    const modal = createModal(
-      'New Checklist Session',
-      body,
-      '<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-create>Create Session</button>'
-    );
-    modal.overlay.querySelector('[data-cancel]').addEventListener('click', modal.close);
-    modal.overlay.querySelector('[data-create]').addEventListener('click', async () => {
-      const title = modal.overlay.querySelector('#newChecklistSessionTitle').value.trim();
-      const date = modal.overlay.querySelector('#newChecklistSessionDate').value;
-      if (!title || !date) {
-        globalScope.toast('Enter a session title and date.', 'warning');
-        return;
-      }
-      modal.close();
-      try {
-        const session = await runTransaction(() => core.addChecklistSession(currentChecklist(), { title, date }));
-        checklistState.sessionId = session.id;
-        openPerformanceChecklistPage();
-        globalScope.toast('Checklist session created.', 'success');
-      } catch (error) {
-        globalScope.toast(error.message, 'error');
-      }
-    });
-  }
-
   function openAddChecklistActivity() {
     const checklist = currentChecklist();
     if (!checklist) return;
     const activeCriteria = checklist.criteria.filter(item => item.active);
     if (!activeCriteria.length) {
-      globalScope.toast('Add an active activity type first.', 'warning');
+      globalScope.toast('Add an active checklist type first.', 'warning');
       return;
     }
     const today = checklistToday();
@@ -2114,10 +2045,10 @@
       return `${criterion.label} ${count + 1}`;
     };
     const body = `<div class="checklist-activity-form">
-      <label><span class="field-label">Activity type</span><select id="newChecklistActivityType" class="field-select">
+      <label><span class="field-label">Checklist type</span><select id="newChecklistActivityType" class="field-select">
         ${activeCriteria.map(item => `<option value="${esc(item.id)}">${esc(item.label)}</option>`).join('')}
       </select></label>
-      <label><span class="field-label">Activity title</span><input id="newChecklistActivityTitle" class="field-input"></label>
+      <label><span class="field-label">Checklist name</span><input id="newChecklistActivityTitle" class="field-input"></label>
       <label><span class="field-label">Date</span><input id="newChecklistActivityDate" class="field-input" type="date" value="${esc(today)}"></label>
       <label><span class="field-label">Grade destination</span><select id="newChecklistActivityDestination" class="field-select">
         <option value="TRACKING">Tracking Only</option>
@@ -2131,11 +2062,11 @@
       <label><span class="field-label">Highest Possible Score</span><input id="newChecklistActivityHps" class="field-input" type="number" min="0.01" step="any"></label>
       <label class="checklist-active-toggle"><input id="newChecklistActivityNotes" type="checkbox"> Allow learner notes</label>
     </div>
-    <div class="checklist-integrity-note">Each activity is stored separately. Graded activities can add points only to a compatible assessment in the same term and component without exceeding HPS.</div>`;
+    <div class="checklist-integrity-note">Each checklist is stored separately. Graded checklists can add points only to a compatible assessment in the same term and component without exceeding HPS.</div>`;
     const modal = createModal(
-      'Add Performance Activity',
+      'Create Performance Checklist',
       body,
-      '<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-create>Create Activity</button>',
+      '<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-create>Create Checklist</button>',
       true
     );
     const typeSelect = modal.overlay.querySelector('#newChecklistActivityType');
@@ -2165,7 +2096,7 @@
       const title = titleInput.value.trim();
       const date = modal.overlay.querySelector('#newChecklistActivityDate').value;
       if (!title || !date || !Number.isFinite(maxPoints) || maxPoints <= 0) {
-        globalScope.toast('Enter an activity title, date, and positive HPS.', 'warning');
+        globalScope.toast('Enter a checklist name, date, and positive HPS.', 'warning');
         return;
       }
       modal.close();
@@ -2190,7 +2121,7 @@
         openPerformanceChecklistPage();
         globalScope.toast(`${activitySession.title} created.`, 'success');
       } catch (error) {
-        globalScope.toast(error.message || 'The activity could not be created.', 'error');
+        globalScope.toast(error.message || 'The checklist could not be created.', 'error');
       }
     });
   }
@@ -2206,8 +2137,8 @@
     }
     const standardNumerical = core.isStandardNumericalChecklistLabel(activity);
     const body = `<div class="checklist-activity-form">
-        <label><span class="field-label">Activity type</span><input class="field-input" value="${esc(activity.label)}" disabled></label>
-        <label><span class="field-label">Activity title</span><input id="editChecklistActivityTitle" class="field-input" value="${esc(activity.title)}"></label>
+        <label><span class="field-label">Checklist type</span><input class="field-input" value="${esc(activity.label)}" disabled></label>
+        <label><span class="field-label">Checklist name</span><input id="editChecklistActivityTitle" class="field-input" value="${esc(activity.title)}"></label>
         <label><span class="field-label">Date</span><input id="editChecklistActivityDate" class="field-input" type="date" value="${esc(session.date)}"></label>
         <label><span class="field-label">Grade destination</span><select id="editChecklistActivityDestination" class="field-select">
           ${['TRACKING', 'WW', 'PT'].map(component => `<option value="${component}" ${activity.destinationComponent === component ? 'selected' : ''}>${esc(checklistComponentLabel(component))}</option>`).join('')}
@@ -2221,9 +2152,9 @@
         <label class="checklist-active-toggle"><input id="editChecklistActivityNotes" type="checkbox" ${activity.allowNotes ? 'checked' : ''}> Allow learner notes</label>
       </div>`;
     const modal = createModal(
-      'Edit Performance Activity',
+      'Edit Performance Checklist',
       body,
-      '<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-save>Save Activity</button>',
+      '<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-primary btn-sm" data-save>Save Checklist</button>',
       true
     );
     modal.overlay.querySelector('[data-cancel]').addEventListener('click', modal.close);
@@ -2232,7 +2163,7 @@
       const date = modal.overlay.querySelector('#editChecklistActivityDate').value;
       const maxPoints = Number(modal.overlay.querySelector('#editChecklistActivityHps').value);
       if (!title || !date || !Number.isFinite(maxPoints) || maxPoints <= 0) {
-        globalScope.toast('Enter an activity title, date, and positive HPS.', 'warning');
+        globalScope.toast('Enter a checklist name, date, and positive HPS.', 'warning');
         return;
       }
       const requestedMode = modal.overlay.querySelector('#editChecklistActivityMode').value;
@@ -2262,9 +2193,9 @@
           options
         ));
         openPerformanceChecklistPage();
-        globalScope.toast('Activity updated.', 'success');
+        globalScope.toast('Checklist updated.', 'success');
       } catch (error) {
-        globalScope.toast(error.message || 'The activity could not be updated.', 'warning');
+        globalScope.toast(error.message || 'The checklist could not be updated.', 'warning');
       }
     });
   }
@@ -2272,26 +2203,26 @@
   async function duplicateChecklistActivity() {
     const checklist = currentChecklist(); const session = checklistSession(checklist);
     if (!session?.activity) return;
-    try { const copy = core.duplicateChecklistActivity(checklist, session.activity.id); await globalScope.saveDatabase(); checklistState.sessionId = copy.id; activate('checklist'); globalScope.toast('Activity duplicated without learner entries.', 'success'); }
+    try { const copy = core.duplicateChecklistActivity(checklist, session.activity.id); await globalScope.saveDatabase(); checklistState.sessionId = copy.id; activate('checklist'); globalScope.toast('Checklist duplicated without learner entries.', 'success'); }
     catch (error) { globalScope.toast(error.message, 'warning'); }
   }
 
   function deleteChecklistActivity() {
     const checklist = currentChecklist(); const session = checklistSession(checklist);
     if (!session?.activity) return;
-    if (core.isChecklistActivityPublished(session)) { globalScope.toast('Unlock and revert official changes before deleting this published activity.', 'warning'); return; }
+    if (core.isChecklistActivityPublished(session)) { globalScope.toast('Unlock and revert official changes before deleting this published checklist.', 'warning'); return; }
     const count = core.checklistEntryCount(session);
     const message = count
-      ? `Delete this activity? ${count} learner entry record(s) will be hidden but retained for restoration.`
-      : 'Delete this empty, unpublished activity?';
-    globalScope.confirmModal('Delete Activity', message, () => {
+      ? `Delete this checklist? ${count} learner entry record(s) will be hidden but retained for restoration.`
+      : 'Delete this empty, unpublished checklist?';
+    globalScope.confirmModal('Delete Checklist', message, () => {
       // Let the confirmation overlay release focus before opening PIN verification.
       globalScope.setTimeout(() => globalScope.promptPinVerification(async () => {
         core.deleteChecklistActivity(checklist, session.activity.id, { confirmed:true });
         await globalScope.saveDatabase();
         checklistState.sessionId='';
         openPerformanceChecklistPage();
-        globalScope.toast('Activity deleted. It can be restored.', 'success');
+        globalScope.toast('Checklist deleted. It can be restored.', 'success');
       }), 0);
     });
   }
@@ -2303,7 +2234,7 @@
     const index = Number(globalScope.prompt(`Choose an activity to restore:
 ${labels}`, '1')) - 1;
     if (!deleted[index]) return;
-    core.restoreChecklistActivity(checklist, deleted[index].activity.id); globalScope.saveDatabase().then(() => { checklistState.sessionId=deleted[index].id; activate('checklist'); globalScope.toast('Activity restored with its entries.', 'success'); });
+    core.restoreChecklistActivity(checklist, deleted[index].activity.id); globalScope.saveDatabase().then(() => { checklistState.sessionId=deleted[index].id; activate('checklist'); globalScope.toast('Checklist restored with its entries.', 'success'); });
   }
 
   function reviewChecklistActivityUnlock(activityId = '') {
@@ -2380,7 +2311,8 @@ ${labels}`, '1')) - 1;
       <button type="button" data-action="templates"><strong>Manage Saved Templates</strong><span>Review or delete personal checklist templates.</span></button>
       <button type="button" data-action="print"><strong>Print Summary</strong><span>Print learner and criterion totals for this term.</span></button>
       <button type="button" data-action="csv"><strong>Export CSV</strong><span>Save checklist totals as a spreadsheet-ready file.</span></button>
-      <button type="button" data-action="reset"><strong>Reset Checklist</strong><span>Clear a session, the term, or only the Mini Name Picker.</span></button>
+      <button type="button" data-action="reset"><strong>Reset Checklist</strong><span>Clear the selected checklist, all term checklists, or only the Mini Name Picker.</span></button>
+      <button type="button" class="checklist-more-actions__danger" data-action="delete-checklist"><strong>Delete Checklist Data</strong><span>Delete this checklist or every checklist for the active class.</span></button>
     </div>`;
     const modal = createModal(
       'More Checklist Actions',
@@ -2400,7 +2332,87 @@ ${labels}`, '1')) - 1;
         if (action === 'print') printChecklistSummary();
         if (action === 'csv') exportChecklistCsv();
         if (action === 'reset') openResetChecklist();
+        if (action === 'delete-checklist') openDeleteChecklist();
       });
+    });
+  }
+
+  function openDeleteChecklist() {
+    const assignment = activeAssignment();
+    const checklist = currentChecklist(assignment);
+    if (!assignment || !checklist) return;
+    const tools = core.normalize(profileDb());
+    const classChecklists = tools.performanceChecklists.filter(item => item.assignmentId === assignment.id);
+    const currentPublished = core.hasPublishedChecklistContributions(checklist);
+    const classPublished = classChecklists.some(item => core.hasPublishedChecklistContributions(item));
+    const currentLabel = `Term ${checklist.term}${checklist.mapePart ? ` - ${checklist.mapePart === 'music_arts' ? 'Music & Arts' : 'PE & Health'}` : ''}`;
+    const body = `${currentPublished || classPublished ? `<div class="checklist-warning">
+        Published grade contributions are protected. Unlock and revert the affected Published Point History entries before deleting their checklist data.
+      </div>` : ''}
+      <div class="checklist-reset-options">
+        <label class="checklist-reset-option${currentPublished ? ' is-disabled' : ''}">
+          <input type="radio" name="checklistDeleteScope" value="current" ${currentPublished ? 'disabled' : 'checked'}>
+          <span><strong>Delete This Checklist</strong><small>Permanently remove ${esc(currentLabel)}, including its activities, learner entries, and local history.</small></span>
+        </label>
+        <label class="checklist-reset-option${classPublished ? ' is-disabled' : ''}">
+          <input type="radio" name="checklistDeleteScope" value="all" ${classPublished ? 'disabled' : ''}>
+          <span><strong>Delete All Class Checklists</strong><small>Permanently remove all ${classChecklists.length} checklist${classChecklists.length === 1 ? '' : 's'} for ${esc(core.assignmentLabel(assignment))}, across every term and MAPEH strand.</small></span>
+        </label>
+      </div>
+      <div class="checklist-integrity-note">Deletion requires PIN verification and creates a local restore point first. Official assessment scores are never changed by this action.</div>`;
+    const modal = createModal(
+      'Delete Performance Checklist',
+      body,
+      `<button class="btn btn-cancel btn-sm" data-cancel>Cancel</button><button class="btn btn-danger btn-sm" data-delete ${currentPublished ? 'disabled' : ''}>Delete Selected</button>`,
+      true
+    );
+    modal.overlay.querySelector('[data-cancel]').addEventListener('click', modal.close);
+    modal.overlay.querySelector('[data-delete]').addEventListener('click', () => {
+      const scope = modal.overlay.querySelector('input[name="checklistDeleteScope"]:checked')?.value;
+      if (!scope) {
+        globalScope.toast('Revert published checklist points before deleting checklist data.', 'warning');
+        return;
+      }
+      modal.close();
+      executeChecklistDeletion(scope, checklist.id, assignment.id);
+    });
+  }
+
+  function executeChecklistDeletion(scope, checklistId, assignmentId) {
+    withPinVerification(async () => {
+      if (typeof globalScope.electronAPI?.createDatabaseRestorePoint !== 'function') {
+        throw new Error('A local restore point cannot be created on this device. The checklist was not deleted.');
+      }
+      await globalScope.electronAPI.createDatabaseRestorePoint(
+        scope === 'all' ? 'performance-checklist-class-delete' : 'performance-checklist-delete'
+      );
+      const result = await runTransaction(() => {
+        const tools = core.normalize(profileDb());
+        const targets = tools.performanceChecklists.filter(item => scope === 'all'
+          ? item.assignmentId === assignmentId
+          : item.id === checklistId && item.assignmentId === assignmentId
+        );
+        if (!targets.length) throw new Error('The selected checklist is no longer available.');
+        if (targets.some(item => core.hasPublishedChecklistContributions(item))) {
+          throw new Error('Revert all published checklist points before deleting checklist data.');
+        }
+        const checklistIds = new Set(targets.map(item => item.id));
+        tools.performanceChecklists = tools.performanceChecklists.filter(item => !checklistIds.has(item.id));
+        tools.performanceChecklistHistory = tools.performanceChecklistHistory.filter(item => !checklistIds.has(item.checklistId));
+        tools.performanceChecklistEntryHistory = tools.performanceChecklistEntryHistory.filter(item => !checklistIds.has(item.checklistId));
+        return { deleted: targets.length };
+      });
+      checklistState.sessionId = '';
+      checklistState.selectedCriterionId = '';
+      checklistState.gridCriterionId = '';
+      checklistState.selected = null;
+      checklistState.picker = null;
+      globalScope.render();
+      openPerformanceChecklistPage();
+      globalScope.toast(
+        result.deleted === 1 ? 'Performance checklist deleted.' : `${result.deleted} performance checklists deleted.`,
+        'success'
+      );
     });
   }
 
@@ -2411,16 +2423,16 @@ ${labels}`, '1')) - 1;
         body: 'Performance Checklist keeps a separate checklist for every class, term, and MAPEH strand. Confirm the context shown at the top before recording.'
       },
       {
-        title: 'Add each activity occurrence',
-        body: 'Create Recitation 1, Recitation 2, Notebook 1, Assignment 1, or another activity as it happens. Every activity keeps its own date, HPS, scoring mode, and destination.'
+        title: 'Create the checklists you need',
+        body: 'Create Recitation 1, Recitation 2, Notebook 1, Assignment 1, or another checklist. Every checklist keeps its own date, HPS, scoring mode, and destination.'
       },
       {
         title: 'Record evidence quickly',
-        body: 'Select one activity and mark learners in its focused roster. Bulk Mark, search, filters, notes, and the Mini Name Picker affect only the selected activity.'
+        body: 'Choose one checklist to conduct and mark learners in its focused roster. Bulk Mark, search, filters, notes, and the Mini Name Picker affect only the selected checklist.'
       },
       {
         title: 'Correct safely',
-        body: 'Undo Last Entry reverses the latest compatible entry action. Reset Checklist requires the profile PIN and a local restore point before clearing a session, criterion, or term.'
+        body: 'Undo Last Entry reverses the latest compatible entry action. Reset Checklist requires the profile PIN and a local restore point before clearing the selected checklist, a criterion, or the term.'
       },
       {
         title: 'Review before adding to grades',
@@ -2450,7 +2462,7 @@ ${labels}`, '1')) - 1;
         <span class="checklist-tutorial__eyebrow">Step ${stepIndex + 1} of ${steps.length}</span>
         <h3>${esc(step.title)}</h3>
         <p>${esc(step.body)}</p>
-        <div class="checklist-integrity-note">This tutorial is read-only. It does not create sessions, entries, templates, or grade changes.</div>
+      <div class="checklist-integrity-note">This tutorial is read-only. It does not create checklists, entries, templates, or grade changes.</div>
       </div>`;
       backButton.disabled = stepIndex === 0;
       nextButton.textContent = stepIndex === steps.length - 1 ? 'Finish' : 'Next';
@@ -2478,7 +2490,7 @@ ${labels}`, '1')) - 1;
       <label><span class="field-label">Template name</span><input id="checklistTemplateName" class="field-input" value="${esc(checklist.title)}"></label>
       <label><span class="field-label">Description</span><input id="checklistTemplateDescription" class="field-input" placeholder="Optional"></label>
     </div>
-    <div class="checklist-integrity-note">Only criterion configuration is copied. Learners, sessions, entries, assessment links, and publication history are excluded.</div>`;
+      <div class="checklist-integrity-note">Only checklist configuration is copied. Learners, conducted checklists, entries, assessment links, and publication history are excluded.</div>`;
     const modal = createModal(
       'Save Checklist as Template',
       body,
@@ -2557,7 +2569,11 @@ ${labels}`, '1')) - 1;
   function openResetChecklist() {
     const checklist = currentChecklist();
     const session = checklistSession(checklist);
-    if (!checklist || !session) return;
+    if (!checklist) return;
+    if (!session) {
+      globalScope.toast('Select the checklist you want to reset first.', 'warning');
+      return;
+    }
     const published = core.hasPublishedChecklistContributions(checklist);
     const currentCount = core.checklistEntryCount(session);
     const termCount = (checklist.sessions || []).reduce(
@@ -2582,11 +2598,11 @@ ${labels}`, '1')) - 1;
       <div class="checklist-reset-options">
         <label class="checklist-reset-option${published || !currentCount ? ' is-disabled' : ''}">
           <input type="radio" name="checklistResetScope" value="session" ${published || !currentCount ? 'disabled' : 'checked'}>
-          <span><strong>Clear Current Session</strong><small>Remove ${currentCount} recorded entr${currentCount === 1 ? 'y' : 'ies'} from ${esc(session.date)} · ${esc(session.title)}.</small></span>
+          <span><strong>Clear Selected Checklist</strong><small>Remove ${currentCount} recorded entr${currentCount === 1 ? 'y' : 'ies'} from ${esc(session.date)} · ${esc(session.title)}.</small></span>
         </label>
         <label class="checklist-reset-option${published || !populatedCriteria.length ? ' is-disabled' : ''}">
           <input type="radio" name="checklistResetScope" value="criterion" ${published || !populatedCriteria.length ? 'disabled' : ''}>
-          <span><strong>Clear One Criterion</strong><small>Remove one criterion from every session in this term.</small>
+          <span><strong>Clear One Criterion</strong><small>Remove one criterion from every checklist in this term.</small>
             <select id="checklistResetCriterion" class="field-select" ${published || !populatedCriteria.length ? 'disabled' : ''}>
               ${populatedCriteria.map(criterion => `<option value="${esc(criterion.id)}" ${criterion.id === preferredCriterionId ? 'selected' : ''}>${esc(criterion.label)} · ${esc(criterionCounts.get(criterion.id))} entries</option>`).join('')}
             </select>
@@ -2594,7 +2610,7 @@ ${labels}`, '1')) - 1;
         </label>
         <label class="checklist-reset-option${published || !termCount ? ' is-disabled' : ''}">
           <input type="radio" name="checklistResetScope" value="term" ${published || !termCount ? 'disabled' : (!currentCount ? 'checked' : '')}>
-          <span><strong>Clear All Term Sessions</strong><small>Remove ${termCount} recorded entr${termCount === 1 ? 'y' : 'ies'} from all ${checklist.sessions.length} Term ${esc(checklist.term)} sessions.</small></span>
+          <span><strong>Clear All Term Checklists</strong><small>Remove ${termCount} recorded entr${termCount === 1 ? 'y' : 'ies'} from all ${checklist.sessions.length} Term ${esc(checklist.term)} checklists.</small></span>
         </label>
         <label class="checklist-reset-option">
           <input type="radio" name="checklistResetScope" value="picker" ${published || !termCount ? 'checked' : ''}>
@@ -2679,10 +2695,10 @@ ${labels}`, '1')) - 1;
               ? 'criterion-clear'
               : 'session-reset',
           label: scope === 'term'
-            ? 'Clear all term sessions'
+            ? 'Clear all term checklists'
             : scope === 'criterion'
               ? `Clear ${criterion.label}`
-              : 'Clear current session',
+              : 'Clear selected checklist',
           metadata: { deviceId: rootDb()?.deviceId || '' }
         });
         appendChecklistEntryHistory(record);
@@ -2696,7 +2712,7 @@ ${labels}`, '1')) - 1;
         ? 'the selected term'
         : result.scope === 'criterion'
           ? `${result.criterionLabel} in the selected term`
-          : 'the current session';
+          : 'the selected checklist';
       globalScope.toast(
         `${result.cleared} checklist entr${result.cleared === 1 ? 'y' : 'ies'} cleared from ${destination}.`,
         'success'
@@ -3933,8 +3949,7 @@ ${labels}`, '1')) - 1;
     reviewSimulationRevert,
     changeChecklistTerm,
     changeChecklistMapePart,
-    changeChecklistSession,
-    startTodayChecklistSession,
+    selectChecklistToConduct,
     quickStartChecklist,
     changeChecklistGridCriterion,
     filterChecklistRows,
@@ -3945,7 +3960,6 @@ ${labels}`, '1')) - 1;
     openCreateChecklist,
     openChecklistCriteria,
     openAddChecklistCriterion,
-    openAddChecklistSession,
     openAddChecklistActivity,
     openEditChecklistActivity,
     reviewChecklistActivityUnlock,
@@ -3954,6 +3968,7 @@ ${labels}`, '1')) - 1;
     openSaveChecklistTemplate,
     openManageChecklistTemplates,
     openResetChecklist,
+    openDeleteChecklist,
     adjustChecklistEntry,
     updateChecklistEntry,
     updateChecklistItemSelection,

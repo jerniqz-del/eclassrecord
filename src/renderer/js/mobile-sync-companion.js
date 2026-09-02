@@ -115,6 +115,7 @@
       formatVersion: 4,
       exportedAt: new Date().toISOString(),
       sourceAppVersion: String(document.title.match(/v([\d.]+)/)?.[1] || 'desktop'),
+      pushPinRequired: Boolean(globalScope.activeProfileRequiresPin?.()),
       teacherName: String(database.teacherName || 'Teacher'),
       schoolName: String(database.schoolName || 'E-Class Record School'),
       schoolYear,
@@ -215,7 +216,16 @@
 
   function schedulePublish() {
     clearTimeout(publishTimer);
-    publishTimer = setTimeout(() => publish().catch((error) => console.error('Companion publish failed:', error)), 500);
+    publishTimer = setTimeout(() => {
+      publishTimer = null;
+      publish().catch((error) => console.error('Companion publish failed:', error));
+    }, 500);
+  }
+
+  async function flushPublish() {
+    clearTimeout(publishTimer);
+    publishTimer = null;
+    return publish();
   }
 
   function renderWlanStatus() {
@@ -226,7 +236,7 @@
     const panel = document.getElementById('companionPairingPanel');
     if (status) status.textContent = wlanReady ? 'WLAN sync is ready' : 'WLAN sync is off';
     if (details) details.textContent = wlanReady
-      ? `${wlanStatus.host}:${wlanStatus.port} · Revision ${wlanStatus.revision || 0}${wlanStatus.lastClientAt ? ' · Phone connected' : ''}`
+      ? `${(wlanStatus.networkInterfaces || []).map((item) => `${item.type} ${item.address}`).join(' · ') || wlanStatus.host}:${wlanStatus.port} · Revision ${wlanStatus.revision || 0}${wlanStatus.lastClientAt ? ' · Phone connected' : ''}`
       : 'Create a QR for phones connected to the same trusted Wi-Fi network.';
     if (panel) panel.style.display = wlanReady ? '' : 'none';
     const start = document.getElementById('btnStartCompanionWlan');
@@ -251,7 +261,7 @@
       const qr = document.getElementById('companionPairingQr');
       const pin = document.getElementById('companionPairingPin');
       if (qr) qr.src = image;
-      if (pin) pin.textContent = wlanStatus.pin;
+      if (pin) pin.textContent = 'Profile PIN';
       renderWlanStatus();
       await publish();
       globalScope.toast?.('Companion WLAN pairing is ready.', 'success');
@@ -282,7 +292,10 @@
       if (scan) scan.style.display = '';
       renderWlanStatus();
       await publish();
-      globalScope.toast?.('Bluetooth QR is ready. Scan it with Android, then scan for the phone.', 'success');
+      globalScope.toast?.('Bluetooth QR is ready. Scan it with Android; pairing will continue automatically.', 'success');
+      setTimeout(() => globalScope.startAutomaticBluetoothDiscovery?.().catch((error) => {
+        console.error('Automatic Bluetooth discovery failed:', error);
+      }), 150);
     } catch (error) {
       globalScope.toast?.(error.message || 'Could not create Bluetooth pairing QR.', 'error');
     }
@@ -349,6 +362,13 @@
   async function applyChanges(request) {
     const database = activeProfile();
     if (!database) throw new Error('No active desktop profile is open.');
+    if (globalScope.activeProfileRequiresPin?.()) {
+      if (typeof globalScope.verifyActiveProfilePinForMobile !== 'function') {
+        throw new Error('Desktop PIN verification is unavailable. Mobile changes were not applied.');
+      }
+      const verified = await globalScope.verifyActiveProfilePinForMobile(String(request.authorizationPin || ''));
+      if (!verified) throw new Error('Incorrect profile PIN. Mobile changes were not applied.');
+    }
     const latestStatus = await globalScope.electronAPI.getCompanionWlanStatus();
     if (Number(request.baseRevision || 0) !== Number(latestStatus.revision || 0)) {
       throw new Error('Desktop data changed after these mobile edits were started. Refresh the phone and review the drafts before sending again.');
@@ -393,7 +413,11 @@
   async function restoreStatus() {
     wlanStatus = await globalScope.electronAPI.getCompanionWlanStatus();
     if (!wlanStatus.running) {
-      wlanStatus = await globalScope.electronAPI.startCompanionBluetooth();
+      try {
+        wlanStatus = await globalScope.electronAPI.startCompanionWlan();
+      } catch (_error) {
+        wlanStatus = await globalScope.electronAPI.startCompanionBluetooth();
+      }
     }
     if (wlanStatus.running) {
       const image = await globalScope.electronAPI.generateCompanionQr(wlanStatus.pairingPayload);
@@ -401,11 +425,18 @@
       const qr = document.getElementById(bluetooth ? 'companionBluetoothPairingQr' : 'companionPairingQr');
       const pin = document.getElementById(bluetooth ? 'companionBluetoothPairingPin' : 'companionPairingPin');
       if (qr) qr.src = image;
-      if (pin) pin.textContent = wlanStatus.pin;
+      if (pin) pin.textContent = bluetooth ? wlanStatus.pin : 'Profile PIN';
       if (bluetooth) document.getElementById('btnScanBle')?.style.setProperty('display', '');
       await publish();
       if (bluetooth) {
-        setTimeout(() => globalScope.attemptKnownBluetoothReconnect?.(), 600);
+        setTimeout(async () => {
+          const reconnected = await globalScope.attemptKnownBluetoothReconnect?.();
+          if (!reconnected) {
+            globalScope.startAutomaticBluetoothDiscovery?.().catch((error) => {
+              console.error('Automatic Bluetooth discovery failed:', error);
+            });
+          }
+        }, 600);
       }
     }
     renderWlanStatus();
@@ -416,7 +447,7 @@
     return applyChanges(payload);
   }
 
-  globalScope.MobileSyncBridge = { buildCompanionSnapshot, publish, schedulePublish, applyChanges, applyBluetoothEnvelope, handleToolCommand };
+  globalScope.MobileSyncBridge = { buildCompanionSnapshot, publish, schedulePublish, flushPublish, applyChanges, applyBluetoothEnvelope, handleToolCommand };
   globalScope.startCompanionWlan = startCompanionWlan;
   globalScope.startCompanionBluetoothPairing = startCompanionBluetoothPairing;
   globalScope.stopCompanionWlan = stopCompanionWlan;

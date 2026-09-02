@@ -109,8 +109,7 @@ body {
   box-shadow: 0 9px 20px -12px var(--color-primary-800), var(--premium-control-shadow);
 }
 
-.btn-secondary,
-.btn-cancel {
+.btn-secondary {
   background: linear-gradient(180deg, var(--bg-surface), var(--premium-surface-muted));
 }
 
