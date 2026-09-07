@@ -1,6 +1,6 @@
 {
   "name": "eclass-record",
-  "version": "1.9.6",
+  "version": "1.9.7",
   "description": "Local, teacher-owned class record for DepEd three-term and legacy grading workflows",
   "author": "E-Class Record App",
   "license": "MIT",
@@ -10,13 +10,13 @@
   },
   "main": "src/main/main.js",
   "allowScripts": {
-    "electron@33.4.11": true
+    "electron@44.2.0": true
   },
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
     "bundle:games": "node scripts/bundle-offline-games.js",
-    "test": "npm run test:group-randomizer-sortable && npm run test:teacher-tools-polish && npm run test:teacher-tools-workspace && npm run test:teacher-tools-animation-engine && npm run test:interactive-picker-themes && npm run test:classroom-games-ui && npm run test:classroom-games && npm run test:classroom-records-ui && npm run test:classroom-records && npm run test:noise-meter-ui && npm run test:noise-meter && npm run test:classroom-foundations-ui && npm run test:classroom-foundations && npm run test:calendar-roadmap-ui && npm run test:calendar-birthdays && npm run test:official-calendar && npm run test:dashboard-optimization-ui && npm run test:dashboard-optimization && npm run test:checklist-publication-ui && npm run test:checklist-publication-flow && npm run test:performance-checklist-redesign-ui && npm run test:performance-checklist-redesign && npm run test:teacher-tools-participation && npm run test:classroom-management && npm run test:score-history && npm run test:dashboard-workplace && npm run test:calendar-integration && npm run test:database-future-proof && npm run test:backup-recovery && npm run test:shared-folder-sync && npm run test:teacher-tools && npm run test:obfuscation-isolation && npm run test:learner-birthdate && npm run test:learner-avatars && npm run test:usage-analytics && npm run test:auto-updater && npm run test:performance-mode && npm run test:admin-auth && npm run test:admin-test-mode && npm run test:admin-mock-files && npm run test:advisory-data && npm run test:special-program && npm run test:senior-high && npm run test:record-layout && npm run test:attendance-pdf-print && npm run test:advisory-compatibility && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer && npm run test:adviser-grade-permission && npm run test:grade-conflicts && npm run test:advisory-backup && npm run test:advisory-e2e && npm run test:advisory-redesign && npm run test:mobile-lan-sync",
+    "test": "npm run test:group-randomizer-sortable && npm run test:teacher-tools-polish && npm run test:teacher-tools-workspace && npm run test:teacher-tools-animation-engine && npm run test:interactive-picker-themes && npm run test:classroom-games-ui && npm run test:classroom-games && npm run test:classroom-records-ui && npm run test:classroom-records && npm run test:noise-meter-ui && npm run test:noise-meter && npm run test:classroom-foundations-ui && npm run test:classroom-foundations && npm run test:calendar-roadmap-ui && npm run test:calendar-birthdays && npm run test:official-calendar && npm run test:dashboard-optimization-ui && npm run test:dashboard-optimization && npm run test:checklist-publication-ui && npm run test:checklist-publication-flow && npm run test:performance-checklist-redesign-ui && npm run test:performance-checklist-redesign && npm run test:teacher-tools-participation && npm run test:classroom-management && npm run test:score-history && npm run test:dashboard-workplace && npm run test:calendar-integration && npm run test:database-future-proof && npm run test:backup-recovery && npm run test:shared-folder-sync && npm run test:teacher-tools && npm run test:obfuscation-isolation && npm run test:learner-birthdate && npm run test:learner-avatars && npm run test:usage-analytics && npm run test:auto-updater && npm run test:performance-mode && npm run test:admin-auth && npm run test:admin-test-mode && npm run test:admin-mock-files && npm run test:advisory-data && npm run test:special-program && npm run test:senior-high && npm run test:record-layout && npm run test:attendance-pdf-print && npm run test:advisory-compatibility && npm run test:advisory-dashboard && npm run test:advisory-roster && npm run test:grade-transfer && npm run test:adviser-grade-permission && npm run test:grade-conflicts && npm run test:advisory-backup && npm run test:advisory-e2e && npm run test:advisory-redesign && npm run test:desktop-profile-management && npm run test:mobile-lan-sync && npm run test:electron-phase2 && npm run test:electron-phase3",
     "test:group-randomizer-sortable": "node scripts/test-group-randomizer-sortable.js",
     "test:dashboard-optimization-ui": "node scripts/test-dashboard-optimization-ui.js",
     "test:dashboard-optimization": "node scripts/test-dashboard-optimization.js",
@@ -38,6 +38,18 @@
     "test:learner-avatars": "node scripts/test-learner-avatars.js",
     "test:usage-analytics": "node scripts/test-usage-analytics.js",
     "test:auto-updater": "node scripts/test-auto-updater.js",
+    "test:single-instance": "node scripts/test-single-instance.js",
+    "electron:phase0:inventory": "node scripts/generate-electron-phase0-inventory.js --write",
+    "electron:phase0:fixtures": "node scripts/test-electron-phase0-fixtures.js",
+    "electron:phase0:baseline": "node scripts/measure-electron-phase0-baseline.js --write",
+    "electron:phase1:baseline": "node scripts/measure-electron-phase0-baseline.js --write --phase=phase1 && node scripts/compare-electron-performance-baselines.js",
+    "electron:phase1:checkpoint": "node scripts/run-electron-phase1-checkpoint.js 44.2.0",
+    "electron:phase0:rollback-verify": "node scripts/verify-electron-phase0-rollback.js",
+    "test:electron-phase0": "node scripts/generate-electron-phase0-inventory.js --check && node scripts/check-electron-modernization-migration-safety.js && node scripts/test-electron-phase0-fixtures.js",
+    "test:electron-phase2": "node scripts/test-electron-phase2-security.js && node scripts/test-electron-phase2-inline-csp.js && node scripts/test-electron-profile-auth.js && node scripts/test-companion-sync-service.js",
+    "electron:phase2:fuses": "node scripts/verify-electron-phase2-fuses.js",
+    "test:electron-profile-auth": "node scripts/test-electron-profile-auth.js",
+    "electron:phase3:recovery-smoke": "node scripts/run-electron-phase3-recovery-smoke.js",
     "test:performance-mode": "node scripts/test-performance-mode.js",
     "test:admin-auth": "node scripts/test-admin-auth.js",
     "test:admin-test-mode": "node scripts/test-admin-test-mode.js",
@@ -58,7 +70,11 @@
     "test:advisory-backup": "node scripts/test-advisory-backup.js",
     "test:advisory-e2e": "node scripts/test-advisory-e2e.js",
     "test:advisory-redesign": "node scripts/test-advisory-redesign.js",
-    "test:mobile-lan-sync": "node scripts/test-mobile-lan-sync-update.js",
+    "test:mobile-lan-sync": "node scripts/test-mobile-lan-sync-update.js && node scripts/test-mobile-apk-install.js && node scripts/test-mobile-multi-profile-sync.js && node scripts/test-mobile-ui-redesign.js && node scripts/test-mobile-desktop-remote.js && node scripts/test-mobile-github-update-channel.js && node scripts/test-mobile-link-experience.js && node scripts/test-mobile-academic-ui.js && node scripts/test-mobile-subject-visuals.js && node scripts/test-mobile-neon-ui.js && node scripts/test-transmutation-table.js",
+    "test:mobile-multi-profile-sync": "node scripts/test-mobile-multi-profile-sync.js",
+    "test:desktop-profile-management": "node scripts/test-desktop-profile-management.js",
+    "test:mobile-ui-redesign": "node scripts/test-mobile-ui-redesign.js",
+    "mobile:update-package": "node scripts/create-mobile-update-package.js",
     "test:link-preview": "node scripts/test-link-preview.js",
     "smoke:offline": "electron . --offline-smoke-test",
     "build": "node scripts/build-obfuscated.js --win",
@@ -83,11 +99,12 @@
     "test:teacher-tools-animation-engine": "node scripts/test-teacher-tools-animation-engine.js",
     "test:teacher-tools-polish": "node scripts/test-teacher-tools-polish.js",
     "test:teacher-tools-workspace": "node scripts/test-teacher-tools-workspace.js",
-    "test:grade-integrity": "node scripts/test-grade-integrity.js"
+    "test:grade-integrity": "node scripts/test-grade-integrity.js && node scripts/test-transmutation-table.js",
+    "test:transmutation-table": "node scripts/test-transmutation-table.js"
   },
   "dependencies": {
     "2048-html": "1.0.0",
-    "electron-updater": "^6.3.0",
+    "electron-updater": "6.8.9",
     "jsqr": "^1.4.0",
     "minesjs": "1.0.2",
     "pdf-parse": "^2.4.5",
@@ -100,8 +117,9 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "electron": "^33.0.0",
-    "electron-builder": "^25.0.0",
+    "@electron/fuses": "1.8.0",
+    "electron": "44.2.0",
+    "electron-builder": "26.15.3",
     "javascript-obfuscator": "^5.4.3"
   },
   "build": {

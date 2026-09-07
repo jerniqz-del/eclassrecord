@@ -170,13 +170,23 @@ function renderQrPixels(payload) {
   const qrPixels = renderQrPixels(qrPayload);
   assert.strictEqual(jsQR(qrPixels.data, qrPixels.width, qrPixels.height, { inversionAttempts: 'attemptBoth' }).data, qrPayload);
   const preloadBridge = {};
+  const computeService = require('../src/main/compute-service.js');
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/main/preload.js'), 'utf8'), {
     console,
     Uint8ClampedArray,
     require(name) {
       if (name === 'electron') return {
         contextBridge: { exposeInMainWorld: (_name, api) => { preloadBridge.api = api; } },
-        ipcRenderer: { invoke: async () => ({ success: false }), on: () => {}, send: () => {} }
+        ipcRenderer: {
+          invoke: async (channel, ...args) => {
+            if (channel === 'compute:generate-recovery-qr') return computeService.generateRecoveryQr(...args);
+            if (channel === 'compute:decode-recovery-qr') return computeService.decodeRecoveryQrPixels(...args);
+            return { success: false };
+          },
+          on: () => {},
+          removeListener: () => {},
+          send: () => {}
+        }
       };
       return require(name);
     }
@@ -189,9 +199,9 @@ function renderQrPixels(payload) {
   const printableQr = recoveryQrHelpers.createRecoveryQrPrintHtml(qrDataUrl, '<Teacher & Profile>');
   assert(printableQr.includes('&lt;Teacher &amp; Profile&gt;'));
   assert(!printableQr.includes('<Teacher & Profile>'));
-  assert.strictEqual(preloadBridge.api.decodeRecoveryQrPixels(qrPixels), qrPayload);
-  assert.strictEqual(preloadBridge.api.decodeRecoveryQrPixels({ data: new Uint8ClampedArray(100 * 100 * 4).fill(255), width: 100, height: 100 }), '');
-  assert.throws(() => preloadBridge.api.decodeRecoveryQrPixels({ data: [], width: 10, height: 10 }), /dimensions are invalid/);
+  assert.strictEqual(await preloadBridge.api.decodeRecoveryQrPixels(qrPixels), qrPayload);
+  assert.strictEqual(await preloadBridge.api.decodeRecoveryQrPixels({ data: new Uint8ClampedArray(100 * 100 * 4).fill(255), width: 100, height: 100 }), '');
+  await assert.rejects(() => preloadBridge.api.decodeRecoveryQrPixels({ data: [], width: 10, height: 10 }), /dimensions are invalid/);
   assert.strictEqual(await context.PinRecovery.decodeRecoveryQrPayloadForProfile(qrPayload, protectedProfile), context.normalizeRecoveryKey(recoveryKey));
   const tamperedQr = `${qrPayload.slice(0, -1)}${qrPayload.endsWith('0') ? '1' : '0'}`;
   await assert.rejects(() => context.parseRecoveryQrPayload(tamperedQr), /failed its checksum/);
@@ -248,8 +258,11 @@ function renderQrPixels(payload) {
   assert(fileIoSource.includes('writeJsonAtomically(dbPath, payload)'));
   assert(htmlSource.includes('id="profileRecoveryPanel"'));
   assert(htmlSource.includes('id="recoveryQrFile"'));
-  assert(preloadSource.includes("require('qrcode')"));
-  assert(preloadSource.includes("require('jsqr')"));
+  assert(!preloadSource.includes("require('qrcode')"));
+  assert(!preloadSource.includes("require('jsqr')"));
+  assert(preloadSource.includes("ipcRenderer.invoke('compute:generate-recovery-qr'"));
+  assert(preloadSource.includes("ipcRenderer.invoke('compute:decode-recovery-qr'"));
+  assert(mainSource.includes("require('./compute-service')"));
   assert(mainSource.includes("ipcMain.handle('dialog:export-recovery-qr'"));
   assert(htmlSource.indexOf('js/app.js') < htmlSource.indexOf('js/pin-recovery.js'));
   assert(mainSource.includes("app.setPath('appData', smokeRoot)"));

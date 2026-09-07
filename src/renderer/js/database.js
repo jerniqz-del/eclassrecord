@@ -201,6 +201,7 @@ async function verifyActiveProfilePinForMobile(pin) {
 }
 
 if (typeof window !== 'undefined') {
+  window.getCurrentProfilePin = getCurrentProfilePin;
   window.activeProfileRequiresPin = activeProfileRequiresPin;
   window.verifyActiveProfilePinForMobile = verifyActiveProfilePinForMobile;
 }
@@ -671,12 +672,12 @@ function promptPinVerification(onSuccess) {
     <div class="modal">
       <div class="modal__title">Confirm PIN Code</div>
       <div class="modal__body">
-        <p style="margin-top:0">Please enter your 6-digit PIN to authorize this sensitive action.</p>
+        <p data-eclass-style="margin-top:0">Please enter your 6-digit PIN to authorize this sensitive action.</p>
         <div class="field">
           <label class="field-label">Enter PIN</label>
           <input type="password" id="actionVerifyPin" class="field-input" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="off" />
         </div>
-        <div id="actionVerifyPinErrorMsg" class="unlock-error-msg" style="color:var(--color-error-600)"></div>
+        <div id="actionVerifyPinErrorMsg" class="unlock-error-msg" data-eclass-style="color:var(--color-error-600)"></div>
       </div>
       <div class="modal__actions">
         <button class="btn btn-cancel btn-sm" id="btnCancelActionVerify">Cancel</button>
@@ -869,7 +870,7 @@ function editAssignmentModal(id) {
           </select>
           <p class="text-muted u-mb-0">This category determines the official grading percentages.</p>
         </div>
-        <div id="editCustomSubjectField" class="field" style="display:none">
+        <div id="editCustomSubjectField" class="field" data-eclass-style="display:none">
           <label class="field-label">Custom Subject Name</label>
           <input id="editCustomSubjectInput" class="field-input" placeholder="e.g. Science Elective" />
         </div>

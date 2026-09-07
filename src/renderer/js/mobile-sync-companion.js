@@ -2,11 +2,46 @@
   'use strict';
 
   const VALID_ATTENDANCE = new Set(['present', 'absent', 'tardy', 'excused']);
+  const COMPANION_DISPLAY_CLASSES = ['companion-js-hidden', 'companion-js-grid', 'companion-js-flex', 'companion-js-inline-flex'];
   let wlanStatus = { running: false };
+  let apkInstallStatus = { running: false };
   let publishTimer = null;
+
+  function setCompanionDisplay(element, visible, shownClass) {
+    if (!element) return;
+    Array.from(element.classList).forEach((name) => {
+      if (name.startsWith('eclass-generated-style-') || COMPANION_DISPLAY_CLASSES.includes(name)) {
+        element.classList.remove(name);
+      }
+    });
+    element.classList.add(visible ? shownClass : 'companion-js-hidden');
+    element.hidden = !visible;
+  }
 
   function activeProfile() {
     return typeof getActiveProfileDatabase === 'function' ? getActiveProfileDatabase() : null;
+  }
+
+  function activeProfileDescriptor() {
+    const database = activeProfile();
+    const root = typeof getRootDatabase === 'function' ? getRootDatabase() : globalScope.getRootDatabase?.();
+    const profileId = String(root?.activeProfileId || '');
+    if (!database || !profileId) throw new Error('Open an E-Class Record profile first.');
+    const record = (root?.profiles || []).find((item) => item.id === profileId);
+    return {
+      profileId,
+      profileName: String(record?.name || database.teacherName || 'Teacher profile'),
+      schoolYear: String(database.schoolYear || ''),
+      desktopName: 'E-Class Record Desktop'
+    };
+  }
+
+  function renderWlanPairingPin(status = wlanStatus) {
+    const display = document.getElementById('companionPairingPinDisplay');
+    const pin = document.getElementById('companionPairingPin');
+    const usesProfilePin = Boolean(globalScope.activeProfileRequiresPin?.());
+    setCompanionDisplay(display, !usesProfilePin, 'companion-js-flex');
+    if (pin) pin.textContent = usesProfilePin ? '' : String(status.pin || '------');
   }
 
   function learnerName(learner) {
@@ -113,6 +148,9 @@
     return {
       format: 'eclass-companion-snapshot',
       formatVersion: 4,
+      protocolVersion: 2,
+      profileId: activeProfileDescriptor().profileId,
+      profileName: activeProfileDescriptor().profileName,
       exportedAt: new Date().toISOString(),
       sourceAppVersion: String(document.title.match(/v([\d.]+)/)?.[1] || 'desktop'),
       pushPinRequired: Boolean(globalScope.activeProfileRequiresPin?.()),
@@ -146,6 +184,12 @@
         })),
         scores: Object.fromEntries(Object.entries(assignment.scores || {}).map(([key, value]) => [key, String(value)])),
         attendance: attendance.filter((session) => session.classId === assignment.id)
+          .map((session) => ({
+            classId: session.classId,
+            date: session.date,
+            term: session.term,
+            statuses: session.statuses.map((status) => ({ ...status }))
+          }))
       })),
       school: {
         name: String(database.schoolName || 'E-Class Record School'),
@@ -234,38 +278,54 @@
     const status = document.getElementById('companionWlanStatus');
     const details = document.getElementById('companionWlanDetails');
     const panel = document.getElementById('companionPairingPanel');
+    const linkQuality = document.getElementById('companionWlanLinkQuality');
+    const linkMeter = document.getElementById('companionWlanLinkMeter');
+    const linkLatency = document.getElementById('companionWlanLinkLatency');
     if (status) status.textContent = wlanReady ? 'WLAN sync is ready' : 'WLAN sync is off';
     if (details) details.textContent = wlanReady
       ? `${(wlanStatus.networkInterfaces || []).map((item) => `${item.type} ${item.address}`).join(' · ') || wlanStatus.host}:${wlanStatus.port} · Revision ${wlanStatus.revision || 0}${wlanStatus.lastClientAt ? ' · Phone connected' : ''}`
       : 'Create a QR for phones connected to the same trusted Wi-Fi network.';
-    if (panel) panel.style.display = wlanReady ? '' : 'none';
+    setCompanionDisplay(panel, wlanReady, 'companion-js-grid');
+    const strength = Math.max(0, Math.min(100, Number(wlanStatus.linkStrength || 0)));
+    if (linkQuality) linkQuality.textContent = wlanStatus.lastClientAt
+      ? `${wlanStatus.linkQuality || 'Connected'} · ${strength}%`
+      : 'Waiting for phone';
+    if (linkMeter) {
+      linkMeter.style.width = `${strength}%`;
+      linkMeter.dataset.quality = strength >= 75 ? 'strong' : strength >= 40 ? 'fair' : 'weak';
+    }
+    if (linkLatency) linkLatency.textContent = wlanStatus.lastClientAt
+      ? `Last activity ${new Date(wlanStatus.lastClientAt).toLocaleTimeString()}${wlanStatus.linkRttMs ? ` · ${wlanStatus.linkRttMs} ms local round-trip` : ''}`
+      : 'The linked phone will reconnect automatically when this desktop is available.';
     const start = document.getElementById('btnStartCompanionWlan');
+    const refresh = document.getElementById('btnRefreshCompanionWlan');
     const stop = document.getElementById('btnStopCompanionWlan');
-    if (start) start.style.display = wlanReady ? 'none' : '';
-    if (stop) stop.style.display = wlanReady ? '' : 'none';
+    setCompanionDisplay(start, !wlanReady, 'companion-js-inline-flex');
+    setCompanionDisplay(refresh, wlanReady, 'companion-js-inline-flex');
+    setCompanionDisplay(stop, wlanReady, 'companion-js-inline-flex');
     const bluetoothPanel = document.getElementById('companionBluetoothPairingPanel');
     const bluetoothStart = document.getElementById('btnStartCompanionBluetooth');
     const bluetoothStop = document.getElementById('btnStopCompanionBluetooth');
     const bluetoothScan = document.getElementById('btnScanBle');
-    if (bluetoothPanel) bluetoothPanel.style.display = bluetoothReady ? '' : 'none';
-    if (bluetoothStart) bluetoothStart.style.display = bluetoothReady ? 'none' : '';
-    if (bluetoothStop) bluetoothStop.style.display = bluetoothReady ? '' : 'none';
-    if (bluetoothScan && !bluetoothReady) bluetoothScan.style.display = 'none';
+    setCompanionDisplay(bluetoothPanel, bluetoothReady, 'companion-js-grid');
+    setCompanionDisplay(bluetoothStart, !bluetoothReady, 'companion-js-inline-flex');
+    setCompanionDisplay(bluetoothStop, bluetoothReady, 'companion-js-inline-flex');
+    setCompanionDisplay(bluetoothScan, bluetoothReady, 'companion-js-inline-flex');
   }
 
   async function startCompanionWlan() {
     if (globalScope.AdminTestMode?.blockExternalAction?.('Companion WLAN server')) return;
     try {
-      wlanStatus = await globalScope.electronAPI.startCompanionWlan();
-      const image = await globalScope.electronAPI.generateCompanionQr(wlanStatus.pairingPayload);
-      const qr = document.getElementById('companionPairingQr');
-      const pin = document.getElementById('companionPairingPin');
-      if (qr) qr.src = image;
-      if (pin) pin.textContent = 'Profile PIN';
+      wlanStatus = await globalScope.electronAPI.startCompanionWlan(activeProfileDescriptor());
+      renderWlanPairingPin();
       renderWlanStatus();
+      const image = await globalScope.electronAPI.generateCompanionQr(wlanStatus.pairingPayloadV2 || wlanStatus.pairingPayload);
+      const qr = document.getElementById('companionPairingQr');
+      if (qr) qr.src = image;
       await publish();
       globalScope.toast?.('Companion WLAN pairing is ready.', 'success');
     } catch (error) {
+      renderWlanStatus();
       globalScope.toast?.(error.message || 'Could not start companion WLAN sync.', 'error');
     }
   }
@@ -275,12 +335,110 @@
     renderWlanStatus();
   }
 
+  function formatApkSize(bytes) {
+    const size = Number(bytes) || 0;
+    if (size < 1024) return `${size} bytes`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function renderMobileUpdateStatus(result) {
+    const status = document.getElementById('companionMobileUpdateStatus');
+    const github = document.getElementById('companionMobileUpdateGithubStatus');
+    if (status) {
+      status.textContent = result?.available
+        ? `Cached Android update ${result.update.versionName} (${formatApkSize(result.update.size)}).`
+        : 'No cached Android update.';
+    }
+    if (github) github.textContent = result?.github?.message || 'GitHub mobile updates have not been checked yet.';
+  }
+
+  function renderApkInstallPanel(status = apkInstallStatus) {
+    apkInstallStatus = status || { running: false };
+    const running = Boolean(apkInstallStatus.running);
+    setCompanionDisplay(document.getElementById('btnStartCompanionApkInstall'), !running, 'companion-js-inline-flex');
+    setCompanionDisplay(document.getElementById('btnRefreshCompanionApkInstall'), running, 'companion-js-inline-flex');
+    setCompanionDisplay(document.getElementById('btnStopCompanionApkInstall'), running, 'companion-js-inline-flex');
+    setCompanionDisplay(document.getElementById('companionApkInstallPanel'), running, 'companion-js-grid');
+    const url = document.getElementById('companionApkInstallUrl');
+    const meta = document.getElementById('companionApkInstallMeta');
+    if (url) url.textContent = running ? String(apkInstallStatus.url || '') : '';
+    if (meta) {
+      meta.textContent = running
+        ? `${apkInstallStatus.versionName || 'Android package'} · ${formatApkSize(apkInstallStatus.size)} · expires ${apkInstallStatus.expiresAt ? new Date(apkInstallStatus.expiresAt).toLocaleTimeString() : 'soon'}`
+        : 'This link expires after 15 minutes.';
+    }
+  }
+
+  async function refreshCompanionMobileUpdateFromGithub() {
+    try {
+      const result = await globalScope.electronAPI.refreshCompanionMobileUpdateFromGithub();
+      renderMobileUpdateStatus(result);
+      globalScope.toast?.(result?.available ? 'A verified Android update is cached for WLAN delivery.' : (result?.github?.message || 'No Android update is cached yet.'), result?.available ? 'success' : 'warning');
+    } catch (error) {
+      globalScope.toast?.(error.message || 'Could not check GitHub for a mobile update.', 'error');
+    }
+  }
+
+  async function importCompanionMobileUpdate() {
+    try {
+      const result = await globalScope.electronAPI.importCompanionMobileUpdate();
+      if (result?.canceled) return;
+      const status = await globalScope.electronAPI.getCompanionMobileUpdateStatus();
+      renderMobileUpdateStatus(status);
+      globalScope.toast?.(status?.available ? 'The imported Android update is ready for the install QR.' : 'Import did not leave a cached Android update.', status?.available ? 'success' : 'warning');
+    } catch (error) {
+      globalScope.toast?.(error.message || 'Could not import a mobile update.', 'error');
+    }
+  }
+
+  async function configureCompanionFirewall() {
+    try {
+      await globalScope.electronAPI.configureCompanionFirewall();
+      globalScope.toast?.('Allow E-Class Record on Private networks. Install QR uses TCP 38474.', 'success');
+    } catch (error) {
+      globalScope.toast?.(error.message || 'Could not open Windows Firewall.', 'error');
+    }
+  }
+
+  async function startCompanionApkInstall() {
+    if (globalScope.AdminTestMode?.blockExternalAction?.('Companion APK install QR')) return;
+    try {
+      apkInstallStatus = await globalScope.electronAPI.startCompanionApkInstall();
+      const qr = document.getElementById('companionApkInstallQr');
+      if (qr) qr.src = apkInstallStatus.qrDataUrl || '';
+      renderApkInstallPanel(apkInstallStatus);
+      globalScope.toast?.('Scan the install QR with the phone camera to download the APK.', 'success');
+    } catch (error) {
+      renderApkInstallPanel({ running: false });
+      globalScope.toast?.(error.message || 'Could not start the APK install QR.', 'error');
+    }
+  }
+
+  async function stopCompanionApkInstall() {
+    apkInstallStatus = await globalScope.electronAPI.stopCompanionApkInstall();
+    renderApkInstallPanel(apkInstallStatus);
+  }
+
+  async function restoreMobileUpdateUi() {
+    try {
+      renderMobileUpdateStatus(await globalScope.electronAPI.getCompanionMobileUpdateStatus());
+    } catch (_error) {
+      renderMobileUpdateStatus({ available: false });
+    }
+    try {
+      renderApkInstallPanel(await globalScope.electronAPI.getCompanionApkInstallStatus());
+    } catch (_error) {
+      renderApkInstallPanel({ running: false });
+    }
+  }
+
   async function startCompanionBluetoothPairing() {
     if (globalScope.AdminTestMode?.blockExternalAction?.('Companion Bluetooth pairing')) return;
     try {
-      if (!wlanStatus.running || wlanStatus.transport !== 'bluetooth') wlanStatus = await globalScope.electronAPI.startCompanionBluetooth();
-      const bluetoothPayload = String(wlanStatus.pairingPayload || '');
-      if (!bluetoothPayload.includes('|bluetooth|')) throw new Error('The Bluetooth pairing session could not be created.');
+      if (!wlanStatus.running || wlanStatus.transport !== 'bluetooth') wlanStatus = await globalScope.electronAPI.startCompanionBluetooth(activeProfileDescriptor());
+      const bluetoothPayload = String(wlanStatus.pairingPayloadV2 || wlanStatus.pairingPayload || '');
+      if (!bluetoothPayload.includes('bluetooth')) throw new Error('The Bluetooth pairing session could not be created.');
       const image = await globalScope.electronAPI.generateCompanionQr(bluetoothPayload);
       const panel = document.getElementById('companionBluetoothPairingPanel');
       const qr = document.getElementById('companionBluetoothPairingQr');
@@ -288,8 +446,8 @@
       const scan = document.getElementById('btnScanBle');
       if (qr) qr.src = image;
       if (pin) pin.textContent = wlanStatus.pin;
-      if (panel) panel.style.display = '';
-      if (scan) scan.style.display = '';
+      setCompanionDisplay(panel, true, 'companion-js-grid');
+      setCompanionDisplay(scan, true, 'companion-js-inline-flex');
       renderWlanStatus();
       await publish();
       globalScope.toast?.('Bluetooth QR is ready. Scan it with Android; pairing will continue automatically.', 'success');
@@ -362,12 +520,9 @@
   async function applyChanges(request) {
     const database = activeProfile();
     if (!database) throw new Error('No active desktop profile is open.');
-    if (globalScope.activeProfileRequiresPin?.()) {
-      if (typeof globalScope.verifyActiveProfilePinForMobile !== 'function') {
-        throw new Error('Desktop PIN verification is unavailable. Mobile changes were not applied.');
-      }
-      const verified = await globalScope.verifyActiveProfilePinForMobile(String(request.authorizationPin || ''));
-      if (!verified) throw new Error('Incorrect profile PIN. Mobile changes were not applied.');
+    const activeId = activeProfileDescriptor().profileId;
+    if (request.profileId && String(request.profileId) !== activeId) {
+      throw new Error('Open the matching desktop profile before pushing its mobile changes.');
     }
     const latestStatus = await globalScope.electronAPI.getCompanionWlanStatus();
     if (Number(request.baseRevision || 0) !== Number(latestStatus.revision || 0)) {
@@ -375,19 +530,50 @@
     }
     await globalScope.electronAPI.createDatabaseRestorePoint?.('android-companion-import');
     let accepted = 0;
+    const acceptedChangeIds = [];
+    const appliedIds = new Set(database.mobileSync?.appliedChangeIds || []);
     for (const change of request.changes || []) {
+      const changeId = String(change.changeId || '');
+      if (changeId && appliedIds.has(changeId)) {
+        acceptedChangeIds.push(changeId);
+        continue;
+      }
       const assignment = (database.assignments || []).find((item) => item.id === change.classId);
       if (!assignment) throw new Error('A mobile change references an unknown class.');
       if (change.type === 'score' && scoreChange(change, assignment)) accepted += 1;
       else if (change.type === 'attendance' && attendanceChange(change, assignment)) accepted += 1;
       else if (!['score', 'attendance'].includes(change.type)) throw new Error('Unsupported mobile change type.');
+      if (changeId) {
+        appliedIds.add(changeId);
+        acceptedChangeIds.push(changeId);
+      }
     }
-    if (accepted) {
+    if (accepted || acceptedChangeIds.length) {
+      database.mobileSync = {
+        ...(database.mobileSync || {}),
+        appliedChangeIds: [...appliedIds].slice(-5000),
+        lastBatchId: String(request.batchId || ''),
+        lastAppliedAt: new Date().toISOString()
+      };
       await globalScope.saveDatabase();
       globalScope.render?.();
       globalScope.toast?.(`${accepted} mobile entries were applied to the desktop record.`, 'success');
     }
-    return { success: true, accepted };
+    return { success: true, accepted: acceptedChangeIds.length || accepted, acceptedChangeIds };
+  }
+
+  async function authorizePairing(request) {
+    const descriptor = activeProfileDescriptor();
+    if (String(request.profileId || '') !== descriptor.profileId) {
+      throw new Error('Open the profile shown in the Android pairing request.');
+    }
+    return {
+      success: true,
+      authorized: true,
+      profileId: descriptor.profileId,
+      profileName: descriptor.profileName,
+      schoolYear: descriptor.schoolYear
+    };
   }
 
   async function handleApplyRequest(request) {
@@ -399,34 +585,108 @@
     }
   }
 
+  async function handlePairingRequest(request) {
+    try {
+      const result = await authorizePairing(request);
+      globalScope.electronAPI.sendCompanionChangesResult(request.requestId, result);
+    } catch (error) {
+      globalScope.electronAPI.sendCompanionChangesResult(request.requestId, {
+        success: false,
+        error: error.message || 'Android pairing was rejected.'
+      });
+    }
+  }
+
   function handleToolCommand(request) {
     const command = String(request.command || '');
-    if (command === 'open-picker') { globalScope.setView?.('tools'); globalScope.TeacherTools?.openTool?.('picker'); }
-    else if (command === 'pick-learner') { globalScope.setView?.('tools'); globalScope.TeacherTools?.activate?.('picker'); globalScope.TeacherTools?.pickName?.(); }
-    else if (command === 'reset-picker') globalScope.TeacherTools?.resetPicker?.();
-    else if (command === 'open-groups') { globalScope.setView?.('tools'); globalScope.TeacherTools?.openTool?.('groups'); }
-    else if (command === 'randomize-groups') { globalScope.setView?.('tools'); globalScope.TeacherTools?.activate?.('groups'); globalScope.TeacherTools?.randomizeGroups?.(); }
-    else if (command === 'open-checklist') globalScope.TeacherTools?.openPerformanceChecklistPage?.();
-    else globalScope.toast?.('The phone requested an unsupported tool command.', 'warning');
+    const args = request.args && typeof request.args === 'object' ? request.args : {};
+    let descriptor;
+    try { descriptor = activeProfileDescriptor(); } catch (_error) { return; }
+    if (request.profileId && String(request.profileId) !== descriptor.profileId) {
+      globalScope.toast?.('The phone requested a page for another profile.', 'warning');
+      return;
+    }
+    const allowedViews = new Set(['dashboard', 'classes', 'record', 'attendance', 'performance-checklist', 'calendar', 'advisory', 'tools', 'settings', 'sync']);
+    const allowedTools = new Set(['picker', 'groups', 'simulator', 'checklist', 'games', 'timer', 'participation', 'noise', 'duels', 'seating', 'exit', 'notes', 'race']);
+    const openTool = (toolId) => {
+      if (!allowedTools.has(toolId)) return false;
+      if (toolId === 'checklist') globalScope.TeacherTools?.openPerformanceChecklistPage?.();
+      else { globalScope.setView?.('tools'); globalScope.TeacherTools?.openTool?.(toolId); }
+      return true;
+    };
+    const runToolAction = (action) => {
+      const actions = {
+        'pick-learner': () => { openTool('picker'); globalScope.TeacherTools?.pickName?.(); },
+        'reset-picker': () => { openTool('picker'); globalScope.TeacherTools?.resetPicker?.(); },
+        'randomize-groups': () => { openTool('groups'); globalScope.TeacherTools?.randomizeGroups?.(); },
+        'reveal-groups': () => { openTool('groups'); globalScope.TeacherTools?.revealGroupsNow?.(); },
+        'timer-start': () => { openTool('timer'); globalScope.ClassroomTools?.timerAction?.('start'); },
+        'timer-pause': () => { openTool('timer'); globalScope.ClassroomTools?.timerAction?.('pause'); },
+        'timer-skip': () => { openTool('timer'); globalScope.ClassroomTools?.timerAction?.('skip'); },
+        'timer-reset': () => { openTool('timer'); globalScope.ClassroomTools?.timerAction?.('reset'); },
+        'randomize-seating': () => { openTool('seating'); globalScope.ClassroomTools?.randomSeating?.(); },
+        'noise-start': () => { openTool('noise'); globalScope.ClassroomTools?.startNoiseMeter?.(); },
+        'noise-stop': () => { openTool('noise'); globalScope.ClassroomTools?.stopNoiseMeter?.(); },
+        'noise-calibrate': () => { openTool('noise'); globalScope.ClassroomTools?.calibrateNoiseMeter?.(); }
+      };
+      if (!Object.hasOwn(actions, action)) return false;
+      actions[action]();
+      return true;
+    };
+    let accepted = true;
+    if (command === 'open-page') {
+      const view = String(args.page || '');
+      if (!allowedViews.has(view)) accepted = false;
+      else {
+        const assignmentId = String(args.assignmentId || '');
+        if (assignmentId && globalScope.getActiveProfileDatabase?.()?.assignments?.some(item => String(item.id) === assignmentId)) {
+          globalScope.selectAssignment?.(assignmentId);
+        }
+        globalScope.setView?.(view);
+      }
+    } else if (command === 'open-tool') accepted = openTool(String(args.toolId || ''));
+    else if (command === 'tool-action') accepted = runToolAction(String(args.action || ''));
+    else if (command === 'open-picker') accepted = openTool('picker');
+    else if (command === 'pick-learner') accepted = runToolAction('pick-learner');
+    else if (command === 'reset-picker') accepted = runToolAction('reset-picker');
+    else if (command === 'open-groups') accepted = openTool('groups');
+    else if (command === 'randomize-groups') accepted = runToolAction('randomize-groups');
+    else if (command === 'open-checklist') accepted = openTool('checklist');
+    else accepted = false;
+    if (!accepted) globalScope.toast?.('The phone requested an unsupported desktop control.', 'warning');
   }
 
   async function restoreStatus() {
+    let descriptor;
+    try {
+      descriptor = activeProfileDescriptor();
+    } catch (_error) {
+      renderWlanStatus();
+      return;
+    }
     wlanStatus = await globalScope.electronAPI.getCompanionWlanStatus();
-    if (!wlanStatus.running) {
+    if (wlanStatus.running && wlanStatus.transport === 'bluetooth') {
+      wlanStatus = await globalScope.electronAPI.startCompanionBluetooth(descriptor);
+    } else {
       try {
-        wlanStatus = await globalScope.electronAPI.startCompanionWlan();
+        wlanStatus = await globalScope.electronAPI.startCompanionWlan(descriptor);
       } catch (_error) {
-        wlanStatus = await globalScope.electronAPI.startCompanionBluetooth();
+        if (wlanStatus.running) throw _error;
+        wlanStatus = await globalScope.electronAPI.startCompanionBluetooth(descriptor);
       }
     }
     if (wlanStatus.running) {
-      const image = await globalScope.electronAPI.generateCompanionQr(wlanStatus.pairingPayload);
+      const image = await globalScope.electronAPI.generateCompanionQr(wlanStatus.pairingPayloadV2 || wlanStatus.pairingPayload);
       const bluetooth = wlanStatus.transport === 'bluetooth';
       const qr = document.getElementById(bluetooth ? 'companionBluetoothPairingQr' : 'companionPairingQr');
-      const pin = document.getElementById(bluetooth ? 'companionBluetoothPairingPin' : 'companionPairingPin');
       if (qr) qr.src = image;
-      if (pin) pin.textContent = bluetooth ? wlanStatus.pin : 'Profile PIN';
-      if (bluetooth) document.getElementById('btnScanBle')?.style.setProperty('display', '');
+      if (bluetooth) {
+        const pin = document.getElementById('companionBluetoothPairingPin');
+        if (pin) pin.textContent = wlanStatus.pin;
+      } else {
+        renderWlanPairingPin();
+      }
+      if (bluetooth) setCompanionDisplay(document.getElementById('btnScanBle'), true, 'companion-js-inline-flex');
       await publish();
       if (bluetooth) {
         setTimeout(async () => {
@@ -447,18 +707,25 @@
     return applyChanges(payload);
   }
 
-  globalScope.MobileSyncBridge = { buildCompanionSnapshot, publish, schedulePublish, flushPublish, applyChanges, applyBluetoothEnvelope, handleToolCommand };
+  globalScope.MobileSyncBridge = { buildCompanionSnapshot, publish, schedulePublish, flushPublish, authorizePairing, applyChanges, applyBluetoothEnvelope, handleToolCommand };
   globalScope.startCompanionWlan = startCompanionWlan;
   globalScope.startCompanionBluetoothPairing = startCompanionBluetoothPairing;
   globalScope.stopCompanionWlan = stopCompanionWlan;
+  globalScope.startCompanionApkInstall = startCompanionApkInstall;
+  globalScope.stopCompanionApkInstall = stopCompanionApkInstall;
+  globalScope.refreshCompanionMobileUpdateFromGithub = refreshCompanionMobileUpdateFromGithub;
+  globalScope.importCompanionMobileUpdate = importCompanionMobileUpdate;
+  globalScope.configureCompanionFirewall = configureCompanionFirewall;
 
   globalScope.addEventListener('DOMContentLoaded', () => {
     globalScope.electronAPI?.onCompanionApplyChanges?.(handleApplyRequest);
+    globalScope.electronAPI?.onCompanionAuthorizePairing?.(handlePairingRequest);
     globalScope.electronAPI?.onCompanionToolCommand?.(handleToolCommand);
     globalScope.electronAPI?.onCompanionClientActivity?.((activity) => {
-      wlanStatus = { ...wlanStatus, lastClientAt: activity.at };
+      wlanStatus = { ...wlanStatus, ...activity, lastClientAt: activity.at };
       renderWlanStatus();
     });
     restoreStatus().catch((error) => console.error('Companion status restore failed:', error));
+    restoreMobileUpdateUi().catch((error) => console.error('Companion update status restore failed:', error));
   });
 })(window);

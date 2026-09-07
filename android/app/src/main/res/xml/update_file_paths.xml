@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="mobile_updates" path="mobile-updates/" />
+    <files-path name="mobile_updates_files" path="mobile-updates/" />
 </paths>

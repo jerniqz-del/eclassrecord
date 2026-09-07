@@ -88,7 +88,7 @@ function storedBluetoothPairing() {
 function saveBluetoothPairing(value) {
   localStorage.setItem(BLE_PAIRING_STORAGE_KEY, JSON.stringify({
     ...value,
-    desktopId: bluetoothDesktopId(),
+    desktopId: value?.desktopId || bluetoothDesktopId(),
     pairedAt: new Date().toISOString()
   }));
 }
@@ -349,7 +349,7 @@ async function finishBluetoothAuthorization(message) {
 async function authorizeKnownBluetoothDevice(pairing) {
   const request = {
     kind: 'reconnect',
-    desktopId: bluetoothDesktopId(),
+    desktopId: String(pairing.desktopId || ''),
     reconnectToken: pairing.reconnectToken
   };
   addSyncLog(`Reconnecting securely to ${pairing.deviceName || 'known Android companion'}...`);
@@ -376,8 +376,10 @@ async function submitHandshakePin() {
     const request = {
       kind: 'pair',
       pin,
-      desktopId: bluetoothDesktopId(),
-      desktopName: 'E-Class Record Desktop'
+      desktopId: String(pairing.desktopId || ''),
+      desktopName: String(pairing.desktopName || 'E-Class Record Desktop'),
+      profileId: String(pairing.profileId || ''),
+      profileName: String(pairing.profileName || 'Teacher profile')
     };
     addSyncLog('Confirming the desktop PIN entered on Android...');
     await handshakeChar.writeValue(new TextEncoder().encode(JSON.stringify(request)));
@@ -389,7 +391,8 @@ async function submitHandshakePin() {
     saveBluetoothPairing({
       deviceId: activeGattDevice.id,
       deviceName: activeGattDevice.name || 'Android companion',
-      reconnectToken: response.reconnectToken
+      reconnectToken: response.reconnectToken,
+      desktopId: String(pairing.desktopId || '')
     });
     await finishBluetoothAuthorization('First pairing complete. Future reconnection is automatic.');
     return;

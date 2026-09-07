@@ -109,30 +109,30 @@ function showAddLearnerModal() {
   overlay.className = 'modal-overlay';
   overlay.style.zIndex = '12000';
   overlay.innerHTML = `
-    <div class="modal learner-manage-modal" style="max-width: 760px; width: 92%;">
+    <div class="modal learner-manage-modal" data-eclass-style="max-width: 760px; width: 92%;">
       <div class="modal__title">Add New Learner</div>
       <div class="modal__body">
         <div id="addLearnerAvatarPicker" class="u-mb-4"></div>
-        <div class="field" style="margin-bottom: var(--space-3);">
+        <div class="field" data-eclass-style="margin-bottom: var(--space-3);">
           <label class="field-label">Learner Reference Number (LRN)</label>
           <input id="modalLearnerLrn" class="field-input" placeholder="e.g. 101234567890" maxlength="12" />
         </div>
-        <div style="display: flex; gap: var(--space-3); margin-bottom: var(--space-3);">
-          <div class="field" style="flex: 1; margin-bottom: 0;">
+        <div data-eclass-style="display: flex; gap: var(--space-3); margin-bottom: var(--space-3);">
+          <div class="field" data-eclass-style="flex: 1; margin-bottom: 0;">
             <label class="field-label">Last Name</label>
             <input id="modalLearnerLast" class="field-input" placeholder="e.g. Dela Cruz" />
           </div>
-          <div class="field" style="flex: 1; margin-bottom: 0;">
+          <div class="field" data-eclass-style="flex: 1; margin-bottom: 0;">
             <label class="field-label">First Name</label>
             <input id="modalLearnerFirst" class="field-input" placeholder="e.g. Juan" />
           </div>
         </div>
-        <div style="display: flex; gap: var(--space-3); margin-bottom: var(--space-4);">
-          <div class="field" style="flex: 1; margin-bottom: 0;">
+        <div data-eclass-style="display: flex; gap: var(--space-3); margin-bottom: var(--space-4);">
+          <div class="field" data-eclass-style="flex: 1; margin-bottom: 0;">
             <label class="field-label">Middle Name</label>
             <input id="modalLearnerMiddle" class="field-input" placeholder="Middle Name (Optional)" />
           </div>
-          <div class="field" style="flex: 1; margin-bottom: 0;">
+          <div class="field" data-eclass-style="flex: 1; margin-bottom: 0;">
             <label class="field-label">Sex</label>
             <select id="modalLearnerSex" class="field-select">
               <option value=""></option>
@@ -140,7 +140,7 @@ function showAddLearnerModal() {
               <option value="F">Female / Girl</option>
             </select>
           </div>
-          <div class="field" style="flex: 1; margin-bottom: 0;">
+          <div class="field" data-eclass-style="flex: 1; margin-bottom: 0;">
             <label class="field-label">Birthdate <span class="text-muted">(Optional)</span></label>
             <input id="modalLearnerBirthdate" type="date" class="field-input" max="${todayIsoDate()}" />
           </div>
@@ -512,7 +512,7 @@ function renderLearnersRoster() {
   
   if (a.learners.length === 0) {
     target.innerHTML = `
-      <div class="text-muted text-sm" style="padding:var(--space-4);text-align:center">
+      <div class="text-muted text-sm" data-eclass-style="padding:var(--space-4);text-align:center">
         No learners registered in this class roster. Upload an SF1 spreadsheet or add a learner to get started.
       </div>
     `;
@@ -520,16 +520,16 @@ function renderLearnersRoster() {
   }
   
   let html = `
-    <table class="roster-table" style="width:100%;border-collapse:collapse">
+    <table class="roster-table" data-eclass-style="width:100%;border-collapse:collapse">
       <thead>
-        <tr style="border-bottom:2px solid var(--border-color);text-align:left">
-          <th style="padding:var(--space-2);width:6%">No.</th>
-          <th style="padding:var(--space-2);width:7%;text-align:center">Avatar</th>
-          <th style="padding:var(--space-2);width:16%">LRN</th>
-          <th style="padding:var(--space-2)">Name</th>
-          <th style="padding:var(--space-2);width:9%">Sex</th>
-          <th style="padding:var(--space-2);width:15%">Birthdate</th>
-          <th style="padding:var(--space-2);width:22%;text-align:center">Action</th>
+        <tr data-eclass-style="border-bottom:2px solid var(--border-color);text-align:left">
+          <th data-eclass-style="padding:var(--space-2);width:6%">No.</th>
+          <th data-eclass-style="padding:var(--space-2);width:7%;text-align:center">Avatar</th>
+          <th data-eclass-style="padding:var(--space-2);width:16%">LRN</th>
+          <th data-eclass-style="padding:var(--space-2)">Name</th>
+          <th data-eclass-style="padding:var(--space-2);width:9%">Sex</th>
+          <th data-eclass-style="padding:var(--space-2);width:15%">Birthdate</th>
+          <th data-eclass-style="padding:var(--space-2);width:22%;text-align:center">Action</th>
         </tr>
       </thead>
       <tbody>
@@ -541,52 +541,52 @@ function renderLearnersRoster() {
     let badgeHtml = '';
     let exportBtnHtml = '';
     if (l.transferredOutTerm) {
-      badgeHtml = ` <span style="font-size:10px; padding:2px 6px; margin-left:6px; border-radius:4px; font-weight:600; background: rgba(255, 193, 7, 0.15); color: #ffb703; border: 1px solid #ffb703;">T/O (Term ${l.transferredOutTerm})</span>`;
+      badgeHtml = ` <span data-eclass-style="font-size:10px; padding:2px 6px; margin-left:6px; border-radius:4px; font-weight:600; background: rgba(255, 193, 7, 0.15); color: #ffb703; border: 1px solid #ffb703;">T/O (Term ${l.transferredOutTerm})</span>`;
       exportBtnHtml = `
-        <button class="btn btn-olive btn-sm" style="padding:var(--space-1) var(--space-2); margin-right: 4px;" 
+        <button class="btn btn-olive btn-sm" data-eclass-style="padding:var(--space-1) var(--space-2); margin-right: 4px;" 
           title="Export Learner Transfer File" 
-          onclick="exportLearnerTransferFile('${esc(l.id)}')">
+          data-eclass-onclick="exportLearnerTransferFile('${esc(l.id)}')">
           Export
         </button>
       `;
     } else if (l.transferredInGrades) {
-      badgeHtml = ` <span style="font-size:10px; padding:2px 6px; margin-left:6px; border-radius:4px; font-weight:600; background: rgba(46, 125, 50, 0.15); color: #81c784; border: 1px solid #81c784;" title="Grades imported for Term(s): ${Object.keys(l.transferredInGrades).join(', ')}">T/I</span>`;
+      badgeHtml = ` <span data-eclass-style="font-size:10px; padding:2px 6px; margin-left:6px; border-radius:4px; font-weight:600; background: rgba(46, 125, 50, 0.15); color: #81c784; border: 1px solid #81c784;" title="Grades imported for Term(s): ${Object.keys(l.transferredInGrades).join(', ')}">T/I</span>`;
       exportBtnHtml = `
-        <button class="btn btn-olive btn-sm" style="padding:var(--space-1) var(--space-2); margin-right: 4px;" 
+        <button class="btn btn-olive btn-sm" data-eclass-style="padding:var(--space-1) var(--space-2); margin-right: 4px;" 
           title="Export Learner Transfer File" 
-          onclick="exportLearnerTransferFile('${esc(l.id)}')">
+          data-eclass-onclick="exportLearnerTransferFile('${esc(l.id)}')">
           Export
         </button>
       `;
     } else {
       exportBtnHtml = `
-        <button class="btn btn-ghost btn-sm" style="padding:var(--space-1) var(--space-2); margin-right: 4px; border: 1px solid var(--border-color);" 
+        <button class="btn btn-ghost btn-sm" data-eclass-style="padding:var(--space-1) var(--space-2); margin-right: 4px; border: 1px solid var(--border-color);" 
           title="Export Learner Transfer File" 
-          onclick="exportLearnerTransferFile('${esc(l.id)}')">
+          data-eclass-onclick="exportLearnerTransferFile('${esc(l.id)}')">
           Export
         </button>
       `;
     }
 
     html += `
-      <tr style="border-bottom:1px solid var(--border-color); ${l.transferredOutTerm ? 'opacity: 0.65;' : ''}">
-        <td style="padding:var(--space-2)">${i + 1}</td>
+      <tr data-eclass-style="border-bottom:1px solid var(--border-color); ${l.transferredOutTerm ? 'opacity: 0.65;' : ''}">
+        <td data-eclass-style="padding:var(--space-2)">${i + 1}</td>
         <td class="roster-avatar-cell">${globalThis.LearnerAvatars ? LearnerAvatars.renderLearner(l, { size: 'sm' }) : ''}</td>
-        <td style="padding:var(--space-2)">${esc(l.lrn || '—')}</td>
-        <td style="padding:var(--space-2)"><strong>${esc(learnerDisplayName(l))}</strong>${badgeHtml}</td>
-        <td style="padding:var(--space-2)">${esc(l.sex || '—')}</td>
-        <td style="padding:var(--space-2);white-space:nowrap">${esc(formatLearnerBirthdate(l.birthdate))}</td>
-        <td style="padding:var(--space-2);text-align:center">
+        <td data-eclass-style="padding:var(--space-2)">${esc(l.lrn || '—')}</td>
+        <td data-eclass-style="padding:var(--space-2)"><strong>${esc(learnerDisplayName(l))}</strong>${badgeHtml}</td>
+        <td data-eclass-style="padding:var(--space-2)">${esc(l.sex || '—')}</td>
+        <td data-eclass-style="padding:var(--space-2);white-space:nowrap">${esc(formatLearnerBirthdate(l.birthdate))}</td>
+        <td data-eclass-style="padding:var(--space-2);text-align:center">
           <div class="roster-row-actions">
             ${exportBtnHtml}
-            <button class="btn btn-olive btn-sm" style="padding:var(--space-1) var(--space-2)"
+            <button class="btn btn-olive btn-sm" data-eclass-style="padding:var(--space-1) var(--space-2)"
               title="Transfer learner to another class"
-              onclick="showEasyLearnerTransferModal('${esc(l.id)}')">
+              data-eclass-onclick="showEasyLearnerTransferModal('${esc(l.id)}')">
               Transfer
             </button>
-            <button class="btn btn-warn btn-sm" style="padding:var(--space-1) var(--space-2)"
+            <button class="btn btn-warn btn-sm" data-eclass-style="padding:var(--space-1) var(--space-2)"
               title="Manage status and removal"
-              onclick="removeLearner('${esc(l.id)}')">
+              data-eclass-onclick="removeLearner('${esc(l.id)}')">
               Manage
             </button>
           </div>
@@ -757,7 +757,7 @@ function showEasyLearnerTransferModal(learnerId) {
             <option value="2">Terms 1 and 2</option>
             <option value="3">Terms 1, 2, and 3</option>
           </select>
-          <div class="text-xs text-muted" style="margin-top: 6px;">
+          <div class="text-xs text-muted" data-eclass-style="margin-top: 6px;">
             The learner will be marked Transferred Out in the current class and added as Transferred In to the selected class.
           </div>
         </div>
@@ -821,16 +821,16 @@ function removeLearner(learnerId) {
   const hasRecordedGrades = learnerHasRecordedGrades(a, learner);
 
   const transferSectionHtml = otherAssignments.length > 0 ? `
-        <div style="border-bottom: 1px solid var(--border-color); margin-bottom: var(--space-4); padding-bottom: var(--space-4);">
-          <h3 style="margin-top: 0; margin-bottom: var(--space-2); font-size: var(--font-size-md); font-weight: 600; color: var(--text-primary);">Transfer Student Directly</h3>
-          <p style="margin-top:0; font-size: 12px; color: var(--text-secondary);">
+        <div data-eclass-style="border-bottom: 1px solid var(--border-color); margin-bottom: var(--space-4); padding-bottom: var(--space-4);">
+          <h3 data-eclass-style="margin-top: 0; margin-bottom: var(--space-2); font-size: var(--font-size-md); font-weight: 600; color: var(--text-primary);">Transfer Student Directly</h3>
+          <p data-eclass-style="margin-top:0; font-size: 12px; color: var(--text-secondary);">
             ${hasRecordedGrades
               ? 'Directly transfer this student to another class in this profile, preserving completed term grades.'
               : 'No scores have been recorded yet, so this will move the student as a clean roster correction with no Transferred In/Out labels.'}
           </p>
           
-          <div style="display: flex; gap: var(--space-2); align-items: flex-end;">
-            <div class="field" style="flex: 1; margin-bottom: 0;">
+          <div data-eclass-style="display: flex; gap: var(--space-2); align-items: flex-end;">
+            <div class="field" data-eclass-style="flex: 1; margin-bottom: 0;">
               <label class="field-label">Target Class Load</label>
               <select id="directTransferClassSelect" class="field-select">
                 <option value="">-- Select Class --</option>
@@ -840,7 +840,7 @@ function removeLearner(learnerId) {
               </select>
             </div>
             ${hasRecordedGrades ? `
-            <div class="field" style="width: 140px; margin-bottom: 0;">
+            <div class="field" data-eclass-style="width: 140px; margin-bottom: 0;">
               <label class="field-label">Transfer Term</label>
               <select id="directTransferTermSelect" class="field-select">
                 <option value="1">Term 1 Only</option>
@@ -850,7 +850,7 @@ function removeLearner(learnerId) {
             </div>
             ` : ''}
           </div>
-          <button class="btn btn-olive btn-sm" id="btnDirectTransferSubmit" style="width: 100%; margin-top: var(--space-3);" disabled>
+          <button class="btn btn-olive btn-sm" id="btnDirectTransferSubmit" data-eclass-style="width: 100%; margin-top: var(--space-3);" disabled>
             ${hasRecordedGrades ? 'Execute Direct Transfer' : 'Move to Selected Class'}
           </button>
         </div>
@@ -864,38 +864,38 @@ function removeLearner(learnerId) {
       <div class="modal__title">Manage Learner: ${esc(learnerDisplayName(learner))}</div>
       <div class="modal__body">
         ${(isTransferredOut || isTransferredIn) ? `
-          <div style="background: rgba(255, 193, 7, 0.1); border: 1px solid var(--color-warning-600); padding: var(--space-2); border-radius: 4px; margin-bottom: var(--space-3); display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: 600; color: var(--color-warning-600);">
+          <div data-eclass-style="background: rgba(255, 193, 7, 0.1); border: 1px solid var(--color-warning-600); padding: var(--space-2); border-radius: 4px; margin-bottom: var(--space-3); display: flex; justify-content: space-between; align-items: center;">
+            <span data-eclass-style="font-weight: 600; color: var(--color-warning-600);">
               Status: ${isTransferredOut ? `Transferred Out (Term ${learner.transferredOutTerm})` : 'Transferred In'}
             </span>
-            <button class="btn btn-sm btn-ghost" id="btnRestoreActive" style="padding: var(--space-1) var(--space-2);">Restore to Active</button>
+            <button class="btn btn-sm btn-ghost" id="btnRestoreActive" data-eclass-style="padding: var(--space-1) var(--space-2);">Restore to Active</button>
           </div>
         ` : ''}
 
         <!-- Edit Learner Profile Info -->
-        <div style="border-bottom: 1px solid var(--border-color); margin-bottom: var(--space-4); padding-bottom: var(--space-4);">
-          <h3 style="margin-top: 0; margin-bottom: var(--space-3); font-size: var(--font-size-md); font-weight: 600; color: var(--text-primary);">Edit Learner Information</h3>
+        <div data-eclass-style="border-bottom: 1px solid var(--border-color); margin-bottom: var(--space-4); padding-bottom: var(--space-4);">
+          <h3 data-eclass-style="margin-top: 0; margin-bottom: var(--space-3); font-size: var(--font-size-md); font-weight: 600; color: var(--text-primary);">Edit Learner Information</h3>
           <div id="editLearnerAvatarPicker" class="u-mb-4"></div>
-          <div class="field" style="margin-bottom: var(--space-3);">
+          <div class="field" data-eclass-style="margin-bottom: var(--space-3);">
             <label class="field-label">Learner Reference Number (LRN)</label>
             <input id="editLearnerLrn" class="field-input" value="${esc(learner.lrn || '')}" maxlength="12" placeholder="e.g. 101234567890" />
           </div>
-          <div style="display: flex; gap: var(--space-3); margin-bottom: var(--space-3);">
-            <div class="field" style="flex: 1; margin-bottom: 0;">
+          <div data-eclass-style="display: flex; gap: var(--space-3); margin-bottom: var(--space-3);">
+            <div class="field" data-eclass-style="flex: 1; margin-bottom: 0;">
               <label class="field-label">Last Name</label>
               <input id="editLearnerLast" class="field-input" value="${esc(learner.lastName || '')}" placeholder="Last Name" />
             </div>
-            <div class="field" style="flex: 1; margin-bottom: 0;">
+            <div class="field" data-eclass-style="flex: 1; margin-bottom: 0;">
               <label class="field-label">First Name</label>
               <input id="editLearnerFirst" class="field-input" value="${esc(learner.firstName || '')}" placeholder="First Name" />
             </div>
           </div>
-          <div style="display: flex; gap: var(--space-3); margin-bottom: var(--space-4);">
-            <div class="field" style="flex: 1; margin-bottom: 0;">
+          <div data-eclass-style="display: flex; gap: var(--space-3); margin-bottom: var(--space-4);">
+            <div class="field" data-eclass-style="flex: 1; margin-bottom: 0;">
               <label class="field-label">Middle Name</label>
               <input id="editLearnerMiddle" class="field-input" value="${esc(learner.middleName || '')}" placeholder="Middle Name (Optional)" />
             </div>
-            <div class="field" style="flex: 1; margin-bottom: 0;">
+            <div class="field" data-eclass-style="flex: 1; margin-bottom: 0;">
               <label class="field-label">Sex</label>
               <select id="editLearnerSex" class="field-select">
                 <option value="" ${!learner.sex ? 'selected' : ''}>Not specified</option>
@@ -903,21 +903,21 @@ function removeLearner(learnerId) {
                 <option value="F" ${learner.sex === 'F' ? 'selected' : ''}>Female / Girl</option>
               </select>
             </div>
-            <div class="field" style="flex: 1; margin-bottom: 0;">
+            <div class="field" data-eclass-style="flex: 1; margin-bottom: 0;">
               <label class="field-label">Birthdate</label>
               <input id="editLearnerBirthdate" type="date" class="field-input" max="${todayIsoDate()}" value="${esc(normalizeLearnerBirthdate(learner.birthdate))}" />
             </div>
           </div>
-          <button class="btn btn-primary btn-sm" id="btnSaveLearnerInfo" style="width: 100%;">
+          <button class="btn btn-primary btn-sm" id="btnSaveLearnerInfo" data-eclass-style="width: 100%;">
             Save Profile Info
           </button>
         </div>
         
         ${transferSectionHtml}
         
-        <p style="margin-top:0">Choose an action for this student. If the student has transferred out mid-year, mark them as Transferred Out to preserve completed term grades.</p>
+        <p data-eclass-style="margin-top:0">Choose an action for this student. If the student has transferred out mid-year, mark them as Transferred Out to preserve completed term grades.</p>
         
-        <div class="field" style="margin-top: var(--space-4);">
+        <div class="field" data-eclass-style="margin-top: var(--space-4);">
           <label class="field-label">Exit/Transfer Term</label>
           <select id="transferOutTermSelect" class="field-select">
             <option value="1">Transferred Out after Term 1 (Term 1 grade is preserved)</option>
@@ -926,16 +926,16 @@ function removeLearner(learnerId) {
           </select>
         </div>
       </div>
-      <div class="modal__actions" style="display: flex; flex-direction: column; gap: var(--space-2); width: 100%;">
-        <div style="display: flex; gap: var(--space-2); width: 100%;">
-          <button class="btn btn-primary" id="btnMarkTransferredOut" style="flex: 1;">
+      <div class="modal__actions" data-eclass-style="display: flex; flex-direction: column; gap: var(--space-2); width: 100%;">
+        <div data-eclass-style="display: flex; gap: var(--space-2); width: 100%;">
+          <button class="btn btn-primary" id="btnMarkTransferredOut" data-eclass-style="flex: 1;">
             Mark as Transferred Out
           </button>
-          <button class="btn btn-ghost" id="btnCancelTransfer" style="width: 100px;">
+          <button class="btn btn-ghost" id="btnCancelTransfer" data-eclass-style="width: 100px;">
             Cancel
           </button>
         </div>
-        <div style="border-top: 1px solid var(--border-color); margin: var(--space-2) 0; padding-top: var(--space-2); display: flex; justify-content: flex-end; width: 100%;">
+        <div data-eclass-style="border-top: 1px solid var(--border-color); margin: var(--space-2) 0; padding-top: var(--space-2); display: flex; justify-content: flex-end; width: 100%;">
           <button class="btn btn-warn btn-sm" id="btnDeletePermanently">
             Delete Student Permanently
           </button>
@@ -1093,15 +1093,15 @@ function showBulkAddLearnersModal() {
   overlay.className = 'modal-overlay';
   overlay.style.zIndex = '12000';
   overlay.innerHTML = `
-    <div class="modal" style="max-width: 850px; width: 95%;">
+    <div class="modal" data-eclass-style="max-width: 850px; width: 95%;">
       <div class="modal__title">Bulk Add Learners</div>
       <div class="modal__body">
         <div class="bulk-modal-grid">
           <!-- Left Column: Input and Settings -->
           <div class="bulk-textarea-wrap">
-            <div class="field" style="margin-bottom: var(--space-3); display: flex; flex-direction: column; flex: 1;">
+            <div class="field" data-eclass-style="margin-bottom: var(--space-3); display: flex; flex-direction: column; flex: 1;">
               <label class="field-label">Copy-paste Learner List (one per line)</label>
-              <div class="text-xs text-muted" style="margin-bottom: var(--space-2); line-height: 1.4;">
+              <div class="text-xs text-muted" data-eclass-style="margin-bottom: var(--space-2); line-height: 1.4;">
                 Accepted formats:<br>
                 • <code>Last Name, First Name Middle Name</code> (e.g. <code>Dela Cruz, Juan Abad</code>)<br>
                 • <code>First Name Middle Name Last Name</code> (e.g. <code>Juan Abad Dela Cruz</code>)<br>
@@ -1110,14 +1110,14 @@ function showBulkAddLearnersModal() {
               <textarea id="bulkLearnersText" class="field-textarea bulk-textarea" placeholder="Paste student names/list here..."></textarea>
             </div>
             
-            <div class="field" style="margin-bottom: 0;">
+            <div class="field" data-eclass-style="margin-bottom: 0;">
               <label class="field-label">Assign Sex (Gender)</label>
               <select id="bulkLearnersGenderDefault" class="field-select">
                 <option value="auto">Auto-detect from pasted row (CSV/Delimited)</option>
                 <option value="M">All Males / Boys</option>
                 <option value="F">All Females / Girls</option>
               </select>
-              <div class="text-xs text-muted" style="margin-top: 4px;">
+              <div class="text-xs text-muted" data-eclass-style="margin-top: 4px;">
                 Selecting "All Males" or "All Females" will assign that gender to all parsed students, ignoring auto-detection.
               </div>
             </div>
@@ -1126,15 +1126,15 @@ function showBulkAddLearnersModal() {
           <!-- Right Column: Live Preview -->
           <div class="bulk-preview-wrap">
             <div class="bulk-preview-header">
-              <label class="field-label" style="margin-bottom: 0;">Parse Preview</label>
-              <div class="bulk-preview-summary-badges" id="bulkPreviewSummaryBadges" style="display: none;">
+              <label class="field-label" data-eclass-style="margin-bottom: 0;">Parse Preview</label>
+              <div class="bulk-preview-summary-badges" id="bulkPreviewSummaryBadges" data-eclass-style="display: none;">
                 <span class="bulk-badge bulk-badge--male" id="bulkCountMale">0 Boys</span>
                 <span class="bulk-badge bulk-badge--female" id="bulkCountFemale">0 Girls</span>
               </div>
             </div>
             <div class="bulk-preview-pane" id="bulkPreviewPane">
               <div class="bulk-preview-empty" id="bulkPreviewEmpty">
-                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.5; margin-bottom: 8px;">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" data-eclass-style="opacity: 0.5; margin-bottom: 8px;">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                   <circle cx="9" cy="7" r="4"></circle>
                   <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -1142,7 +1142,7 @@ function showBulkAddLearnersModal() {
                 </svg>
                 <div>No students parsed yet. Start typing or pasting to see a live preview.</div>
               </div>
-              <ul class="bulk-preview-list" id="bulkPreviewList" style="display: none;"></ul>
+              <ul class="bulk-preview-list" id="bulkPreviewList" data-eclass-style="display: none;"></ul>
             </div>
           </div>
         </div>
@@ -1303,14 +1303,14 @@ function showBulkAddLearnersModal() {
         } else if (l.sex === 'F') {
           genderBadge = `<span class="bulk-badge bulk-badge--female">Girl</span>`;
         } else {
-          genderBadge = `<span class="bulk-badge" style="background:var(--border-default);color:var(--text-secondary);">Unknown</span>`;
+          genderBadge = `<span class="bulk-badge" data-eclass-style="background:var(--border-default);color:var(--text-secondary);">Unknown</span>`;
         }
 
         return `
           <li class="bulk-preview-item">
             <div class="bulk-preview-item__name">${index + 1}. ${esc(l.displayName)}</div>
             <div class="bulk-preview-item__meta">
-              <span style="font-family:monospace;color:var(--text-tertiary);">${esc(l.lrn || '—')}</span>
+              <span data-eclass-style="font-family:monospace;color:var(--text-tertiary);">${esc(l.lrn || '—')}</span>
               <span>${esc(formatLearnerBirthdate(l.birthdate))}</span>
               ${genderBadge}
             </div>

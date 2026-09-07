@@ -29,6 +29,7 @@ assert.strictEqual(standardPc.recommended, false, '8 GB / four-thread device sho
 const mainSource = read('src/main/main.js');
 const preloadSource = read('src/main/preload.js');
 const html = read('src/renderer/index.html');
+const startup = read('src/renderer/js/startup.js');
 const css = read('src/renderer/css/performance.css');
 const ads = read('src/renderer/js/ad-manager.js');
 const analytics = read('src/renderer/js/usage-analytics.js');
@@ -41,7 +42,7 @@ assert(html.includes('id="settingLowSpecMode"'), 'Low-Spec Mode toggle is missin
 assert(html.includes('id="performanceDeviceSummary"'), 'device recommendation UI is missing');
 assert(html.includes('css/performance.css'), 'performance stylesheet is not loaded');
 assert(html.includes('js/performance-mode.js'), 'performance module is not loaded');
-assert(html.includes('PerformanceMode.init();'), 'performance module is not initialized before optional services');
+assert(startup.includes('PerformanceMode.init();'), 'performance module is not initialized before optional services');
 assert(css.includes('data-performance-mode="low"'), 'low-spec CSS state is missing');
 assert(css.includes('backdrop-filter: none'), 'expensive backdrop effects are not disabled');
 assert(ads.includes('isSidebarAdLowSpecMode()'), 'sidebar ad rotation is not performance-aware');

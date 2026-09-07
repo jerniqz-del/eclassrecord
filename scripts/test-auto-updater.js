@@ -25,6 +25,7 @@ const updater = fs.readFileSync(updaterPath, 'utf8');
 const preload = fs.readFileSync(preloadPath, 'utf8');
 const main = fs.readFileSync(mainPath, 'utf8');
 const html = fs.readFileSync(htmlPath, 'utf8');
+const startup = fs.readFileSync(path.join(root, 'src', 'renderer', 'js', 'startup.js'), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 
 assert.match(updater, /autoUpdater\.autoDownload\s*=\s*false/);
@@ -44,8 +45,9 @@ assert.match(main, /if \(result && result\.started\) isConfirmedExit = true/);
 assert.match(html, /id="settingAutomaticUpdateChecks"/);
 assert.match(html, /id="settingAutomaticUpdateDownloads"/);
 assert.match(html, /src="js\/update-manager\.js"/);
-assert.match(html, /UpdateManager\.init\(\)/);
-assert.strictEqual(pkg.version, '1.9.6');
+assert.match(html, /js\/startup\.js/);
+assert.match(startup, /UpdateManager\.init\(\)/);
+assert.strictEqual(pkg.version, '1.9.7');
 
 (async () => {
   const values = new Map();

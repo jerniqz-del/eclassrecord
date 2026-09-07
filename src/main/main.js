@@ -5,19 +5,51 @@
  * file I/O and native dialogs, and initialises auto-updates.
  */
 
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session, safeStorage, protocol, net, crashReporter, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const os = require('os');
+const securityBoundary = require('./security-boundary');
+const computeService = require('./compute-service');
+const { DiagnosticService } = require('./diagnostic-service');
+const { RecoveryController } = require('./recovery-controller');
+const { PermissionService } = require('./permission-service');
+const { ProfileAuth } = require('./profile-auth');
+const { installPowerLifecycle } = require('./power-lifecycle');
 
-const isSmokeTest = process.argv.includes('--smoke-test') || process.argv.includes('--offline-smoke-test');
+securityBoundary.registerAppScheme(protocol);
+app.enableSandbox();
+
+const isPhase3RecoverySmoke = process.argv.includes('--phase3-recovery-smoke');
+const isSmokeTest = process.argv.includes('--smoke-test') || process.argv.includes('--offline-smoke-test') || isPhase3RecoverySmoke;
 const isOfflineSmokeTest = process.argv.includes('--offline-smoke-test');
 if (isSmokeTest) {
   const smokeRoot = path.join(app.getPath('temp'), `eclass-record-smoke-${process.pid}`);
   app.setPath('appData', smokeRoot);
   app.setPath('userData', path.join(smokeRoot, 'user-data'));
 }
+
+const diagnosticsRoot = path.join(app.getPath('userData'), 'diagnostics');
+const crashDumpRoot = path.join(diagnosticsRoot, 'crashes');
+app.setPath('crashDumps', crashDumpRoot);
+const diagnosticService = new DiagnosticService({ root: diagnosticsRoot, crashRoot: crashDumpRoot });
+const recoveryController = new RecoveryController({ statePath: path.join(diagnosticsRoot, 'recovery-state.json') });
+const permissionService = new PermissionService(path.join(app.getPath('userData'), 'permission-preferences.json'));
+const profileAuth = new ProfileAuth();
+
+let mainWindow = null;
+securityBoundary.installIpcBoundary(ipcMain, {
+  getMainWindow: () => mainWindow,
+  isProfileUnlocked: () => profileAuth.isUnlocked()
+});
+const { installSingleInstanceGuard } = require('./single-instance');
+const singleInstanceGuard = installSingleInstanceGuard(app, {
+  // Smoke tests intentionally use isolated data directories and may run beside
+  // the installed app without taking its production instance lock.
+  bypass: isSmokeTest,
+  getMainWindow: () => mainWindow,
+});
 
 // File I/O resolves its database path while loading, so smoke paths must be
 // isolated before this module (and any updater helpers) are required.
@@ -29,14 +61,117 @@ const recoveryQr = require('./recovery-qr');
 const adminSession = require('./admin-session');
 const { verifyAdminPassphrase } = require('./admin-auth');
 const { CompanionSyncService } = require('./companion-sync-service');
+const { MobileApkInstallService } = require('./mobile-apk-install-service');
+const mobileUpdateChannel = require('./mobile-update-channel');
 const { SchoolCloudVault } = require('./school-cloud-vault');
 const { SchoolCloudService } = require('./school-cloud-service');
 
-let mainWindow = null;
 let isConfirmedExit = false;
 let selectBluetoothDeviceCallback = null;
 let automaticBluetoothScanPending = false;
 let automaticBluetoothDiscoveryTag = '';
+let mobileUpdateCheckTimer = null;
+let rendererRecoveryPending = false;
+let unresponsiveDialogPending = false;
+let rendererStableTimer = null;
+
+async function preserveBeforeRendererRecovery(category) {
+  try {
+    await fileIO.createLocalRestorePoint(`renderer-${String(category || 'failure').replace(/[^a-z0-9-]/gi, '-').slice(0, 40)}`);
+    diagnosticService.log('recovery-checkpoint-created', { category });
+    return true;
+  } catch (error) {
+    diagnosticService.log('recovery-checkpoint-failed', { category, error: error?.message || 'unknown' });
+    return false;
+  }
+}
+
+async function recoverRenderer(category, metadata = {}) {
+  if (rendererRecoveryPending || !mainWindow || mainWindow.isDestroyed()) return;
+  rendererRecoveryPending = true;
+  profileAuth.lock();
+  clearTimeout(rendererStableTimer);
+  const decision = recoveryController.recordFailure(category);
+  diagnosticService.log('renderer-recovery-requested', {
+    category,
+    reason: metadata.reason || '',
+    exitCode: Number.isInteger(metadata.exitCode) ? metadata.exitCode : undefined,
+    count: decision.count,
+    safeMode: decision.safeMode
+  });
+  await preserveBeforeRendererRecovery(category);
+  if (!decision.mayReload) {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: 'E-Class Record could not recover safely',
+      message: 'Automatic recovery has stopped to protect your records.',
+      detail: 'Restart the app. It will remain locked and can start in Safe Mode after repeated failures.',
+      buttons: ['Exit'],
+      noLink: true
+    });
+    isConfirmedExit = true;
+    app.quit();
+    return;
+  }
+  const query = new URLSearchParams({ recovery: '1', safeMode: decision.safeMode ? '1' : '0' });
+  try {
+    await mainWindow.loadURL(`${securityBoundary.APP_ORIGIN}/index.html?${query}`);
+  } catch (error) {
+    diagnosticService.log('renderer-recovery-load-failed', { category, error: error?.message || 'unknown' });
+  } finally {
+    rendererRecoveryPending = false;
+  }
+}
+
+function installRendererRecoveryHandlers(window) {
+  window.webContents.on('render-process-gone', (_event, details) => {
+    if (['clean-exit', 'killed'].includes(details?.reason) && isConfirmedExit) return;
+    recoverRenderer('render-process-gone', details).catch(() => {});
+  });
+  window.webContents.on('unresponsive', async () => {
+    diagnosticService.log('renderer-unresponsive');
+    if (unresponsiveDialogPending || rendererRecoveryPending || window.isDestroyed()) return;
+    unresponsiveDialogPending = true;
+    try {
+      const result = await dialog.showMessageBox(window, {
+        type: 'warning',
+        title: 'E-Class Record is not responding',
+        message: 'The workspace is taking longer than expected.',
+        detail: 'Wait if a large backup, import, or report is running. Reload safely creates a restore point and returns to the locked profile screen.',
+        buttons: ['Wait', 'Reload safely', 'Exit'],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true
+      });
+      if (result.response === 1) await recoverRenderer('renderer-unresponsive');
+      if (result.response === 2) {
+        isConfirmedExit = true;
+        app.quit();
+      }
+    } finally {
+      unresponsiveDialogPending = false;
+    }
+  });
+  window.webContents.on('responsive', () => diagnosticService.log('renderer-responsive'));
+  window.webContents.on('preload-error', (_event, preloadPath, error) => {
+    diagnosticService.log('preload-error', { preload: path.basename(preloadPath || ''), error: error?.message || 'unknown' });
+  });
+  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (!isMainFrame || errorCode === -3 || rendererRecoveryPending) return;
+    recoverRenderer('did-fail-load', {
+      reason: errorDescription,
+      exitCode: errorCode,
+      origin: securityBoundary.isTrustedAppUrl(validatedURL) ? 'internal' : 'rejected'
+    }).catch(() => {});
+  });
+  window.webContents.on('did-finish-load', () => {
+    clearTimeout(rendererStableTimer);
+    rendererStableTimer = setTimeout(() => {
+      recoveryController.markStable();
+      diagnosticService.log('renderer-stable');
+    }, 60_000);
+  });
+}
 
 function cancelPendingBluetoothSelection() {
   automaticBluetoothScanPending = false;
@@ -85,31 +220,104 @@ function requestCompanionRenderer(channel, payload, timeoutMs = 15000) {
   });
 }
 
+function mobileUpdateRoot() {
+  return path.join(app.getPath('userData'), 'mobile-updates');
+}
+
+function readMobileUpdateManifest(manifestPath) {
+  try {
+    if (!fs.existsSync(manifestPath)) return null;
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const fileName = path.basename(String(manifest.fileName || ''));
+    const apkPath = path.join(path.dirname(manifestPath), fileName);
+    if (!fileName.toLowerCase().endsWith('.apk') || !fs.existsSync(apkPath)) return null;
+    const bytes = fs.readFileSync(apkPath);
+    const digest = crypto.createHash('sha256').update(bytes).digest('hex');
+    if (!/^[a-f0-9]{64}$/i.test(String(manifest.sha256 || '')) || digest !== String(manifest.sha256).toLowerCase()) return null;
+    if (String(manifest.packageName || manifest.applicationId || '') !== 'com.example.eclassrecordmobile') return null;
+    if (!Number.isInteger(Number(manifest.versionCode)) || Number(manifest.versionCode) < 1) return null;
+    return {
+      path: apkPath,
+      fileName,
+      packageName: 'com.example.eclassrecordmobile',
+      versionName: String(manifest.versionName || manifest.versionCode),
+      versionCode: Number(manifest.versionCode),
+      size: bytes.length,
+      sha256: digest,
+      releaseNotes: String(manifest.releaseNotes || ''),
+      minimumCompanionProtocol: Number(manifest.minimumCompanionProtocol || 2),
+      publishedAt: String(manifest.publishedAt || '')
+    };
+  } catch (_error) {
+    return null;
+  }
+}
+
 function mobileUpdatePackage() {
-  const fileName = `E-Class-Record-Mobile-v${app.getVersion()}.apk`;
-  const candidates = [
-    path.join(process.resourcesPath, 'mobile', fileName),
-    path.join(__dirname, '..', '..', 'android', 'app', 'build', 'outputs', 'apk', 'debug', fileName)
+  const manifests = [
+    path.join(mobileUpdateRoot(), 'mobile-update.json'),
+    path.join(process.resourcesPath, 'mobile', 'mobile-update.json')
   ];
-  const apkPath = candidates.find((candidate) => fs.existsSync(candidate));
-  if (!apkPath) return null;
-  const bytes = fs.readFileSync(apkPath);
-  return {
-    path: apkPath,
-    fileName,
-    packageName: 'com.example.eclassrecordmobile',
-    versionName: app.getVersion(),
-    versionCode: 4,
-    size: bytes.length,
-    sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
-    releaseNotes: 'QR pairing confirmation and automatic WLAN/Bluetooth QR recognition fixes.'
+  return manifests.map(readMobileUpdateManifest).filter(Boolean).sort((a, b) => b.versionCode - a.versionCode)[0] || null;
+}
+
+async function importMobileUpdatePackage() {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import Android Mobile Update Manifest',
+    filters: [{ name: 'E-Class Mobile Update Manifest', extensions: ['json'] }],
+    properties: ['openFile']
+  });
+  if (result.canceled || !result.filePaths[0]) return { success: false, canceled: true };
+  const sourceManifest = result.filePaths[0];
+  const update = readMobileUpdateManifest(sourceManifest);
+  if (!update) throw new Error('The mobile update manifest or APK is invalid. Keep both files in the same folder.');
+  if (update.minimumCompanionProtocol > 2) throw new Error('This mobile update requires a newer desktop companion protocol.');
+  const root = mobileUpdateRoot();
+  fs.mkdirSync(root, { recursive: true });
+  const targetApk = path.join(root, update.fileName);
+  const temporaryApk = `${targetApk}.incoming`;
+  fs.copyFileSync(update.path, temporaryApk);
+  fs.renameSync(temporaryApk, targetApk);
+  const manifest = {
+    schemaVersion: 1,
+    applicationId: update.packageName,
+    versionCode: update.versionCode,
+    versionName: update.versionName,
+    fileName: update.fileName,
+    size: update.size,
+    sha256: update.sha256,
+    releaseNotes: update.releaseNotes,
+    minimumCompanionProtocol: update.minimumCompanionProtocol,
+    publishedAt: update.publishedAt || new Date().toISOString()
   };
+  const temporaryManifest = path.join(root, 'mobile-update.json.incoming');
+  fs.writeFileSync(temporaryManifest, JSON.stringify(manifest, null, 2), { mode: 0o600 });
+  fs.renameSync(temporaryManifest, path.join(root, 'mobile-update.json'));
+  return { success: true, update: mobileUpdatePackage() };
 }
 
 const companionSyncService = new CompanionSyncService({
   identityPath: path.join(app.getPath('userData'), 'companion-lan-identity.json'),
-  onChanges: (payload) => requestCompanionRenderer('companion:apply-changes', payload, 30000),
+  identityStorage: safeStorage,
+  onPair: async (payload) => {
+    const profileId = String(payload.profileId || '');
+    if (!profileAuth.verifyAuthorizationPin(profileId, payload.authorizationPin, companionSyncService.status?.pin)) {
+      return { authorized: false, error: 'Incorrect profile PIN.' };
+    }
+    return requestCompanionRenderer('companion:authorize-pairing', payload, 30000);
+  },
+  onChanges: async (payload) => {
+    const profileId = String(payload.profileId || '');
+    if (!profileAuth.isUnlocked() || (profileId && profileAuth.sessionProfileId() !== profileId)) {
+      throw Object.assign(new Error('Unlock the matching desktop profile before pushing mobile changes.'), { statusCode: 403 });
+    }
+    if (!profileAuth.authorizeChanges(profileId, payload.authorizationPin, companionSyncService.status?.pin)) {
+      throw Object.assign(new Error('Incorrect profile PIN. Mobile changes were not applied.'), { statusCode: 403 });
+    }
+    return requestCompanionRenderer('companion:apply-changes', payload, 30000);
+  },
   onToolCommand: async (payload) => {
+    if (!profileAuth.isUnlocked()) throw new Error('Unlock the desktop profile before using remote controls.');
     if (!mainWindow?.webContents || mainWindow.webContents.isDestroyed()) throw new Error('The desktop workspace is not ready.');
     mainWindow.webContents.send('companion:tool-command', payload);
     return { accepted: true };
@@ -119,7 +327,15 @@ const companionSyncService = new CompanionSyncService({
       mainWindow.webContents.send('companion:client-activity', activity);
     }
   },
-  getMobileUpdate: mobileUpdatePackage
+  getMobileUpdate: () => {
+    mobileUpdateChannel.refresh(mobileUpdateRoot());
+    return mobileUpdatePackage();
+  }
+});
+
+const mobileApkInstallService = new MobileApkInstallService({
+  getMobileUpdate: () => mobileUpdatePackage(),
+  generateQr: (url) => computeService.generateApkInstallQr(url)
 });
 
 function attachmentRoot() {
@@ -210,24 +426,30 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false
     }
   });
 
-  mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  securityBoundary.configureWebContents(mainWindow.webContents);
+  installRendererRecoveryHandlers(mainWindow);
+  mainWindow.loadURL(`${securityBoundary.APP_ORIGIN}/index.html`);
   mainWindow.setAutoHideMenuBar(true);
   mainWindow.setMenuBarVisibility(false);
   mainWindow.setMenu(null);
   Menu.setApplicationMenu(null);
 
-  if (isSmokeTest) {
+  if (isSmokeTest && !isPhase3RecoverySmoke) {
     const rendererErrors = [];
     const smokeTimeout = setTimeout(() => {
-      console.error('SMOKE_FAIL Renderer did not finish loading within 30 seconds.');
+      console.error('SMOKE_FAIL Renderer did not finish loading within 90 seconds.');
       app.exit(1);
-    }, 30000);
+    }, 90000);
 
-    mainWindow.webContents.on('console-message', (_event, level, message) => {
+    mainWindow.webContents.on('console-message', (event) => {
+      const level = Number(event?.level ?? 0);
+      const message = String(event?.message ?? '');
       if (level >= 3) rendererErrors.push(message);
     });
 
@@ -341,7 +563,9 @@ function createWindow() {
           if (!toolsGameFrame || toolsGameFrame.getAttribute('sandbox') !== 'allow-scripts') {
             throw new Error('Offline games iframe is missing its scripts-only sandbox.');
           }
-          await new Promise(resolve => setTimeout(resolve, 120));
+          for (let attempt = 0; attempt < 20 && !document.querySelector('.adm-panel'); attempt += 1) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
           TeacherTools.openGame('2048');
           TeacherTools.activate('games');
           await new Promise(resolve => setTimeout(resolve, 180));
@@ -733,13 +957,30 @@ function createWindow() {
             || !document.querySelector('.tool-control-strip__actions .btn-primary')?.disabled) {
             throw new Error('Group Randomizer did not enter its learner movement animation.');
           }
-          await new Promise(resolve => setTimeout(resolve, 2300));
+          if (!TeacherTools.revealGroupsNow()) {
+            throw new Error('Group Randomizer could not complete through its Reveal Now action.');
+          }
+          const expectedGroupLearners = TeacherToolsCore.activeLearners(rouletteAssignment).length;
+          for (let attempt = 0; attempt < 80; attempt++) {
+            const currentGroupLearners = document.querySelectorAll('[data-group-learner-id]');
+            if (!document.querySelector('.group-results--randomizing')
+              && currentGroupLearners.length === expectedGroupLearners) {
+              break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
           const settledGroupLearners = Array.from(document.querySelectorAll('[data-group-learner-id]'))
             .map(element => element.dataset.groupLearnerId);
           if (document.querySelector('.group-results--randomizing')
-            || settledGroupLearners.length !== TeacherToolsCore.activeLearners(rouletteAssignment).length
+            || settledGroupLearners.length !== expectedGroupLearners
             || new Set(settledGroupLearners).size !== settledGroupLearners.length) {
-            throw new Error('Group Randomizer did not settle into a complete unique final grouping.');
+            throw new Error('Group Randomizer did not settle into a complete unique final grouping: '
+              + JSON.stringify({
+                randomizing: Boolean(document.querySelector('.group-results--randomizing')),
+                expected: expectedGroupLearners,
+                rendered: settledGroupLearners.length,
+                unique: new Set(settledGroupLearners).size
+              }));
           }
           TeacherTools.activate('picker');
           TeacherTools.pickName();
@@ -790,7 +1031,7 @@ function createWindow() {
             });
             mockTools.performanceChecklists.push(renderedChecklist);
           }
-          PerformanceChecklist.addActivity(renderedChecklist, {
+          const smokeAddedChecklistActivity = PerformanceChecklist.addActivity(renderedChecklist, {
             criterionId: renderedChecklist.criteria[0].id,
             title: 'Smoke Added Activity',
             date: '2099-08-02'
@@ -798,15 +1039,24 @@ function createWindow() {
           renderedChecklist.sessions.forEach(session => {
             if (session.activity) session.activity.destinationComponent = 'TRACKING';
           });
-          TeacherTools.activate('checklist');
+          TeacherTools.openPerformanceChecklistPage();
+          TeacherTools.changeChecklistTerm(checklistTerm);
+          if (checklistMapePart) TeacherTools.changeChecklistMapePart(checklistMapePart);
+          TeacherTools.selectChecklistToConduct(smokeAddedChecklistActivity.id);
           await new Promise(resolve => setTimeout(resolve, 80));
           const renderedActivityTitles = Array.from(document.querySelectorAll('.checklist-activity-column > span'))
             .map(element => element.textContent.trim());
           if (!renderedActivityTitles.includes('Smoke Added Activity')) {
-            throw new Error('An added activity was not reflected in the Performance Checklist table.');
+            throw new Error('An added activity was not reflected in the Performance Checklist table: '
+              + JSON.stringify({
+                expectedSessionId: smokeAddedChecklistActivity.id,
+                renderedActivityTitles,
+                selectedSessionId: document.querySelector('.checklist-active-activity select')?.value || '',
+                currentView: getRuntimeNavigationState().currentView
+              }));
           }
-          const checklistToolbar = document.querySelector('.checklist-tool .simulator-toolbar');
-          const checklistToolbarActions = checklistToolbar?.querySelector('.simulator-toolbar__actions');
+          const checklistToolbar = document.querySelector('.checklist-tool .checklist-primary-toolbar');
+          const checklistToolbarActions = checklistToolbar?.querySelector('.checklist-primary-toolbar__actions');
           const checklistActionButtons = Array.from(checklistToolbarActions?.querySelectorAll('.checklist-toolbar-action') || []);
           const checklistSupportStyles = ['--bulk', '--picker', '--more'].map(suffix => {
             const button = checklistToolbarActions?.querySelector('.checklist-toolbar-action' + suffix);
@@ -825,7 +1075,21 @@ function createWindow() {
             || distinctChecklistBackgrounds.size !== 3
             || checklistActionButtons.some(button => button.scrollWidth > button.clientWidth + 1)
             || checklistToolbarActions.getBoundingClientRect().right > checklistToolbar.getBoundingClientRect().right + 1) {
-            throw new Error('Performance Checklist toolbar actions did not receive distinct, contained color treatments.');
+            throw new Error('Performance Checklist toolbar actions did not receive distinct, contained color treatments: '
+              + JSON.stringify({
+                toolbarFound: Boolean(checklistToolbar),
+                actionsFound: Boolean(checklistToolbarActions),
+                actionCount: checklistActionButtons.length,
+                supportStyles: checklistSupportStyles,
+                distinctBackgrounds: distinctChecklistBackgrounds.size,
+                buttonWidths: checklistActionButtons.map(button => ({
+                  label: button.textContent.trim(),
+                  scrollWidth: button.scrollWidth,
+                  clientWidth: button.clientWidth
+                })),
+                toolbarRight: checklistToolbar?.getBoundingClientRect().right || 0,
+                actionsRight: checklistToolbarActions?.getBoundingClientRect().right || 0
+              }));
           }
           TeacherTools.openChecklistPicker();
           await new Promise(resolve => setTimeout(resolve, 40));
@@ -1093,6 +1357,42 @@ function createWindow() {
     });
   }
 
+  if (isPhase3RecoverySmoke) {
+    let forcedCrashes = 0;
+    const timeout = setTimeout(() => {
+      console.error('PHASE3_RECOVERY_FAIL timed out');
+      app.exit(1);
+    }, 90_000);
+    mainWindow.webContents.on('did-finish-load', async () => {
+      if (forcedCrashes < 3) {
+        forcedCrashes += 1;
+        setTimeout(() => {
+          if (!mainWindow?.webContents?.isDestroyed()) mainWindow.webContents.forcefullyCrashRenderer();
+        }, 150);
+        return;
+      }
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        const state = await mainWindow.webContents.executeJavaScript(`({
+          safeMode: document.documentElement.dataset.safeMode === 'true',
+          profileLocked: Boolean(document.getElementById('profileOverlay'))
+            && getComputedStyle(document.getElementById('profileOverlay')).display !== 'none',
+          nodeUnavailable: typeof require === 'undefined' && typeof process === 'undefined'
+        })`);
+        if (!state.safeMode || !state.profileLocked || !state.nodeUnavailable) {
+          throw new Error(`Recovery did not return to locked sandboxed Safe Mode: ${JSON.stringify(state)}`);
+        }
+        clearTimeout(timeout);
+        console.log('PHASE3_RECOVERY_OK ' + JSON.stringify(state));
+        app.exit(0);
+      } catch (error) {
+        clearTimeout(timeout);
+        console.error('PHASE3_RECOVERY_FAIL ' + error.message);
+        app.exit(1);
+      }
+    });
+  }
+
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.key === 'Alt') {
       event.preventDefault();
@@ -1280,7 +1580,9 @@ ipcMain.handle('admin:logout', async () => {
 });
 
 ipcMain.handle('db:load', async () => {
-return fileIO.loadDatabase();
+  const data = fileIO.loadDatabase();
+  profileAuth.ingestDatabase(data);
+  return data;
 });
 
 ipcMain.handle('school-cloud:feature-status', async () => ({
@@ -1324,14 +1626,79 @@ ipcMain.handle('school-cloud:restore-profile', async (_event, schoolId) => {
 });
 
 ipcMain.handle('db:save', async (_event, data) => {
-  return fileIO.saveDatabase(data);
+  const result = fileIO.saveDatabase(data);
+  profileAuth.ingestDatabase(data);
+  return result;
 });
 
-ipcMain.handle('companion:wlan-start', async () => companionSyncService.start());
-ipcMain.handle('companion:bluetooth-start', async () => companionSyncService.startBluetooth());
+ipcMain.handle('companion:wlan-start', async (_event, pairingContext) => companionSyncService.start(pairingContext));
+ipcMain.handle('companion:bluetooth-start', async (_event, pairingContext) => companionSyncService.startBluetooth(pairingContext));
+ipcMain.handle('companion:firewall-configure', async () => {
+  if (process.platform !== 'win32') return { success: true, required: false };
+  await shell.openExternal('windowsdefender://NetworkSettings');
+  return { success: true, required: true };
+});
+ipcMain.handle('compute:generate-companion-qr', async (_event, payload) => computeService.generateCompanionQr(payload));
+ipcMain.handle('compute:generate-recovery-qr', async (_event, payload) => computeService.generateRecoveryQr(payload));
+ipcMain.handle('compute:decode-recovery-qr', async (_event, pixels) => computeService.decodeRecoveryQrPixels(pixels));
+ipcMain.handle('compute:generate-sudoku', async (_event, difficulty) => computeService.generateSudoku(difficulty));
+ipcMain.handle('diagnostics:policy', async () => diagnosticService.policy());
+ipcMain.handle('diagnostics:set-enabled', async (_event, enabled) => diagnosticService.setEnabled(enabled));
+ipcMain.handle('diagnostics:delete', async () => diagnosticService.deleteAll());
+ipcMain.handle('diagnostics:export', async () => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Sanitized Support Bundle',
+    defaultPath: path.join(app.getPath('desktop'), `E-Class-Record-Support-${new Date().toISOString().slice(0, 10)}.zip`),
+    filters: [{ name: 'ZIP Support Bundle', extensions: ['zip'] }]
+  });
+  if (result.canceled || !result.filePath) return { success: false, canceled: true };
+  const files = diagnosticService.supportBundleFiles({
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    platform: process.platform,
+    arch: process.arch
+  });
+  fs.writeFileSync(result.filePath, zipArchive.createZip(files));
+  return { success: true, path: result.filePath, fileCount: files.length };
+});
+ipcMain.handle('security:permission-preferences', async () => permissionService.read());
+ipcMain.handle('security:set-permission-preference', async (_event, capability, enabled) => {
+  const preferences = permissionService.set(String(capability || ''), enabled === true);
+  if (enabled !== true) {
+    await session.defaultSession.clearStorageData({ storages: ['permissions'] });
+  }
+  return preferences;
+});
+ipcMain.handle('security:request-capability', async (_event, capability) => permissionService.begin(String(capability || '')));
+ipcMain.handle('security:unlock-profile', async (_event, state) => {
+  return profileAuth.unlock(String(state?.profileId || ''), String(state?.pin || ''));
+});
+ipcMain.handle('security:lock-profile', async () => {
+  mobileApkInstallService.stop().catch(() => {});
+  return profileAuth.lock();
+});
 ipcMain.handle('companion:wlan-stop', async () => companionSyncService.stop());
 ipcMain.handle('companion:wlan-status', async () => companionSyncService.publicStatus());
 ipcMain.handle('companion:publish-snapshot', async (_event, snapshot) => companionSyncService.publish(snapshot));
+ipcMain.handle('companion:apk-install-start', async () => mobileApkInstallService.start());
+ipcMain.handle('companion:apk-install-stop', async () => mobileApkInstallService.stop());
+ipcMain.handle('companion:apk-install-status', async () => mobileApkInstallService.publicStatus());
+ipcMain.handle('companion:mobile-update-status', async () => {
+  await mobileUpdateChannel.refresh(mobileUpdateRoot());
+  const update = mobileUpdatePackage();
+  const github = mobileUpdateChannel.status();
+  if (!update) return { available: false, github };
+  const { path: _privatePath, ...publicUpdate } = update;
+  return { available: true, update: publicUpdate, github };
+});
+ipcMain.handle('companion:mobile-update-refresh', async () => {
+  const github = await mobileUpdateChannel.refresh(mobileUpdateRoot(), { force: true });
+  const update = mobileUpdatePackage();
+  if (!update) return { available: false, github };
+  const { path: _privatePath, ...publicUpdate } = update;
+  return { available: true, update: publicUpdate, github };
+});
+ipcMain.handle('companion:mobile-update-import', importMobileUpdatePackage);
 ipcMain.on('companion:changes-result', (_event, requestId, result) => {
   const key = String(requestId || '');
   const pending = companionRendererRequests.get(key);
@@ -1384,6 +1751,7 @@ ipcMain.handle('dialog:print-recovery-qr', async (_event, dataUrl, label) => {
     width: 720, height: 900, show: false, parent: mainWindow,
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
+  securityBoundary.configureWebContents(printWindow.webContents, { allowDataMainFrame: true });
   await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
   return new Promise(resolve => {
     printWindow.webContents.print({ silent: false, printBackground: true }, (success, failureReason) => {
@@ -1864,7 +2232,7 @@ ipcMain.handle('updater:quit-and-install', async () => {
 });
 
 ipcMain.handle('shell:open-external', async (_event, url) => {
-  await shell.openExternal(url);
+  await shell.openExternal(securityBoundary.assertSafeExternalUrl(url));
 });
 
 function normalizePreviewText(value, limit) {
@@ -2015,7 +2383,34 @@ ipcMain.handle('bluetooth:auto-scan', (_event, discoveryTag) => {
 
 // ── App Lifecycle ─────────────────────────────────────────
 
-app.whenReady().then(() => {
+function startMobileUpdateBackgroundChecks() {
+  if (mobileUpdateCheckTimer || isOfflineSmokeTest) return;
+  const check = () => {
+    mobileUpdateChannel.refresh(mobileUpdateRoot(), { force: true })
+      .catch(error => console.error('Background mobile update check failed:', error));
+  };
+  check();
+  mobileUpdateCheckTimer = setInterval(check, mobileUpdateChannel.CHECK_INTERVAL_MS);
+}
+
+app.whenReady().then(async () => {
+  if (!singleInstanceGuard.acquired) return;
+  if (diagnosticService.preferences().enabled) {
+    crashReporter.start({
+      productName: 'E-Class Record',
+      companyName: 'E-Class Record App',
+      uploadToServer: false,
+      compress: true,
+      ignoreSystemCrashHandler: false
+    });
+    diagnosticService.log('crash-reporting-started', { uploadToServer: false });
+  }
+  await securityBoundary.registerAppProtocol({
+    protocol,
+    net,
+    rendererRoot: path.join(__dirname, '..', 'renderer')
+  });
+  securityBoundary.installPermissionPolicy(session.defaultSession, () => mainWindow, permissionService);
   if (isOfflineSmokeTest) {
     session.defaultSession.webRequest.onBeforeRequest(
       { urls: ['http://*/*', 'https://*/*'] },
@@ -2023,11 +2418,43 @@ app.whenReady().then(() => {
     );
   }
   createWindow();
+  try {
+    profileAuth.ingestDatabase(fileIO.loadDatabase());
+  } catch (_error) {
+    // A missing or unreadable database leaves the workspace locked.
+  }
+  installPowerLifecycle({
+    powerMonitor,
+    profileAuth,
+    companionSyncService,
+    mobileApkInstallService,
+    fileIO,
+    getMainWindow: () => mainWindow,
+    logger: { warn: (...args) => diagnosticService.log('lifecycle-warning', { message: args.map((item) => String(item)).join(' ') }) }
+  });
+  singleInstanceGuard.focusIfPending();
+  startMobileUpdateBackgroundChecks();
+});
+
+app.on('child-process-gone', (_event, details) => {
+  diagnosticService.log('child-process-gone', {
+    type: details?.type || 'unknown',
+    reason: details?.reason || 'unknown',
+    exitCode: Number.isInteger(details?.exitCode) ? details.exitCode : undefined,
+    serviceName: String(details?.serviceName || '').slice(0, 80)
+  });
 });
 
 app.on('before-quit', () => {
   isConfirmedExit = true;
+  profileAuth.lock();
+  clearTimeout(rendererStableTimer);
+  if (mobileUpdateCheckTimer) {
+    clearInterval(mobileUpdateCheckTimer);
+    mobileUpdateCheckTimer = null;
+  }
   companionSyncService.stop().catch(() => {});
+  mobileApkInstallService.stop().catch(() => {});
 });
 
 app.on('window-all-closed', () => {

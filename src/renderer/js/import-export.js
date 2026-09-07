@@ -61,12 +61,12 @@ function promptBackupPinModal(onConfirm, onCancel) {
     <div class="modal">
       <div class="modal__title">PIN-Protected Backup</div>
       <div class="modal__body">
-        <p style="margin-top:0">This backup is encrypted. Enter the PIN that protected it to decrypt and restore its contents.</p>
+        <p data-eclass-style="margin-top:0">This backup is encrypted. Enter the PIN that protected it to decrypt and restore its contents.</p>
         <div class="field">
           <label class="field-label">Enter 6-digit PIN</label>
           <input type="password" id="backupDecryptPin" class="field-input" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="off" />
         </div>
-        <div id="backupDecryptErrorMsg" class="unlock-error-msg" style="color:var(--color-error-600)"></div>
+        <div id="backupDecryptErrorMsg" class="unlock-error-msg" data-eclass-style="color:var(--color-error-600)"></div>
       </div>
       <div class="modal__actions">
         <button class="btn btn-cancel btn-sm" id="btnCancelBackupDecrypt">Cancel</button>
@@ -1174,20 +1174,20 @@ function initiateLearnerImport() {
   overlay.className = 'modal-overlay';
   overlay.style.zIndex = '12000';
   overlay.innerHTML = `
-    <div class="modal" style="max-width: 450px; width: 90%;">
+    <div class="modal" data-eclass-style="max-width: 450px; width: 90%;">
       <div class="modal__title">Import Transferred Learner</div>
       <div class="modal__body">
-        <p style="margin-top:0">Choose how you want to import the transferred student's record:</p>
+        <p data-eclass-style="margin-top:0">Choose how you want to import the transferred student's record:</p>
         
-        <div style="display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-4);">
-          <button class="btn btn-primary" id="btnImportFromFile" style="text-align: left; padding: var(--space-3); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: 100%;">
-            <strong style="font-size: 14px;">Option 1: Upload Transfer JSON File</strong>
-            <span style="font-size: 11px; font-weight: normal; margin-top: 4px; opacity: 0.85;">Select a .json file exported from another teacher's app.</span>
+        <div data-eclass-style="display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-4);">
+          <button class="btn btn-primary" id="btnImportFromFile" data-eclass-style="text-align: left; padding: var(--space-3); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: 100%;">
+            <strong data-eclass-style="font-size: 14px;">Option 1: Upload Transfer JSON File</strong>
+            <span data-eclass-style="font-size: 11px; font-weight: normal; margin-top: 4px; opacity: 0.85;">Select a .json file exported from another teacher's app.</span>
           </button>
           
-          <button class="btn btn-olive" id="btnImportFromClass" style="text-align: left; padding: var(--space-3); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: 100%;">
-            <strong style="font-size: 14px;">Option 2: Direct Copy from Class in Profile</strong>
-            <span style="font-size: 11px; font-weight: normal; margin-top: 4px; opacity: 0.85;">Clone a learner directly from another class in your active profile.</span>
+          <button class="btn btn-olive" id="btnImportFromClass" data-eclass-style="text-align: left; padding: var(--space-3); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: 100%;">
+            <strong data-eclass-style="font-size: 14px;">Option 2: Direct Copy from Class in Profile</strong>
+            <span data-eclass-style="font-size: 11px; font-weight: normal; margin-top: 4px; opacity: 0.85;">Clone a learner directly from another class in your active profile.</span>
           </button>
         </div>
       </div>
@@ -1282,12 +1282,12 @@ function showDirectClassCopyModal() {
   overlay.className = 'modal-overlay';
   overlay.style.zIndex = '12000';
   overlay.innerHTML = `
-    <div class="modal" style="max-width: 500px; width: 90%;">
+    <div class="modal" data-eclass-style="max-width: 500px; width: 90%;">
       <div class="modal__title">Direct Class-to-Class Copy</div>
       <div class="modal__body">
-        <p style="margin-top:0">Clone a learner from another class load in this profile and import their completed term grades.</p>
+        <p data-eclass-style="margin-top:0">Clone a learner from another class load in this profile and import their completed term grades.</p>
         
-        <div class="field" style="margin-top: var(--space-3);">
+        <div class="field" data-eclass-style="margin-top: var(--space-3);">
           <label class="field-label">Select Source Class Load</label>
           <select id="sourceClassSelect" class="field-select">
             <option value="">-- Choose Class Load --</option>
@@ -1297,14 +1297,14 @@ function showDirectClassCopyModal() {
           </select>
         </div>
         
-        <div class="field" id="sourceLearnerField" style="margin-top: var(--space-3); display: none;">
+        <div class="field" id="sourceLearnerField" data-eclass-style="margin-top: var(--space-3); display: none;">
           <label class="field-label">Select Learner</label>
           <select id="sourceLearnerSelect" class="field-select">
             <option value="">-- Choose Learner --</option>
           </select>
         </div>
 
-        <div class="field" id="sourceTermField" style="margin-top: var(--space-3); display: none;">
+        <div class="field" id="sourceTermField" data-eclass-style="margin-top: var(--space-3); display: none;">
           <label class="field-label">Exit/Transfer Term (Include grades up to this term)</label>
           <select id="sourceExitTermSelect" class="field-select">
             <option value="1">Include Term 1 grade only</option>
@@ -1434,12 +1434,12 @@ function showImportRosterModal() {
   overlay.className = 'modal-overlay';
   overlay.style.zIndex = '12000';
   overlay.innerHTML = `
-    <div class="modal" style="max-width: 500px; width: 90%;">
+    <div class="modal" data-eclass-style="max-width: 500px; width: 90%;">
       <div class="modal__title">Import Roster from Other Class</div>
       <div class="modal__body">
-        <p style="margin-top:0">Import learners from another class load or Advisory Class in this profile into the active class roster.</p>
+        <p data-eclass-style="margin-top:0">Import learners from another class load or Advisory Class in this profile into the active class roster.</p>
         
-        <div class="field" style="margin-top: var(--space-3);">
+        <div class="field" data-eclass-style="margin-top: var(--space-3);">
           <label class="field-label">Select Source Class</label>
           <select id="importRosterClassSelect" class="field-select">
             <option value="">-- Choose Class --</option>
@@ -1449,26 +1449,26 @@ function showImportRosterModal() {
           </select>
         </div>
         
-        <div id="importRosterDetails" style="margin-top: var(--space-3); display: none; padding: var(--space-3); background: rgba(0, 0, 0, 0.05); border-radius: 4px; border: 1px solid var(--border-color);">
-          <div style="font-weight: 600; margin-bottom: var(--space-1);" id="importRosterSizeText">Roster Size: --</div>
-          <div style="font-size: var(--font-size-sm); color: var(--text-secondary);" id="importRosterBreakdownText">Boys: --, Girls: --</div>
+        <div id="importRosterDetails" data-eclass-style="margin-top: var(--space-3); display: none; padding: var(--space-3); background: rgba(0, 0, 0, 0.05); border-radius: 4px; border: 1px solid var(--border-color);">
+          <div data-eclass-style="font-weight: 600; margin-bottom: var(--space-1);" id="importRosterSizeText">Roster Size: --</div>
+          <div data-eclass-style="font-size: var(--font-size-sm); color: var(--text-secondary);" id="importRosterBreakdownText">Boys: --, Girls: --</div>
         </div>
 
-        <div class="field" id="importRosterModeField" style="margin-top: var(--space-4); display: none;">
+        <div class="field" id="importRosterModeField" data-eclass-style="margin-top: var(--space-4); display: none;">
           <label class="field-label">Import Mode</label>
-          <div style="display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2);">
-            <label style="display: flex; align-items: flex-start; gap: var(--space-2); cursor: pointer;">
-              <input type="radio" name="importRosterMode" value="merge" checked style="margin-top: 3px;" />
+          <div data-eclass-style="display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2);">
+            <label data-eclass-style="display: flex; align-items: flex-start; gap: var(--space-2); cursor: pointer;">
+              <input type="radio" name="importRosterMode" value="merge" checked data-eclass-style="margin-top: 3px;" />
               <div>
                 <strong>Merge Roster</strong>
-                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">Keep current students and add missing ones. Skips duplicates (matches on LRN or exact Name).</div>
+                <div data-eclass-style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">Keep current students and add missing ones. Skips duplicates (matches on LRN or exact Name).</div>
               </div>
             </label>
-            <label style="display: flex; align-items: flex-start; gap: var(--space-2); cursor: pointer;">
-              <input type="radio" name="importRosterMode" value="overwrite" style="margin-top: 3px;" />
+            <label data-eclass-style="display: flex; align-items: flex-start; gap: var(--space-2); cursor: pointer;">
+              <input type="radio" name="importRosterMode" value="overwrite" data-eclass-style="margin-top: 3px;" />
               <div>
                 <strong>Overwrite Roster</strong>
-                <div style="font-size: 11px; color: var(--color-warning-600); margin-top: 2px;">Replace the current roster completely. <strong style="color: var(--color-warning-600);">Warning: Existing grades/scores for deleted students will be removed permanently!</strong></div>
+                <div data-eclass-style="font-size: 11px; color: var(--color-warning-600); margin-top: 2px;">Replace the current roster completely. <strong data-eclass-style="color: var(--color-warning-600);">Warning: Existing grades/scores for deleted students will be removed permanently!</strong></div>
               </div>
             </label>
           </div>

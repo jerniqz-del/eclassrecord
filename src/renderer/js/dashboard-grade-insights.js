@@ -92,8 +92,8 @@
       return `<div class="workplace-student-term">
         <div class="workplace-student-term__label"><strong>Term ${item.term}</strong><span>${gradeDisplay(item.grade)}</span></div>
         <div class="workplace-student-term__plot">
-          <span class="workplace-student-term__track" aria-label="Learner grade ${gradeDisplay(item.grade)}"><i style="width:${learnerWidth}%"></i></span>
-          <span class="workplace-student-term__track workplace-student-term__track--average" aria-label="Class average ${gradeDisplay(item.classAverage)}"><i style="width:${averageWidth}%"></i></span>
+          <span class="workplace-student-term__track" aria-label="Learner grade ${gradeDisplay(item.grade)}"><i data-eclass-style="width:${learnerWidth}%"></i></span>
+          <span class="workplace-student-term__track workplace-student-term__track--average" aria-label="Class average ${gradeDisplay(item.classAverage)}"><i data-eclass-style="width:${averageWidth}%"></i></span>
         </div>
         <div class="workplace-student-term__values"><strong>${gradeDisplay(item.grade)}</strong><span>${gradeDisplay(item.classAverage)} class</span></div>
       </div>`;

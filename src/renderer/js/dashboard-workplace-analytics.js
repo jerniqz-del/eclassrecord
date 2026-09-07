@@ -9,7 +9,7 @@
       <div class="workplace-chart-row">
         <div class="workplace-chart-row__label"><strong>${esc(item.label)}</strong><span>${esc(item.subject)}</span></div>
         <div class="workplace-chart-row__plot" role="img" aria-label="${esc(item.label)} ${item.percent} percent complete">
-          <span style="width:${Math.max(0, Math.min(100, item.percent))}%"></span>
+          <span data-eclass-style="width:${Math.max(0, Math.min(100, item.percent))}%"></span>
         </div>
         <div class="workplace-chart-row__value"><strong>${item.percent}%</strong><span>${esc(detail)}</span></div>
       </div>`;
@@ -47,7 +47,7 @@
           <article class="workplace-kpi workplace-kpi--primary"><span>Score entry</span><strong>${coverage.percent}%</strong><small>${coverage.entered} of ${coverage.expected} cells · all terms</small></article>
           <article class="workplace-kpi workplace-kpi--success"><span>HPS ready</span><strong>${analytics.hpsPercent}%</strong><small>${analytics.hpsReady} of ${analytics.assessments} assessments</small></article>
           <article class="workplace-kpi workplace-kpi--warning"><span>Assessments</span><strong>${analytics.assessments}</strong><small>Across ${snapshot.stats.classes} active classes</small></article>
-          <article class="workplace-kpi workplace-kpi--neutral"><span>Learners</span><strong>${snapshot.stats.learnerDisplay}</strong><small>${includeDuplicateLearners ? `${snapshot.stats.learnerEntries} class enrollments` : `${snapshot.stats.uniqueLearners} unique learners`}</small><label class="workplace-kpi-toggle" title="Duplicates are matched by LRN, then by normalized learner name and birthdate"><input type="checkbox" ${includeDuplicateLearners ? 'checked' : ''} onchange="toggleDashboardLearnerDuplicates(this.checked)"><span>Include duplicates</span></label></article>
+          <article class="workplace-kpi workplace-kpi--neutral"><span>Learners</span><strong>${snapshot.stats.learnerDisplay}</strong><small>${includeDuplicateLearners ? `${snapshot.stats.learnerEntries} class enrollments` : `${snapshot.stats.uniqueLearners} unique learners`}</small><label class="workplace-kpi-toggle" title="Duplicates are matched by LRN, then by normalized learner name and birthdate"><input type="checkbox" ${includeDuplicateLearners ? 'checked' : ''} data-eclass-onchange="toggleDashboardLearnerDuplicates(this.checked)"><span>Include duplicates</span></label></article>
         </div>
         <div class="workplace-insights-grid">
           <article class="workplace-insight-card workplace-insight-card--wide">

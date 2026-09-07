@@ -49,9 +49,9 @@
     const fluidColumnCount = subjectColumnCount + (includeTerms ? averageColumnCount : 0);
     const subjectWidth = `calc((100% - ${learnerWidth}px - ${reservedAverageWidth}%) / ${Math.max(fluidColumnCount, 1)})`;
     const averageColumns = includeAverage
-      ? Array.from({ length: averageColumnCount }, () => `<col class="advisory-report__average-column" style="width:${includeTerms ? subjectWidth : `${reservedAverageWidth}%`}">`).join('')
+      ? Array.from({ length: averageColumnCount }, () => `<col class="advisory-report__average-column" data-eclass-style="width:${includeTerms ? subjectWidth : `${reservedAverageWidth}%`}">`).join('')
       : '';
-    const columns = `<colgroup><col class="advisory-report__learner-column" style="width:${learnerWidth}px">${Array.from({ length: subjectColumnCount }, () => `<col class="advisory-report__subject-column" style="width:${subjectWidth}">`).join('')}${averageColumns}</colgroup>`;
+    const columns = `<colgroup><col class="advisory-report__learner-column" data-eclass-style="width:${learnerWidth}px">${Array.from({ length: subjectColumnCount }, () => `<col class="advisory-report__subject-column" data-eclass-style="width:${subjectWidth}">`).join('')}${averageColumns}</colgroup>`;
     const top = group.map(subject => `<th colspan="${includeTerms ? 4 : 1}">${esc(transfer.subjectDisplayName(subject.subjectName))}</th>`).join('');
     const bottom = includeTerms ? `<tr>${group.map(() => '<th>T1</th><th>T2</th><th>T3</th><th>Final</th>').join('')}${includeAverage ? '<th>T1</th><th>T2</th><th>T3</th><th>Final</th>' : ''}</tr>` : '';
     const rows = learners.map(learner => {

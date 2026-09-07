@@ -446,7 +446,7 @@
         <div class="adm-auth-logo" aria-hidden="true">🧪</div>
         <div class="adm-auth-title" id="adminTestConfirmTitle"></div>
         <div class="adm-auth-sub"></div>
-        <div style="display:flex;gap:10px;width:100%;margin-top:8px;">
+        <div data-eclass-style="display:flex;gap:10px;width:100%;margin-top:8px;">
           <button type="button" class="adm-btn adm-btn--ghost" data-cancel>Cancel</button>
           <button type="button" class="adm-btn adm-btn--primary" data-confirm></button>
         </div>

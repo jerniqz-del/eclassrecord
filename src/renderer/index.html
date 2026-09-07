@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/advisory.css" />
   <link rel="stylesheet" href="css/record-table.css" />
   <link rel="stylesheet" href="css/score-history.css" />
+  <link rel="stylesheet" href="css/transmutation-table.css" />
   <link rel="stylesheet" href="css/animations.css" />
 <link rel="stylesheet" href="css/premium-fluidity.css" />
   <link rel="stylesheet" href="css/mobile-sync.css" />
@@ -48,13 +49,9 @@
   <link rel="stylesheet" href="css/admin.css" />
   <link rel="stylesheet" href="css/pin-recovery.css" />
   <link rel="stylesheet" href="css/performance.css" />
-  <script>
-    try {
-      if (localStorage.getItem('eclass_performance_mode_v1') === 'low') {
-        document.documentElement.dataset.performanceMode = 'low';
-      }
-    } catch (_error) {}
-  </script>
+  <link rel="stylesheet" href="css/runtime-generated.css" />
+  <script src="js/legacy-markup-runtime.js"></script>
+  <script src="js/early-startup.js"></script>
 </head>
 <body>
   
@@ -91,7 +88,7 @@
       <span class="sidebar__section-title">Navigation</span>
       <!-- View Navigation Menu -->
       <nav class="nav-menu">
-        <button id="navDashboard" class="nav-btn nav-btn--active" onclick="setView('dashboard')" title="Dashboard">
+        <button id="navDashboard" class="nav-btn nav-btn--active" data-eclass-onclick="setView('dashboard')" title="Dashboard">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="9"></rect>
             <rect x="14" y="3" width="7" height="5"></rect>
@@ -100,7 +97,7 @@
           </svg>
           <span class="nav-btn__label">Dashboard</span>
         </button>
-        <button id="navAdvisory" class="nav-btn" onclick="openAdvisoryClassPage(event)" title="Advisory Class" hidden>
+        <button id="navAdvisory" class="nav-btn" data-eclass-onclick="openAdvisoryClassPage(event)" title="Advisory Class" hidden>
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="7.5" cy="12" r="3.5"></circle>
             <circle cx="16.5" cy="12" r="3.5"></circle>
@@ -108,7 +105,7 @@
           </svg>
           <span class="nav-btn__label">Advisory Class</span>
         </button>
-        <button id="navClasses" class="nav-btn" onclick="setView('classes')" title="Teaching Load">
+        <button id="navClasses" class="nav-btn" data-eclass-onclick="setView('classes')" title="Teaching Load">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
@@ -117,7 +114,7 @@
           </svg>
           <span class="nav-btn__label">Teaching Load</span>
         </button>
-        <button id="navRecord" class="nav-btn" onclick="setView('record')" title="Grading Sheet">
+        <button id="navRecord" class="nav-btn" data-eclass-onclick="setView('record')" title="Grading Sheet">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="9" y1="3" x2="9" y2="21"></line>
@@ -127,7 +124,7 @@
           </svg>
           <span class="nav-btn__label">Grading Sheet</span>
         </button>
-        <button id="navAttendance" class="nav-btn" onclick="setView('attendance')" title="Attendance Tracker">
+        <button id="navAttendance" class="nav-btn" data-eclass-onclick="setView('attendance')" title="Attendance Tracker">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2"></rect>
             <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -137,13 +134,13 @@
           </svg>
           <span class="nav-btn__label">Attendance</span>
         </button>
-        <button id="navPerformanceChecklist" class="nav-btn" onclick="TeacherTools.openPerformanceChecklistPage()" title="Performance Checklist">
+        <button id="navPerformanceChecklist" class="nav-btn" data-eclass-onclick="TeacherTools.openPerformanceChecklistPage()" title="Performance Checklist">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M9 5h10"></path><path d="M9 12h10"></path><path d="M9 19h10"></path><path d="m3 5 1.5 1.5L7 4"></path><path d="m3 12 1.5 1.5L7 11"></path><path d="m3 19 1.5 1.5L7 18"></path>
           </svg>
           <span class="nav-btn__label">Performance Checklist</span>
         </button>
-        <button id="navCalendar" class="nav-btn" onclick="openCalendarView()" title="School Calendar">
+        <button id="navCalendar" class="nav-btn" data-eclass-onclick="openCalendarView()" title="School Calendar">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M6 2v3"></path>
             <path d="M18 2v3"></path>
@@ -157,7 +154,7 @@
           </svg>
           <span class="nav-btn__label">Calendar</span>
         </button>
-        <button id="navTools" class="nav-btn" onclick="setView('tools')" title="Teacher Tools">
+        <button id="navTools" class="nav-btn" data-eclass-onclick="setView('tools')" title="Teacher Tools">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M14.7 6.3a4 4 0 0 0-5-5L7.4 3.6l3 3 2.3-2.3a4 4 0 0 0 2 2z"></path>
             <path d="m8.5 8.5-6.8 6.8a2.4 2.4 0 0 0 3.4 3.4l6.8-6.8"></path>
@@ -166,7 +163,7 @@
           </svg>
           <span class="nav-btn__label">Tools</span>
         </button>
-        <button id="navSync" class="nav-btn" onclick="openMobileSyncView()" title="Mobile Sync (Ctrl+Shift+M)" hidden aria-hidden="true" tabindex="-1" style="display:none">
+        <button id="navSync" class="nav-btn" data-eclass-onclick="openMobileSyncView()" title="Mobile Sync (Ctrl+Shift+M)" hidden aria-hidden="true" tabindex="-1" data-eclass-style="display:none">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
             <line x1="12" y1="18" x2="12.01" y2="18"></line>
@@ -185,20 +182,20 @@
       
       <!-- Sidebar Footer -->
       <div class="sidebar__footer no-print">
-        <button id="sidebarToggle" class="nav-btn u-mb-2" onclick="toggleSidebarCollapse()" title="Collapse Sidebar">
+        <button id="sidebarToggle" class="nav-btn u-mb-2" data-eclass-onclick="toggleSidebarCollapse()" title="Collapse Sidebar">
           <svg id="sidebarToggleIcon" class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
           <span class="nav-btn__label">Collapse Sidebar</span>
         </button>
-        <button id="navSettings" class="nav-btn" onclick="setView('settings'); syncDistrictProfileField()" title="Settings">
+        <button id="navSettings" class="nav-btn" data-eclass-onclick="setView('settings'); syncDistrictProfileField()" title="Settings">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
           <span class="nav-btn__label">Settings</span>
         </button>
-        <button id="navHelp" class="nav-btn u-mt-1" onclick="setView('help')" title="Help & Tutorials">
+        <button id="navHelp" class="nav-btn u-mt-1" data-eclass-onclick="setView('help')" title="Help & Tutorials">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
@@ -206,13 +203,13 @@
           </svg>
           <span class="nav-btn__label">Help & Tutorials</span>
         </button>
-        <button id="navFeedback" class="nav-btn u-mt-1" onclick="openFeedback()" title="Feedback">
+        <button id="navFeedback" class="nav-btn u-mt-1" data-eclass-onclick="openFeedback()" title="Feedback">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
           <span class="nav-btn__label">Feedback</span>
         </button>
-        <button id="navLogout" class="nav-btn nav-btn--logout u-mt-1" onclick="logoutProfile()" title="Logout">
+        <button id="navLogout" class="nav-btn nav-btn--logout u-mt-1" data-eclass-onclick="logoutProfile()" title="Logout">
           <svg class="nav-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
@@ -233,7 +230,7 @@
         <div class="app-header__left">
           <h1 id="currentTitle" class="app-header__title">Dashboard</h1>
           <div id="currentMeta" class="app-header__subtitle">
-            <select id="schoolYear" class="header-year-select" onchange="updateProfile(); normalizeDatabase(); saveDatabase(); setView('dashboard'); render()">
+            <select id="schoolYear" class="header-year-select" data-eclass-onchange="updateProfile(); normalizeDatabase(); saveDatabase(); setView('dashboard'); render()">
               <option value="2025-2026">2025-2026</option>
               <option value="2026-2027">2026-2027</option>
               <option value="2027-2028">2027-2028</option>
@@ -253,7 +250,7 @@
           </div>
         </div>
         <div class="app-header__actions">
-          <button id="sharedSyncIndicator" class="shared-sync-indicator" type="button" onclick="SharedFolderSync.openStatus()" title="Shared Folder Sync is off">
+          <button id="sharedSyncIndicator" class="shared-sync-indicator" type="button" data-eclass-onclick="SharedFolderSync.openStatus()" title="Shared Folder Sync is off">
             <span class="shared-sync-indicator__icon" aria-hidden="true"></span>
             <span id="sharedSyncIndicatorLabel">Sync Off</span>
           </button>
@@ -265,45 +262,45 @@
             </svg>
             Auto-saved
           </span>
-          <button id="undoBtn" class="btn btn-sm record-header-action" onclick="triggerUndo()" title="Undo (Ctrl+Z)" disabled style="display:none">
+          <button id="undoBtn" class="btn btn-sm record-header-action" data-eclass-onclick="triggerUndo()" title="Undo (Ctrl+Z)" disabled data-eclass-style="display:none">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 7v6h6"></path>
               <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
             </svg>
             Undo
           </button>
-          <button id="redoBtn" class="btn btn-sm record-header-action" onclick="triggerRedo()" title="Redo (Ctrl+Y)" disabled style="display:none">
+          <button id="redoBtn" class="btn btn-sm record-header-action" data-eclass-onclick="triggerRedo()" title="Redo (Ctrl+Y)" disabled data-eclass-style="display:none">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 7v6h-6"></path>
               <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path>
             </svg>
             Redo
           </button>
-          <button class="btn btn-sm" onclick="exportJson()">
+          <button class="btn btn-sm" data-eclass-onclick="exportJson()">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Download Backup
           </button>
-          <button class="btn btn-sm" onclick="importJsonBackupFile()">
+          <button class="btn btn-sm" data-eclass-onclick="importJsonBackupFile()">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
             Upload Backup
           </button>
           <!-- Word-like Zoom Control -->
-          <div class="zoom-word-control" title="Zoom" oncontextmenu="showZoomDefaultMenu(event)">
-            <button class="zoom-word-btn" id="zoomOutBtn" onclick="changeZoom(-5)" title="Zoom Out">−</button>
-            <input type="range" id="zoomSlider" min="50" max="200" step="5" value="100" oninput="onZoomSliderInput(this.value)" class="zoom-word-slider" title="Zoom Slider" />
-            <button class="zoom-word-btn" id="zoomInBtn" onclick="changeZoom(5)" title="Zoom In">+</button>
+          <div class="zoom-word-control" title="Zoom" data-eclass-oncontextmenu="showZoomDefaultMenu(event)">
+            <button class="zoom-word-btn" id="zoomOutBtn" data-eclass-onclick="changeZoom(-5)" title="Zoom Out">−</button>
+            <input type="range" id="zoomSlider" min="50" max="200" step="5" value="100" data-eclass-oninput="onZoomSliderInput(this.value)" class="zoom-word-slider" title="Zoom Slider" />
+            <button class="zoom-word-btn" id="zoomInBtn" data-eclass-onclick="changeZoom(5)" title="Zoom In">+</button>
             <div class="zoom-word-label-container">
-              <button class="zoom-word-label" id="zoomLabel" onclick="toggleZoomMenu(event)" title="Zoom Options">100%</button>
+              <button class="zoom-word-label" id="zoomLabel" data-eclass-onclick="toggleZoomMenu(event)" title="Zoom Options">100%</button>
               <div class="zoom-dropdown-menu" id="zoomDropdownMenu">
-                <button onclick="setZoomPct(50)">50%</button>
-                <button onclick="setZoomPct(75)">75%</button>
-                <button onclick="setZoomPct(100)">100% (Default)</button>
-                <button onclick="setZoomPct(120)">120%</button>
-                <button onclick="setZoomPct(150)">150%</button>
-                <button onclick="setZoomPct(200)">200%</button>
+                <button data-eclass-onclick="setZoomPct(50)">50%</button>
+                <button data-eclass-onclick="setZoomPct(75)">75%</button>
+                <button data-eclass-onclick="setZoomPct(100)">100% (Default)</button>
+                <button data-eclass-onclick="setZoomPct(120)">120%</button>
+                <button data-eclass-onclick="setZoomPct(150)">150%</button>
+                <button data-eclass-onclick="setZoomPct(200)">200%</button>
               </div>
               <div class="zoom-dropdown-menu zoom-default-menu" id="zoomDefaultMenu">
-                <button id="saveZoomDefaultBtn" onclick="saveCurrentZoomAsDefault()">Set current zoom as default</button>
+                <button id="saveZoomDefaultBtn" data-eclass-onclick="saveCurrentZoomAsDefault()">Set current zoom as default</button>
               </div>
             </div>
           </div>
@@ -311,15 +308,15 @@
       </header>
       
       <!-- Paste Data Panel (Hidden default) -->
-      <section id="importPanel" class="card view-section no-print" data-view="classes,record,settings" style="display:none">
+      <section id="importPanel" class="card view-section no-print" data-view="classes,record,settings" data-eclass-style="display:none">
         <h2 id="importTitle" class="card-title">Import Panel</h2>
         <div class="field">
           <label id="importHelp" class="field-label">Paste text here.</label>
           <textarea id="importText" class="field-textarea" placeholder="Paste data..."></textarea>
         </div>
         <div class="action-cluster">
-          <button class="btn btn-primary btn-sm" onclick="runImport()">Process Import</button>
-          <button class="btn btn-cancel btn-sm" onclick="toggleImport('')">Cancel</button>
+          <button class="btn btn-primary btn-sm" data-eclass-onclick="runImport()">Process Import</button>
+          <button class="btn btn-cancel btn-sm" data-eclass-onclick="toggleImport('')">Cancel</button>
         </div>
       </section>
 
@@ -339,26 +336,26 @@
               <div id="dashboardTable"></div>
             </div>
             <footer class="dashboard-class-panel__footer">
-              <button class="btn btn-primary btn-sm" type="button" onclick="addDashboardClassFromPanel()">Add Class</button>
-              <button class="btn btn-ghost btn-sm" type="button" onclick="openDashboardClassesFullView()">Full View</button>
+              <button class="btn btn-primary btn-sm" type="button" data-eclass-onclick="addDashboardClassFromPanel()">Add Class</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="openDashboardClassesFullView()">Full View</button>
             </footer>
           </aside>
         </div>
       </section>
 
       <!-- School Calendar View -->
-      <section class="view-section view-section--flex calendar-page-view" data-view="calendar" style="display:none">
+      <section class="view-section view-section--flex calendar-page-view" data-view="calendar" data-eclass-style="display:none">
         <div class="calendar-layout">
           <section class="calendar-card" aria-labelledby="calendarMonthTitle">
             <header class="calendar-header-controls">
               <div class="calendar-month-navigation">
-                <button class="btn btn-ghost btn-sm" type="button" onclick="navigateCalendarMonth(-1)" aria-label="Previous month">&larr;</button>
+                <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="navigateCalendarMonth(-1)" aria-label="Previous month">&larr;</button>
                 <h2 id="calendarMonthTitle" class="calendar-month-title">School Calendar</h2>
-                <button class="btn btn-ghost btn-sm" type="button" onclick="navigateCalendarMonth(1)" aria-label="Next month">&rarr;</button>
+                <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="navigateCalendarMonth(1)" aria-label="Next month">&rarr;</button>
               </div>
               <div class="calendar-toolbar-actions">
                 <span id="calendarSyncOffline" class="calendar-local-mode" hidden>Local calendar active</span>
-                <span id="calendarSyncStatus" class="calendar-sync-status" style="display:none"></span>
+                <span id="calendarSyncStatus" class="calendar-sync-status" data-eclass-style="display:none"></span>
               </div>
             </header>
             <div class="calendar-grid-container">
@@ -374,11 +371,11 @@
             <div id="calendarSidebarList" class="calendar-sidebar-list"></div>
           </aside>
         </div>
-        <div id="calendarDayModal" class="modal-overlay" style="display:none"></div>
+        <div id="calendarDayModal" class="modal-overlay" data-eclass-style="display:none"></div>
       </section>
 
       <!-- Advisory Class View -->
-      <section class="view-section advisory-page-view" data-view="advisory" style="display:none">
+      <section class="view-section advisory-page-view" data-view="advisory" data-eclass-style="display:none">
         <div class="advisory-page">
           <header class="advisory-page__header" data-advisory-page-header></header>
           <div class="advisory-page__toolbar" role="tablist" aria-label="Advisory Class pages">
@@ -404,7 +401,7 @@
       </section>
 
       <!-- Mobile Sync View -->
-      <section class="view-section" data-view="sync" style="display:none">
+      <section class="view-section" data-view="sync" data-eclass-style="display:none">
         <div class="card sync-panel">
           <div class="sync-panel__header">
             <h2 class="card-title card-title--inline">Mobile Companion Synchronization</h2>
@@ -414,19 +411,54 @@
           <div class="sync-panel__body">
             <section class="companion-transport-card companion-transport-card--wlan">
               <div class="companion-transport-card__heading">
-                <div><span class="companion-transport-card__eyebrow">PRIMARY · LIVE SYNC</span><h3>WLAN / Wi-Fi pairing</h3><p id="companionWlanDetails">Fast automatic two-way synchronization for devices on the same trusted network.</p></div>
+                <div><span class="companion-transport-card__eyebrow">PRIMARY · LIVE SYNC</span><h3>Wi-Fi / phone hotspot pairing</h3><p id="companionWlanDetails">Fast automatic two-way synchronization over a router or the Android phone's hotspot. Internet is not required.</p></div>
                 <span class="companion-state" id="companionWlanStatus">WLAN sync is off</span>
               </div>
-              <div class="sync-actions-row">
-                <button class="btn btn-primary" id="btnStartCompanionWlan" onclick="startCompanionWlan()">Show WLAN QR</button>
-                <button class="btn btn-ghost" id="btnStopCompanionWlan" onclick="stopCompanionWlan()" style="display:none">Stop WLAN Pairing</button>
+              <div class="companion-link-quality" id="companionWlanLinkCard">
+                <div class="companion-link-quality__copy"><span>Phone link</span><strong id="companionWlanLinkQuality">Waiting for phone</strong></div>
+                <div class="companion-link-quality__track"><span id="companionWlanLinkMeter"></span></div>
+                <small id="companionWlanLinkLatency">The linked phone will reconnect automatically when this desktop is available.</small>
               </div>
-              <div class="companion-pairing" id="companionPairingPanel" style="display:none">
+              <div class="sync-actions-row">
+                <button class="btn btn-primary" id="btnStartCompanionWlan" data-eclass-onclick="startCompanionWlan()">Show WLAN QR</button>
+                <button class="btn btn-secondary companion-js-hidden" id="btnRefreshCompanionWlan" data-eclass-onclick="startCompanionWlan()" hidden>Refresh Network QR</button>
+                <button class="btn btn-secondary" id="btnConfigureCompanionFirewall" data-eclass-onclick="configureCompanionFirewall()">Open Windows Firewall</button>
+                <button class="btn btn-ghost companion-js-hidden" id="btnStopCompanionWlan" data-eclass-onclick="stopCompanionWlan()" hidden>Stop WLAN Pairing</button>
+              </div>
+              <div class="companion-update-host">
+                <strong>Mobile app updates</strong>
+                <span class="text-muted text-xs" id="companionMobileUpdateStatus">No cached Android update.</span>
+                <span class="text-muted text-xs" id="companionMobileUpdateGithubStatus">GitHub mobile updates have not been checked yet.</span>
+                <div class="sync-actions-row">
+                  <button class="btn btn-primary" data-eclass-onclick="refreshCompanionMobileUpdateFromGithub()">Check Updates Now</button>
+                  <button class="btn btn-secondary" data-eclass-onclick="importCompanionMobileUpdate()">Import Mobile Update</button>
+                </div>
+                <div class="sync-actions-row">
+                  <button class="btn btn-primary" id="btnStartCompanionApkInstall" data-eclass-onclick="startCompanionApkInstall()">Show install QR</button>
+                  <button class="btn btn-secondary companion-js-hidden" id="btnRefreshCompanionApkInstall" data-eclass-onclick="startCompanionApkInstall()" hidden>Refresh install QR</button>
+                  <button class="btn btn-ghost companion-js-hidden" id="btnStopCompanionApkInstall" data-eclass-onclick="stopCompanionApkInstall()" hidden>Stop install QR</button>
+                </div>
+                <small>The desktop checks the independent GitHub mobile channel automatically and keeps the last verified APK for offline WLAN/hotspot delivery. Scan the install QR with the phone camera to download the APK from this computer. If download fails after pairing already works, allow E-Class Record on Private networks for TCP 38474. Manual import remains available.</small>
+                <div class="companion-pairing companion-js-hidden" id="companionApkInstallPanel" hidden>
+                  <div class="companion-pairing__qr"><img id="companionApkInstallQr" alt="Android APK install QR code"></div>
+                  <div class="companion-pairing__instructions">
+                    <strong>Scan this QR with the phone camera</strong>
+                    <ol>
+                      <li>Use the same trusted Wi-Fi, or enable the phone hotspot and connect this computer to it.</li>
+                      <li>Open the camera or a QR scanner, not the companion app scanner.</li>
+                      <li>On the landing page tap Download APK, then allow install from this source if Android asks.</li>
+                    </ol>
+                    <p class="companion-apk-install-url" id="companionApkInstallUrl"></p>
+                    <small id="companionApkInstallMeta">This link expires after 15 minutes.</small>
+                  </div>
+                </div>
+              </div>
+              <div class="companion-pairing companion-js-hidden" id="companionPairingPanel" hidden>
                 <div class="companion-pairing__qr"><img id="companionPairingQr" alt="Android companion pairing QR code"></div>
                 <div class="companion-pairing__instructions">
                   <strong>Scan this QR code from the Android app</strong>
-                  <ol><li>Connect the desktop and phone to the same trusted Wi-Fi.</li><li>On Android choose Connect to Desktop App → WLAN / Wi-Fi.</li><li>Scan this QR. Desktop updates will refresh automatically on the phone.</li></ol>
-                  <div class="companion-pin-display"><span>Mobile entries use your desktop profile PIN</span><strong id="companionPairingPin">Secure</strong></div>
+                  <ol><li>Use the same trusted Wi-Fi, or enable the phone hotspot and connect this computer to it.</li><li>If Android times out, open Windows Firewall and allow E-Class Record on Private networks. Then refresh the QR.</li><li>On Android scan this QR and enter your usual profile login PIN. The PIN is neither displayed nor included in the QR.</li></ol>
+                  <div class="companion-pin-display companion-js-hidden" id="companionPairingPinDisplay" hidden><span>Temporary pairing PIN (profile has no login PIN)</span><strong id="companionPairingPin">------</strong></div>
                   <small>Do not photograph or share this QR code. It contains the encrypted session key.</small>
                 </div>
               </div>
@@ -434,10 +466,10 @@
             <section class="companion-transport-card companion-transport-card--bluetooth">
               <div class="companion-transport-card__heading"><div><span class="companion-transport-card__eyebrow">FALLBACK · AUTO RECONNECT</span><h3>Bluetooth pairing</h3><p>Bluetooth remains available when the trusted local network cannot be reached.</p></div></div>
             <div class="sync-actions-row">
-              <button class="btn btn-primary" id="btnStartCompanionBluetooth" onclick="startCompanionBluetoothPairing()">1. Start Bluetooth Pairing</button>
-              <button class="btn btn-ghost" id="btnStopCompanionBluetooth" onclick="stopCompanionWlan()" style="display:none">Stop Bluetooth Pairing</button>
+              <button class="btn btn-primary" id="btnStartCompanionBluetooth" data-eclass-onclick="startCompanionBluetoothPairing()">1. Start Bluetooth Pairing</button>
+              <button class="btn btn-ghost companion-js-hidden" id="btnStopCompanionBluetooth" data-eclass-onclick="stopCompanionWlan()" hidden>Stop Bluetooth Pairing</button>
             </div>
-            <div class="companion-pairing" id="companionBluetoothPairingPanel" style="display:none">
+            <div class="companion-pairing companion-js-hidden" id="companionBluetoothPairingPanel" hidden>
               <div class="companion-pairing__qr"><img id="companionBluetoothPairingQr" alt="Android companion Bluetooth pairing QR code"></div>
               <div class="companion-pairing__instructions">
                 <strong>Scan this Bluetooth QR from the Android app</strong>
@@ -457,16 +489,16 @@
             </div>
 
             <div class="sync-actions-row">
-              <button class="btn btn-primary" id="btnScanBle" onclick="startScanBleDevices()" style="display:none">
+              <button class="btn btn-primary companion-js-hidden" id="btnScanBle" data-eclass-onclick="startScanBleDevices()" hidden>
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9-9a9 9 0 0 1-9 9m9-9V3m0 18v-3"></path>
                 </svg>
                 Retry Phone Detection
               </button>
-              <button class="btn btn-ghost" id="btnDisconnectBle" onclick="disconnectBleDevice()" style="display:none;">
+              <button class="btn btn-ghost" id="btnDisconnectBle" data-eclass-onclick="disconnectBleDevice()" data-eclass-style="display:none;">
                 Disconnect
               </button>
-              <button class="btn btn-olive" id="btnSyncToPhone" onclick="syncDataToMobile()" style="display:none;">
+              <button class="btn btn-olive" id="btnSyncToPhone" data-eclass-onclick="syncDataToMobile()" data-eclass-style="display:none;">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M17 3a2.82 2.82 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                 </svg>
@@ -475,12 +507,12 @@
             </div>
 
             <!-- Discovered Devices Selector Modal Overlay/Popup -->
-            <div class="device-discovery-panel" id="deviceDiscoveryPanel" style="display:none;">
+            <div class="device-discovery-panel" id="deviceDiscoveryPanel" data-eclass-style="display:none;">
               <div class="device-discovery-title">Automatic Phone Detection</div>
               <ul class="device-list" id="discoveredDevicesList">
                 <li class="device-item text-muted">Searching for E-Class companions...</li>
               </ul>
-              <button class="btn btn-ghost btn-sm u-mt-2" onclick="cancelBleDiscovery()">Cancel Search</button>
+              <button class="btn btn-ghost btn-sm u-mt-2" data-eclass-onclick="cancelBleDiscovery()">Cancel Search</button>
             </div>
 
             </section>
@@ -504,17 +536,17 @@
             <div class="record-header-main">
               <div class="record-class-selector u-mb-0">
                 <span class="record-class-label">Active Class:</span>
-                <select id="classesClassSelect" class="field-select select-class-dropdown" onchange="selectAssignment(this.value); setView('classes');">
+                <select id="classesClassSelect" class="field-select select-class-dropdown" data-eclass-onchange="selectAssignment(this.value); setView('classes');">
                   <!-- Dynamically populated options -->
                 </select>
               </div>
             </div>
             <div class="page-action-cluster action-cluster action-cluster--end">
-              <button class="btn btn-primary btn-lg teaching-load-primary-action" onclick="setView('record')" title="Open the selected class in the grading sheet">
+              <button class="btn btn-primary btn-lg teaching-load-primary-action" data-eclass-onclick="setView('record')" title="Open the selected class in the grading sheet">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
                 Proceed to Grading Sheet
               </button>
-              <button class="btn btn-warn btn-lg" onclick="removeCurrentAssignment()" title="Delete this class load">
+              <button class="btn btn-warn btn-lg" data-eclass-onclick="removeCurrentAssignment()" title="Delete this class load">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 Delete This Class
               </button>
@@ -526,15 +558,15 @@
             <div id="classesRosterHeader" class="spread-row u-mb-3">
               <h2 class="card-title card-title--inline">Class Roster</h2>
               <div class="action-cluster">
-                <button class="btn btn-primary btn-sm" onclick="showAddLearnerModal()" title="Add one learner to this class">
+                <button class="btn btn-primary btn-sm" data-eclass-onclick="showAddLearnerModal()" title="Add one learner to this class">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>
                   Add Learner
                 </button>
-                <button class="btn btn-olive btn-sm" onclick="sortLearners()" title="Sort learners by sex and name">
+                <button class="btn btn-olive btn-sm" data-eclass-onclick="sortLearners()" title="Sort learners by sex and name">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="14" y2="9"></line><line x1="4" y1="15" x2="10" y2="15"></line><polyline points="14 12 18 16 22 12"></polyline><line x1="18" y1="8" x2="18" y2="16"></line></svg>
                   Sort Roster
                 </button>
-                <button class="btn btn-warn btn-sm" onclick="clearAllLearnersFromCurrentClass()" title="Delete all learners from the selected class after confirmation">
+                <button class="btn btn-warn btn-sm" data-eclass-onclick="clearAllLearnersFromCurrentClass()" title="Delete all learners from the selected class after confirmation">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
                   Clear All
                 </button>
@@ -544,7 +576,7 @@
           </div>
         </div>
 
-        <div id="classesViewEmpty" style="display:none"></div>
+        <div id="classesViewEmpty" data-eclass-style="display:none"></div>
       </section>
 
       <!-- Record & Grading Sheets View -->
@@ -556,50 +588,50 @@
             <!-- Class Selector Dropdown -->
             <div class="record-class-selector">
               <span class="record-class-label">Active Class:</span>
-              <select id="recordClassSelect" class="field-select select-class-dropdown" onchange="selectAssignment(this.value); setView('record');" title="Choose the active class for this grading sheet">
+              <select id="recordClassSelect" class="field-select select-class-dropdown" data-eclass-onchange="selectAssignment(this.value); setView('record');" title="Choose the active class for this grading sheet">
                 <!-- Dynamically populated options -->
               </select>
             </div>
 
             <!-- Record Grid Tabs -->
             <div id="recordTabs" class="record-tabs u-mb-0" title="Switch between term records and final summary">
-              <button id="recTab1" class="record-tab" onclick="setRecordTab('1')" title="Show Term 1 grading sheet">Term 1</button>
-              <button id="recTab2" class="record-tab" onclick="setRecordTab('2')" title="Show Term 2 grading sheet">Term 2</button>
-              <button id="recTab3" class="record-tab" onclick="setRecordTab('3')" title="Show Term 3 grading sheet">Term 3</button>
-              <button id="recTabSummary" class="record-tab record-tab--summary" onclick="setRecordTab('summary')" title="Show final grades summary">Summary</button>
+              <button id="recTab1" class="record-tab" data-eclass-onclick="setRecordTab('1')" title="Show Term 1 grading sheet">Term 1</button>
+              <button id="recTab2" class="record-tab" data-eclass-onclick="setRecordTab('2')" title="Show Term 2 grading sheet">Term 2</button>
+              <button id="recTab3" class="record-tab" data-eclass-onclick="setRecordTab('3')" title="Show Term 3 grading sheet">Term 3</button>
+              <button id="recTabSummary" class="record-tab record-tab--summary" data-eclass-onclick="setRecordTab('summary')" title="Show final grades summary">Summary</button>
             </div>
           </div>
 
           <div class="page-action-cluster action-cluster action-cluster--end">
-            <button id="printTerm1Btn" class="btn btn-primary btn-sm" onclick="printClassRecord()" title="Print the active grading sheet" style="display:none">
+            <button id="printTerm1Btn" class="btn btn-primary btn-sm" data-eclass-onclick="printClassRecord()" title="Print the active grading sheet" data-eclass-style="display:none">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
               Print
             </button>
-            <button id="printTerm2Btn" class="btn btn-primary btn-sm" onclick="printClassRecord()" title="Print the active grading sheet" style="display:none">
+            <button id="printTerm2Btn" class="btn btn-primary btn-sm" data-eclass-onclick="printClassRecord()" title="Print the active grading sheet" data-eclass-style="display:none">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
               Print
             </button>
-            <button id="printTerm3Btn" class="btn btn-primary btn-sm" onclick="printClassRecord()" title="Print the active grading sheet" style="display:none">
+            <button id="printTerm3Btn" class="btn btn-primary btn-sm" data-eclass-onclick="printClassRecord()" title="Print the active grading sheet" data-eclass-style="display:none">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
               Print
             </button>
-            <button id="printSummaryBtn" class="btn btn-primary btn-sm" onclick="printClassRecord()" title="Print the active summary" style="display:none">
+            <button id="printSummaryBtn" class="btn btn-primary btn-sm" data-eclass-onclick="printClassRecord()" title="Print the active summary" data-eclass-style="display:none">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
               Print
             </button>
-            <button id="pdfTerm1Btn" class="btn btn-olive btn-sm" onclick="downloadPdf()" title="Download the active grading sheet as PDF" style="display:none">
+            <button id="pdfTerm1Btn" class="btn btn-olive btn-sm" data-eclass-onclick="downloadPdf()" title="Download the active grading sheet as PDF" data-eclass-style="display:none">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               Download PDF
             </button>
-            <button id="pdfTerm2Btn" class="btn btn-olive btn-sm" onclick="downloadPdf()" title="Download the active grading sheet as PDF" style="display:none">
+            <button id="pdfTerm2Btn" class="btn btn-olive btn-sm" data-eclass-onclick="downloadPdf()" title="Download the active grading sheet as PDF" data-eclass-style="display:none">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               Download PDF
             </button>
-            <button id="pdfTerm3Btn" class="btn btn-olive btn-sm" onclick="downloadPdf()" title="Download the active grading sheet as PDF" style="display:none">
+            <button id="pdfTerm3Btn" class="btn btn-olive btn-sm" data-eclass-onclick="downloadPdf()" title="Download the active grading sheet as PDF" data-eclass-style="display:none">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               Download PDF
             </button>
-            <button id="pdfSummaryBtn" class="btn btn-olive btn-sm" onclick="downloadPdf()" title="Download the active summary as PDF" style="display:none">
+            <button id="pdfSummaryBtn" class="btn btn-olive btn-sm" data-eclass-onclick="downloadPdf()" title="Download the active summary as PDF" data-eclass-style="display:none">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               Download PDF
             </button>
@@ -607,10 +639,10 @@
         </div>
 
         <!-- MAPEH Components sub-tabs -->
-        <div id="mapehSubTabs" class="record-tabs record-tabs--sub no-print record-tabs--pull" style="display:none;">
-          <button id="mapehTabMusicArts" class="record-tab record-tab--sub" onclick="setMapehSubTab('music_arts')">Music & Arts</button>
-          <button id="mapehTabPEHealth" class="record-tab record-tab--sub" onclick="setMapehSubTab('pe_health')">PE & Health</button>
-          <button id="mapehTabConsolidated" class="record-tab record-tab--sub record-tab--consolidated" onclick="setMapehSubTab('consolidated')">Consolidated Grades</button>
+        <div id="mapehSubTabs" class="record-tabs record-tabs--sub no-print record-tabs--pull" data-eclass-style="display:none;">
+          <button id="mapehTabMusicArts" class="record-tab record-tab--sub" data-eclass-onclick="setMapehSubTab('music_arts')">Music & Arts</button>
+          <button id="mapehTabPEHealth" class="record-tab record-tab--sub" data-eclass-onclick="setMapehSubTab('pe_health')">PE & Health</button>
+          <button id="mapehTabConsolidated" class="record-tab record-tab--sub record-tab--consolidated" data-eclass-onclick="setMapehSubTab('consolidated')">Consolidated Grades</button>
         </div>
 
 
@@ -620,7 +652,7 @@
             <div class="inline-cluster">
               <h2 id="classRecordTitle" class="card-title card-title--inline">Class Record</h2>
               <span id="saveStatus"></span>
-              <button id="blurToggleBtn" class="btn btn-sm btn-compact-toggle" onclick="toggleGradesBlur()" title="Toggle Blur Grades (Hide from spectators)">
+              <button id="blurToggleBtn" class="btn btn-sm btn-compact-toggle" data-eclass-onclick="toggleGradesBlur()" title="Toggle Blur Grades (Hide from spectators)">
                 <svg id="blurToggleIcon" class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                   <circle cx="12" cy="12" r="3"></circle>
@@ -629,14 +661,14 @@
               </button>
             </div>
             <div class="action-cluster action-cluster--end">
-              <button id="quickGradeBtn" class="btn btn-primary btn-lg" onclick="showQuickGradeModal()" title="Enter scores sequentially" style="display:none">
+              <button id="quickGradeBtn" class="btn btn-primary btn-lg" data-eclass-onclick="showQuickGradeModal()" title="Enter scores sequentially" data-eclass-style="display:none">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
                 Quick Grade Entry
               </button>
-              <button id="transferScoresBtn" class="btn btn-transfer btn-lg" onclick="showScoreTransferModal()" title="Move or copy raw scores between assessments" style="display:none">
+              <button id="transferScoresBtn" class="btn btn-transfer btn-lg" data-eclass-onclick="showScoreTransferModal()" title="Move or copy raw scores between assessments" data-eclass-style="display:none">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M7 7h11"></path>
                   <path d="m15 4 3 3-3 3"></path>
@@ -645,7 +677,7 @@
                 </svg>
                 Transfer Scores
               </button>
-              <button id="viewLearnerGradesBtn" class="btn btn-olive btn-lg" onclick="showViewLearnerGradesModal()" title="View individual learner's grades summary" style="display:none">
+              <button id="viewLearnerGradesBtn" class="btn btn-olive btn-lg" data-eclass-onclick="showViewLearnerGradesModal()" title="View individual learner's grades summary" data-eclass-style="display:none">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                   <circle cx="9" cy="7" r="4"></circle>
@@ -660,11 +692,11 @@
           <div id="recordTable" class="table-wrap"></div>
         </div>
 
-        <div id="finalGradesPanel" class="card panel-fill panel-stack u-p-0" style="display:none;">
+        <div id="finalGradesPanel" class="card panel-fill panel-stack u-p-0" data-eclass-style="display:none;">
           <div class="card-header no-print panel-header">
             <div class="inline-cluster">
               <h2 class="card-title card-title--inline">Final Grades Summary</h2>
-              <button id="blurToggleSummaryBtn" class="btn btn-sm btn-compact-toggle" onclick="toggleGradesBlur()" title="Toggle Blur Grades (Hide from spectators)">
+              <button id="blurToggleSummaryBtn" class="btn btn-sm btn-compact-toggle" data-eclass-onclick="toggleGradesBlur()" title="Toggle Blur Grades (Hide from spectators)">
                 <svg id="blurToggleSummaryIcon" class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                   <circle cx="12" cy="12" r="3"></circle>
@@ -685,16 +717,16 @@
             <div class="record-header-main">
               <div class="record-class-selector u-mb-0">
                 <span class="record-class-label">Active Class:</span>
-                <select id="attendanceClassSelect" class="field-select select-class-dropdown" onchange="selectAssignment(this.value); setView('attendance'); render();" title="Choose the active class for attendance"></select>
+                <select id="attendanceClassSelect" class="field-select select-class-dropdown" data-eclass-onchange="selectAssignment(this.value); setView('attendance'); render();" title="Choose the active class for attendance"></select>
               </div>
               <span id="attendanceSaveStatus"></span>
             </div>
             <div class="page-action-cluster action-cluster action-cluster--end">
-              <button class="btn btn-primary btn-sm" onclick="printAttendanceLog()" title="Print the current Attendance Log">
+              <button class="btn btn-primary btn-sm" data-eclass-onclick="printAttendanceLog()" title="Print the current Attendance Log">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                 Print
               </button>
-              <button class="btn btn-olive btn-sm" onclick="downloadAttendanceLogPdf()" title="Preview and export the SF2 Daily Attendance sheet">
+              <button class="btn btn-olive btn-sm" data-eclass-onclick="downloadAttendanceLogPdf()" title="Preview and export the SF2 Daily Attendance sheet">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Download PDF
               </button>
@@ -712,13 +744,13 @@
       </section>
 
       <!-- Performance Checklist View -->
-      <section class="view-section view-section--flex" data-view="performance-checklist" style="display:none">
+      <section class="view-section view-section--flex" data-view="performance-checklist" data-eclass-style="display:none">
         <div class="performance-checklist-page panel-fill">
           <div class="record-header-row performance-checklist-class-row no-print">
             <div class="record-header-main">
               <div class="record-class-selector u-mb-0">
                 <span class="record-class-label">Active Class:</span>
-                <select id="performanceChecklistClassSelect" class="field-select select-class-dropdown" onchange="TeacherTools.handleActiveClassChange(this.value, this)" title="Choose the class for the performance checklist"></select>
+                <select id="performanceChecklistClassSelect" class="field-select select-class-dropdown" data-eclass-onchange="TeacherTools.handleActiveClassChange(this.value, this)" title="Choose the class for the performance checklist"></select>
               </div>
             </div>
           </div>
@@ -727,7 +759,7 @@
       </section>
 
       <!-- Teacher Tools View -->
-      <section class="view-section view-section--flex" data-view="tools" style="display:none">
+      <section class="view-section view-section--flex" data-view="tools" data-eclass-style="display:none">
         <div id="teacherToolsView" class="teacher-tools panel-fill">
           <header class="teacher-tools__header no-print">
             <div>
@@ -750,30 +782,30 @@
           <div class="split-row">
             <div class="field">
               <label class="field-label">Teacher Name</label>
-              <input id="teacherName" class="field-input" placeholder="e.g. DELA CRUZ, MARIA S." onkeyup="updateProfile()" onchange="updateProfile()" />
+              <input id="teacherName" class="field-input" placeholder="e.g. DELA CRUZ, MARIA S." data-eclass-onkeyup="updateProfile()" data-eclass-onchange="updateProfile()" />
             </div>
             <div class="field">
               <label class="field-label">School Name</label>
-              <input id="schoolName" class="field-input" placeholder="e.g. Manila High School" onkeyup="updateProfile()" onchange="updateProfile()" />
+              <input id="schoolName" class="field-input" placeholder="e.g. Manila High School" data-eclass-onkeyup="updateProfile()" data-eclass-onchange="updateProfile()" />
             </div>
             <div class="field">
               <label class="field-label">School ID</label>
-              <input id="schoolId" class="field-input" placeholder="e.g. 300123" onkeyup="updateProfile()" onchange="updateProfile()" />
+              <input id="schoolId" class="field-input" placeholder="e.g. 300123" data-eclass-onkeyup="updateProfile()" data-eclass-onchange="updateProfile()" />
             </div>
           </div>
           
           <div class="split-row u-mt-4">
             <div class="field">
               <label class="field-label">Region</label>
-              <select id="schoolRegion" class="field-select" onchange="handleRegionChanged()"></select>
+              <select id="schoolRegion" class="field-select" data-eclass-onchange="handleRegionChanged()"></select>
             </div>
             <div class="field">
               <label class="field-label">Division</label>
-              <select id="schoolDivision" class="field-select" onchange="updateProfile(); saveDatabase()"></select>
+              <select id="schoolDivision" class="field-select" data-eclass-onchange="updateProfile(); saveDatabase()"></select>
             </div>
             <div class="field">
               <label class="field-label">District</label>
-              <input id="schoolDistrict" class="field-input" placeholder="e.g. Irosin II District" onkeyup="updateProfile()" onchange="updateProfile(); saveDatabase()" />
+              <input id="schoolDistrict" class="field-input" placeholder="e.g. Irosin II District" data-eclass-onkeyup="updateProfile()" data-eclass-onchange="updateProfile(); saveDatabase()" />
             </div>
           </div>
         </div>
@@ -808,9 +840,9 @@
             <label class="field-label" for="backupRecoverySearchInput">Backup Recovery ID</label>
             <div class="backup-discovery__controls">
               <input id="backupRecoverySearchInput" class="field-input backup-recovery-input" type="text" autocomplete="off" spellcheck="false" placeholder="No Backup Recovery ID" aria-label="Backup Recovery ID" />
-              <button id="btnSharedSyncConnect" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.connectExisting()">Connect Existing ID</button>
-              <button id="btnSharedSyncToggle" class="btn btn-primary btn-sm" type="button" onclick="SharedFolderSync.toggleSync()">Create New ID</button>
-              <button id="btnCopyBackupRecoveryId" class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.copyRecoveryId()" title="Copy Backup Recovery ID">
+              <button id="btnSharedSyncConnect" class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="SharedFolderSync.connectExisting()">Connect Existing ID</button>
+              <button id="btnSharedSyncToggle" class="btn btn-primary btn-sm" type="button" data-eclass-onclick="SharedFolderSync.toggleSync()">Create New ID</button>
+              <button id="btnCopyBackupRecoveryId" class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="BackupRecovery.copyRecoveryId()" title="Copy Backup Recovery ID">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2h9a2 2 0 0 1 2 2v1"></path></svg>
                 Copy
               </button>
@@ -827,7 +859,7 @@
                 <div class="settings-row__title">Profiles Found in OneDrive</div>
                 <div class="settings-row__desc">Valid E-Class Record backups and synchronized profiles detected on this PC.</div>
               </div>
-              <button id="btnRefreshOneDriveBackups" class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.discoverOneDriveBackups(true)">Refresh</button>
+              <button id="btnRefreshOneDriveBackups" class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="BackupRecovery.discoverOneDriveBackups(true)">Refresh</button>
             </div>
             <div id="oneDriveBackupDiscoveryList" class="backup-found__list">
               <div class="settings-row__desc">Checking OneDrive for profiles&hellip;</div>
@@ -839,14 +871,14 @@
             <div id="sharedSyncSettingsDetails" class="shared-sync-details" hidden></div>
             <div id="secondaryBackupPathDesc" class="settings-row__desc">Local AppData backups remain active.</div>
             <div class="action-cluster u-mt-3">
-              <button id="btnSharedSyncCheck" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.checkNow()" hidden>Check Now</button>
-              <button id="btnSharedSyncReview" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.reviewPending()" hidden>Review Changes</button>
-              <button id="btnSharedSyncDevice" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.renameDevice()" hidden>Rename Device</button>
-              <button id="btnRegenerateBackupRecoveryId" class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.regenerateRecoveryId()">Start New Identity</button>
-              <button id="btnSharedSyncDisableAdvanced" class="btn btn-ghost btn-sm" type="button" onclick="SharedFolderSync.toggleSync()" hidden>Disconnect This PC</button>
-              <button id="btnScanBackupFolder" class="btn btn-ghost btn-sm" type="button" onclick="BackupRecovery.scanForBackup()">Find Backup Manually</button>
-              <button id="btnClearBackupFolder" class="btn btn-ghost btn-sm" onclick="clearSecondaryBackupFolder()" style="display:none">Clear Local Folder</button>
-              <button class="btn btn-ghost btn-sm" onclick="selectSecondaryBackupFolder()">Choose Local Backup Folder</button>
+              <button id="btnSharedSyncCheck" class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="SharedFolderSync.checkNow()" hidden>Check Now</button>
+              <button id="btnSharedSyncReview" class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="SharedFolderSync.reviewPending()" hidden>Review Changes</button>
+              <button id="btnSharedSyncDevice" class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="SharedFolderSync.renameDevice()" hidden>Rename Device</button>
+              <button id="btnRegenerateBackupRecoveryId" class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="BackupRecovery.regenerateRecoveryId()">Start New Identity</button>
+              <button id="btnSharedSyncDisableAdvanced" class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="SharedFolderSync.toggleSync()" hidden>Disconnect This PC</button>
+              <button id="btnScanBackupFolder" class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="BackupRecovery.scanForBackup()">Find Backup Manually</button>
+              <button id="btnClearBackupFolder" class="btn btn-ghost btn-sm" data-eclass-onclick="clearSecondaryBackupFolder()" data-eclass-style="display:none">Clear Local Folder</button>
+              <button class="btn btn-ghost btn-sm" data-eclass-onclick="selectSecondaryBackupFolder()">Choose Local Backup Folder</button>
             </div>
           </details>
 
@@ -856,7 +888,7 @@
               <div><dt>Saved</dt><dd id="backupDiscoveryCreatedAt"></dd></div>
               <div><dt>Protection</dt><dd id="backupDiscoveryProtection"></dd></div>
             </dl>
-            <button class="btn btn-primary btn-sm" type="button" onclick="BackupRecovery.restoreSelectedBackup()">Restore This Backup</button>
+            <button class="btn btn-primary btn-sm" type="button" data-eclass-onclick="BackupRecovery.restoreSelectedBackup()">Restore This Backup</button>
           </div>
         </div>
 
@@ -868,7 +900,7 @@
               <div class="settings-row__title">Offline Recovery Key</div>
               <div class="settings-row__desc" id="pinRecoveryStatus">Set up a recovery key to replace a forgotten PIN without uploading learner data or contacting a server.</div>
             </div>
-            <button id="btnConfigurePinRecovery" class="btn btn-sm" type="button" onclick="configurePinRecovery()">Set Up Recovery</button>
+            <button id="btnConfigurePinRecovery" class="btn btn-sm" type="button" data-eclass-onclick="configurePinRecovery()">Set Up Recovery</button>
           </div>
         </div>
         
@@ -881,7 +913,7 @@
               <div class="settings-row__desc">Automatically blur grades and scores when loading grading sheets to hide them from spectators.</div>
             </div>
             <label class="welcome-checkbox-label checkbox-row">
-              <input type="checkbox" id="settingAutoBlur" onchange="toggleAutoBlurSetting(this.checked)" />
+              <input type="checkbox" id="settingAutoBlur" data-eclass-onchange="toggleAutoBlurSetting(this.checked)" />
             </label>
           </div>
           <div class="settings-row section-divider">
@@ -890,7 +922,7 @@
               <div class="settings-row__desc">Show numerical grade range equivalents (e.g. 90-100 for A) next to descriptive letters in tables, reports, and exports.</div>
             </div>
             <label class="welcome-checkbox-label checkbox-row">
-              <input type="checkbox" id="settingShowNumericalEquivalents" onchange="toggleShowNumericalEquivalentsSetting(this.checked)" />
+              <input type="checkbox" id="settingShowNumericalEquivalents" data-eclass-onchange="toggleShowNumericalEquivalentsSetting(this.checked)" />
             </label>
           </div>
           <div class="settings-row section-divider">
@@ -901,7 +933,7 @@
               </div>
             </div>
             <label class="welcome-checkbox-label checkbox-row">
-              <input type="checkbox" id="settingUseUniversalTrimesterLayout" onchange="toggleUseUniversalTrimesterLayoutSetting(this.checked)" />
+              <input type="checkbox" id="settingUseUniversalTrimesterLayout" data-eclass-onchange="toggleUseUniversalTrimesterLayoutSetting(this.checked)" />
             </label>
           </div>
           <div class="settings-row section-divider">
@@ -909,7 +941,7 @@
               <div class="settings-row__title">Guided Interactive Tour</div>
               <div class="settings-row__desc">Launch the 12-step guided interactive tour to walkthrough all panels, actions, and features of the application.</div>
             </div>
-            <button class="btn btn-sm" onclick="if (typeof startAppTour === 'function') startAppTour();">Start Tour Again</button>
+            <button class="btn btn-sm" data-eclass-onclick="if (typeof startAppTour === 'function') startAppTour();">Start Tour Again</button>
           </div>
           <div class="settings-row section-divider">
             <div class="settings-row__left">
@@ -917,7 +949,7 @@
               <div class="settings-row__desc">Show the interactive guided app tour invitation prompt on startup after unlocking your profile.</div>
             </div>
             <label class="welcome-checkbox-label checkbox-row">
-              <input type="checkbox" id="settingEnableTourPrompt" onchange="toggleTourPromptSetting(this.checked)" />
+              <input type="checkbox" id="settingEnableTourPrompt" data-eclass-onchange="toggleTourPromptSetting(this.checked)" />
             </label>
           </div>
         </div>
@@ -932,7 +964,7 @@
               <div class="settings-row__desc u-mt-1">This preference stays only on this device and is not included in profiles or backups.</div>
             </div>
             <label class="welcome-checkbox-label checkbox-row">
-              <input type="checkbox" id="settingLowSpecMode" onchange="PerformanceMode.setLowSpec(this.checked)" />
+              <input type="checkbox" id="settingLowSpecMode" data-eclass-onchange="PerformanceMode.setLowSpec(this.checked)" />
             </label>
           </div>
           <div class="settings-row section-divider">
@@ -941,7 +973,7 @@
               <div class="settings-row__desc" id="performanceDeviceSummary">Select Detect My PC to check whether Low-Spec Mode is recommended.</div>
               <div class="settings-row__desc u-mt-1" id="performanceRecommendation"></div>
             </div>
-            <button class="btn btn-sm" type="button" onclick="PerformanceMode.detectDevice()">Detect My PC</button>
+            <button class="btn btn-sm" type="button" data-eclass-onclick="PerformanceMode.detectDevice()">Detect My PC</button>
           </div>
         </div>
 
@@ -952,11 +984,49 @@
             <div class="settings-row__left">
               <div class="settings-row__title">Share Minimized Class-Usage Statistics</div>
               <div class="settings-row__desc" id="usageAnalyticsStatus">Disabled. No class usage summary is sent.</div>
-              <button type="button" class="welcome-inline-link u-mt-2" onclick="UsageAnalytics.showPrivacyNotice(event)">View exactly what is collected</button>
+              <button type="button" class="welcome-inline-link u-mt-2" data-eclass-onclick="UsageAnalytics.showPrivacyNotice(event)">View exactly what is collected</button>
             </div>
             <label class="welcome-checkbox-label checkbox-row">
-              <input type="checkbox" id="settingUsageAnalytics" onchange="UsageAnalytics.setConsent(this.checked)" />
+              <input type="checkbox" id="settingUsageAnalytics" data-eclass-onchange="UsageAnalytics.setConsent(this.checked)" />
             </label>
+          </div>
+        </div>
+
+        <div class="card" id="diagnosticsSettingsCard">
+          <h2 class="card-title">Crash Recovery &amp; Local Diagnostics</h2>
+          <div class="settings-row">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Keep Local Recovery Diagnostics</div>
+              <div class="settings-row__desc" id="diagnosticPolicyStatus">Loading the local diagnostic policy...</div>
+              <div class="settings-row__desc u-mt-1">Diagnostics are never uploaded automatically. Sanitized support bundles exclude raw crash dumps, profiles, learner records, grades, PINs, tokens, and database contents.</div>
+            </div>
+            <label class="welcome-checkbox-label checkbox-row">
+              <input type="checkbox" id="settingDiagnosticCollection" />
+            </label>
+          </div>
+          <div class="settings-row section-divider">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Diagnostic Data Controls</div>
+              <div class="settings-row__desc">Export a sanitized troubleshooting bundle or permanently delete local diagnostic logs and crash dumps.</div>
+            </div>
+            <div class="inline-cluster">
+              <button class="btn btn-sm" type="button" id="btnExportDiagnosticBundle">Export Support Bundle</button>
+              <button class="btn btn-cancel btn-sm" type="button" id="btnDeleteDiagnosticData">Delete Diagnostics</button>
+            </div>
+          </div>
+          <div class="settings-row section-divider">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Bluetooth Companion Permission</div>
+              <div class="settings-row__desc">Allow Bluetooth only after you intentionally start pairing. WLAN and hotspot synchronization do not require this permission.</div>
+            </div>
+            <label class="welcome-checkbox-label checkbox-row"><input type="checkbox" id="settingBluetoothPermission" /></label>
+          </div>
+          <div class="settings-row section-divider">
+            <div class="settings-row__left">
+              <div class="settings-row__title">Microphone Noise Meter Permission</div>
+              <div class="settings-row__desc">Allow microphone access only after you press Start in Noise Meter. Audio is not recorded or saved.</div>
+            </div>
+            <label class="welcome-checkbox-label checkbox-row"><input type="checkbox" id="settingMicrophonePermission" /></label>
           </div>
         </div>
 
@@ -968,7 +1038,7 @@
               <div class="settings-row__title">Scan for Database Anomalies</div>
               <div class="settings-row__desc">Checks your active profile for orphaned score keys, entries exceeding HPS, duplicate LRNs, and invalid Advisory Class references. Existing score repairs remain available; advisory issues are reported without automatic deletion.</div>
             </div>
-            <button class="btn btn-olive btn-sm" onclick="runDatabaseIntegrityCheck()">Run Integrity Check</button>
+            <button class="btn btn-olive btn-sm" data-eclass-onclick="runDatabaseIntegrityCheck()">Run Integrity Check</button>
           </div>
         </div>
 
@@ -983,7 +1053,7 @@
               </div>
               <div id="updateText" class="settings-row__desc">Updates can be checked and downloaded automatically while you continue working.</div>
             </div>
-            <button id="btnCheckUpdates" class="btn btn-sm" onclick="handleCheckUpdatesClick()">Check for Updates</button>
+            <button id="btnCheckUpdates" class="btn btn-sm" data-eclass-onclick="handleCheckUpdatesClick()">Check for Updates</button>
           </div>
           <div class="settings-row section-divider">
             <div class="settings-row__left">
@@ -991,7 +1061,7 @@
               <div id="automaticUpdateScheduleStatus" class="settings-row__desc">Enabled. The app checks at most once every 24 hours while online.</div>
             </div>
             <label class="welcome-checkbox-label checkbox-row">
-              <input type="checkbox" id="settingAutomaticUpdateChecks" onchange="UpdateManager.setAutoCheck(this.checked)" checked />
+              <input type="checkbox" id="settingAutomaticUpdateChecks" data-eclass-onchange="UpdateManager.setAutoCheck(this.checked)" checked />
             </label>
           </div>
           <div class="settings-row section-divider">
@@ -1000,7 +1070,7 @@
               <div class="settings-row__desc">Downloads available updates in the background. The app restarts only after you choose to apply one or close normally.</div>
             </div>
             <label class="welcome-checkbox-label checkbox-row">
-              <input type="checkbox" id="settingAutomaticUpdateDownloads" onchange="UpdateManager.setAutoDownload(this.checked)" checked />
+              <input type="checkbox" id="settingAutomaticUpdateDownloads" data-eclass-onchange="UpdateManager.setAutoDownload(this.checked)" checked />
             </label>
           </div>
         </div>
@@ -1013,7 +1083,7 @@
               <div class="settings-row__title">Share Your Feedback</div>
               <div class="settings-row__desc">Help improve the E-Class Record App by reporting bugs, suggesting features, or sharing your experience.</div>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="openFeedback()">Give Feedback</button>
+            <button class="btn btn-primary btn-sm" data-eclass-onclick="openFeedback()">Give Feedback</button>
           </div>
           <div class="settings-row section-divider">
             <div class="settings-row__left">
@@ -1031,19 +1101,19 @@
               <div class="settings-row__title">Clear local app data</div>
               <div class="settings-row__desc">Permanently erase all rosters, assessments, and marks stored locally on this machine.</div>
             </div>
-            <button class="btn btn-warn btn-sm" onclick="clearLocalData()">Clear Local Data</button>
+            <button class="btn btn-warn btn-sm" data-eclass-onclick="clearLocalData()">Clear Local Data</button>
           </div>
         </div>
       </section>
 
       <!-- Help & Tutorials View -->
-      <section class="view-section" data-view="help" style="display:none">
+      <section class="view-section" data-view="help" data-eclass-style="display:none">
         <div class="help-container">
           <!-- Left Sidebar: Search & Categories -->
           <div class="help-sidebar card">
             <div class="help-search-box">
-              <input type="text" id="helpSearchInput" class="field-input" placeholder="Search guides & tutorials..." oninput="filterHelpTopics()" />
-              <button class="help-search-clear" id="helpSearchClearBtn" onclick="clearHelpSearch()" style="display:none">&times;</button>
+              <input type="text" id="helpSearchInput" class="field-input" placeholder="Search guides & tutorials..." data-eclass-oninput="filterHelpTopics()" />
+              <button class="help-search-clear" id="helpSearchClearBtn" data-eclass-onclick="clearHelpSearch()" data-eclass-style="display:none">&times;</button>
             </div>
             <ul class="help-categories" id="helpCategoryList">
               <!-- Category list items injected dynamically -->
@@ -1059,9 +1129,9 @@
       <!-- Footer Info Row -->
       <footer class="app-footer no-print">
         <div class="app-footer__content">
-          <div class="app-footer__text"><a href="#" onclick="openDonateExternal('https://www.facebook.com/profile.php?id=61591204673647'); return false;" class="app-footer__link">E-Class Record <span id="footerVersion"></span></a></div>
+          <div class="app-footer__text"><a href="#" data-eclass-onclick="openDonateExternal('https://www.facebook.com/profile.php?id=61591204673647'); return false;" class="app-footer__link">E-Class Record <span id="footerVersion"></span></a></div>
           <span class="app-footer__separator" aria-hidden="true">•</span>
-          <div class="app-footer__info-text" title="Compliant with DepEd Order No. 15 s. 2026 — Developer: JOHN EDWARD A. ENRIQUEZ, T-II">Local-first · DepEd Order No. 15 s. 2026 · <a href="#" onclick="openDonateExternal('https://www.facebook.com/marasa.p.man'); return false;" class="app-footer__link">Developer</a></div>
+          <div class="app-footer__info-text" title="Compliant with DepEd Order No. 15 s. 2026 — Developer: JOHN EDWARD A. ENRIQUEZ, T-II">Local-first · DepEd Order No. 15 s. 2026 · <a href="#" data-eclass-onclick="openDonateExternal('https://www.facebook.com/marasa.p.man'); return false;" class="app-footer__link">Developer</a></div>
         </div>
       </footer>
 
@@ -1069,14 +1139,14 @@
   </div>
 
   <!-- Add Class Load Modal -->
-  <div id="addClassLoadModal" class="modal-overlay" style="display:none">
+  <div id="addClassLoadModal" class="modal-overlay" data-eclass-style="display:none">
     <div class="modal modal--wide">
       <div class="modal__title">Add Class Load</div>
       <div class="modal__body">
         <div class="split-row">
           <div class="field">
             <label class="field-label">Grade Level</label>
-            <select id="newGrade" class="field-select" onchange="populateSubjects()">
+            <select id="newGrade" class="field-select" data-eclass-onchange="populateSubjects()">
               <option>1</option><option>2</option><option>3</option><option selected>4</option>
               <option>5</option><option>6</option><option>7</option><option>8</option>
               <option>9</option><option>10</option><option>11</option><option>12</option>
@@ -1106,7 +1176,7 @@
         
         <div class="field">
           <label class="field-label">Subject</label>
-          <select id="newSubject" class="field-select" onchange="handleSubjectChanged()"></select>
+          <select id="newSubject" class="field-select" data-eclass-onchange="handleSubjectChanged()"></select>
         </div>
 
         <div id="seniorHighSubjectGroupField" class="field" hidden>
@@ -1115,13 +1185,13 @@
           <p id="newSeniorHighSubjectGroupHelp" class="text-muted u-mb-0">Select the curriculum category used to determine the official grading percentages.</p>
         </div>
         
-        <div id="customSubjectField" class="field" style="display:none">
+        <div id="customSubjectField" class="field" data-eclass-style="display:none">
           <label class="field-label">Custom Subject Name</label>
           <input id="customSubjectInput" class="field-input" placeholder="e.g. Science Elective" />
         </div>
 
         <div id="specialProgramSubjectField" class="special-program-weight-panel" hidden>
-          <label class="checkbox-row"><input type="checkbox" id="newSpecialProgramSubject" onchange="syncNewSpecialProgramWeights()"> Treat this as a Special-Program Subject</label>
+          <label class="checkbox-row"><input type="checkbox" id="newSpecialProgramSubject" data-eclass-onchange="syncNewSpecialProgramWeights()"> Treat this as a Special-Program Subject</label>
           <div id="newSpecialProgramWeights" hidden>
             <p class="text-muted u-mt-0">Set whole-number percentages. Written Works, Performance Tasks, and Summative Tests &amp; Term Examination must total 100%.</p>
             <div class="split-row">
@@ -1136,13 +1206,13 @@
 
       </div>
       <div class="modal__actions">
-        <button class="btn btn-cancel btn-sm" onclick="hideAddClassLoadModal()">Cancel</button>
-        <button class="btn btn-primary btn-sm" onclick="addAssignment()">Add Teaching Load</button>
+        <button class="btn btn-cancel btn-sm" data-eclass-onclick="hideAddClassLoadModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" data-eclass-onclick="addAssignment()">Add Teaching Load</button>
       </div>
     </div>
   </div>
   <!-- Donate Modal -->
-  <div id="donateModal" class="modal-overlay modal-z-donate" style="display:none;">
+  <div id="donateModal" class="modal-overlay modal-z-donate" data-eclass-style="display:none;">
     <div class="modal modal--md">
       <div class="modal__title">Support the Developer</div>
       <div class="modal__body">
@@ -1151,16 +1221,16 @@
         
         <!-- Button container in the center and middle -->
         <div class="donation-actions">
-          <button class="btn btn-primary btn-wide" onclick="showDonateQrModal()">
+          <button class="btn btn-primary btn-wide" data-eclass-onclick="showDonateQrModal()">
             Click here to donate 👍
           </button>
-          <button class="btn btn-olive btn-wide" onclick="openFeedback()">
+          <button class="btn btn-olive btn-wide" data-eclass-onclick="openFeedback()">
             <svg class="btn-icon btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
             Leave Feedback 📝
           </button>
-          <button class="btn btn-facebook btn-wide" onclick="openDonateExternal('https://www.facebook.com/eclassrecordapp')">
+          <button class="btn btn-facebook btn-wide" data-eclass-onclick="openDonateExternal('https://www.facebook.com/eclassrecordapp')">
             <svg class="btn-icon btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
             </svg>
@@ -1173,15 +1243,15 @@
         </p>
       </div>
       <div class="modal__actions">
-        <button id="donateCancelExitBtn" class="btn btn-cancel btn-sm" style="display:none" onclick="hideDonateModal()">Cancel</button>
-        <button id="donateCloseBtn" class="btn btn-cancel btn-sm" onclick="hideDonateModal()">Close</button>
-        <button id="donateConfirmExitBtn" class="btn btn-primary btn-sm" style="display:none" onclick="confirmAppExit()">Continue to Exit</button>
+        <button id="donateCancelExitBtn" class="btn btn-cancel btn-sm" data-eclass-style="display:none" data-eclass-onclick="hideDonateModal()">Cancel</button>
+        <button id="donateCloseBtn" class="btn btn-cancel btn-sm" data-eclass-onclick="hideDonateModal()">Close</button>
+        <button id="donateConfirmExitBtn" class="btn btn-primary btn-sm" data-eclass-style="display:none" data-eclass-onclick="confirmAppExit()">Continue to Exit</button>
       </div>
     </div>
   </div>
 
   <!-- Donate QR Modal -->
-  <div id="donateQrModal" class="modal-overlay modal-z-higher" style="display:none;">
+  <div id="donateQrModal" class="modal-overlay modal-z-higher" data-eclass-style="display:none;">
     <div class="modal modal--lg">
       <div class="modal__title">Support the Developer - QR Codes</div>
       <div class="modal__body">
@@ -1192,50 +1262,50 @@
           <!-- Column 1: GCash 1 -->
           <div class="qr-card">
             <span class="qr-title">GCash</span>
-            <div class="qr-image-frame" title="Click to enlarge" onclick="showImageZoom('assets/qr_gcash_09106979279.jpg')">
+            <div class="qr-image-frame" title="Click to enlarge" data-eclass-onclick="showImageZoom('assets/qr_gcash_09106979279.jpg')">
               <img class="qr-image qr-image--gcash" src="assets/qr_gcash_09106979279.jpg" />
             </div>
             <div class="qr-number">09106979279</div>
-            <div class="qr-zoom-link" onclick="showImageZoom('assets/qr_gcash_09106979279.jpg')">🔍 Click Image to Enlarge</div>
+            <div class="qr-zoom-link" data-eclass-onclick="showImageZoom('assets/qr_gcash_09106979279.jpg')">🔍 Click Image to Enlarge</div>
           </div>
 
           <!-- Column 2: GCash 2 -->
           <div class="qr-card">
             <span class="qr-title">GCash</span>
-            <div class="qr-image-frame" title="Click to enlarge" onclick="showImageZoom('assets/qr_gcash_09568793810.jpg')">
+            <div class="qr-image-frame" title="Click to enlarge" data-eclass-onclick="showImageZoom('assets/qr_gcash_09568793810.jpg')">
               <img class="qr-image qr-image--gcash" src="assets/qr_gcash_09568793810.jpg" />
             </div>
             <div class="qr-number">09568793810</div>
-            <div class="qr-zoom-link" onclick="showImageZoom('assets/qr_gcash_09568793810.jpg')">🔍 Click Image to Enlarge</div>
+            <div class="qr-zoom-link" data-eclass-onclick="showImageZoom('assets/qr_gcash_09568793810.jpg')">🔍 Click Image to Enlarge</div>
           </div>
 
           <!-- Column 3: Maya -->
           <div class="qr-card">
             <span class="qr-title">Maya</span>
-            <div class="qr-image-frame" title="Click to enlarge" onclick="showImageZoom('assets/qr_maya_09106979279.jpg')">
+            <div class="qr-image-frame" title="Click to enlarge" data-eclass-onclick="showImageZoom('assets/qr_maya_09106979279.jpg')">
               <img class="qr-image qr-image--maya" src="assets/qr_maya_09106979279.jpg" />
             </div>
             <div class="qr-number">09106979279</div>
-            <div class="qr-zoom-link" onclick="showImageZoom('assets/qr_maya_09106979279.jpg')">🔍 Click Image to Enlarge</div>
+            <div class="qr-zoom-link" data-eclass-onclick="showImageZoom('assets/qr_maya_09106979279.jpg')">🔍 Click Image to Enlarge</div>
           </div>
         </div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-primary btn-sm" onclick="hideDonateQrModal()">Done</button>
+        <button class="btn btn-primary btn-sm" data-eclass-onclick="hideDonateQrModal()">Done</button>
       </div>
     </div>
   </div>
 
   <!-- Image Zoom Modal -->
-  <div id="imageZoomModal" class="modal-overlay modal-z-top" style="display:none;" onclick="hideImageZoomModal()">
-    <div class="image-zoom-frame" onclick="event.stopPropagation()">
-      <button class="btn btn-ghost btn-sm btn-square-sm image-zoom-close" onclick="hideImageZoomModal()">✕</button>
+  <div id="imageZoomModal" class="modal-overlay modal-z-top" data-eclass-style="display:none;" data-eclass-onclick="hideImageZoomModal()">
+    <div class="image-zoom-frame" data-eclass-onclick="event.stopPropagation()">
+      <button class="btn btn-ghost btn-sm btn-square-sm image-zoom-close" data-eclass-onclick="hideImageZoomModal()">✕</button>
       <img id="zoomedImage" class="image-zoom-img" src="" />
     </div>
   </div>
 
   <!-- Quick Grade Entry Modal -->
-  <div id="quickGradeModal" class="modal-overlay" style="display:none">
+  <div id="quickGradeModal" class="modal-overlay" data-eclass-style="display:none">
     <div class="modal modal--wide quick-grade-modal">
       <div class="modal__title quick-grade-modal__title">Quick Grade Entry</div>
       <div class="modal__body split-layout-modal">
@@ -1243,7 +1313,7 @@
         <div class="quick-grade-main">
           <div class="field quick-grade-assessment-field">
             <label class="field-label">Select Assessment</label>
-            <select id="quickGradeAssessmentSelect" class="field-select" onchange="onQuickGradeAssessmentChanged()"></select>
+            <select id="quickGradeAssessmentSelect" class="field-select" data-eclass-onchange="onQuickGradeAssessmentChanged()"></select>
           </div>
           <div id="quickGradeAssessmentDetails" class="quick-grade-assessment-details"></div>
           
@@ -1258,10 +1328,10 @@
             </div>
             <div class="quick-grade-validation-msg" id="quickGradeValidationMsg"></div>
             <div class="quick-grade-nav-actions">
-              <button class="btn btn-ghost btn-sm" onclick="quickGradePrev()" title="Previous Student (Up Arrow)">
+              <button class="btn btn-ghost btn-sm" data-eclass-onclick="quickGradePrev()" title="Previous Student (Up Arrow)">
                 &larr; Previous
               </button>
-              <button class="btn btn-primary btn-sm" onclick="quickGradeNext()" title="Next Student (Enter / Down Arrow)">
+              <button class="btn btn-primary btn-sm" data-eclass-onclick="quickGradeNext()" title="Next Student (Enter / Down Arrow)">
                 Next &rarr;
               </button>
             </div>
@@ -1275,37 +1345,37 @@
         <!-- Sidebar Panel (Roster & Scores List) -->
         <div class="quick-grade-sidebar">
           <div class="quick-grade-sidebar-title">Learners & Scores</div>
-          <input id="quickGradeRosterSearch" class="field-input quick-grade-roster-search" type="search" placeholder="Search learners..." oninput="renderQuickGradeRoster()" />
+          <input id="quickGradeRosterSearch" class="field-input quick-grade-roster-search" type="search" placeholder="Search learners..." data-eclass-oninput="renderQuickGradeRoster()" />
           <div class="quick-grade-roster-list" id="quickGradeRosterList"></div>
         </div>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-cancel btn-sm" onclick="hideQuickGradeModal()">Close</button>
+        <button class="btn btn-cancel btn-sm" data-eclass-onclick="hideQuickGradeModal()">Close</button>
       </div>
     </div>
   </div>
 
   <!-- Welcome Modal -->
-  <div id="welcomeModal" class="modal-overlay" style="display:none">
+  <div id="welcomeModal" class="modal-overlay" data-eclass-style="display:none">
     <div class="modal modal--wide welcome-modal">
       <div class="modal__title modal__title-row">
         <span class="welcome-icon">👋</span> Welcome to E-Class Record App <span id="welcomeCurrentVersion"></span>
       </div>
       <div class="modal__body">
         <!-- Dynamic Update Alert Banner -->
-        <div id="welcomeUpdateBanner" class="welcome-update-banner" style="display:none;">
+        <div id="welcomeUpdateBanner" class="welcome-update-banner" data-eclass-style="display:none;">
           <div class="welcome-update-row">
             <div class="welcome-update-copy">
               <strong>🚀 New Version Available: v<span id="welcomeLatestVersion"></span></strong><br>
               <span id="welcomeUpdateNotice" class="welcome-update-notice">A new update is ready. Would you like to update now? You can also update later via Settings.</span>
             </div>
             <div id="welcomeUpdateActions" class="welcome-update-actions">
-              <button class="btn btn-ghost btn-sm" onclick="dismissWelcomeUpdate()">Later</button>
-              <button class="btn btn-primary btn-sm" onclick="triggerWelcomeUpdate()">Update Now</button>
+              <button class="btn btn-ghost btn-sm" data-eclass-onclick="dismissWelcomeUpdate()">Later</button>
+              <button class="btn btn-primary btn-sm" data-eclass-onclick="triggerWelcomeUpdate()">Update Now</button>
             </div>
           </div>
           <!-- Download Progress Container -->
-          <div id="welcomeProgressContainer" class="welcome-progress" style="display:none;">
+          <div id="welcomeProgressContainer" class="welcome-progress" data-eclass-style="display:none;">
             <div class="welcome-progress-row">
               <span id="welcomeProgressText">Preparing download...</span>
               <span id="welcomeProgressPercent">0%</span>
@@ -1425,46 +1495,46 @@
         </div>
         <!-- What's New Section (Dynamic) -->
         <div class="welcome-link-row">
-          <button type="button" id="welcomeWhatsNewBtn" class="welcome-inline-link" onclick="showWhatsNewModal()">What's New...</button>
+          <button type="button" id="welcomeWhatsNewBtn" class="welcome-inline-link" data-eclass-onclick="showWhatsNewModal()">What's New...</button>
         </div>
       </div>
       <div class="modal__actions welcome-modal-footer">
         <div class="welcome-modal-footer__checks">
           <label class="welcome-checkbox-label checkbox-row">
-            <input type="checkbox" id="welcomeTermsCheckbox" onchange="updateWelcomeTermsGate()" />
-            <span>I have read and agree to the <button type="button" class="welcome-terms-link" onclick="showTermsModal(event)">Terms &amp; Conditions</button></span>
+            <input type="checkbox" id="welcomeTermsCheckbox" data-eclass-onchange="updateWelcomeTermsGate()" />
+            <span>I have read and agree to the <button type="button" class="welcome-terms-link" data-eclass-onclick="showTermsModal(event)">Terms &amp; Conditions</button></span>
           </label>
           <label class="welcome-checkbox-label checkbox-row">
             <input type="checkbox" id="welcomeUsageAnalyticsCheckbox" />
-            <span>Optional: Share minimized class-usage statistics. <button type="button" class="welcome-terms-link" onclick="UsageAnalytics.showPrivacyNotice(event)">Privacy details</button></span>
+            <span>Optional: Share minimized class-usage statistics. <button type="button" class="welcome-terms-link" data-eclass-onclick="UsageAnalytics.showPrivacyNotice(event)">Privacy details</button></span>
           </label>
           <label class="welcome-checkbox-label checkbox-row">
             <input type="checkbox" id="welcomeDoNotShowCheckbox" />
             Do not show again today
           </label>
         </div>
-        <button id="welcomeCloseBtn" class="btn btn-cancel btn-sm" onclick="closeWelcomeModal()" disabled>Close</button>
+        <button id="welcomeCloseBtn" class="btn btn-cancel btn-sm" data-eclass-onclick="closeWelcomeModal()" disabled>Close</button>
       </div>
     </div>
   </div>
 
   <!-- What's New Modal -->
-  <div id="whatsNewModal" class="modal-overlay modal-z-higher" style="display:none">
+  <div id="whatsNewModal" class="modal-overlay modal-z-higher" data-eclass-style="display:none">
     <div class="modal modal--wide whats-new-modal">
       <div class="modal__title" id="whatsNewModalTitle">What's New</div>
       <div class="modal__body whats-new-modal__body">
         <div id="whatsNewModalMeta" class="whats-new-modal__meta"></div>
         <ul id="whatsNewModalList" class="whats-new-modal__list"></ul>
-        <p id="whatsNewModalFallback" class="whats-new-modal__fallback" style="display:none">No release notes are available for this version.</p>
+        <p id="whatsNewModalFallback" class="whats-new-modal__fallback" data-eclass-style="display:none">No release notes are available for this version.</p>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-cancel btn-sm" onclick="closeWhatsNewModal()">Close</button>
+        <button class="btn btn-cancel btn-sm" data-eclass-onclick="closeWhatsNewModal()">Close</button>
       </div>
     </div>
   </div>
 
   <!-- Terms & Conditions Modal -->
-  <div id="termsModal" class="modal-overlay modal-z-higher" style="display:none">
+  <div id="termsModal" class="modal-overlay modal-z-higher" data-eclass-style="display:none">
     <div class="modal modal--wide terms-modal">
       <div class="modal__title">Terms &amp; Conditions of Service</div>
       <div class="modal__body terms-modal__body">
@@ -1527,13 +1597,13 @@
         </section>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-cancel btn-sm" onclick="closeTermsModal()">Close</button>
+        <button class="btn btn-cancel btn-sm" data-eclass-onclick="closeTermsModal()">Close</button>
       </div>
     </div>
   </div>
 
   <!-- Optional Usage Analytics Privacy Notice -->
-  <div id="usagePrivacyModal" class="modal-overlay modal-z-higher" style="display:none">
+  <div id="usagePrivacyModal" class="modal-overlay modal-z-higher" data-eclass-style="display:none">
     <div class="modal modal--wide terms-modal">
       <div class="modal__title">Optional Usage Analytics Privacy Notice</div>
       <div class="modal__body terms-modal__body">
@@ -1564,13 +1634,13 @@
         </section>
       </div>
       <div class="modal__actions">
-        <button class="btn btn-cancel btn-sm" type="button" onclick="UsageAnalytics.closePrivacyNotice()">Close</button>
+        <button class="btn btn-cancel btn-sm" type="button" data-eclass-onclick="UsageAnalytics.closePrivacyNotice()">Close</button>
       </div>
     </div>
   </div>
 
   <!-- View Learner's Grades Modal -->
-  <div id="viewLearnerGradesModal" class="modal-overlay" style="display:none">
+  <div id="viewLearnerGradesModal" class="modal-overlay" data-eclass-style="display:none">
     <div class="modal modal--wide learner-grades-modal">
       <div class="modal__title no-print-modal">View Learner's Grades</div>
       <div class="modal__body learner-grades-body">
@@ -1579,7 +1649,7 @@
         <div class="no-print-modal learner-grades-controls">
           <div class="field field--compact">
             <label class="field-label">Select Learner</label>
-            <select id="viewGradesLearnerSelect" class="field-select" onchange="onLearnerSelectedForGrades()">
+            <select id="viewGradesLearnerSelect" class="field-select" data-eclass-onchange="onLearnerSelectedForGrades()">
               <!-- Dynamic options loaded via JS -->
             </select>
           </div>
@@ -1588,24 +1658,24 @@
           <div class="learner-grades-filter-row">
             <span class="learner-grades-filter-title">Show Sections:</span>
             <label>
-              <input type="checkbox" id="viewGradesShowTerm1" checked onchange="updateLearnerGradesDisplay()" />
+              <input type="checkbox" id="viewGradesShowTerm1" checked data-eclass-onchange="updateLearnerGradesDisplay()" />
               Term 1
             </label>
             <label>
-              <input type="checkbox" id="viewGradesShowTerm2" checked onchange="updateLearnerGradesDisplay()" />
+              <input type="checkbox" id="viewGradesShowTerm2" checked data-eclass-onchange="updateLearnerGradesDisplay()" />
               Term 2
             </label>
             <label>
-              <input type="checkbox" id="viewGradesShowTerm3" checked onchange="updateLearnerGradesDisplay()" />
+              <input type="checkbox" id="viewGradesShowTerm3" checked data-eclass-onchange="updateLearnerGradesDisplay()" />
               Term 3
             </label>
             <label>
-              <input type="checkbox" id="viewGradesShowSummary" checked onchange="updateLearnerGradesDisplay()" />
+              <input type="checkbox" id="viewGradesShowSummary" checked data-eclass-onchange="updateLearnerGradesDisplay()" />
               Summary
             </label>
           </div>
 
-          <div id="completionReportControls" class="completion-report-controls" style="display:none">
+          <div id="completionReportControls" class="completion-report-controls" data-eclass-style="display:none">
             <div class="field field--compact">
               <label class="field-label">Completion Report Term</label>
               <select id="completionReportTermSelect" class="field-select">
@@ -1630,15 +1700,15 @@
 
       </div>
       <div class="modal__actions no-print-modal">
-        <button class="btn btn-cancel btn-sm" onclick="hideViewLearnerGradesModal()">Close</button>
-        <button id="openLearnerAttendanceBtn" class="btn btn-sm" onclick="openLearnerAttendanceLog(currentSelectedLearnerId)" style="display:none">
+        <button class="btn btn-cancel btn-sm" data-eclass-onclick="hideViewLearnerGradesModal()">Close</button>
+        <button id="openLearnerAttendanceBtn" class="btn btn-sm" data-eclass-onclick="openLearnerAttendanceLog(currentSelectedLearnerId)" data-eclass-style="display:none">
           Open Attendance Log
         </button>
-        <button id="downloadLearnerGradesBtn" class="btn btn-primary btn-sm" onclick="downloadLearnerGradesPdf()" style="display:none">
+        <button id="downloadLearnerGradesBtn" class="btn btn-primary btn-sm" data-eclass-onclick="downloadLearnerGradesPdf()" data-eclass-style="display:none">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           Download Grades Report
         </button>
-        <button id="downloadCompletionReportBtn" class="btn btn-olive btn-sm" onclick="downloadLearnerCompletionReportPdf()" style="display:none">
+        <button id="downloadCompletionReportBtn" class="btn btn-olive btn-sm" data-eclass-onclick="downloadLearnerCompletionReportPdf()" data-eclass-style="display:none">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15h6"></path><path d="M9 11h2"></path><path d="M9 19h4"></path></svg>
           Download Completion Report
         </button>
@@ -1647,22 +1717,22 @@
   </div>
 
   <!-- Class Analysis Modal -->
-  <div id="classAnalysisModal" class="modal-overlay modal-z-analysis" style="display:none;">
+  <div id="classAnalysisModal" class="modal-overlay modal-z-analysis" data-eclass-style="display:none;">
     <div class="modal modal--wide modal--analysis">
       <div class="modal__title">Class Progress Report</div>
       <div class="modal__body modal-body--scroll" id="classAnalysisBody">
         <!-- Populated by renderClassAnalysisModal() -->
       </div>
       <div class="modal__actions class-report-actions">
-        <button class="btn btn-ghost btn-sm" onclick="printClassReport()">Print</button>
-        <button class="btn btn-primary btn-sm" onclick="downloadClassReportPdf()">Download PDF</button>
-        <button class="btn btn-cancel btn-sm" onclick="closeClassAnalysisModal()">Close</button>
+        <button class="btn btn-ghost btn-sm" data-eclass-onclick="printClassReport()">Print</button>
+        <button class="btn btn-primary btn-sm" data-eclass-onclick="downloadClassReportPdf()">Download PDF</button>
+        <button class="btn btn-cancel btn-sm" data-eclass-onclick="closeClassAnalysisModal()">Close</button>
       </div>
     </div>
   </div>
 
   <!-- Assessment Details Modal -->
-  <div id="assessmentDetailsModal" class="modal-overlay modal-z-assessment" style="display:none;">
+  <div id="assessmentDetailsModal" class="modal-overlay modal-z-assessment" data-eclass-style="display:none;">
     <div class="modal modal--wide assessment-details-modal">
       <div class="modal__title assessment-details-title">Assessment Details</div>
       <div class="modal__body assessment-details-body">
@@ -1686,11 +1756,11 @@
             <div class="field assessment-description-field">
               <label class="field-label">Description</label>
               <div class="assessment-editor-toolbar" role="toolbar" aria-label="Description formatting">
-                <button type="button" class="assessment-format-btn" onclick="formatAssessmentDescription('bold')" title="Bold" aria-label="Bold"><strong>B</strong></button>
-                <button type="button" class="assessment-format-btn" onclick="formatAssessmentDescription('italic')" title="Italic" aria-label="Italic"><em>I</em></button>
-                <button type="button" class="assessment-format-btn" onclick="formatAssessmentDescription('underline')" title="Underline" aria-label="Underline"><u>U</u></button>
-                <button type="button" class="assessment-format-btn" onclick="formatAssessmentDescription('insertUnorderedList')" title="Bullet List" aria-label="Bullet list">• List</button>
-                <button type="button" class="assessment-format-btn" onclick="formatAssessmentDescription('insertOrderedList')" title="Numbered List" aria-label="Numbered list">1. List</button>
+                <button type="button" class="assessment-format-btn" data-eclass-onclick="formatAssessmentDescription('bold')" title="Bold" aria-label="Bold"><strong>B</strong></button>
+                <button type="button" class="assessment-format-btn" data-eclass-onclick="formatAssessmentDescription('italic')" title="Italic" aria-label="Italic"><em>I</em></button>
+                <button type="button" class="assessment-format-btn" data-eclass-onclick="formatAssessmentDescription('underline')" title="Underline" aria-label="Underline"><u>U</u></button>
+                <button type="button" class="assessment-format-btn" data-eclass-onclick="formatAssessmentDescription('insertUnorderedList')" title="Bullet List" aria-label="Bullet list">• List</button>
+                <button type="button" class="assessment-format-btn" data-eclass-onclick="formatAssessmentDescription('insertOrderedList')" title="Numbered List" aria-label="Numbered list">1. List</button>
               </div>
               <div id="assessmentDescriptionEditor" class="assessment-description-editor" contenteditable="true"></div>
             </div>
@@ -1703,7 +1773,7 @@
                   <div class="settings-row__title">Uploaded Files</div>
                   <div class="settings-row__desc">Attach documents, PDFs, or images related to this assessment.</div>
                 </div>
-                <button class="btn btn-sm" type="button" onclick="uploadAssessmentAttachment()">Upload File</button>
+                <button class="btn btn-sm" type="button" data-eclass-onclick="uploadAssessmentAttachment()">Upload File</button>
               </div>
               <div id="assessmentAttachmentsList" class="assessment-attachments-list"></div>
             </div>
@@ -1713,21 +1783,21 @@
                 <div class="settings-row__title">Clear Scores</div>
                 <div class="settings-row__desc">Delete all learner scores for this assessment only. HPS, date, description, and files are preserved.</div>
               </div>
-              <button class="btn btn-ghost btn-sm" type="button" onclick="clearAssessmentScoresFromDetails()">Clear all students scores for this assessment</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="clearAssessmentScoresFromDetails()">Clear all students scores for this assessment</button>
             </div>
           </aside>
         </div>
       </div>
       <div class="modal__actions assessment-details-actions">
-        <button class="btn btn-transfer btn-sm" onclick="showScoreTransferFromAssessmentDetails()">Transfer Scores</button>
-        <button class="btn btn-cancel btn-sm" onclick="closeAssessmentDetailsModal()">Cancel</button>
-        <button class="btn btn-primary btn-sm" onclick="saveAssessmentDetails()">Save Details</button>
+        <button class="btn btn-transfer btn-sm" data-eclass-onclick="showScoreTransferFromAssessmentDetails()">Transfer Scores</button>
+        <button class="btn btn-cancel btn-sm" data-eclass-onclick="closeAssessmentDetailsModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" data-eclass-onclick="saveAssessmentDetails()">Save Details</button>
       </div>
     </div>
   </div>
 
   <!-- Transfer Scores Modal -->
-  <div id="scoreTransferModal" class="modal-overlay modal-z-assessment" style="display:none;">
+  <div id="scoreTransferModal" class="modal-overlay modal-z-assessment" data-eclass-style="display:none;">
     <div class="modal modal--wide score-transfer-modal">
       <div class="modal__title">Transfer Scores</div>
       <div class="modal__body score-transfer-body">
@@ -1736,12 +1806,12 @@
             <div class="score-transfer-panel__title">From</div>
             <div class="field">
               <label class="field-label">Source Class</label>
-              <select id="scoreTransferSourceClass" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+              <select id="scoreTransferSourceClass" class="field-select" data-eclass-onchange="handleScoreTransferSelectionChange()"></select>
             </div>
             <div class="split-row">
               <div class="field">
                 <label class="field-label">Term</label>
-                <select id="scoreTransferSourceTerm" class="field-select" onchange="handleScoreTransferSelectionChange()">
+                <select id="scoreTransferSourceTerm" class="field-select" data-eclass-onchange="handleScoreTransferSelectionChange()">
                   <option value="1">Term 1</option>
                   <option value="2">Term 2</option>
                   <option value="3">Term 3</option>
@@ -1749,12 +1819,12 @@
               </div>
               <div id="scoreTransferSourcePartRow" class="field">
                 <label class="field-label">MAPEH Strand</label>
-                <select id="scoreTransferSourcePart" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+                <select id="scoreTransferSourcePart" class="field-select" data-eclass-onchange="handleScoreTransferSelectionChange()"></select>
               </div>
             </div>
             <div class="field">
               <label class="field-label">Source Assessment</label>
-              <select id="scoreTransferSourceAssessment" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+              <select id="scoreTransferSourceAssessment" class="field-select" data-eclass-onchange="handleScoreTransferSelectionChange()"></select>
             </div>
           </section>
 
@@ -1762,12 +1832,12 @@
             <div class="score-transfer-panel__title">To</div>
             <div class="field">
               <label class="field-label">Target Class</label>
-              <select id="scoreTransferTargetClass" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+              <select id="scoreTransferTargetClass" class="field-select" data-eclass-onchange="handleScoreTransferSelectionChange()"></select>
             </div>
             <div class="split-row">
               <div class="field">
                 <label class="field-label">Term</label>
-                <select id="scoreTransferTargetTerm" class="field-select" onchange="handleScoreTransferSelectionChange()">
+                <select id="scoreTransferTargetTerm" class="field-select" data-eclass-onchange="handleScoreTransferSelectionChange()">
                   <option value="1">Term 1</option>
                   <option value="2">Term 2</option>
                   <option value="3">Term 3</option>
@@ -1775,12 +1845,12 @@
               </div>
               <div id="scoreTransferTargetPartRow" class="field">
                 <label class="field-label">MAPEH Strand</label>
-                <select id="scoreTransferTargetPart" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+                <select id="scoreTransferTargetPart" class="field-select" data-eclass-onchange="handleScoreTransferSelectionChange()"></select>
               </div>
             </div>
             <div class="field">
               <label class="field-label">Target Assessment</label>
-              <select id="scoreTransferTargetAssessment" class="field-select" onchange="handleScoreTransferSelectionChange()"></select>
+              <select id="scoreTransferTargetAssessment" class="field-select" data-eclass-onchange="handleScoreTransferSelectionChange()"></select>
             </div>
           </section>
         </div>
@@ -1788,20 +1858,20 @@
         <div class="score-transfer-options">
           <label class="field compact-field">
             <span class="field-label">Transfer Mode</span>
-            <select id="scoreTransferMode" class="field-select" onchange="clearScoreTransferPreview()">
+            <select id="scoreTransferMode" class="field-select" data-eclass-onchange="clearScoreTransferPreview()">
               <option value="move">Move scores and clear successful source cells</option>
               <option value="copy">Copy scores and keep source cells</option>
             </select>
           </label>
           <label class="field compact-field">
             <span class="field-label">If Target Has Scores</span>
-            <select id="scoreTransferConflictMode" class="field-select" onchange="clearScoreTransferPreview()">
+            <select id="scoreTransferConflictMode" class="field-select" data-eclass-onchange="clearScoreTransferPreview()">
               <option value="skip">Skip filled target scores</option>
               <option value="overwrite">Overwrite target scores</option>
             </select>
           </label>
           <label class="score-transfer-check">
-            <input id="scoreTransferCopyHps" type="checkbox" onchange="clearScoreTransferPreview()" />
+            <input id="scoreTransferCopyHps" type="checkbox" data-eclass-onchange="clearScoreTransferPreview()" />
             <span>Copy HPS to target only if target HPS is blank</span>
           </label>
         </div>
@@ -1811,27 +1881,27 @@
         </div>
       </div>
       <div class="modal__actions score-transfer-actions">
-        <button class="btn btn-cancel btn-sm" onclick="closeScoreTransferModal()">Cancel</button>
-        <button class="btn btn-secondary btn-sm" onclick="previewScoreTransfer()">Preview</button>
-        <button id="scoreTransferApplyBtn" class="btn btn-primary btn-sm" onclick="applyScoreTransfer()" disabled>Apply Transfer</button>
+        <button class="btn btn-cancel btn-sm" data-eclass-onclick="closeScoreTransferModal()">Cancel</button>
+        <button class="btn btn-secondary btn-sm" data-eclass-onclick="previewScoreTransfer()">Preview</button>
+        <button id="scoreTransferApplyBtn" class="btn btn-primary btn-sm" data-eclass-onclick="applyScoreTransfer()" disabled>Apply Transfer</button>
       </div>
     </div>
   </div>
 
   <!-- Transfer Scores Full Preview Modal -->
-  <div id="scoreTransferPreviewModal" class="modal-overlay modal-z-top" style="display:none;">
+  <div id="scoreTransferPreviewModal" class="modal-overlay modal-z-top" data-eclass-style="display:none;">
     <div class="modal modal--wide score-transfer-preview-modal">
       <div class="modal__title">Transfer Scores Preview</div>
       <div id="scoreTransferPreviewModalBody" class="modal__body score-transfer-preview-modal__body"></div>
       <div class="modal__actions score-transfer-actions">
-        <button class="btn btn-cancel btn-sm" onclick="closeScoreTransferPreviewModal()">Back</button>
-        <button id="scoreTransferPreviewApplyBtn" class="btn btn-primary btn-sm" onclick="applyScoreTransferFromPreview()">Apply Transfer</button>
+        <button class="btn btn-cancel btn-sm" data-eclass-onclick="closeScoreTransferPreviewModal()">Back</button>
+        <button id="scoreTransferPreviewApplyBtn" class="btn btn-primary btn-sm" data-eclass-onclick="applyScoreTransferFromPreview()">Apply Transfer</button>
       </div>
     </div>
   </div>
 
   <!-- Owner Sidebar Ads Modal -->
-  <div id="ownerSidebarAdsModal" class="modal-overlay" style="display:none;">
+  <div id="ownerSidebarAdsModal" class="modal-overlay" data-eclass-style="display:none;">
     <div class="modal modal--wide owner-sidebar-ads-modal">
       <div class="modal__title">Sidebar Ads</div>
       <div class="modal__body owner-sidebar-ads-body">
@@ -1844,31 +1914,33 @@
         <div id="ownerSidebarAdsStatus" class="settings-row__desc owner-sidebar-ads-status"></div>
       </div>
       <div class="modal__actions owner-sidebar-ads-actions">
-        <button class="btn btn-ghost btn-sm" type="button" onclick="addOwnerSidebarAdRow()">Add Link</button>
-        <button class="btn btn-ghost btn-sm" type="button" onclick="resetOwnerSidebarAds()">Reset Defaults</button>
-        <button class="btn btn-cancel btn-sm" type="button" onclick="closeSidebarAdOwnerModal()">Cancel</button>
-        <button id="ownerSidebarAdsSaveBtn" class="btn btn-primary btn-sm" type="button" onclick="saveOwnerSidebarAds()">Save Global Ads</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="addOwnerSidebarAdRow()">Add Link</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="resetOwnerSidebarAds()">Reset Defaults</button>
+        <button class="btn btn-cancel btn-sm" type="button" data-eclass-onclick="closeSidebarAdOwnerModal()">Cancel</button>
+        <button id="ownerSidebarAdsSaveBtn" class="btn btn-primary btn-sm" type="button" data-eclass-onclick="saveOwnerSidebarAds()">Save Global Ads</button>
       </div>
     </div>
   </div>
 
   <!-- Profile Overlay Container -->
-  <div id="profileOverlay" class="profile-overlay" style="display:none">
+  <div id="profileOverlay" class="profile-overlay" data-eclass-style="display:none">
     <!-- Profile Select Panel -->
-    <div id="profileSelectPanel" class="profile-panel card animate-slide-up" style="display:block">
+    <div id="profileSelectPanel" class="profile-panel card animate-slide-up" data-eclass-style="display:block">
       <h2 class="profile-panel-title">Who is grading today?</h2>
       <p class="profile-panel-desc">Select your user profile to unlock your class loads and records.</p>
       <div id="profileList" class="profile-grid">
         <!-- Dynamic list of profile cards -->
       </div>
       <div class="profile-actions">
-        <button class="btn btn-sm" onclick="showCreateProfileForm()">Create New Profile</button>
+        <button class="btn btn-sm" data-eclass-onclick="showCreateProfileForm()">Create New Profile</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="DesktopProfileManager.restoreProfileBackup()">Restore Profile Backup</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="DesktopProfileManager.open()">Manage Profiles</button>
       </div>
     </div>
 
     <!-- Profile Passcode Unlock Panel -->
-    <div id="profileUnlockPanel" class="profile-panel card animate-slide-up" style="display:none">
-      <button class="btn-back" onclick="showProfileSelect()" title="Go Back">
+    <div id="profileUnlockPanel" class="profile-panel card animate-slide-up" data-eclass-style="display:none">
+      <button class="btn-back" data-eclass-onclick="showProfileSelect()" title="Go Back">
         &larr; Back to Profiles
       </button>
       <h2 class="profile-panel-title" id="unlockTitle">Enter Your PIN</h2>
@@ -1877,18 +1949,18 @@
         <input type="password" id="passcodeField" class="passcode-field" placeholder="••••••" maxlength="6" autocomplete="off" />
       </div>
       <div id="unlockErrorMsg" class="unlock-error-msg"></div>
-      <button class="btn btn-primary btn-sm btn-block u-mt-3" onclick="submitPasscode()">Unlock Profile</button>
-      <button id="btnForgotProfilePin" class="btn btn-ghost btn-sm btn-block u-mt-2" type="button" onclick="showPinRecoveryPanel()">Forgot PIN? Use Recovery Key</button>
+      <button class="btn btn-primary btn-sm btn-block u-mt-3" data-eclass-onclick="submitPasscode()">Unlock Profile</button>
+      <button id="btnForgotProfilePin" class="btn btn-ghost btn-sm btn-block u-mt-2" type="button" data-eclass-onclick="showPinRecoveryPanel()">Forgot PIN? Use Recovery Key</button>
     </div>
 
     <!-- Offline PIN Recovery Panel -->
-    <div id="profileRecoveryPanel" class="profile-panel card animate-slide-up" style="display:none">
-      <button class="btn-back" type="button" onclick="cancelPinRecovery()" title="Return to PIN entry">&larr; Back to PIN</button>
+    <div id="profileRecoveryPanel" class="profile-panel card animate-slide-up" data-eclass-style="display:none">
+      <button class="btn-back" type="button" data-eclass-onclick="cancelPinRecovery()" title="Return to PIN entry">&larr; Back to PIN</button>
       <h2 class="profile-panel-title" id="recoveryProfileTitle">Recover Profile</h2>
       <p class="profile-panel-desc">Enter the recovery key saved when recovery was enabled, then choose a new 6-digit PIN.</p>
       <div class="pin-recovery-upload">
-        <input id="recoveryQrFile" type="file" accept="image/png,image/jpeg,image/webp" hidden onchange="uploadRecoveryQr(this.files[0])" />
-        <button class="btn btn-ghost btn-sm btn-block" type="button" onclick="document.getElementById('recoveryQrFile').click()">Upload Recovery QR Image</button>
+        <input id="recoveryQrFile" type="file" accept="image/png,image/jpeg,image/webp" hidden data-eclass-onchange="uploadRecoveryQr(this.files[0])" />
+        <button class="btn btn-ghost btn-sm btn-block" type="button" data-eclass-onclick="document.getElementById('recoveryQrFile').click()">Upload Recovery QR Image</button>
         <div id="recoveryQrStatus" class="profile-panel-desc pin-recovery-upload__status">Upload a saved recovery QR image, or enter the recovery key manually.</div>
       </div>
       <div class="pin-recovery-divider"><span>or enter the key manually</span></div>
@@ -1907,12 +1979,12 @@
         </div>
       </div>
       <div id="recoveryErrorMsg" class="unlock-error-msg"></div>
-      <button id="btnSubmitPinRecovery" class="btn btn-primary btn-sm btn-block u-mt-3" type="button" onclick="submitPinRecovery()">Verify &amp; Replace PIN</button>
+      <button id="btnSubmitPinRecovery" class="btn btn-primary btn-sm btn-block u-mt-3" type="button" data-eclass-onclick="submitPinRecovery()">Verify &amp; Replace PIN</button>
     </div>
 
     <!-- Create Profile Panel -->
-    <div id="profileCreatePanel" class="profile-panel card animate-slide-up" style="display:none">
-      <button id="btnCancelCreateProfile" class="btn-back" onclick="showProfileSelect()" title="Go Back">
+    <div id="profileCreatePanel" class="profile-panel card animate-slide-up" data-eclass-style="display:none">
+      <button id="btnCancelCreateProfile" class="btn-back" data-eclass-onclick="showProfileSelect()" title="Go Back">
         &larr; Cancel
       </button>
       <h2 class="profile-panel-title">Create Profile</h2>
@@ -1925,7 +1997,7 @@
       
       <div class="field">
         <label class="welcome-checkbox-label checkbox-row u-mb-3">
-           <input type="checkbox" id="createProfilePinEnabled" onchange="togglePinFields(this.checked)" checked />
+           <input type="checkbox" id="createProfilePinEnabled" data-eclass-onchange="togglePinFields(this.checked)" checked />
            Enable PIN Lock Security
         </label>
       </div>
@@ -1942,7 +2014,7 @@
       </div>
       
       <div id="createProfileErrorMsg" class="unlock-error-msg"></div>
-      <button class="btn btn-primary btn-sm btn-block u-mt-3" onclick="submitCreateProfile()">Create Profile</button>
+      <button class="btn btn-primary btn-sm btn-block u-mt-3" data-eclass-onclick="submitCreateProfile()">Create Profile</button>
     </div>
   </div>
 
@@ -1951,7 +2023,7 @@
   <div id="tourClickBlocker" class="tour-overlay"></div>
   
   <!-- Tour Highlight Box with Shadow Overlay -->
-  <div id="tourHighlightOverlay" style="display:none"></div>
+  <div id="tourHighlightOverlay" data-eclass-style="display:none"></div>
   
   <!-- Tour Popover Dialog Box -->
   <div id="tourPopover" class="tour-popover">
@@ -1965,15 +2037,15 @@
         <!-- Dots injected dynamically -->
       </div>
       <div class="tour-controls">
-        <button class="btn btn-ghost btn-sm tour-control-btn" id="tourBtnSkip" onclick="skipTour()">Skip</button>
-        <button class="btn btn-ghost btn-sm tour-control-btn" id="tourBtnPrev" onclick="prevTourStep()">&larr; Prev</button>
-        <button class="btn btn-primary btn-sm tour-control-btn tour-control-btn--next" id="tourBtnNext" onclick="nextTourStep()">Next &rarr;</button>
+        <button class="btn btn-ghost btn-sm tour-control-btn" id="tourBtnSkip" data-eclass-onclick="skipTour()">Skip</button>
+        <button class="btn btn-ghost btn-sm tour-control-btn" id="tourBtnPrev" data-eclass-onclick="prevTourStep()">&larr; Prev</button>
+        <button class="btn btn-primary btn-sm tour-control-btn tour-control-btn--next" id="tourBtnNext" data-eclass-onclick="nextTourStep()">Next &rarr;</button>
       </div>
     </div>
   </div>
 
   <!-- App Tour Prompt Modal -->
-  <div id="tourPromptModal" class="modal-overlay modal-z-tour" style="display:none;">
+  <div id="tourPromptModal" class="modal-overlay modal-z-tour" data-eclass-style="display:none;">
     <div class="modal modal--tour">
       <div class="modal__title modal__title-row">
         <span>🗺️</span> Interactive Application Tour
@@ -1998,15 +2070,16 @@
           </label>
         </div>
         <div class="tour-prompt-actions">
-          <button class="btn btn-ghost btn-sm" onclick="dismissTourPrompt()">Skip Tour</button>
-          <button class="btn btn-primary btn-sm" onclick="acceptTourPrompt()">Start Tour</button>
+          <button class="btn btn-ghost btn-sm" data-eclass-onclick="dismissTourPrompt()">Skip Tour</button>
+          <button class="btn btn-primary btn-sm" data-eclass-onclick="acceptTourPrompt()">Start Tour</button>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Mock Electron API for testing outside Electron -->
-  <script>
+  <script src="js/browser-mock.js"></script>
+  <!--
     if (!window.electronAPI) {
       window.electronAPI = {
         loadDatabase: async () => {
@@ -2076,7 +2149,7 @@
         onUpdateStatus: () => {}
       };
     }
-  </script>
+  -->
 
   <!-- Modular Scripts Injection -->
   <script src="js/changelog.js"></script>
@@ -2100,10 +2173,12 @@
   <script src="js/dashboard-workplace.js"></script>
   <script src="js/database.js"></script>
   <script src="js/usage-analytics.js"></script>
+  <script src="js/diagnostics-ui.js"></script>
   <script src="js/update-manager.js"></script>
   <script src="js/import-export.js"></script>
   <script src="js/record-table.js"></script>
   <script src="js/score-history-ui.js"></script>
+  <script src="js/transmutation-table-ui.js"></script>
   <script src="js/advisory-dashboard.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/dashboard-workplace-ui.js"></script>
@@ -2137,6 +2212,8 @@
   <script src="js/ad-manager.js"></script>
   <script src="js/attendance-excused.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/profile-management.js"></script>
+  <script src="js/session-bridge.js"></script>
   <script src="js/calendar-roadmap-ui.js"></script>
   <script src="js/calendar-reference.js"></script>
 <script src="js/calendar-integration.js"></script>
@@ -2156,6 +2233,6 @@
   <script src="js/shared-folder-sync.js"></script>
   <script src="js/admin-testing.js"></script>
   <script src="js/mobile-sync-navigation.js"></script>
-  <script>PerformanceMode.init(); initFontSize(); initSidebarResizer(); if (typeof initSidebarAd === 'function') initSidebarAd(); initTeacherTools(); initPinRecovery(); initBackupRecovery(); initSharedFolderSync(); CloudGradePilot.init(); UsageAnalytics.init(); UpdateManager.init();</script>
+  <script src="js/startup.js"></script>
 </body>
 </html>

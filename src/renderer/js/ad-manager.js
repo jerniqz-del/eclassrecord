@@ -431,7 +431,7 @@ function ownerAdRowTemplate(ad = {}) {
         <label class="field-label">Link</label>
         <input class="field-input" data-owner-ad-field="clickUrl" value="${sidebarAdEsc(ad.clickUrl || '')}" placeholder="https://example.com" />
       </div>
-      <button class="btn btn-ghost btn-sm owner-sidebar-ad-remove" type="button" onclick="removeOwnerSidebarAdRow(this)" title="Remove link">&times;</button>
+      <button class="btn btn-ghost btn-sm owner-sidebar-ad-remove" type="button" data-eclass-onclick="removeOwnerSidebarAdRow(this)" title="Remove link">&times;</button>
       <div class="field owner-sidebar-ad-row--wide">
         <label class="field-label">Description</label>
         <input class="field-input" data-owner-ad-field="body" value="${sidebarAdEsc(ad.body || '')}" placeholder="Short sponsor message" />

@@ -1,0 +1,85 @@
+{
+  "recordedAt": "2026-09-05T13:49:39.864Z",
+  "appVersion": "1.9.6",
+  "electronVersion": "33.4.11",
+  "system": {
+    "platform": "win32",
+    "release": "10.0.19045",
+    "arch": "x64",
+    "logicalProcessors": 8,
+    "cpu": "AMD Ryzen 3 3100 4-Core Processor              ",
+    "totalMemoryBytes": 8522014720
+  },
+  "fixture": {
+    "learners": 250,
+    "serializedBytes": 42560,
+    "retainedHeapDeltaBytes": 69144
+  },
+  "metrics": {
+    "electronRuntime": {
+      "totalMs": 1858.64,
+      "details": {
+        "electronReadyMs": 32.08,
+        "rendererReadyMs": 906.91,
+        "mainWorkingSetKb": 83600,
+        "rendererWorkingSetKb": 73712,
+        "pdfMs": 155.44,
+        "pdfBytes": 39565
+      }
+    },
+    "fullOfflineSmoke": {
+      "totalMs": 16637.46,
+      "smokeModules": 22,
+      "attempts": 1,
+      "priorFailures": []
+    },
+    "databaseSave": {
+      "medianMs": 9.98,
+      "minMs": 5.83,
+      "maxMs": 17.12,
+      "samples": 15
+    },
+    "backupCreateVerify": {
+      "medianMs": 0.05,
+      "minMs": 0.05,
+      "maxMs": 2.11,
+      "samples": 100
+    },
+    "legacyRestore": {
+      "medianMs": 0.01,
+      "minMs": 0.01,
+      "maxMs": 0.75,
+      "samples": 50
+    },
+    "largeSheetRoundTrip": {
+      "medianMs": 0.16,
+      "minMs": 0.16,
+      "maxMs": 1.06,
+      "samples": 30
+    },
+    "excelWrite": {
+      "medianMs": 10.1,
+      "minMs": 3.9,
+      "maxMs": 18.49,
+      "samples": 3
+    },
+    "excelRead": {
+      "medianMs": 7.16,
+      "minMs": 5.69,
+      "maxMs": 16.93,
+      "samples": 5
+    },
+    "updateTransfer16MiB": {
+      "medianMs": 30.63,
+      "minMs": 28.58,
+      "maxMs": 30.63,
+      "samples": 3
+    },
+    "wlanReconnect": {
+      "medianMs": 12.16,
+      "minMs": 11.97,
+      "maxMs": 13.28,
+      "samples": 3
+    }
+  }
+}

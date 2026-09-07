@@ -2,6 +2,7 @@ package com.example.eclassrecordmobile.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,11 +10,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,6 +36,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.eclassrecordmobile.data.PersonalChecklistRepository
+import com.example.eclassrecordmobile.theme.NeonPurple
+import com.example.eclassrecordmobile.ui.design.NeonCard
 
 @Composable
 fun PersonalChecklistPanel() {
@@ -46,60 +49,60 @@ fun PersonalChecklistPanel() {
     var error by rememberSaveable { mutableStateOf("") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("My Personal Checklist", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                Text(
-                    "Create your own items using retained categories. These stay encrypted on this Android device and are not part of the official desktop record.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp,
-                )
-                if (checklist.categories.isNotEmpty()) {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(checklist.categories, key = { it }) { saved ->
-                            AssistChip(onClick = { category = saved }, label = { Text(saved) })
-                        }
+        NeonCard(modifier = Modifier.fillMaxWidth(), accent = NeonPurple.copy(alpha = 0.32f)) {
+            Text("My Personal Checklist", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+            Text(
+                "Create your own items using retained categories. These stay encrypted on this Android device and are not part of the official desktop record.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp,
+            )
+            if (checklist.categories.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(checklist.categories, key = { it }) { saved ->
+                        AssistChip(onClick = { category = saved }, label = { Text(saved) })
                     }
                 }
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = { category = it.take(80); error = "" },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Category") },
-                    singleLine = true,
-                )
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it.take(180); error = "" },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Checklist item") },
-                )
-                if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
-                Button(
-                    onClick = {
-                        runCatching { repository.add(category, title) }
-                            .onSuccess {
-                                checklist = it
-                                category = it.categories.firstOrNull { saved ->
-                                    saved.equals(category.trim(), ignoreCase = true)
-                                }.orEmpty()
-                                title = ""
-                            }
-                            .onFailure { error = it.message ?: "Checklist item could not be saved." }
-                    },
-                    enabled = category.isNotBlank() && title.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Add checklist item")
-                }
+            }
+            OutlinedTextField(
+                value = category,
+                onValueChange = { category = it.take(80); error = "" },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Category") },
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+            )
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it.take(180); error = "" },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Checklist item") },
+                shape = RoundedCornerShape(16.dp),
+            )
+            if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+            Button(
+                onClick = {
+                    runCatching { repository.add(category, title) }
+                        .onSuccess {
+                            checklist = it
+                            category = it.categories.firstOrNull { saved ->
+                                saved.equals(category.trim(), ignoreCase = true)
+                            }.orEmpty()
+                            title = ""
+                        }
+                        .onFailure { error = it.message ?: "Checklist item could not be saved." }
+                },
+                enabled = category.isNotBlank() && title.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+            ) {
+                Text("Add checklist item")
             }
         }
 
         if (checklist.categories.isEmpty()) {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            NeonCard(modifier = Modifier.fillMaxWidth(), raised = true) {
                 Text(
                     "Create your first category and checklist item.",
-                    modifier = Modifier.padding(18.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -113,9 +116,9 @@ fun PersonalChecklistPanel() {
                     Text("No items in this category.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 categoryItems.forEach { item ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    NeonCard(modifier = Modifier.fillMaxWidth(), raised = true, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Checkbox(
@@ -141,4 +144,3 @@ fun PersonalChecklistPanel() {
         }
     }
 }
-

@@ -1,6 +1,6 @@
 /**
- * Builds the Electron app with obfuscated renderer/main JavaScript while
- * restoring the readable source tree afterward.
+ * Builds the Electron app from an isolated obfuscated staging tree. The
+ * readable workspace source is never modified, even if the build is killed.
  */
 const fs = require('fs');
 const path = require('path');
@@ -10,7 +10,7 @@ const { obfuscateDirectory } = require('./obfuscate');
 const rootDir = path.resolve(__dirname, '..');
 const srcDir = path.join(rootDir, 'src');
 const tmpDir = path.join(rootDir, '.tmp');
-const backupDir = path.join(tmpDir, `src-before-obfuscation-${Date.now()}`);
+const stageDir = path.join(tmpDir, `electron-build-stage-${Date.now()}-${process.pid}`);
 
 function assertInsideRoot(targetPath) {
   const resolved = path.resolve(targetPath);
@@ -34,42 +34,68 @@ function copyDirectory(source, destination) {
   fs.cpSync(resolvedSource, resolvedDestination, { recursive: true });
 }
 
-function restoreSource() {
-  if (!fs.existsSync(backupDir)) return;
-  console.log('Restoring readable source files...');
-  removeDirectory(srcDir);
-  copyDirectory(backupDir, srcDir);
-  removeDirectory(backupDir);
-  console.log('Source files restored.');
+function copyIfPresent(source, destination) {
+  if (!fs.existsSync(source)) return;
+  const stats = fs.statSync(source);
+  if (stats.isDirectory()) copyDirectory(source, destination);
+  else {
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.copyFileSync(source, destination);
+  }
 }
 
 function runBuilder(args) {
   const cliPath = require.resolve('electron-builder/cli.js');
   return spawnSync(process.execPath, [cliPath, ...args], {
-    cwd: rootDir,
+    cwd: stageDir,
     stdio: 'inherit',
     env: process.env
   });
 }
 
+function normalizedBuilderArgs(args) {
+  let hasOutput = false;
+  const normalized = args.map((argument) => {
+    const prefix = '--config.directories.output=';
+    if (!String(argument).startsWith(prefix)) return argument;
+    hasOutput = true;
+    const requested = String(argument).slice(prefix.length);
+    return `${prefix}${path.isAbsolute(requested) ? requested : path.resolve(rootDir, requested)}`;
+  });
+  if (!hasOutput) normalized.push(`--config.directories.output=${path.join(rootDir, 'dist')}`);
+  return normalized;
+}
+
+function prepareStage() {
+  removeDirectory(stageDir);
+  fs.mkdirSync(stageDir, { recursive: true });
+  copyDirectory(srcDir, path.join(stageDir, 'src'));
+  copyIfPresent(path.join(rootDir, 'package.json'), path.join(stageDir, 'package.json'));
+  copyIfPresent(path.join(rootDir, 'package-lock.json'), path.join(stageDir, 'package-lock.json'));
+  copyIfPresent(path.join(rootDir, 'electron-builder.yml'), path.join(stageDir, 'electron-builder.yml'));
+  copyIfPresent(path.join(rootDir, 'build'), path.join(stageDir, 'build'));
+  copyIfPresent(
+    path.join(rootDir, 'android', 'app', 'build', 'outputs', 'apk', 'debug'),
+    path.join(stageDir, 'android', 'app', 'build', 'outputs', 'apk', 'debug')
+  );
+  fs.symlinkSync(path.join(rootDir, 'node_modules'), path.join(stageDir, 'node_modules'), 'junction');
+}
+
 function main() {
-  const builderArgs = process.argv.slice(2);
-  if (builderArgs.length === 0) {
-    builderArgs.push('--win');
-  }
+  const requestedArgs = process.argv.slice(2);
+  if (requestedArgs.length === 0) requestedArgs.push('--win');
+  const builderArgs = normalizedBuilderArgs(requestedArgs);
 
   fs.mkdirSync(tmpDir, { recursive: true });
-  removeDirectory(backupDir);
-
-  console.log('Creating readable source backup before release build...');
-  copyDirectory(srcDir, backupDir);
+  console.log('Creating isolated release-build staging tree...');
+  prepareStage();
 
   let result;
   try {
-    obfuscateDirectory(srcDir);
+    obfuscateDirectory(path.join(stageDir, 'src'));
     result = runBuilder(builderArgs);
   } finally {
-    restoreSource();
+    removeDirectory(stageDir);
   }
 
   if (result.error) {
@@ -82,10 +108,6 @@ try {
   main();
 } catch (error) {
   console.error('Build failed:', error);
-  try {
-    restoreSource();
-  } catch (restoreError) {
-    console.error('Source restore also failed:', restoreError);
-  }
+  try { removeDirectory(stageDir); } catch (_cleanupError) {}
   process.exit(1);
 }

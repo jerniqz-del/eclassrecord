@@ -1,5 +1,12 @@
 package com.example.eclassrecordmobile.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -51,6 +58,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -63,6 +72,11 @@ import com.example.eclassrecordmobile.data.DatabaseHelper
 import com.example.eclassrecordmobile.data.LearnerGradeSummary
 import com.example.eclassrecordmobile.ui.main.SubjectIcon
 import com.example.eclassrecordmobile.ui.main.SubjectVisuals
+import com.example.eclassrecordmobile.ui.design.EClassTopBar
+import com.example.eclassrecordmobile.ui.design.LocalFluidLayout
+import com.example.eclassrecordmobile.ui.design.themePanel
+import com.example.eclassrecordmobile.theme.NeonGreen
+import com.example.eclassrecordmobile.theme.NeonPurple
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,33 +102,19 @@ fun ClassDetailScreen(
     val isMapeh = assignment.subject.uppercase().contains("MAPEH")
     var selectedMapePart by rememberSaveable { mutableStateOf("music_arts") }
     val visual = SubjectVisuals.forAssignment(assignment)
+    val visibleForTerm = assignment.assessments.filter { it.term == selectedTerm }
+    val expectedForTerm = assignment.learners.size * visibleForTerm.size
+    val enteredForTerm = assignment.learners.sumOf { learner -> visibleForTerm.count { assignment.scores["${learner.id}|${it.id}"].orEmpty().isNotBlank() } }
+    val completion = if (expectedForTerm == 0) 0f else enteredForTerm.toFloat() / expectedForTerm
+    val animatedCompletion by animateFloatAsState(completion, label = "sheet-detail-completion")
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        SubjectIcon(assignment, size = 36.dp)
-                        Spacer(Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                "Grade ${assignment.gradeLevel} - ${assignment.section}",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                            )
-                            Text(assignment.subject, fontSize = 13.sp)
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = visual.color.copy(alpha = 0.14f),
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
+            EClassTopBar(
+                title = assignment.subject,
+                subtitle = "Grade ${assignment.gradeLevel} · ${assignment.section}",
+                onBack = onBack,
             )
         },
         modifier = modifier,
@@ -124,7 +124,28 @@ fun ClassDetailScreen(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            TabRow(selectedTabIndex = selectedTerm.toInt() - 1) {
+            Card(
+                Modifier.fillMaxWidth().padding(LocalFluidLayout.current.gutter).graphicsLayer { shadowElevation = 18f },
+                shape = RoundedCornerShape(LocalFluidLayout.current.cornerRadius),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            ) {
+                Column(
+                    Modifier.background(Brush.horizontalGradient(listOf(visual.color.copy(alpha = .95f), visual.color.copy(alpha = .62f)))).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Term $selectedTerm progress", color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        Text("${(completion * 100).toInt()}%", color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    }
+                    LinearProgressIndicator({ animatedCompletion }, Modifier.fillMaxWidth().height(9.dp).clip(RoundedCornerShape(9.dp)), color = Color.White, trackColor = Color.White.copy(alpha = .25f))
+                    Text("$enteredForTerm of $expectedForTerm learner scores entered · ${visibleForTerm.size} assessments", color = Color.White.copy(alpha = .88f), fontSize = 11.sp)
+                }
+            }
+            TabRow(
+                selectedTabIndex = selectedTerm.toInt() - 1,
+                containerColor = themePanel(),
+                contentColor = NeonPurple,
+            ) {
                 listOf("1", "2", "3").forEach { term ->
                     Tab(
                         selected = selectedTerm == term,
@@ -135,7 +156,8 @@ fun ClassDetailScreen(
             }
             ScrollableTabRow(
                 selectedTabIndex = selectedSheetTab,
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = themePanel(),
+                contentColor = NeonPurple,
                 edgePadding = 8.dp,
             ) {
                 listOf("Assessments", "Individual", "Grid", "Summary").forEachIndexed { index, label ->
@@ -150,8 +172,8 @@ fun ClassDetailScreen(
             if (isMapeh && selectedSheetTab < 3) {
                     TabRow(
                         selectedTabIndex = if (selectedMapePart == "music_arts") 0 else 1,
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        containerColor = themePanel(),
+                        contentColor = NeonPurple,
                     ) {
                         Tab(
                             selected = selectedMapePart == "music_arts",
@@ -165,32 +187,22 @@ fun ClassDetailScreen(
                         )
                     }
             }
-            when (selectedSheetTab) {
-              0 -> {
-                AssessmentList(
-                    assignment = assignment,
-                    term = selectedTerm,
-                    mapePart = selectedMapePart.takeIf { isMapeh },
-                    onOpen = { onNavigate(ScoreEntry(assignment.id, it)) },
-                )
-              }
-              1 -> IndividualGradeView(
-                  assignment = assignment,
-                  term = selectedTerm,
-                  mapePart = selectedMapePart.takeIf { isMapeh },
-              )
-              2 -> GridGradeSheet(
-                  assignment = assignment,
-                  term = selectedTerm,
-                  mapePart = selectedMapePart.takeIf { isMapeh },
-              )
-              else -> {
-                GradeSummary(
-                    assignment = assignment,
-                    term = selectedTerm,
-                    grades = payload.grades,
-                )
-              }
+            AnimatedContent(
+                targetState = selectedSheetTab,
+                modifier = Modifier.fillMaxSize(),
+                transitionSpec = {
+                    val direction = if (targetState >= initialState) 1 else -1
+                    (fadeIn() + slideInHorizontally { direction * it / 5 }) togetherWith
+                        (fadeOut() + slideOutHorizontally { -direction * it / 6 })
+                },
+                label = "grading-sheet-mode",
+            ) { sheet ->
+                when (sheet) {
+                  0 -> AssessmentList(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh }) { onNavigate(ScoreEntry(assignment.id, it)) }
+                  1 -> IndividualGradeView(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh })
+                  2 -> GridGradeSheet(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh })
+                  else -> GradeSummary(assignment, selectedTerm, payload.grades)
+                }
             }
         }
     }
@@ -254,17 +266,20 @@ private fun IndividualGradeView(assignment: Assignment, term: String, mapePart: 
         EmptyGradeView("No assessments configured for this term.")
         return
     }
+    val fluid = LocalFluidLayout.current
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(fluid.columns.coerceAtLeast(2)),
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(12.dp),
+        contentPadding = PaddingValues(fluid.gutter),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         gridItems(assignment.learners, key = { it.id }) { learner ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(fluid.cornerRadius),
+                colors = CardDefaults.cardColors(containerColor = themePanel()),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
             ) {
                 Column(
                     modifier = Modifier.padding(12.dp),
@@ -353,7 +368,7 @@ private fun GradeSheetCell(
             .width(width)
             .height(if (header) 62.dp else 50.dp)
             .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
-            .background(if (header) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
+            .background(if (header) themePanel(raised = true) else MaterialTheme.colorScheme.surface)
             .padding(horizontal = 8.dp, vertical = 6.dp),
         contentAlignment = if (header || centered) Alignment.Center else Alignment.CenterStart,
     ) {
@@ -361,7 +376,7 @@ private fun GradeSheetCell(
             text.ifBlank { "—" },
             fontSize = if (header) 11.sp else 12.sp,
             fontWeight = if (header) FontWeight.ExtraBold else FontWeight.Medium,
-            color = if (header) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+            color = if (header) NeonPurple else MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
             textAlign = if (header || centered) TextAlign.Center else TextAlign.Start,
         )
@@ -381,14 +396,17 @@ private fun GradeSummary(
     term: String,
     grades: List<LearnerGradeSummary>,
 ) {
+    val payload = DatabaseHelper.getPayload()
     val termGrades = grades.filter { it.classId == assignment.id && it.term == term }
     val numericGrades = termGrades.mapNotNull { it.quarterlyGrade?.toDoubleOrNull() }
     val average = numericGrades.average().takeUnless(Double::isNaN)
     val passing = numericGrades.count { it >= 75.0 }
+    var lookupGrade by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedLookup = termGrades.firstOrNull { "${it.learnerId}|${it.term}" == lookupGrade }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(LocalFluidLayout.current.gutter),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
@@ -422,7 +440,15 @@ private fun GradeSummary(
         } else {
             items(termGrades, key = { "${it.learnerId}|${it.term}" }) { grade ->
                 val learner = assignment.learners.firstOrNull { it.id == grade.learnerId }
-                Card(modifier = Modifier.fillMaxWidth()) {
+                val canLookup = grade.initialGrade != null && !grade.quarterlyGrade.isNullOrBlank() &&
+                    grade.quarterlyGrade != "T/O" && grade.quarterlyGrade != "T/I"
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (canLookup) Modifier.clickable { lookupGrade = "${grade.learnerId}|${grade.term}" } else Modifier),
+                    colors = CardDefaults.cardColors(containerColor = themePanel()),
+                    shape = RoundedCornerShape(LocalFluidLayout.current.cornerRadius),
+                ) {
                     Column(
                         Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -430,12 +456,26 @@ private fun GradeSummary(
                         Text(learner?.name ?: "Learner", fontWeight = FontWeight.Bold)
                         HorizontalDivider()
                         Text("Initial grade: ${grade.initialGrade ?: "-"}", fontSize = 13.sp)
-                        Text("Term grade: ${grade.quarterlyGrade ?: "-"}", fontSize = 13.sp)
+                        Text("Term grade: ${grade.quarterlyGrade ?: "-"}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = NeonPurple)
                         Text("Remark: ${grade.remark.ifBlank { "-" }}", fontSize = 13.sp)
+                        if (canLookup) {
+                            Text("Tap to view transmutation table", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }
         }
+    }
+    selectedLookup?.let { grade ->
+        val learner = assignment.learners.firstOrNull { it.id == grade.learnerId }
+        TransmutationTableDialog(
+            assignment = assignment,
+            schoolYear = payload?.schoolYear.orEmpty(),
+            learnerName = learner?.name.orEmpty(),
+            initialGrade = grade.initialGrade,
+            transmutedGrade = grade.quarterlyGrade,
+            onDismiss = { lookupGrade = null },
+        )
     }
 }
 
@@ -472,10 +512,12 @@ fun AssessmentItem(
         else -> Color(0xFF388E3C)
     }
 
+    val fluid = LocalFluidLayout.current
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(fluid.cornerRadius),
+        colors = CardDefaults.cardColors(containerColor = themePanel()),
+        border = androidx.compose.foundation.BorderStroke(1.dp, badgeColor.copy(alpha = 0.35f)),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -501,7 +543,7 @@ fun AssessmentItem(
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     LinearProgressIndicator(
                         progress = { percent / 100f },
-                        color = if (percent == 100) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+                        color = if (percent == 100) NeonGreen else MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)),
                     )
@@ -510,7 +552,7 @@ fun AssessmentItem(
                         "$gradedCount/$totalCount ($percent%)",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (percent == 100) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (percent == 100) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -519,7 +561,7 @@ fun AssessmentItem(
                 Icon(
                     Icons.Default.CheckCircle,
                     contentDescription = "Completed",
-                    tint = Color(0xFF2E7D32),
+                    tint = NeonGreen,
                     modifier = Modifier.size(24.dp),
                 )
             }

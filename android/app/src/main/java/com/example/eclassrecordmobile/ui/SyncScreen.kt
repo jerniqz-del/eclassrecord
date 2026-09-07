@@ -7,17 +7,29 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -38,10 +51,18 @@ import com.example.eclassrecordmobile.data.BleServerManager
 import com.example.eclassrecordmobile.data.DatabaseHelper
 import com.example.eclassrecordmobile.data.BluetoothPairingQrParser
 import com.example.eclassrecordmobile.data.LanSyncManager
+import com.example.eclassrecordmobile.ui.design.EClassTopBar
+import com.example.eclassrecordmobile.ui.design.DepthIcon
+import com.example.eclassrecordmobile.ui.design.LocalFluidLayout
+import com.example.eclassrecordmobile.ui.design.themePanel
+import com.example.eclassrecordmobile.theme.NeonBlue
+import com.example.eclassrecordmobile.theme.NeonGreen
+import com.example.eclassrecordmobile.theme.NeonPurple
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import kotlinx.coroutines.delay
+import org.json.JSONObject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,8 +81,14 @@ fun SyncScreen(
     var isQrScanning by rememberSaveable { mutableStateOf(false) }
     var showBluetoothEnablePrompt by rememberSaveable { mutableStateOf(false) }
     var showPushAuthorization by rememberSaveable { mutableStateOf(false) }
+    var pushTransport by rememberSaveable { mutableStateOf("lan") }
     var pushPin by rememberSaveable { mutableStateOf("") }
     var pushError by rememberSaveable { mutableStateOf("") }
+    var pendingLanQr by rememberSaveable { mutableStateOf("") }
+    var pairingPin by rememberSaveable { mutableStateOf("") }
+    var pairingInProgress by rememberSaveable { mutableStateOf(false) }
+    var showUnlinkConfirmation by rememberSaveable { mutableStateOf(false) }
+    var profilePendingDeletion by rememberSaveable { mutableStateOf("") }
     val qrScanner = remember(context) {
         val options = GmsBarcodeScannerOptions.Builder()
             .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
@@ -77,8 +104,11 @@ fun SyncScreen(
             .addOnSuccessListener { barcode ->
                 isQrScanning = false
                 val rawValue = barcode.rawValue.orEmpty()
-                if (rawValue.contains("|wlan|")) {
-                    if (LanSyncManager.pairFromQr(context, rawValue)) {
+                if (isLanPairingQr(rawValue)) {
+                    if (rawValue.trim().startsWith("{")) {
+                        pendingLanQr = rawValue
+                        pairingPin = ""
+                    } else if (LanSyncManager.pairFromQr(context, rawValue)) {
                         qrAcceptedMessage = "Desktop QR accepted. Connecting through the local network now."
                     } else {
                         pairingError = LanSyncManager.syncLog
@@ -88,7 +118,7 @@ fun SyncScreen(
                         BluetoothPairingQrParser.parse(rawValue)
                     }.onSuccess { pairing ->
                         desktopPin = pairing.pin
-                        BleServerManager.prepareFirstPairing(pairing.pin, pairing.sessionId)
+                        BleServerManager.prepareFirstPairing(context, pairing)
                         BleServerManager.startAdvertising(context)
                         qrAcceptedMessage = "Desktop QR accepted. Your phone is now visible to the paired desktop."
                     }.onFailure { error ->
@@ -110,19 +140,22 @@ fun SyncScreen(
             .addOnSuccessListener { barcode ->
                 isQrScanning = false
                 val rawValue = barcode.rawValue.orEmpty()
-                if (rawValue.contains("|bluetooth|")) {
+                if (isBluetoothPairingQr(rawValue)) {
                     if (!isBluetoothEnabled(context)) {
                         pairingError = "This is a Bluetooth QR. Turn on Bluetooth, then scan it again."
                     } else {
                         runCatching { BluetoothPairingQrParser.parse(rawValue) }
                             .onSuccess { pairing ->
                                 desktopPin = pairing.pin
-                                BleServerManager.prepareFirstPairing(pairing.pin, pairing.sessionId)
+                                BleServerManager.prepareFirstPairing(context, pairing)
                                 BleServerManager.startAdvertising(context)
                                 qrAcceptedMessage = "Bluetooth QR accepted. Your phone is now visible to the paired desktop."
                             }
                             .onFailure { pairingError = it.message ?: "The QR code could not be used." }
                     }
+                } else if (rawValue.trim().startsWith("{") && isLanPairingQr(rawValue)) {
+                    pendingLanQr = rawValue
+                    pairingPin = ""
                 } else if (LanSyncManager.pairFromQr(context, rawValue)) {
                     qrAcceptedMessage = "Desktop QR accepted. Connecting through the local network now."
                 } else {
@@ -162,6 +195,11 @@ fun SyncScreen(
     val pushPinRequired = DatabaseHelper.getPayload()?.pushPinRequired ?: true
     val lanConnected = LanSyncManager.isConnected
     val lanPaired = LanSyncManager.isPaired
+    val pairedProfiles = LanSyncManager.pairedProfiles
+    val bluetoothProfiles = BleServerManager.pairedProfiles
+    val activeProfileKey = DatabaseHelper.getActiveProfileKey()
+    val lanStrengthProgress by animateFloatAsState(LanSyncManager.linkStrength / 100f, label = "lan-link-strength")
+    val linkCardDepth by animateFloatAsState(if (lanConnected) 1.01f else 1f, label = "link-card-depth")
 
     if (qrAcceptedMessage.isNotBlank()) {
         AlertDialog(
@@ -173,7 +211,69 @@ fun SyncScreen(
             },
         )
     }
-    val effectiveAuthorized = lanConnected || isAuthorized
+    if (pendingLanQr.isNotBlank()) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!pairingInProgress) {
+                    pendingLanQr = ""
+                    pairingPin = ""
+                }
+            },
+            title = { Text("Authorize desktop profile") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Enter the six-digit PIN for the profile shown on the desktop. The PIN is verified before this phone saves the connection.")
+                    OutlinedTextField(
+                        value = pairingPin,
+                        onValueChange = {
+                            pairingPin = it.filter(Char::isDigit).take(6)
+                            pairingError = ""
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Desktop profile PIN") },
+                        singleLine = true,
+                        enabled = !pairingInProgress,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        visualTransformation = PasswordVisualTransformation(),
+                    )
+                    if (pairingError.isNotBlank()) {
+                        Text(pairingError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = pairingPin.length == 6 && !pairingInProgress,
+                    onClick = {
+                        pairingInProgress = true
+                        val qr = pendingLanQr
+                        LanSyncManager.authorizeAndPair(context, qr, pairingPin) { success, message ->
+                            Handler(Looper.getMainLooper()).post {
+                                pairingInProgress = false
+                                if (success) {
+                                    pendingLanQr = ""
+                                    pairingPin = ""
+                                    pairingError = ""
+                                    qrAcceptedMessage = "Profile authorized and saved. Connecting through Wi-Fi or phone hotspot."
+                                } else {
+                                    pairingError = message
+                                }
+                            }
+                        }
+                    },
+                ) { Text(if (pairingInProgress) "Authorizing..." else "Authorize") }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !pairingInProgress,
+                    onClick = {
+                        pendingLanQr = ""
+                        pairingPin = ""
+                    },
+                ) { Text("Cancel") }
+            },
+        )
+    }
     val effectiveSyncLog = if (lanPaired) LanSyncManager.syncLog else syncLog
 
     val isPaired = BleServerManager.isPaired
@@ -237,6 +337,50 @@ fun SyncScreen(
         )
     }
 
+    if (showUnlinkConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showUnlinkConfirmation = false },
+            title = { Text("Unlink this desktop profile?") },
+            text = { Text("Automatic reconnection will stop for this profile. Encrypted offline records and pending mobile changes will remain on this phone.") },
+            confirmButton = {
+                Button(onClick = {
+                    LanSyncManager.forget(context)
+                    showUnlinkConfirmation = false
+                }) { Text("Unlink") }
+            },
+            dismissButton = { TextButton(onClick = { showUnlinkConfirmation = false }) { Text("Cancel") } },
+        )
+    }
+
+    if (profilePendingDeletion.isNotBlank()) {
+        val profileName = pairedProfiles.find { it.profileKey == profilePendingDeletion }?.profileName
+            ?: bluetoothProfiles.find { it.profileKey == profilePendingDeletion }?.profileName
+            ?: "this profile"
+        AlertDialog(
+            onDismissRequest = { profilePendingDeletion = "" },
+            title = { Text("Delete $profileName?") },
+            text = {
+                Text("This permanently deletes this profile's pairing credentials, mobile PIN, downloaded class records, and pending mobile changes from this phone. The desktop profile is not deleted.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val deleted = LanSyncManager.deleteProfile(context, profilePendingDeletion)
+                        if (!deleted) pairingError = LanSyncManager.syncLog
+                        profilePendingDeletion = ""
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+                ) { Text("Delete permanently") }
+            },
+            dismissButton = {
+                TextButton(onClick = { profilePendingDeletion = "" }) { Text("Cancel") }
+            },
+        )
+    }
+
     if (showPushAuthorization) {
         AlertDialog(
             onDismissRequest = {
@@ -249,9 +393,17 @@ fun SyncScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         if (pushPinRequired) {
-                            "Enter your desktop profile PIN. The paired desktop will validate and save the pending grades automatically—no action is needed on the desktop."
+                            if (pushTransport == "lan") {
+                                "Enter your desktop profile PIN. Pending grades will be sent primarily through Wi-Fi or the phone hotspot."
+                            } else {
+                                "Enter your desktop profile PIN. Bluetooth will be used only as the fallback because this profile has no WLAN pairing."
+                            }
                         } else {
-                            "The paired desktop profile has no PIN enabled. Confirm to save the pending grades automatically."
+                            if (pushTransport == "lan") {
+                                "Confirm to push pending grades through Wi-Fi or the phone hotspot."
+                            } else {
+                                "Confirm to push pending grades through the Bluetooth fallback."
+                            }
                         }
                     )
                     if (pushPinRequired) {
@@ -275,7 +427,7 @@ fun SyncScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val accepted = if (lanConnected) {
+                        val accepted = if (pushTransport == "lan") {
                             LanSyncManager.pushChanges(context, if (pushPinRequired) pushPin else "")
                         } else {
                             BleServerManager.syncScoresToDesktop(context, if (pushPinRequired) pushPin else "")
@@ -285,7 +437,7 @@ fun SyncScreen(
                             pushPin = ""
                             pushError = ""
                         } else {
-                            pushError = if (lanConnected) LanSyncManager.syncLog else BleServerManager.syncLog
+                            pushError = if (pushTransport == "lan") LanSyncManager.syncLog else BleServerManager.syncLog
                         }
                     },
                     enabled = !pushPinRequired || pushPin.length == 6,
@@ -306,18 +458,12 @@ fun SyncScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text("Desktop Connection", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            EClassTopBar(
+                title = "Desktop Connection",
+                subtitle = "Wi-Fi / hotspot first · Bluetooth fallback",
+                onBack = onBack,
             )
         },
         modifier = modifier
@@ -326,25 +472,98 @@ fun SyncScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
+                .padding(LocalFluidLayout.current.gutter)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            if (pairedProfiles.isNotEmpty() || bluetoothProfiles.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = themePanel()),
+                    border = BorderStroke(1.dp, NeonPurple.copy(alpha = 0.34f)),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Saved desktop profiles", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                        Text(
+                            "Each profile keeps its own encrypted offline data and pending changes. Use the trash button to remove one from this phone.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        pairedProfiles.forEach { profile ->
+                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                FilterChip(
+                                    selected = profile.profileKey == activeProfileKey,
+                                    onClick = { LanSyncManager.selectProfile(context, profile.profileKey) },
+                                    label = {
+                                        Text(
+                                            profile.profileName +
+                                                profile.schoolYear.takeIf(String::isNotBlank)?.let { " - " + it }.orEmpty()
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                )
+                                IconButton(onClick = { profilePendingDeletion = profile.profileKey }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete ${profile.profileName} profile", tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        }
+                        bluetoothProfiles
+                            .filterNot { bluetooth -> pairedProfiles.any { it.profileKey == bluetooth.profileKey } }
+                            .forEach { profile ->
+                                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    FilterChip(
+                                        selected = profile.profileKey == activeProfileKey,
+                                        onClick = { BleServerManager.selectProfile(context, profile.profileKey) },
+                                        label = {
+                                            Text(
+                                                profile.profileName +
+                                                    profile.schoolYear.takeIf(String::isNotBlank)?.let { " - " + it }.orEmpty() +
+                                                    " (Bluetooth)"
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    IconButton(onClick = { profilePendingDeletion = profile.profileKey }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete ${profile.profileName} profile", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().graphicsLayer {
+                    scaleX = linkCardDepth
+                    scaleY = linkCardDepth
+                    rotationX = if (lanConnected) 0.6f else 0f
+                    shadowElevation = if (lanConnected) 24f else 10f
+                },
+                shape = RoundedCornerShape(22.dp),
+                border = BorderStroke(1.dp, if (lanConnected) NeonGreen.copy(alpha = 0.55f) else NeonPurple.copy(alpha = 0.30f)),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (lanConnected) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant,
+                    containerColor = themePanel(),
                 ),
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        DepthIcon(
+                            icon = Icons.Default.Wifi,
+                            contentDescription = "Wi-Fi or phone hotspot",
+                            selected = lanConnected,
+                            size = 46.dp,
+                        )
+                        Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Wi-Fi / Local Network", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
-                            Text(
-                                LanSyncManager.connectionState,
-                                color = if (lanConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.SemiBold,
-                            )
+                            Text("Wi-Fi / Phone Hotspot", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                            AnimatedContent(
+                                targetState = LanSyncManager.connectionState,
+                                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                label = "wlan-state",
+                            ) { state ->
+                                Text(state, color = if (lanConnected) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                            }
                         }
                         AssistChip(
                             onClick = {},
@@ -377,6 +596,38 @@ fun SyncScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().graphicsLayer { shadowElevation = 12f },
+                        shape = RoundedCornerShape(16.dp),
+                        color = themePanel(raised = true),
+                        border = BorderStroke(1.dp, if (lanConnected) NeonGreen.copy(alpha = 0.28f) else MaterialTheme.colorScheme.outlineVariant),
+                        tonalElevation = 0.dp,
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Desktop link", fontWeight = FontWeight.Bold)
+                                Text(
+                                    if (lanPaired) "${LanSyncManager.linkQuality} · ${LanSyncManager.linkStrength}%" else "Not linked",
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (lanConnected) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            LinearProgressIndicator(
+                                progress = { lanStrengthProgress },
+                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp)),
+                                color = when {
+                                    LanSyncManager.linkStrength >= 75 -> Color(0xFF16A34A)
+                                    LanSyncManager.linkStrength >= 45 -> Color(0xFFF59E0B)
+                                    else -> Color(0xFFEF4444)
+                                },
+                            )
+                            Text(
+                                if (LanSyncManager.autoReconnectEnabled) "Trusted automatic reconnection is on" else "Automatic reconnection is paused",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                     if (LanSyncManager.diagnosticMessage.isNotBlank()) {
                         Text(
                             LanSyncManager.diagnosticMessage,
@@ -386,10 +637,37 @@ fun SyncScreen(
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = startLanQrScan, enabled = !isQrScanning, modifier = Modifier.weight(1f)) {
-                            Text(if (lanPaired) "Scan New WLAN QR" else "Scan WLAN QR")
+                            Text(if (lanPaired) "Add Profile QR" else "Scan Wi-Fi / Hotspot QR")
                         }
                         if (lanPaired) {
-                            TextButton(onClick = { LanSyncManager.forget(context) }) { Text("Forget") }
+                            TextButton(onClick = { showUnlinkConfirmation = true }) { Text("Unlink") }
+                        }
+                    }
+                    if (lanPaired) {
+                        Button(
+                            onClick = {
+                                pushTransport = "lan"
+                                pushError = ""
+                                showPushAuthorization = true
+                            },
+                            enabled = hasUnsynced,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = NeonGreen,
+                                contentColor = Color(0xFF03140A),
+                                disabledContainerColor = NeonGreen.copy(alpha = 0.4f),
+                            ),
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Push through Wi-Fi or hotspot")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                if (hasUnsynced) "Push via Wi-Fi / Hotspot" else "All Changes Synced",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                     }
                     LanSyncManager.updateInfo?.let { update ->
@@ -402,10 +680,15 @@ fun SyncScreen(
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Text("Downloading ${LanSyncManager.updateProgress}%", fontSize = 12.sp)
-                        } else {
-                            Button(onClick = { LanSyncManager.downloadAndInstallUpdate(context) }) {
-                                Text("Download & Install Update")
+                        } else if (LanSyncManager.isUpdateReady) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { LanSyncManager.installReadyUpdate(context) }) { Text("Update Now") }
+                                TextButton(onClick = { LanSyncManager.deferReadyUpdate(context) }) { Text("Later") }
                             }
+                            Text("The verified update is stored safely and can be installed whenever you are ready.", fontSize = 11.sp)
+                        } else {
+                            Text("The update will download automatically over Wi-Fi or hotspot.", fontSize = 12.sp)
+                            Button(onClick = { LanSyncManager.downloadUpdate(context) }) { Text("Retry Download") }
                         }
                     }
                 }
@@ -427,7 +710,7 @@ fun SyncScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "The app needs Bluetooth permissions to connect and sync grades with the desktop application.",
+                            "Bluetooth is an optional fallback when Wi-Fi or a phone hotspot is unavailable.",
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -446,18 +729,36 @@ fun SyncScreen(
                 // Connection Status Panel
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = themePanel()),
+                    border = BorderStroke(1.dp, if (isAuthorized) NeonBlue.copy(alpha = 0.45f) else MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            DepthIcon(
+                                icon = Icons.Default.Bluetooth,
+                                contentDescription = "Bluetooth fallback",
+                                selected = isAuthorized,
+                                size = 46.dp,
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text("Bluetooth fallback", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                                Text("Use when Wi-Fi or hotspot is unavailable", fontSize = 11.sp)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
                             text = "STATUS: $connectionState",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = if (isAuthorized) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isAuthorized) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = "Connection strength: $linkQuality" +
@@ -610,29 +911,33 @@ fun SyncScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // Upload scores button (Visible if authorized and has unsynced changes)
+                // Bluetooth is only offered for pushes when this profile has no WLAN pairing.
+                if (!lanConnected) {
                 Button(
                     onClick = {
+                        pushTransport = "bluetooth"
                         pushError = ""
                         showPushAuthorization = true
                     },
-                    enabled = effectiveAuthorized && hasUnsynced,
+                    enabled = isAuthorized && hasUnsynced,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2E7D32),
-                        disabledContainerColor = Color(0xFF2E7D32).copy(alpha = 0.4f)
+                        containerColor = NeonGreen,
+                        contentColor = Color(0xFF03140A),
+                        disabledContainerColor = NeonGreen.copy(alpha = 0.4f)
                     )
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = "Sync")
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        if (hasUnsynced) "Authorize & Push Grades" else "All Scores Synced",
+                        if (hasUnsynced) "Push via Bluetooth (Fallback)" else "All Changes Synced",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
+                }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -649,7 +954,7 @@ fun SyncScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .height(240.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     LazyColumn(
@@ -671,6 +976,22 @@ fun SyncScreen(
         }
     }
 }
+
+private fun pairingTransport(rawValue: String): String {
+    val value = rawValue.trim()
+    if (value.startsWith("{")) {
+        return runCatching { JSONObject(value).optString("transport") }.getOrDefault("")
+    }
+    return when {
+        value.contains("|wlan|") -> "wlan"
+        value.contains("|bluetooth|") -> "bluetooth"
+        else -> ""
+    }
+}
+
+private fun isLanPairingQr(rawValue: String) = pairingTransport(rawValue) == "wlan"
+
+private fun isBluetoothPairingQr(rawValue: String) = pairingTransport(rawValue) == "bluetooth"
 
 private fun getRequiredBlePermissions(): Array<String> {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

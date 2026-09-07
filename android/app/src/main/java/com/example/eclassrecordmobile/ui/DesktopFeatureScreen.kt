@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.Icon
@@ -43,8 +44,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.eclassrecordmobile.data.Assignment
 import com.example.eclassrecordmobile.data.DatabaseHelper
+import com.example.eclassrecordmobile.ui.design.EClassTopBar
+import com.example.eclassrecordmobile.ui.design.LocalFluidLayout
+import com.example.eclassrecordmobile.ui.design.NeonCard
+import com.example.eclassrecordmobile.ui.design.RemoteToolChip
+import com.example.eclassrecordmobile.theme.NeonPurple
 import com.example.eclassrecordmobile.data.Learner
-import com.example.eclassrecordmobile.data.BleServerManager
+import com.example.eclassrecordmobile.data.DesktopRemoteController
 import androidx.compose.ui.platform.LocalContext
 import java.time.Instant
 import java.time.LocalDate
@@ -80,28 +86,32 @@ fun DesktopFeatureScreen(
     modifier: Modifier = Modifier,
 ) {
     val payload = DatabaseHelper.getPayload()
+    var lookupKey by rememberSaveable { mutableStateOf<String?>(null) }
+    val lookupGrade = payload?.grades?.firstOrNull { "${it.learnerId}|${it.classId}|${it.term}" == lookupKey }
+    val fluid = LocalFluidLayout.current
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(DesktopFeatureNames.title(feature), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
+            EClassTopBar(
+                title = DesktopFeatureNames.title(feature),
+                subtitle = "Mobile classroom workspace",
+                onBack = onBack,
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier,
     ) { padding ->
+        if (payload != null && feature == DesktopFeatureNames.ATTENDANCE) {
+            ModernAttendanceScreen(payload.assignments, Modifier.padding(padding))
+            return@Scaffold
+        }
+        if (payload != null && feature == DesktopFeatureNames.CALENDAR) {
+            ModernCalendarScreen(payload.calendar, Modifier.padding(padding))
+            return@Scaffold
+        }
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(fluid.gutter),
+            verticalArrangement = Arrangement.spacedBy(fluid.itemGap),
         ) {
             item {
                 AuthorityBanner(
@@ -114,7 +124,9 @@ fun DesktopFeatureScreen(
             } else {
                 when (feature) {
                     DesktopFeatureNames.ADVISORY -> advisoryItems(payload.assignments)
-                    DesktopFeatureNames.GRADING -> gradingItems(payload.assignments, payload.grades)
+                    DesktopFeatureNames.GRADING -> gradingItems(payload.assignments, payload.grades) { grade ->
+                        lookupKey = "${grade.learnerId}|${grade.classId}|${grade.term}"
+                    }
                     DesktopFeatureNames.ATTENDANCE -> {
                         item { AttendanceEditor(payload.assignments) }
                         attendanceItems(payload.assignments)
@@ -137,27 +149,36 @@ fun DesktopFeatureScreen(
             }
         }
     }
+    if (payload != null && lookupGrade != null) {
+        val assignment = payload.assignments.firstOrNull { it.id == lookupGrade.classId }
+        val learner = assignment?.learners?.firstOrNull { it.id == lookupGrade.learnerId }
+        if (assignment != null) {
+            TransmutationTableDialog(
+                assignment = assignment,
+                schoolYear = payload.schoolYear,
+                learnerName = learner?.name.orEmpty(),
+                initialGrade = lookupGrade.initialGrade,
+                transmutedGrade = lookupGrade.quarterlyGrade,
+                onDismiss = { lookupKey = null },
+            )
+        }
+    }
 }
 
 @Composable
 private fun AuthorityBanner(revision: Long, appVersion: String) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Text("Desktop is the source of truth", fontWeight = FontWeight.Bold)
-            Text(
-                "Android shows the latest approved desktop snapshot. Mobile entries remain drafts until the desktop accepts them.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                "Revision $revision" + if (appVersion.isBlank()) "" else " - Desktop v$appVersion",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+    NeonCard(modifier = Modifier.fillMaxWidth(), accent = NeonPurple.copy(alpha = 0.4f)) {
+        Text("Desktop is the source of truth", fontWeight = FontWeight.Bold)
+        Text(
+            "Android shows the latest approved desktop snapshot. Mobile entries remain drafts until the desktop accepts them.",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            "Revision $revision" + if (appVersion.isBlank()) "" else " - Desktop v$appVersion",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -182,6 +203,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.advisoryItems(assignm
 private fun androidx.compose.foundation.lazy.LazyListScope.gradingItems(
     assignments: List<Assignment>,
     grades: List<com.example.eclassrecordmobile.data.LearnerGradeSummary>,
+    onOpenGrade: (com.example.eclassrecordmobile.data.LearnerGradeSummary) -> Unit,
 ) {
     if (grades.isEmpty()) {
         item { EmptyFeature("No computed term grades are available in the desktop snapshot yet.") }
@@ -190,6 +212,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.gradingItems(
     items(grades) { grade ->
         val assignment = assignments.firstOrNull { it.id == grade.classId }
         val learner = assignment?.learners?.firstOrNull { it.id == grade.learnerId }
+        val canLookup = grade.initialGrade != null && !grade.quarterlyGrade.isNullOrBlank()
         FeatureCard(
             title = learner?.name ?: "Learner",
             subtitle = "${assignment?.subject.orEmpty()} - Term ${grade.term}",
@@ -197,7 +220,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.gradingItems(
                 "Initial grade: ${grade.initialGrade?.toString() ?: "-"}",
                 "Term grade: ${grade.quarterlyGrade ?: "-"}",
                 "Remark: ${grade.remark.ifBlank { "-" }}",
-            ),
+            ) + if (canLookup) listOf("Tap to view transmutation table") else emptyList(),
+            onClick = if (canLookup) ({ onOpenGrade(grade) }) else null,
         )
     }
 }
@@ -407,9 +431,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     item {
         FeatureCard(
             title = "Sync policy",
-            subtitle = "Bluetooth primary",
+            subtitle = "Wi-Fi / hotspot primary",
             lines = listOf(
-                "Reconnects to the trusted desktop after first pairing",
+                "Uses the trusted local network first and Bluetooth only as fallback",
                 "Desktop validates and commits all mobile edits",
                 "Local records are encrypted on this device",
             ),
@@ -424,39 +448,43 @@ private fun TeacherToolsPanel(assignments: List<Assignment>) {
     var groups by remember { mutableStateOf<List<List<Learner>>>(emptyList()) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        val remoteEnabled = DesktopRemoteController.isAvailable
         FeatureCard(
             title = "Desktop Tool Controls",
-            subtitle = "Runs on the authoritative desktop",
+            subtitle = DesktopRemoteController.transportLabel,
             lines = listOf(
-                if (BleServerManager.isAuthorized) "Bluetooth control link ready"
-                else "Connect Bluetooth to enable these controls",
+                "Opening a mobile page mirrors its desktop equivalent",
+                "Commands use Wi-Fi or the phone hotspot before Bluetooth fallback",
             ),
         )
-        Button(
-            onClick = { BleServerManager.openDesktopLearnerPicker() },
-            enabled = BleServerManager.isAuthorized,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Open learner picker on desktop") }
-        Button(
-            onClick = { BleServerManager.pickLearnerOnDesktop() },
-            enabled = BleServerManager.isAuthorized,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Pick learner on desktop") }
-        Button(
-            onClick = { BleServerManager.openDesktopGroupMaker() },
-            enabled = BleServerManager.isAuthorized,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Open group maker on desktop") }
-        Button(
-            onClick = { BleServerManager.randomizeGroupsOnDesktop() },
-            enabled = BleServerManager.isAuthorized,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Randomize desktop groups") }
-        Button(
-            onClick = { BleServerManager.openDesktopChecklist() },
-            enabled = BleServerManager.isAuthorized,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Open checklist on desktop") }
+        Text("Open every desktop tool", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        listOf(
+            "Name Picker" to "picker", "Group Randomizer" to "groups", "Grade Simulator" to "simulator",
+            "Performance Checklist" to "checklist", "Games" to "games", "Activity Timer" to "timer",
+            "Participation Tracker" to "participation", "Noise Meter" to "noise", "Class Duels" to "duels",
+            "Seating Chart" to "seating", "Exit Ticket" to "exit", "Anecdotal Notes" to "notes", "Boat Race" to "race",
+        ).chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { (label, tool) ->
+                    RemoteToolChip(label, remoteEnabled, { DesktopRemoteController.openTool(tool) }, Modifier.weight(1f))
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+        Text("Live desktop actions", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        listOf(
+            "Pick learner now" to "pick-learner", "Randomize groups" to "randomize-groups",
+            "Start / resume timer" to "timer-start", "Pause timer" to "timer-pause",
+            "Skip timer segment" to "timer-skip", "Reset timer" to "timer-reset",
+            "Randomize seating" to "randomize-seating", "Start noise meter" to "noise-start", "Stop noise meter" to "noise-stop",
+        ).chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { (label, action) ->
+                    RemoteToolChip(label, remoteEnabled, { DesktopRemoteController.toolAction(action) }, Modifier.weight(1f))
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
         HorizontalDivider()
 
         FeatureCard(
@@ -488,27 +516,24 @@ private fun TeacherToolsPanel(assignments: List<Assignment>) {
 }
 
 @Composable
-private fun FeatureCard(title: String, subtitle: String, lines: List<String>) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp)) {
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            if (subtitle.isNotBlank()) {
-                Text(subtitle, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
-                Spacer(Modifier.height(6.dp))
-            }
-            lines.forEach { line ->
-                Text(line, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+private fun FeatureCard(title: String, subtitle: String, lines: List<String>, onClick: (() -> Unit)? = null) {
+    NeonCard(modifier = Modifier.fillMaxWidth(), accent = NeonPurple.copy(alpha = 0.28f), contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp), onClick = onClick) {
+        Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        if (subtitle.isNotBlank()) {
+            Text(subtitle, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+            Spacer(Modifier.height(6.dp))
+        }
+        lines.forEach { line ->
+            Text(line, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
 private fun EmptyFeature(message: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    NeonCard(modifier = Modifier.fillMaxWidth(), raised = true) {
         Text(
             message,
-            modifier = Modifier.padding(20.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

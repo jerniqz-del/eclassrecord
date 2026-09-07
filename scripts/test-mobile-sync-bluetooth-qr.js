@@ -18,7 +18,7 @@ assert.ok(
 );
 
 assert.match(bridge, /async function startCompanionBluetoothPairing\(\)/);
-assert.match(bridge, /electronAPI\.startCompanionBluetooth\(\)/);
+assert.match(bridge, /electronAPI\.startCompanionBluetooth\(descriptor\)/);
 assert.match(bridge, /generateCompanionQr\(bluetoothPayload\)/);
 assert.match(bridge, /startAutomaticBluetoothDiscovery/);
 assert.match(bridge, /pairing will continue automatically/);
@@ -27,6 +27,7 @@ assert.doesNotMatch(html, /id="syncPinInput"/, 'Desktop must not ask the user to
 const bluetoothController = fs.readFileSync(path.join(root, 'src', 'renderer', 'js', 'mobile-sync.js'), 'utf8');
 const preload = fs.readFileSync(path.join(root, 'src', 'main', 'preload.js'), 'utf8');
 const main = fs.readFileSync(path.join(root, 'src', 'main', 'main.js'), 'utf8');
+const service = fs.readFileSync(path.join(root, 'src', 'main', 'companion-sync-service.js'), 'utf8');
 const androidSyncScreen = fs.readFileSync(
   path.join(root, 'android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'ui', 'SyncScreen.kt'),
   'utf8',
@@ -52,7 +53,23 @@ assert.match(bluetoothController, /MobileSyncBridge\?\.flushPublish\?\.\(\)/);
 assert.match(bluetoothController, /\}, 250\);/);
 assert.match(bridge, /async function flushPublish\(\)/);
 assert.match(html, /id="syncLinkQuality"/);
-assert.match(bluetoothController, /desktopId: bluetoothDesktopId\(\)/);
+assert.match(bluetoothController, /desktopId: String\(pairing\.desktopId \|\| ''\)/);
+assert.match(bluetoothController, /profileId: String\(pairing\.profileId \|\| ''\)/);
+assert.match(service, /transportPin: String\(status\.pin \|\| ''\)/);
+const { pairingPayloadV2 } = require('../src/main/companion-sync-service');
+const { requireCompanionPayload } = require('../src/main/compute-service');
+const bluetoothQr = JSON.parse(pairingPayloadV2({
+  desktopId: '11111111-1111-4111-8111-111111111111',
+  profileId: 'profile-1',
+  pairingSessionId: '22222222-2222-4222-8222-222222222222',
+  sessionId: '22222222-2222-4222-8222-222222222222',
+  secret: 'abcdefghijklmnopqrstuvwxyzABCDEFG_1234567890',
+  pairingExpiresAt: '2099-01-01T00:00:00.000Z',
+  transport: 'bluetooth',
+  pin: '654321'
+}));
+assert.strictEqual(bluetoothQr.bluetooth.transportPin, '654321');
+assert.strictEqual(requireCompanionPayload(JSON.stringify(bluetoothQr)), JSON.stringify(bluetoothQr));
 assert.match(bluetoothController, /if \(isSyncConnecting\) return/);
 assert.match(bluetoothController, /setBluetoothScanBusy\(true\)/);
 assert.match(bluetoothController, /resetBluetoothScan\(\)/);
@@ -80,7 +97,7 @@ const androidDataModel = fs.readFileSync(
   path.join(root, 'android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'data', 'DataModel.kt'),
   'utf8',
 );
-assert.match(androidSyncScreen, /prepareFirstPairing\(pairing\.pin, pairing\.sessionId\)/);
+assert.match(androidSyncScreen, /prepareFirstPairing\(context, pairing\)/);
 assert.match(androidBleManager, /pairingDiscoveryTag/);
 assert.match(androidBleManager, /adapter\.name = "EC-\$advertisedCode"/);
 assert.match(androidBleManager, /override fun onServiceAdded\(/);
@@ -89,7 +106,9 @@ assert.match(androidBleManager, /bluetoothGattServer\?\.addService\(service\) ==
 assert.match(database, /async function verifyActiveProfilePinForMobile\(pin\)/);
 assert.match(database, /verifyPin\(candidate, profile\.salt, profile\.pinHash\)/);
 assert.match(bridge, /pushPinRequired: Boolean\(globalScope\.activeProfileRequiresPin\?\.\(\)\)/);
-assert.match(bridge, /verifyActiveProfilePinForMobile\(String\(request\.authorizationPin \|\| ''\)\)/);
+assert.doesNotMatch(bridge, /verifyActiveProfilePinForMobile\(String\(request\.authorizationPin \|\| ''\)\)/);
+assert.match(main, /profileAuth\.verifyAuthorizationPin/);
+assert.match(main, /profileAuth\.authorizeChanges/);
 assert.match(androidDataModel, /val authorizationPin: String = ""/);
 assert.match(androidSyncScreen, /Authorize grade push/);
 assert.match(androidSyncScreen, /PasswordVisualTransformation\(\)/);
@@ -99,5 +118,7 @@ assert.match(androidBleManager, /override fun onNotificationSent\(/);
 assert.match(androidBleManager, /val payloadSize = \(negotiatedMtu - 3\)\.coerceIn\(20, 180\)/);
 assert.match(androidBleManager, /pendingTxFrames\.offer\(TxFrame\(label, chunks\)\)/);
 assert.match(androidBleManager, /Json \{ encodeDefaults = true \}/);
-assert.doesNotMatch(androidBleManager, /val mtu = 200/);
+assert.doesNotMatch(androidBleManager, /data == pinCode/);
+assert.match(androidBleManager, /failedPairAttempts/);
+assert.match(androidBleManager, /MobilePinLock\.enroll/);
 console.log('Mobile Sync Bluetooth QR tests passed.');

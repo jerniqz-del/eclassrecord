@@ -211,7 +211,7 @@ function updateLearnerGradesDisplay() {
       <div class="learner-report-title">
         INDIVIDUAL LEARNER GRADES REPORT
       </div>
-      <div class="print-metadata-grid" style="margin-bottom: var(--space-4); color: var(--text-secondary)">
+      <div class="print-metadata-grid" data-eclass-style="margin-bottom: var(--space-4); color: var(--text-secondary)">
         <div class="print-metadata-col">
           <div><strong>Learner Name:</strong> <span class="learner-report-name">${esc(learnerDisplayName(learner))}</span></div>
           <div><strong>LRN:</strong> ${esc(learner.lrn || '—')}</div>
@@ -294,12 +294,12 @@ function renderTermStandardDetails(a, learnerId, term) {
     <table class="report-grades-table">
       <thead>
         <tr class="report-cell-left">
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Component</th>
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Title</th>
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:center">Score</th>
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:center">HPS</th>
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:center">Percentage (PS)</th>
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:center">Weighted (WS)</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs)">Component</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs)">Title</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:center">Score</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:center">HPS</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:center">Percentage (PS)</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:center">Weighted (WS)</th>
         </tr>
       </thead>
       <tbody>
@@ -321,13 +321,13 @@ function renderTermStandardDetails(a, learnerId, term) {
       const max = ast.maxScore || '—';
       
       blockHtml += `
-        <tr style="border-bottom:1px solid var(--border-subtle)">
-          <td style="padding:var(--space-2); font-size:var(--font-size-sm); color:var(--text-secondary)">${idx === 0 ? esc(label) : ''}</td>
-          <td style="padding:var(--space-2); font-size:var(--font-size-sm)">${esc(ast.title)}</td>
-          <td style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">${esc(score)}</td>
-          <td style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">${esc(max)}</td>
-          <td style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">—</td>
-          <td style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">—</td>
+        <tr data-eclass-style="border-bottom:1px solid var(--border-subtle)">
+          <td data-eclass-style="padding:var(--space-2); font-size:var(--font-size-sm); color:var(--text-secondary)">${idx === 0 ? esc(label) : ''}</td>
+          <td data-eclass-style="padding:var(--space-2); font-size:var(--font-size-sm)">${esc(ast.title)}</td>
+          <td data-eclass-style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">${esc(score)}</td>
+          <td data-eclass-style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">${esc(max)}</td>
+          <td data-eclass-style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">—</td>
+          <td data-eclass-style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">—</td>
         </tr>
       `;
     });
@@ -335,12 +335,12 @@ function renderTermStandardDetails(a, learnerId, term) {
     // Total row for this component
     const ws = compResult.hasData ? (compResult.ps * weight / 100) : 0;
     blockHtml += `
-      <tr style="border-bottom:1px solid var(--border-default); background:var(--bg-surface-raised); font-weight:var(--font-weight-bold)">
-        <td style="padding:var(--space-2); font-size:var(--font-size-sm)" colspan="2">Total ${esc(label)} (${weight}%)</td>
-        <td style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">${compResult.hasData ? fmt(compResult.raw) : '—'}</td>
-        <td style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">${compResult.hasData ? fmt(compResult.max) : '—'}</td>
-        <td style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center; color:var(--color-primary-700)">${compResult.hasData ? fmt(compResult.ps) + '%' : '—'}</td>
-        <td style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center; color:var(--color-success-700)">${compResult.hasData ? fmt(ws) : '—'}</td>
+      <tr data-eclass-style="border-bottom:1px solid var(--border-default); background:var(--bg-surface-raised); font-weight:var(--font-weight-bold)">
+        <td data-eclass-style="padding:var(--space-2); font-size:var(--font-size-sm)" colspan="2">Total ${esc(label)} (${weight}%)</td>
+        <td data-eclass-style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">${compResult.hasData ? fmt(compResult.raw) : '—'}</td>
+        <td data-eclass-style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center">${compResult.hasData ? fmt(compResult.max) : '—'}</td>
+        <td data-eclass-style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center; color:var(--color-primary-700)">${compResult.hasData ? fmt(compResult.ps) + '%' : '—'}</td>
+        <td data-eclass-style="padding:var(--space-2); font-size:var(--font-size-sm); text-align:center; color:var(--color-success-700)">${compResult.hasData ? fmt(ws) : '—'}</td>
       </tr>
     `;
     return blockHtml;
@@ -362,7 +362,7 @@ function renderTermStandardDetails(a, learnerId, term) {
     
     <div class="term-result-strip">
       <div>Initial Grade (IG): <strong>${result.hasData ? fmt(result.initialGrade) : '—'}</strong></div>
-      <div>Transmuted Grade (TG): <strong class="term-grade-highlight">${result.termGrade === null ? '—' : formatGradeForDisplay(result.termGrade, a.policy)}</strong></div>
+      <div>Transmuted Grade (TG): <strong class="term-grade-highlight">${result.termGrade === null ? '—' : wrapTransmutationTrigger(formatGradeForDisplay(result.termGrade, a.policy), result.initialGrade, result.termGrade, { disabled: !result.hasData, isTransferredIn: !!result.isTransferredIn, isTransferredOut: !!result.isTransferredOut })}</strong></div>
       <div>Remarks: ${remarksBadge}</div>
     </div>
   `;
@@ -410,7 +410,7 @@ function renderTermMapehDetails(a, learnerId, term) {
         <div>Performance Task Percentage Score: <strong>${resMusic.pt.hasData ? fmt(resMusic.pt.ps) + '%' : '—'}</strong></div>
         <div>Term Examination Percentage Score: <strong>${resMusic.hasData ? fmt(resMusic.examPS) + '%' : '—'}</strong></div>
         <div class="mapeh-term-grade">
-          Term Grade: <strong style="font-size:var(--font-size-md)">${gMusic === null ? '—' : formatGradeForDisplay(gMusic, a.policy)}</strong>
+          Term Grade: <strong data-eclass-style="font-size:var(--font-size-md)">${gMusic === null ? '—' : formatGradeForDisplay(gMusic, a.policy)}</strong>
         </div>
       </div>
       <div class="mapeh-term-card">
@@ -419,7 +419,7 @@ function renderTermMapehDetails(a, learnerId, term) {
         <div>Performance Task Percentage Score: <strong>${resPE.pt.hasData ? fmt(resPE.pt.ps) + '%' : '—'}</strong></div>
         <div>Term Examination Percentage Score: <strong>${resPE.hasData ? fmt(resPE.examPS) + '%' : '—'}</strong></div>
         <div class="mapeh-term-grade">
-          Term Grade: <strong style="font-size:var(--font-size-md)">${gPE === null ? '—' : formatGradeForDisplay(gPE, a.policy)}</strong>
+          Term Grade: <strong data-eclass-style="font-size:var(--font-size-md)">${gPE === null ? '—' : formatGradeForDisplay(gPE, a.policy)}</strong>
         </div>
       </div>
     </div>
@@ -472,31 +472,31 @@ function renderSummaryStandardDetails(a, learnerId) {
     <table class="report-grades-table">
       <thead>
         <tr class="report-cell-center">
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:left">Term</th>
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Grade</th>
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Descriptor</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:left">Term</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs)">Grade</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs)">Descriptor</th>
         </tr>
       </thead>
       <tbody>
-        <tr style="text-align:center; border-bottom:1px solid var(--border-subtle)">
-          <td style="padding:var(--space-2); text-align:left">Term 1</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(terms[0], a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2)">${esc(termDescription(a, terms[0])) || '—'}</td>
+        <tr data-eclass-style="text-align:center; border-bottom:1px solid var(--border-subtle)">
+          <td data-eclass-style="padding:var(--space-2); text-align:left">Term 1</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(terms[0], a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2)">${esc(termDescription(a, terms[0])) || '—'}</td>
         </tr>
-        <tr style="text-align:center; border-bottom:1px solid var(--border-subtle)">
-          <td style="padding:var(--space-2); text-align:left">Term 2</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(terms[1], a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2)">${esc(termDescription(a, terms[1])) || '—'}</td>
+        <tr data-eclass-style="text-align:center; border-bottom:1px solid var(--border-subtle)">
+          <td data-eclass-style="padding:var(--space-2); text-align:left">Term 2</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(terms[1], a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2)">${esc(termDescription(a, terms[1])) || '—'}</td>
         </tr>
-        <tr style="text-align:center; border-bottom:1px solid var(--border-default)">
-          <td style="padding:var(--space-2); text-align:left">Term 3</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(terms[2], a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2)">${esc(termDescription(a, terms[2])) || '—'}</td>
+        <tr data-eclass-style="text-align:center; border-bottom:1px solid var(--border-default)">
+          <td data-eclass-style="padding:var(--space-2); text-align:left">Term 3</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(terms[2], a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2)">${esc(termDescription(a, terms[2])) || '—'}</td>
         </tr>
-        <tr style="text-align:center; background:var(--bg-surface-raised); font-weight:var(--font-weight-bold); font-size:var(--font-size-md)">
-          <td style="padding:var(--space-2); text-align:left">Final Grade</td>
-          <td style="padding:var(--space-2); color:var(--color-success-700); font-size:var(--font-size-lg)">${blankNull(formatGradeForDisplay(fg, a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2)">${remarks}</td>
+        <tr data-eclass-style="text-align:center; background:var(--bg-surface-raised); font-weight:var(--font-weight-bold); font-size:var(--font-size-md)">
+          <td data-eclass-style="padding:var(--space-2); text-align:left">Final Grade</td>
+          <td data-eclass-style="padding:var(--space-2); color:var(--color-success-700); font-size:var(--font-size-lg)">${blankNull(formatGradeForDisplay(fg, a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2)">${remarks}</td>
         </tr>
       </tbody>
     </table>
@@ -590,38 +590,38 @@ function renderSummaryMapehDetails(a, learnerId) {
     <table class="report-grades-table">
       <thead>
         <tr class="report-cell-center">
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:left">Component / Term</th>
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Term 1</th>
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Term 2</th>
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Term 3</th>
-          <th style="padding:var(--space-2); font-size:var(--font-size-xs)">Final</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs); text-align:left">Component / Term</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs)">Term 1</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs)">Term 2</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs)">Term 3</th>
+          <th data-eclass-style="padding:var(--space-2); font-size:var(--font-size-xs)">Final</th>
         </tr>
       </thead>
       <tbody>
-        <tr style="text-align:center; border-bottom:1px solid var(--border-subtle)">
-          <td style="padding:var(--space-2); text-align:left">Music & Arts</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '1', 'music_arts').termGrade, a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '2', 'music_arts').termGrade, a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '3', 'music_arts').termGrade, a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2); font-weight:var(--font-weight-semibold)">${blankNull(formatGradeForDisplay(musicFinal, a.policy)) || '—'}</td>
+        <tr data-eclass-style="text-align:center; border-bottom:1px solid var(--border-subtle)">
+          <td data-eclass-style="padding:var(--space-2); text-align:left">Music & Arts</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '1', 'music_arts').termGrade, a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '2', 'music_arts').termGrade, a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '3', 'music_arts').termGrade, a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2); font-weight:var(--font-weight-semibold)">${blankNull(formatGradeForDisplay(musicFinal, a.policy)) || '—'}</td>
         </tr>
-        <tr style="text-align:center; border-bottom:1px solid var(--border-subtle)">
-          <td style="padding:var(--space-2); text-align:left">PE & Health</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '1', 'pe_health').termGrade, a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '2', 'pe_health').termGrade, a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '3', 'pe_health').termGrade, a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2); font-weight:var(--font-weight-semibold)">${blankNull(formatGradeForDisplay(peFinal, a.policy)) || '—'}</td>
+        <tr data-eclass-style="text-align:center; border-bottom:1px solid var(--border-subtle)">
+          <td data-eclass-style="padding:var(--space-2); text-align:left">PE & Health</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '1', 'pe_health').termGrade, a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '2', 'pe_health').termGrade, a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(computeTerm(a, learnerId, '3', 'pe_health').termGrade, a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2); font-weight:var(--font-weight-semibold)">${blankNull(formatGradeForDisplay(peFinal, a.policy)) || '—'}</td>
         </tr>
-        <tr style="text-align:center; border-bottom:1px solid var(--border-default); background:var(--bg-surface-raised)">
-          <td style="padding:var(--space-2); text-align:left; font-weight:var(--font-weight-semibold)">MAPEH Consolidated</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(consGrades[0], a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(consGrades[1], a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(consGrades[2], a.policy)) || '—'}</td>
-          <td style="padding:var(--space-2); color:var(--color-primary-700); font-weight:var(--font-weight-bold)">${blankNull(formatGradeForDisplay(finalConsolidated, a.policy)) || '—'}</td>
+        <tr data-eclass-style="text-align:center; border-bottom:1px solid var(--border-default); background:var(--bg-surface-raised)">
+          <td data-eclass-style="padding:var(--space-2); text-align:left; font-weight:var(--font-weight-semibold)">MAPEH Consolidated</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(consGrades[0], a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(consGrades[1], a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2)">${blankNull(formatGradeForDisplay(consGrades[2], a.policy)) || '—'}</td>
+          <td data-eclass-style="padding:var(--space-2); color:var(--color-primary-700); font-weight:var(--font-weight-bold)">${blankNull(formatGradeForDisplay(finalConsolidated, a.policy)) || '—'}</td>
         </tr>
-        <tr style="background:var(--bg-surface-raised); font-weight:var(--font-weight-bold)">
-          <td style="padding:var(--space-2); text-align:left">Final Remarks</td>
-          <td style="padding:var(--space-2); text-align:center" colspan="4">${remarks}</td>
+        <tr data-eclass-style="background:var(--bg-surface-raised); font-weight:var(--font-weight-bold)">
+          <td data-eclass-style="padding:var(--space-2); text-align:left">Final Remarks</td>
+          <td data-eclass-style="padding:var(--space-2); text-align:center" colspan="4">${remarks}</td>
         </tr>
       </tbody>
     </table>

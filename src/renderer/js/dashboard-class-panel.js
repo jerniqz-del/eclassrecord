@@ -70,8 +70,8 @@
           <div><p class="workplace-hero__eyebrow">Teaching workspace</p><h2 id="dashboardClassModalTitle">My Classes &amp; Advisory</h2><p>Open a class, review its term summary, export final grades, or run reports.</p></div>
           <div class="dashboard-class-modal__controls">
             <div class="dashboard-class-modal__view-toggle" aria-label="Class view mode">
-              <button type="button" data-class-modal-view="grid" onclick="setDashboardClassModalView('grid')">Grid</button>
-              <button type="button" data-class-modal-view="list" onclick="setDashboardClassModalView('list')">List</button>
+              <button type="button" data-class-modal-view="grid" data-eclass-onclick="setDashboardClassModalView('grid')">Grid</button>
+              <button type="button" data-class-modal-view="list" data-eclass-onclick="setDashboardClassModalView('list')">List</button>
             </div>
             <button class="btn btn-primary btn-sm" type="button" data-class-modal-add>Add Class</button>
             <button class="btn btn-cancel btn-sm" type="button" data-class-modal-close>Close</button>

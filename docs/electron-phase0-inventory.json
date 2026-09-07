@@ -1,0 +1,4011 @@
+{
+  "sourceSha256": "2cedf17bbdb09a697809766c1ccd602dab60a2cde9853b40ef27262176285896",
+  "files": [
+    "src/main/admin-auth.js",
+    "src/main/admin-session.js",
+    "src/main/companion-sync-service.js",
+    "src/main/compute-service.js",
+    "src/main/diagnostic-service.js",
+    "src/main/excel-exporter.js",
+    "src/main/file-io.js",
+    "src/main/link-preview-helper.js",
+    "src/main/main.js",
+    "src/main/mobile-update-channel.js",
+    "src/main/permission-service.js",
+    "src/main/preload.js",
+    "src/main/recovery-controller.js",
+    "src/main/recovery-qr.js",
+    "src/main/school-cloud-service.js",
+    "src/main/school-cloud-vault.js",
+    "src/main/security-boundary.js",
+    "src/main/sf1-reader.js",
+    "src/main/shared-folder-sync.js",
+    "src/main/single-instance.js",
+    "src/main/updater.js",
+    "src/main/zip-archive.js"
+  ],
+  "windows": [
+    {
+      "file": "src/main/main.js",
+      "line": 395
+    },
+    {
+      "file": "src/main/main.js",
+      "line": 1701
+    }
+  ],
+  "ipc": [
+    {
+      "receiver": "handle",
+      "channel": "admin:authenticate",
+      "signature": "async (_event, passphrase) => {",
+      "file": "src/main/main.js",
+      "line": 1515
+    },
+    {
+      "receiver": "handle",
+      "channel": "admin:has-gh-token",
+      "signature": "async (_event, token) => {",
+      "file": "src/main/main.js",
+      "line": 1526
+    },
+    {
+      "receiver": "handle",
+      "channel": "admin:logout",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1535
+    },
+    {
+      "receiver": "handle",
+      "channel": "db:load",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1540
+    },
+    {
+      "receiver": "handle",
+      "channel": "school-cloud:feature-status",
+      "signature": "async () => ({",
+      "file": "src/main/main.js",
+      "line": 1544
+    },
+    {
+      "receiver": "handle",
+      "channel": "school-cloud:configure",
+      "signature": "async (_event, schoolId, connection) => {",
+      "file": "src/main/main.js",
+      "line": 1548
+    },
+    {
+      "receiver": "handle",
+      "channel": "school-cloud:activate",
+      "signature": "async (_event, schoolId, connection) => {",
+      "file": "src/main/main.js",
+      "line": 1552
+    },
+    {
+      "receiver": "handle",
+      "channel": "school-cloud:bootstrap",
+      "signature": "async (_event, setup) => {",
+      "file": "src/main/main.js",
+      "line": 1556
+    },
+    {
+      "receiver": "handle",
+      "channel": "school-cloud:status",
+      "signature": "async (_event, schoolId) => {",
+      "file": "src/main/main.js",
+      "line": 1560
+    },
+    {
+      "receiver": "handle",
+      "channel": "school-cloud:connections",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1564
+    },
+    {
+      "receiver": "handle",
+      "channel": "school-cloud:disconnect",
+      "signature": "async (_event, schoolId) => {",
+      "file": "src/main/main.js",
+      "line": 1568
+    },
+    {
+      "receiver": "handle",
+      "channel": "school-cloud:request",
+      "signature": "async (_event, schoolId, request) => {",
+      "file": "src/main/main.js",
+      "line": 1572
+    },
+    {
+      "receiver": "handle",
+      "channel": "school-cloud:backup-profile",
+      "signature": "async (_event, schoolId, database) => {",
+      "file": "src/main/main.js",
+      "line": 1576
+    },
+    {
+      "receiver": "handle",
+      "channel": "school-cloud:restore-profile",
+      "signature": "async (_event, schoolId) => {",
+      "file": "src/main/main.js",
+      "line": 1580
+    },
+    {
+      "receiver": "handle",
+      "channel": "db:save",
+      "signature": "async (_event, data) => {",
+      "file": "src/main/main.js",
+      "line": 1584
+    },
+    {
+      "receiver": "handle",
+      "channel": "companion:wlan-start",
+      "signature": "async (_event, pairingContext) => companionSyncService.start(pairingContext));",
+      "file": "src/main/main.js",
+      "line": 1588
+    },
+    {
+      "receiver": "handle",
+      "channel": "companion:bluetooth-start",
+      "signature": "async (_event, pairingContext) => companionSyncService.startBluetooth(pairingContext));",
+      "file": "src/main/main.js",
+      "line": 1589
+    },
+    {
+      "receiver": "handle",
+      "channel": "companion:firewall-configure",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1590
+    },
+    {
+      "receiver": "handle",
+      "channel": "compute:generate-companion-qr",
+      "signature": "async (_event, payload) => computeService.generateCompanionQr(payload));",
+      "file": "src/main/main.js",
+      "line": 1595
+    },
+    {
+      "receiver": "handle",
+      "channel": "compute:generate-recovery-qr",
+      "signature": "async (_event, payload) => computeService.generateRecoveryQr(payload));",
+      "file": "src/main/main.js",
+      "line": 1596
+    },
+    {
+      "receiver": "handle",
+      "channel": "compute:decode-recovery-qr",
+      "signature": "async (_event, pixels) => computeService.decodeRecoveryQrPixels(pixels));",
+      "file": "src/main/main.js",
+      "line": 1597
+    },
+    {
+      "receiver": "handle",
+      "channel": "compute:generate-sudoku",
+      "signature": "async (_event, difficulty) => computeService.generateSudoku(difficulty));",
+      "file": "src/main/main.js",
+      "line": 1598
+    },
+    {
+      "receiver": "handle",
+      "channel": "diagnostics:policy",
+      "signature": "async () => diagnosticService.policy());",
+      "file": "src/main/main.js",
+      "line": 1599
+    },
+    {
+      "receiver": "handle",
+      "channel": "diagnostics:set-enabled",
+      "signature": "async (_event, enabled) => diagnosticService.setEnabled(enabled));",
+      "file": "src/main/main.js",
+      "line": 1600
+    },
+    {
+      "receiver": "handle",
+      "channel": "diagnostics:delete",
+      "signature": "async () => diagnosticService.deleteAll());",
+      "file": "src/main/main.js",
+      "line": 1601
+    },
+    {
+      "receiver": "handle",
+      "channel": "diagnostics:export",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1602
+    },
+    {
+      "receiver": "handle",
+      "channel": "security:permission-preferences",
+      "signature": "async () => permissionService.read());",
+      "file": "src/main/main.js",
+      "line": 1618
+    },
+    {
+      "receiver": "handle",
+      "channel": "security:set-permission-preference",
+      "signature": "async (_event, capability, enabled) => {",
+      "file": "src/main/main.js",
+      "line": 1619
+    },
+    {
+      "receiver": "handle",
+      "channel": "security:request-capability",
+      "signature": "async (_event, capability) => permissionService.begin(String(capability || '')));",
+      "file": "src/main/main.js",
+      "line": 1626
+    },
+    {
+      "receiver": "handle",
+      "channel": "security:set-profile-session",
+      "signature": "async (_event, state) => {",
+      "file": "src/main/main.js",
+      "line": 1627
+    },
+    {
+      "receiver": "handle",
+      "channel": "companion:wlan-stop",
+      "signature": "async () => companionSyncService.stop());",
+      "file": "src/main/main.js",
+      "line": 1634
+    },
+    {
+      "receiver": "handle",
+      "channel": "companion:wlan-status",
+      "signature": "async () => companionSyncService.publicStatus());",
+      "file": "src/main/main.js",
+      "line": 1635
+    },
+    {
+      "receiver": "handle",
+      "channel": "companion:publish-snapshot",
+      "signature": "async (_event, snapshot) => companionSyncService.publish(snapshot));",
+      "file": "src/main/main.js",
+      "line": 1636
+    },
+    {
+      "receiver": "handle",
+      "channel": "companion:mobile-update-status",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1637
+    },
+    {
+      "receiver": "handle",
+      "channel": "companion:mobile-update-refresh",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1645
+    },
+    {
+      "receiver": "handle",
+      "channel": "companion:mobile-update-import",
+      "signature": "importMobileUpdatePackage);",
+      "file": "src/main/main.js",
+      "line": 1652
+    },
+    {
+      "receiver": "on",
+      "channel": "companion:changes-result",
+      "signature": "(_event, requestId, result) => {",
+      "file": "src/main/main.js",
+      "line": 1653
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:export-json",
+      "signature": "async (_event, jsonString, defaultFileName) => {",
+      "file": "src/main/main.js",
+      "line": 1663
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:import-json",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1675
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:export-recovery-qr",
+      "signature": "async (_event, dataUrl, defaultFileName) => {",
+      "file": "src/main/main.js",
+      "line": 1686
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:print-recovery-qr",
+      "signature": "async (_event, dataUrl, label) => {",
+      "file": "src/main/main.js",
+      "line": 1699
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:export-grade-transfer",
+      "signature": "async (_event, jsonString, defaultFileName) => {",
+      "file": "src/main/main.js",
+      "line": 1715
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:import-grade-transfer",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1727
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:export-advisory-reset-backup",
+      "signature": "async (_event, request) => {",
+      "file": "src/main/main.js",
+      "line": 1738
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:select-folder",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1753
+    },
+    {
+      "receiver": "handle",
+      "channel": "backup:select-and-scan",
+      "signature": "async (_event, backupRecoveryId) => {",
+      "file": "src/main/main.js",
+      "line": 1764
+    },
+    {
+      "receiver": "handle",
+      "channel": "backup:read-discovered",
+      "signature": "async (_event, handle) => {",
+      "file": "src/main/main.js",
+      "line": 1802
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:device-info",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1812
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:rename-device",
+      "signature": "async (_event, label) => {",
+      "file": "src/main/main.js",
+      "line": 1816
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:state",
+      "signature": "async (_event, backupRecoveryId) => {",
+      "file": "src/main/main.js",
+      "line": 1820
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:configure-folder",
+      "signature": "async (_event, backupRecoveryId) => {",
+      "file": "src/main/main.js",
+      "line": 1826
+    },
+    {
+      "receiver": "handle",
+      "channel": "backup:discover-onedrive",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1866
+    },
+    {
+      "receiver": "handle",
+      "channel": "backup:scan-known-folder",
+      "signature": "async (_event, backupRecoveryId, folderPath) => {",
+      "file": "src/main/main.js",
+      "line": 1870
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:select-onedrive-folder",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1876
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:configure-selected-folder",
+      "signature": "async (_event, backupRecoveryId, folderPath) => {",
+      "file": "src/main/main.js",
+      "line": 1886
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:inspect-selected-folder",
+      "signature": "async (_event, backupRecoveryId, folderPath) => {",
+      "file": "src/main/main.js",
+      "line": 1892
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:disable",
+      "signature": "async (_event, backupRecoveryId) => {",
+      "file": "src/main/main.js",
+      "line": 1896
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:write-head",
+      "signature": "async (_event, backupRecoveryId, envelopeText) => {",
+      "file": "src/main/main.js",
+      "line": 1901
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:write-base",
+      "signature": "async (_event, backupRecoveryId, envelopeText) => {",
+      "file": "src/main/main.js",
+      "line": 1905
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:scan",
+      "signature": "async (_event, backupRecoveryId) => {",
+      "file": "src/main/main.js",
+      "line": 1909
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:create-restore-point",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1913
+    },
+    {
+      "receiver": "handle",
+      "channel": "database:create-restore-point",
+      "signature": "async (_event, reason) => {",
+      "file": "src/main/main.js",
+      "line": 1917
+    },
+    {
+      "receiver": "handle",
+      "channel": "shared-sync:read",
+      "signature": "async (_event, handle) => {",
+      "file": "src/main/main.js",
+      "line": 1921
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:import-sf1",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 1925
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:import-assessment-attachment",
+      "signature": "async (_event, assignmentId, assessmentId) => {",
+      "file": "src/main/main.js",
+      "line": 1945
+    },
+    {
+      "receiver": "handle",
+      "channel": "attachment:open",
+      "signature": "async (_event, relativePath) => {",
+      "file": "src/main/main.js",
+      "line": 1985
+    },
+    {
+      "receiver": "handle",
+      "channel": "attachment:remove",
+      "signature": "async (_event, relativePath) => {",
+      "file": "src/main/main.js",
+      "line": 1992
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:export-csv",
+      "signature": "async (_event, csvString, defaultFileName) => {",
+      "file": "src/main/main.js",
+      "line": 1998
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:export-excel-template",
+      "signature": "async (_event, payload) => {",
+      "file": "src/main/main.js",
+      "line": 2010
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:export-pdf",
+      "signature": "async (_event, options) => {",
+      "file": "src/main/main.js",
+      "line": 2029
+    },
+    {
+      "receiver": "handle",
+      "channel": "dialog:print-choose",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 2131
+    },
+    {
+      "receiver": "handle",
+      "channel": "app:version",
+      "signature": "() => {",
+      "file": "src/main/main.js",
+      "line": 2145
+    },
+    {
+      "receiver": "handle",
+      "channel": "system:performance-profile",
+      "signature": "() => {",
+      "file": "src/main/main.js",
+      "line": 2149
+    },
+    {
+      "receiver": "handle",
+      "channel": "updater:check",
+      "signature": "async (_event, options) => {",
+      "file": "src/main/main.js",
+      "line": 2171
+    },
+    {
+      "receiver": "handle",
+      "channel": "updater:download",
+      "signature": "async (_event, options) => {",
+      "file": "src/main/main.js",
+      "line": 2175
+    },
+    {
+      "receiver": "handle",
+      "channel": "updater:quit-and-install",
+      "signature": "async () => {",
+      "file": "src/main/main.js",
+      "line": 2179
+    },
+    {
+      "receiver": "handle",
+      "channel": "shell:open-external",
+      "signature": "async (_event, url) => {",
+      "file": "src/main/main.js",
+      "line": 2185
+    },
+    {
+      "receiver": "handle",
+      "channel": "link-preview:fetch",
+      "signature": "async (_event, url) => fetchLinkPreview(url));",
+      "file": "src/main/main.js",
+      "line": 2298
+    },
+    {
+      "receiver": "handle",
+      "channel": "app:confirm-exit",
+      "signature": "() => {",
+      "file": "src/main/main.js",
+      "line": 2300
+    },
+    {
+      "receiver": "on",
+      "channel": "bluetooth:select-device",
+      "signature": "(_event, deviceId) => {",
+      "file": "src/main/main.js",
+      "line": 2306
+    },
+    {
+      "receiver": "on",
+      "channel": "bluetooth:cancel-device",
+      "signature": "() => {",
+      "file": "src/main/main.js",
+      "line": 2313
+    },
+    {
+      "receiver": "handle",
+      "channel": "bluetooth:reset-scan",
+      "signature": "() => cancelPendingBluetoothSelection());",
+      "file": "src/main/main.js",
+      "line": 2317
+    },
+    {
+      "receiver": "handle",
+      "channel": "bluetooth:auto-scan",
+      "signature": "(_event, discoveryTag) => {",
+      "file": "src/main/main.js",
+      "line": 2318
+    }
+  ],
+  "bridges": [
+    {
+      "api": "adminAuth",
+      "arguments": "(passphrase) =>",
+      "operation": "invoke",
+      "channel": "admin:authenticate",
+      "file": "src/main/preload.js",
+      "line": 18
+    },
+    {
+      "api": "adminHasGhToken",
+      "arguments": "(token) =>",
+      "operation": "invoke",
+      "channel": "admin:has-gh-token",
+      "file": "src/main/preload.js",
+      "line": 19
+    },
+    {
+      "api": "adminLogout",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "admin:logout",
+      "file": "src/main/preload.js",
+      "line": 20
+    },
+    {
+      "api": "loadDatabase",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "db:load",
+      "file": "src/main/preload.js",
+      "line": 23
+    },
+    {
+      "api": "saveDatabase",
+      "arguments": "(data) =>",
+      "operation": "invoke",
+      "channel": "db:save",
+      "file": "src/main/preload.js",
+      "line": 24
+    },
+    {
+      "api": "getSchoolCloudFeatureStatus",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "school-cloud:feature-status",
+      "file": "src/main/preload.js",
+      "line": 27
+    },
+    {
+      "api": "configureSchoolCloud",
+      "arguments": "(schoolId, connection) =>",
+      "operation": "invoke",
+      "channel": "school-cloud:configure",
+      "file": "src/main/preload.js",
+      "line": 28
+    },
+    {
+      "api": "activateSchoolCloud",
+      "arguments": "(schoolId, connection) =>",
+      "operation": "invoke",
+      "channel": "school-cloud:activate",
+      "file": "src/main/preload.js",
+      "line": 29
+    },
+    {
+      "api": "bootstrapSchoolCloud",
+      "arguments": "(setup) =>",
+      "operation": "invoke",
+      "channel": "school-cloud:bootstrap",
+      "file": "src/main/preload.js",
+      "line": 30
+    },
+    {
+      "api": "getSchoolCloudStatus",
+      "arguments": "(schoolId) =>",
+      "operation": "invoke",
+      "channel": "school-cloud:status",
+      "file": "src/main/preload.js",
+      "line": 31
+    },
+    {
+      "api": "listSchoolCloudConnections",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "school-cloud:connections",
+      "file": "src/main/preload.js",
+      "line": 32
+    },
+    {
+      "api": "disconnectSchoolCloud",
+      "arguments": "(schoolId) =>",
+      "operation": "invoke",
+      "channel": "school-cloud:disconnect",
+      "file": "src/main/preload.js",
+      "line": 33
+    },
+    {
+      "api": "requestSchoolCloud",
+      "arguments": "(schoolId, request) =>",
+      "operation": "invoke",
+      "channel": "school-cloud:request",
+      "file": "src/main/preload.js",
+      "line": 34
+    },
+    {
+      "api": "backupSchoolCloudProfile",
+      "arguments": "(schoolId, database) =>",
+      "operation": "invoke",
+      "channel": "school-cloud:backup-profile",
+      "file": "src/main/preload.js",
+      "line": 35
+    },
+    {
+      "api": "restoreSchoolCloudProfile",
+      "arguments": "(schoolId) =>",
+      "operation": "invoke",
+      "channel": "school-cloud:restore-profile",
+      "file": "src/main/preload.js",
+      "line": 36
+    },
+    {
+      "api": "startCompanionWlan",
+      "arguments": "(pairingContext) =>",
+      "operation": "invoke",
+      "channel": "companion:wlan-start",
+      "file": "src/main/preload.js",
+      "line": 39
+    },
+    {
+      "api": "startCompanionBluetooth",
+      "arguments": "(pairingContext) =>",
+      "operation": "invoke",
+      "channel": "companion:bluetooth-start",
+      "file": "src/main/preload.js",
+      "line": 40
+    },
+    {
+      "api": "configureCompanionFirewall",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "companion:firewall-configure",
+      "file": "src/main/preload.js",
+      "line": 41
+    },
+    {
+      "api": "stopCompanionWlan",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "companion:wlan-stop",
+      "file": "src/main/preload.js",
+      "line": 42
+    },
+    {
+      "api": "getCompanionWlanStatus",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "companion:wlan-status",
+      "file": "src/main/preload.js",
+      "line": 43
+    },
+    {
+      "api": "publishCompanionSnapshot",
+      "arguments": "(snapshot) =>",
+      "operation": "invoke",
+      "channel": "companion:publish-snapshot",
+      "file": "src/main/preload.js",
+      "line": 44
+    },
+    {
+      "api": "getCompanionMobileUpdateStatus",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "companion:mobile-update-status",
+      "file": "src/main/preload.js",
+      "line": 45
+    },
+    {
+      "api": "refreshCompanionMobileUpdateFromGithub",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "companion:mobile-update-refresh",
+      "file": "src/main/preload.js",
+      "line": 46
+    },
+    {
+      "api": "importCompanionMobileUpdate",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "companion:mobile-update-import",
+      "file": "src/main/preload.js",
+      "line": 47
+    },
+    {
+      "api": "generateCompanionQr",
+      "arguments": "(payload) =>",
+      "operation": "invoke",
+      "channel": "compute:generate-companion-qr",
+      "file": "src/main/preload.js",
+      "line": 48
+    },
+    {
+      "api": "sendCompanionChangesResult",
+      "arguments": "(requestId, result) =>",
+      "operation": "send",
+      "channel": "companion:changes-result",
+      "file": "src/main/preload.js",
+      "line": 49
+    },
+    {
+      "api": "exportJson",
+      "arguments": "(jsonString, defaultFileName) =>",
+      "operation": "invoke",
+      "channel": "dialog:export-json",
+      "file": "src/main/preload.js",
+      "line": 56
+    },
+    {
+      "api": "importJson",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "dialog:import-json",
+      "file": "src/main/preload.js",
+      "line": 57
+    },
+    {
+      "api": "exportGradeTransfer",
+      "arguments": "(jsonString, defaultFileName) =>",
+      "operation": "invoke",
+      "channel": "dialog:export-grade-transfer",
+      "file": "src/main/preload.js",
+      "line": 58
+    },
+    {
+      "api": "importGradeTransfer",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "dialog:import-grade-transfer",
+      "file": "src/main/preload.js",
+      "line": 59
+    },
+    {
+      "api": "exportAdvisoryResetBackup",
+      "arguments": "(request) =>",
+      "operation": "invoke",
+      "channel": "dialog:export-advisory-reset-backup",
+      "file": "src/main/preload.js",
+      "line": 60
+    },
+    {
+      "api": "selectFolder",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "dialog:select-folder",
+      "file": "src/main/preload.js",
+      "line": 61
+    },
+    {
+      "api": "selectAndScanBackupFolder",
+      "arguments": "(backupRecoveryId) =>",
+      "operation": "invoke",
+      "channel": "backup:select-and-scan",
+      "file": "src/main/preload.js",
+      "line": 62
+    },
+    {
+      "api": "discoverOneDriveBackups",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "backup:discover-onedrive",
+      "file": "src/main/preload.js",
+      "line": 63
+    },
+    {
+      "api": "scanKnownBackupFolder",
+      "arguments": "(backupRecoveryId, folderPath) =>",
+      "operation": "invoke",
+      "channel": "backup:scan-known-folder",
+      "file": "src/main/preload.js",
+      "line": 64
+    },
+    {
+      "api": "readDiscoveredBackup",
+      "arguments": "(handle) =>",
+      "operation": "invoke",
+      "channel": "backup:read-discovered",
+      "file": "src/main/preload.js",
+      "line": 65
+    },
+    {
+      "api": "getSharedSyncDeviceInfo",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "shared-sync:device-info",
+      "file": "src/main/preload.js",
+      "line": 66
+    },
+    {
+      "api": "renameSharedSyncDevice",
+      "arguments": "(label) =>",
+      "operation": "invoke",
+      "channel": "shared-sync:rename-device",
+      "file": "src/main/preload.js",
+      "line": 67
+    },
+    {
+      "api": "getSharedSyncState",
+      "arguments": "(backupRecoveryId) =>",
+      "operation": "invoke",
+      "channel": "shared-sync:state",
+      "file": "src/main/preload.js",
+      "line": 68
+    },
+    {
+      "api": "configureSharedSyncFolder",
+      "arguments": "(backupRecoveryId) =>",
+      "operation": "invoke",
+      "channel": "shared-sync:configure-folder",
+      "file": "src/main/preload.js",
+      "line": 69
+    },
+    {
+      "api": "selectOneDriveSyncFolder",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "shared-sync:select-onedrive-folder",
+      "file": "src/main/preload.js",
+      "line": 70
+    },
+    {
+      "api": "configureSelectedSharedSyncFolder",
+      "arguments": "(backupRecoveryId, folderPath) =>",
+      "operation": "invoke",
+      "channel": "shared-sync:configure-selected-folder",
+      "file": "src/main/preload.js",
+      "line": 71
+    },
+    {
+      "api": "inspectSelectedSharedSyncFolder",
+      "arguments": "(backupRecoveryId, folderPath) =>",
+      "operation": "invoke",
+      "channel": "shared-sync:inspect-selected-folder",
+      "file": "src/main/preload.js",
+      "line": 72
+    },
+    {
+      "api": "disableSharedSync",
+      "arguments": "(backupRecoveryId) =>",
+      "operation": "invoke",
+      "channel": "shared-sync:disable",
+      "file": "src/main/preload.js",
+      "line": 73
+    },
+    {
+      "api": "writeSharedSyncHead",
+      "arguments": "(backupRecoveryId, envelopeText) =>",
+      "operation": "invoke",
+      "channel": "shared-sync:write-head",
+      "file": "src/main/preload.js",
+      "line": 74
+    },
+    {
+      "api": "writeSharedSyncBase",
+      "arguments": "(backupRecoveryId, envelopeText) =>",
+      "operation": "invoke",
+      "channel": "shared-sync:write-base",
+      "file": "src/main/preload.js",
+      "line": 75
+    },
+    {
+      "api": "scanSharedSyncFolder",
+      "arguments": "(backupRecoveryId) =>",
+      "operation": "invoke",
+      "channel": "shared-sync:scan",
+      "file": "src/main/preload.js",
+      "line": 76
+    },
+    {
+      "api": "createSharedSyncRestorePoint",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "shared-sync:create-restore-point",
+      "file": "src/main/preload.js",
+      "line": 77
+    },
+    {
+      "api": "createDatabaseRestorePoint",
+      "arguments": "(reason) =>",
+      "operation": "invoke",
+      "channel": "database:create-restore-point",
+      "file": "src/main/preload.js",
+      "line": 78
+    },
+    {
+      "api": "readSharedSyncFile",
+      "arguments": "(handle) =>",
+      "operation": "invoke",
+      "channel": "shared-sync:read",
+      "file": "src/main/preload.js",
+      "line": 79
+    },
+    {
+      "api": "importSf1",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "dialog:import-sf1",
+      "file": "src/main/preload.js",
+      "line": 81
+    },
+    {
+      "api": "exportCsv",
+      "arguments": "(csvString, defaultFileName) =>",
+      "operation": "invoke",
+      "channel": "dialog:export-csv",
+      "file": "src/main/preload.js",
+      "line": 82
+    },
+    {
+      "api": "showPrintChoose",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "dialog:print-choose",
+      "file": "src/main/preload.js",
+      "line": 83
+    },
+    {
+      "api": "exportExcelTemplate",
+      "arguments": "(payload) =>",
+      "operation": "invoke",
+      "channel": "dialog:export-excel-template",
+      "file": "src/main/preload.js",
+      "line": 84
+    },
+    {
+      "api": "exportPdf",
+      "arguments": "(options) =>",
+      "operation": "invoke",
+      "channel": "dialog:export-pdf",
+      "file": "src/main/preload.js",
+      "line": 85
+    },
+    {
+      "api": "generateRecoveryQr",
+      "arguments": "(payload) =>",
+      "operation": "invoke",
+      "channel": "compute:generate-recovery-qr",
+      "file": "src/main/preload.js",
+      "line": 86
+    },
+    {
+      "api": "decodeRecoveryQrPixels",
+      "arguments": "(pixels) =>",
+      "operation": "invoke",
+      "channel": "compute:decode-recovery-qr",
+      "file": "src/main/preload.js",
+      "line": 87
+    },
+    {
+      "api": "generateSudoku",
+      "arguments": "(difficulty = 'medium') =>",
+      "operation": "invoke",
+      "channel": "compute:generate-sudoku",
+      "file": "src/main/preload.js",
+      "line": 88
+    },
+    {
+      "api": "getDiagnosticPolicy",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "diagnostics:policy",
+      "file": "src/main/preload.js",
+      "line": 89
+    },
+    {
+      "api": "setDiagnosticCollectionEnabled",
+      "arguments": "(enabled) =>",
+      "operation": "invoke",
+      "channel": "diagnostics:set-enabled",
+      "file": "src/main/preload.js",
+      "line": 90
+    },
+    {
+      "api": "exportDiagnosticSupportBundle",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "diagnostics:export",
+      "file": "src/main/preload.js",
+      "line": 91
+    },
+    {
+      "api": "deleteDiagnosticData",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "diagnostics:delete",
+      "file": "src/main/preload.js",
+      "line": 92
+    },
+    {
+      "api": "getPermissionPreferences",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "security:permission-preferences",
+      "file": "src/main/preload.js",
+      "line": 93
+    },
+    {
+      "api": "setPermissionPreference",
+      "arguments": "(capability, enabled) =>",
+      "operation": "invoke",
+      "channel": "security:set-permission-preference",
+      "file": "src/main/preload.js",
+      "line": 94
+    },
+    {
+      "api": "requestCapability",
+      "arguments": "(capability) =>",
+      "operation": "invoke",
+      "channel": "security:request-capability",
+      "file": "src/main/preload.js",
+      "line": 95
+    },
+    {
+      "api": "setProfileSession",
+      "arguments": "(profileId, unlocked) =>",
+      "operation": "invoke",
+      "channel": "security:set-profile-session",
+      "file": "src/main/preload.js",
+      "line": 96
+    },
+    {
+      "api": "exportRecoveryQr",
+      "arguments": "(dataUrl, defaultFileName) =>",
+      "operation": "invoke",
+      "channel": "dialog:export-recovery-qr",
+      "file": "src/main/preload.js",
+      "line": 97
+    },
+    {
+      "api": "printRecoveryQr",
+      "arguments": "(dataUrl, label) =>",
+      "operation": "invoke",
+      "channel": "dialog:print-recovery-qr",
+      "file": "src/main/preload.js",
+      "line": 98
+    },
+    {
+      "api": "importAssessmentAttachment",
+      "arguments": "(assignmentId, assessmentId) =>",
+      "operation": "invoke",
+      "channel": "dialog:import-assessment-attachment",
+      "file": "src/main/preload.js",
+      "line": 99
+    },
+    {
+      "api": "openAssessmentAttachment",
+      "arguments": "(relativePath) =>",
+      "operation": "invoke",
+      "channel": "attachment:open",
+      "file": "src/main/preload.js",
+      "line": 100
+    },
+    {
+      "api": "removeAssessmentAttachment",
+      "arguments": "(relativePath) =>",
+      "operation": "invoke",
+      "channel": "attachment:remove",
+      "file": "src/main/preload.js",
+      "line": 101
+    },
+    {
+      "api": "getVersion",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "app:version",
+      "file": "src/main/preload.js",
+      "line": 104
+    },
+    {
+      "api": "getPerformanceProfile",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "system:performance-profile",
+      "file": "src/main/preload.js",
+      "line": 105
+    },
+    {
+      "api": "checkForUpdates",
+      "arguments": "(options) =>",
+      "operation": "invoke",
+      "channel": "updater:check",
+      "file": "src/main/preload.js",
+      "line": 106
+    },
+    {
+      "api": "downloadUpdate",
+      "arguments": "(options) =>",
+      "operation": "invoke",
+      "channel": "updater:download",
+      "file": "src/main/preload.js",
+      "line": 107
+    },
+    {
+      "api": "quitAndInstall",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "updater:quit-and-install",
+      "file": "src/main/preload.js",
+      "line": 108
+    },
+    {
+      "api": "openExternal",
+      "arguments": "(url) =>",
+      "operation": "invoke",
+      "channel": "shell:open-external",
+      "file": "src/main/preload.js",
+      "line": 109
+    },
+    {
+      "api": "fetchLinkPreview",
+      "arguments": "(url) =>",
+      "operation": "invoke",
+      "channel": "link-preview:fetch",
+      "file": "src/main/preload.js",
+      "line": 110
+    },
+    {
+      "api": "confirmExit",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "app:confirm-exit",
+      "file": "src/main/preload.js",
+      "line": 117
+    },
+    {
+      "api": "selectBluetoothDevice",
+      "arguments": "(deviceId) =>",
+      "operation": "send",
+      "channel": "bluetooth:select-device",
+      "file": "src/main/preload.js",
+      "line": 122
+    },
+    {
+      "api": "cancelBluetoothDevice",
+      "arguments": "() =>",
+      "operation": "send",
+      "channel": "bluetooth:cancel-device",
+      "file": "src/main/preload.js",
+      "line": 123
+    },
+    {
+      "api": "resetBluetoothScan",
+      "arguments": "() =>",
+      "operation": "invoke",
+      "channel": "bluetooth:reset-scan",
+      "file": "src/main/preload.js",
+      "line": 124
+    },
+    {
+      "api": "startAutomaticBluetoothScan",
+      "arguments": "(discoveryTag) =>",
+      "operation": "invoke",
+      "channel": "bluetooth:auto-scan",
+      "file": "src/main/preload.js",
+      "line": 125
+    }
+  ],
+  "sends": [
+    {
+      "channel": "companion:tool-command",
+      "file": "src/main/main.js",
+      "line": 305
+    },
+    {
+      "channel": "companion:client-activity",
+      "file": "src/main/main.js",
+      "line": 310
+    },
+    {
+      "channel": "shared-sync-folder-changed",
+      "file": "src/main/main.js",
+      "line": 351
+    },
+    {
+      "channel": "bluetooth:device-list",
+      "file": "src/main/main.js",
+      "line": 1395
+    },
+    {
+      "channel": "app-close-triggered",
+      "file": "src/main/main.js",
+      "line": 1415
+    },
+    {
+      "channel": "menu-save",
+      "file": "src/main/main.js",
+      "line": 1437
+    },
+    {
+      "channel": "menu-export-json",
+      "file": "src/main/main.js",
+      "line": 1439
+    },
+    {
+      "channel": "menu-import-json",
+      "file": "src/main/main.js",
+      "line": 1440
+    },
+    {
+      "channel": "update-status",
+      "file": "src/main/updater.js",
+      "line": 49
+    }
+  ],
+  "channels": [
+    {
+      "channel": "admin:authenticate",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "adminAuth",
+      "input": "async (_event, passphrase) => {",
+      "auth": "Passphrase is checked; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Changes privileged admin session state.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1515"
+    },
+    {
+      "channel": "admin:has-gh-token",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "adminHasGhToken",
+      "input": "async (_event, token) => {",
+      "auth": "Admin session is checked where implemented; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Changes privileged admin session state.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1526"
+    },
+    {
+      "channel": "admin:logout",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "adminLogout",
+      "input": "async () => {",
+      "auth": "Admin session is checked where implemented; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Changes privileged admin session state.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1535"
+    },
+    {
+      "channel": "app-close-triggered",
+      "direction": "Main -> Renderer",
+      "bridge": "",
+      "input": "Main event payload; renderer callback is channel-specific.",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/main.js:1415"
+    },
+    {
+      "channel": "app:confirm-exit",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "confirmExit",
+      "input": "() => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads metadata or controls application shutdown.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2300"
+    },
+    {
+      "channel": "app:version",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "getVersion",
+      "input": "() => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads metadata or controls application shutdown.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2145"
+    },
+    {
+      "channel": "attachment:open",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "openAssessmentAttachment",
+      "input": "async (_event, relativePath) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads, imports, opens, or removes an assessment attachment.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1985"
+    },
+    {
+      "channel": "attachment:remove",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "removeAssessmentAttachment",
+      "input": "async (_event, relativePath) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads, imports, opens, or removes an assessment attachment.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1992"
+    },
+    {
+      "channel": "backup:discover-onedrive",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "discoverOneDriveBackups",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Scans or reads backup material.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1866"
+    },
+    {
+      "channel": "backup:read-discovered",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "readDiscoveredBackup",
+      "input": "async (_event, handle) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Scans or reads backup material.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1802"
+    },
+    {
+      "channel": "backup:scan-known-folder",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "scanKnownBackupFolder",
+      "input": "async (_event, backupRecoveryId, folderPath) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Scans or reads backup material.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1870"
+    },
+    {
+      "channel": "backup:select-and-scan",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "selectAndScanBackupFolder",
+      "input": "async (_event, backupRecoveryId) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Scans or reads backup material.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1764"
+    },
+    {
+      "channel": "bluetooth:auto-scan",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "startAutomaticBluetoothScan",
+      "input": "(_event, discoveryTag) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Controls Web Bluetooth device selection.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2318"
+    },
+    {
+      "channel": "bluetooth:cancel-device",
+      "direction": "Renderer send -> Main",
+      "bridge": "cancelBluetoothDevice",
+      "input": "() => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Controls Web Bluetooth device selection.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/main.js:2313"
+    },
+    {
+      "channel": "bluetooth:device-list",
+      "direction": "Main -> Renderer",
+      "bridge": "",
+      "input": "Main event payload; renderer callback is channel-specific.",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Controls Web Bluetooth device selection.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/main.js:1395"
+    },
+    {
+      "channel": "bluetooth:reset-scan",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "resetBluetoothScan",
+      "input": "() => cancelPendingBluetoothSelection());",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Controls Web Bluetooth device selection.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2317"
+    },
+    {
+      "channel": "bluetooth:select-device",
+      "direction": "Renderer send -> Main",
+      "bridge": "selectBluetoothDevice",
+      "input": "(_event, deviceId) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Controls Web Bluetooth device selection.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/main.js:2306"
+    },
+    {
+      "channel": "companion:bluetooth-start",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "startCompanionBluetooth",
+      "input": "async (_event, pairingContext) => companionSyncService.startBluetooth(pairingContext));",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1589"
+    },
+    {
+      "channel": "companion:changes-result",
+      "direction": "Renderer send -> Main",
+      "bridge": "sendCompanionChangesResult",
+      "input": "(_event, requestId, result) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/main.js:1653"
+    },
+    {
+      "channel": "companion:client-activity",
+      "direction": "Main -> Renderer",
+      "bridge": "",
+      "input": "Main event payload; renderer callback is channel-specific.",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/main.js:310"
+    },
+    {
+      "channel": "companion:firewall-configure",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "configureCompanionFirewall",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1590"
+    },
+    {
+      "channel": "companion:mobile-update-import",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "importCompanionMobileUpdate",
+      "input": "importMobileUpdatePackage);",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1652"
+    },
+    {
+      "channel": "companion:mobile-update-refresh",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "refreshCompanionMobileUpdateFromGithub",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1645"
+    },
+    {
+      "channel": "companion:mobile-update-status",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "getCompanionMobileUpdateStatus",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1637"
+    },
+    {
+      "channel": "companion:publish-snapshot",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "publishCompanionSnapshot",
+      "input": "async (_event, snapshot) => companionSyncService.publish(snapshot));",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1636"
+    },
+    {
+      "channel": "companion:tool-command",
+      "direction": "Main -> Renderer",
+      "bridge": "",
+      "input": "Main event payload; renderer callback is channel-specific.",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/main.js:305"
+    },
+    {
+      "channel": "companion:wlan-start",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "startCompanionWlan",
+      "input": "async (_event, pairingContext) => companionSyncService.start(pairingContext));",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1588"
+    },
+    {
+      "channel": "companion:wlan-status",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "getCompanionWlanStatus",
+      "input": "async () => companionSyncService.publicStatus());",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1635"
+    },
+    {
+      "channel": "companion:wlan-stop",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "stopCompanionWlan",
+      "input": "async () => companionSyncService.stop());",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Starts, stops, publishes, or configures companion synchronization.",
+      "timeout": "Companion request flow has handler-specific timeouts.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1634"
+    },
+    {
+      "channel": "compute:decode-recovery-qr",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "decodeRecoveryQrPixels",
+      "input": "async (_event, pixels) => computeService.decodeRecoveryQrPixels(pixels));",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1597"
+    },
+    {
+      "channel": "compute:generate-companion-qr",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "generateCompanionQr",
+      "input": "async (_event, payload) => computeService.generateCompanionQr(payload));",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1595"
+    },
+    {
+      "channel": "compute:generate-recovery-qr",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "generateRecoveryQr",
+      "input": "async (_event, payload) => computeService.generateRecoveryQr(payload));",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1596"
+    },
+    {
+      "channel": "compute:generate-sudoku",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "generateSudoku",
+      "input": "async (_event, difficulty) => computeService.generateSudoku(difficulty));",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1598"
+    },
+    {
+      "channel": "database:create-restore-point",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "createDatabaseRestorePoint",
+      "input": "async (_event, reason) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Creates a durable database restore point.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1917"
+    },
+    {
+      "channel": "db:load",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "loadDatabase",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or atomically writes the profile database.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1540"
+    },
+    {
+      "channel": "db:save",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "saveDatabase",
+      "input": "async (_event, data) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or atomically writes the profile database.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1584"
+    },
+    {
+      "channel": "diagnostics:delete",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "deleteDiagnosticData",
+      "input": "async () => diagnosticService.deleteAll());",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1601"
+    },
+    {
+      "channel": "diagnostics:export",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "exportDiagnosticSupportBundle",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1602"
+    },
+    {
+      "channel": "diagnostics:policy",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "getDiagnosticPolicy",
+      "input": "async () => diagnosticService.policy());",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1599"
+    },
+    {
+      "channel": "diagnostics:set-enabled",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "setDiagnosticCollectionEnabled",
+      "input": "async (_event, enabled) => diagnosticService.setEnabled(enabled));",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1600"
+    },
+    {
+      "channel": "dialog:export-advisory-reset-backup",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "exportAdvisoryResetBackup",
+      "input": "async (_event, request) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1738"
+    },
+    {
+      "channel": "dialog:export-csv",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "exportCsv",
+      "input": "async (_event, csvString, defaultFileName) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1998"
+    },
+    {
+      "channel": "dialog:export-excel-template",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "exportExcelTemplate",
+      "input": "async (_event, payload) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2010"
+    },
+    {
+      "channel": "dialog:export-grade-transfer",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "exportGradeTransfer",
+      "input": "async (_event, jsonString, defaultFileName) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1715"
+    },
+    {
+      "channel": "dialog:export-json",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "exportJson",
+      "input": "async (_event, jsonString, defaultFileName) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1663"
+    },
+    {
+      "channel": "dialog:export-pdf",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "exportPdf",
+      "input": "async (_event, options) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2029"
+    },
+    {
+      "channel": "dialog:export-recovery-qr",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "exportRecoveryQr",
+      "input": "async (_event, dataUrl, defaultFileName) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1686"
+    },
+    {
+      "channel": "dialog:import-assessment-attachment",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "importAssessmentAttachment",
+      "input": "async (_event, assignmentId, assessmentId) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1945"
+    },
+    {
+      "channel": "dialog:import-grade-transfer",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "importGradeTransfer",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1727"
+    },
+    {
+      "channel": "dialog:import-json",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "importJson",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1675"
+    },
+    {
+      "channel": "dialog:import-sf1",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "importSf1",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1925"
+    },
+    {
+      "channel": "dialog:print-choose",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "showPrintChoose",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2131"
+    },
+    {
+      "channel": "dialog:print-recovery-qr",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "printRecoveryQr",
+      "input": "async (_event, dataUrl, label) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1699"
+    },
+    {
+      "channel": "dialog:select-folder",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "selectFolder",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Opens a native dialog and may read or write a user-selected file.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1753"
+    },
+    {
+      "channel": "link-preview:fetch",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "fetchLinkPreview",
+      "input": "async (_event, url) => fetchLinkPreview(url));",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Performs a remote metadata request.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2298"
+    },
+    {
+      "channel": "menu-export-json",
+      "direction": "Main -> Renderer",
+      "bridge": "",
+      "input": "Main event payload; renderer callback is channel-specific.",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/main.js:1439"
+    },
+    {
+      "channel": "menu-import-json",
+      "direction": "Main -> Renderer",
+      "bridge": "",
+      "input": "Main event payload; renderer callback is channel-specific.",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/main.js:1440"
+    },
+    {
+      "channel": "menu-save",
+      "direction": "Main -> Renderer",
+      "bridge": "",
+      "input": "Main event payload; renderer callback is channel-specific.",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/main.js:1437"
+    },
+    {
+      "channel": "school-cloud:activate",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "activateSchoolCloud",
+      "input": "async (_event, schoolId, connection) => {",
+      "auth": "School connection/authentication is handler-specific; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes School Cloud state or encrypted remote data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1552"
+    },
+    {
+      "channel": "school-cloud:backup-profile",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "backupSchoolCloudProfile",
+      "input": "async (_event, schoolId, database) => {",
+      "auth": "School connection/authentication is handler-specific; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes School Cloud state or encrypted remote data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1576"
+    },
+    {
+      "channel": "school-cloud:bootstrap",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "bootstrapSchoolCloud",
+      "input": "async (_event, setup) => {",
+      "auth": "School connection/authentication is handler-specific; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes School Cloud state or encrypted remote data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1556"
+    },
+    {
+      "channel": "school-cloud:configure",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "configureSchoolCloud",
+      "input": "async (_event, schoolId, connection) => {",
+      "auth": "School connection/authentication is handler-specific; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes School Cloud state or encrypted remote data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1548"
+    },
+    {
+      "channel": "school-cloud:connections",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "listSchoolCloudConnections",
+      "input": "async () => {",
+      "auth": "School connection/authentication is handler-specific; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes School Cloud state or encrypted remote data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1564"
+    },
+    {
+      "channel": "school-cloud:disconnect",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "disconnectSchoolCloud",
+      "input": "async (_event, schoolId) => {",
+      "auth": "School connection/authentication is handler-specific; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes School Cloud state or encrypted remote data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1568"
+    },
+    {
+      "channel": "school-cloud:feature-status",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "getSchoolCloudFeatureStatus",
+      "input": "async () => ({",
+      "auth": "School connection/authentication is handler-specific; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes School Cloud state or encrypted remote data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1544"
+    },
+    {
+      "channel": "school-cloud:request",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "requestSchoolCloud",
+      "input": "async (_event, schoolId, request) => {",
+      "auth": "School connection/authentication is handler-specific; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes School Cloud state or encrypted remote data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1572"
+    },
+    {
+      "channel": "school-cloud:restore-profile",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "restoreSchoolCloudProfile",
+      "input": "async (_event, schoolId) => {",
+      "auth": "School connection/authentication is handler-specific; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes School Cloud state or encrypted remote data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1580"
+    },
+    {
+      "channel": "school-cloud:status",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "getSchoolCloudStatus",
+      "input": "async (_event, schoolId) => {",
+      "auth": "School connection/authentication is handler-specific; sender is not centrally validated.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes School Cloud state or encrypted remote data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1560"
+    },
+    {
+      "channel": "security:permission-preferences",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "getPermissionPreferences",
+      "input": "async () => permissionService.read());",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1618"
+    },
+    {
+      "channel": "security:request-capability",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "requestCapability",
+      "input": "async (_event, capability) => permissionService.begin(String(capability || '')));",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1626"
+    },
+    {
+      "channel": "security:set-permission-preference",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "setPermissionPreference",
+      "input": "async (_event, capability, enabled) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1619"
+    },
+    {
+      "channel": "security:set-profile-session",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "setProfileSession",
+      "input": "async (_event, state) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1627"
+    },
+    {
+      "channel": "shared-sync-folder-changed",
+      "direction": "Main -> Renderer",
+      "bridge": "",
+      "input": "Main event payload; renderer callback is channel-specific.",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/main.js:351"
+    },
+    {
+      "channel": "shared-sync:configure-folder",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "configureSharedSyncFolder",
+      "input": "async (_event, backupRecoveryId) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1826"
+    },
+    {
+      "channel": "shared-sync:configure-selected-folder",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "configureSelectedSharedSyncFolder",
+      "input": "async (_event, backupRecoveryId, folderPath) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1886"
+    },
+    {
+      "channel": "shared-sync:create-restore-point",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "createSharedSyncRestorePoint",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1913"
+    },
+    {
+      "channel": "shared-sync:device-info",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "getSharedSyncDeviceInfo",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1812"
+    },
+    {
+      "channel": "shared-sync:disable",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "disableSharedSync",
+      "input": "async (_event, backupRecoveryId) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1896"
+    },
+    {
+      "channel": "shared-sync:inspect-selected-folder",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "inspectSelectedSharedSyncFolder",
+      "input": "async (_event, backupRecoveryId, folderPath) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1892"
+    },
+    {
+      "channel": "shared-sync:read",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "readSharedSyncFile",
+      "input": "async (_event, handle) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1921"
+    },
+    {
+      "channel": "shared-sync:rename-device",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "renameSharedSyncDevice",
+      "input": "async (_event, label) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1816"
+    },
+    {
+      "channel": "shared-sync:scan",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "scanSharedSyncFolder",
+      "input": "async (_event, backupRecoveryId) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1909"
+    },
+    {
+      "channel": "shared-sync:select-onedrive-folder",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "selectOneDriveSyncFolder",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1876"
+    },
+    {
+      "channel": "shared-sync:state",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "getSharedSyncState",
+      "input": "async (_event, backupRecoveryId) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1820"
+    },
+    {
+      "channel": "shared-sync:write-base",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "writeSharedSyncBase",
+      "input": "async (_event, backupRecoveryId, envelopeText) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1905"
+    },
+    {
+      "channel": "shared-sync:write-head",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "writeSharedSyncHead",
+      "input": "async (_event, backupRecoveryId, envelopeText) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads or changes shared-folder configuration or data.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:1901"
+    },
+    {
+      "channel": "shell:open-external",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "openExternal",
+      "input": "async (_event, url) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Launches an operating-system URL or resource.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2185"
+    },
+    {
+      "channel": "system:performance-profile",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "getPerformanceProfile",
+      "input": "() => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Reads local performance information.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2149"
+    },
+    {
+      "channel": "update-status",
+      "direction": "Main -> Renderer",
+      "bridge": "",
+      "input": "Main event payload; renderer callback is channel-specific.",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Handler-specific application side effect.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Event channel; failures require handler-specific acknowledgement.",
+      "location": "src/main/updater.js:49"
+    },
+    {
+      "channel": "updater:check",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "checkForUpdates",
+      "input": "async (_event, options) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Checks, downloads, or installs a desktop update.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2171"
+    },
+    {
+      "channel": "updater:download",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "downloadUpdate",
+      "input": "async (_event, options) => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Checks, downloads, or installs a desktop update.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2175"
+    },
+    {
+      "channel": "updater:quit-and-install",
+      "direction": "Renderer invoke -> Main",
+      "bridge": "quitAndInstall",
+      "input": "async () => {",
+      "auth": "No central trusted-sender gate; profile/admin authorization is handler-specific.",
+      "limits": "No centralized IPC size limit; handler validation must be reviewed in Phase 2.",
+      "sideEffect": "Checks, downloads, or installs a desktop update.",
+      "timeout": "No centralized timeout; promise/event behavior is handler-specific.",
+      "errors": "Thrown/rejected errors propagate through ipcRenderer.invoke.",
+      "location": "src/main/main.js:2179"
+    }
+  ],
+  "dialogs": [
+    {
+      "method": "showMessageBox",
+      "file": "src/main/main.js",
+      "line": 100
+    },
+    {
+      "method": "showMessageBox",
+      "file": "src/main/main.js",
+      "line": 132
+    },
+    {
+      "method": "showOpenDialog",
+      "file": "src/main/main.js",
+      "line": 261
+    },
+    {
+      "method": "showMessageBox",
+      "file": "src/main/main.js",
+      "line": 1474
+    },
+    {
+      "method": "showSaveDialog",
+      "file": "src/main/main.js",
+      "line": 1603
+    },
+    {
+      "method": "showSaveDialog",
+      "file": "src/main/main.js",
+      "line": 1665
+    },
+    {
+      "method": "showOpenDialog",
+      "file": "src/main/main.js",
+      "line": 1676
+    },
+    {
+      "method": "showSaveDialog",
+      "file": "src/main/main.js",
+      "line": 1689
+    },
+    {
+      "method": "showSaveDialog",
+      "file": "src/main/main.js",
+      "line": 1717
+    },
+    {
+      "method": "showOpenDialog",
+      "file": "src/main/main.js",
+      "line": 1728
+    },
+    {
+      "method": "showSaveDialog",
+      "file": "src/main/main.js",
+      "line": 1742
+    },
+    {
+      "method": "showOpenDialog",
+      "file": "src/main/main.js",
+      "line": 1754
+    },
+    {
+      "method": "showOpenDialog",
+      "file": "src/main/main.js",
+      "line": 1765
+    },
+    {
+      "method": "showOpenDialog",
+      "file": "src/main/main.js",
+      "line": 1827
+    },
+    {
+      "method": "showOpenDialog",
+      "file": "src/main/main.js",
+      "line": 1877
+    },
+    {
+      "method": "showOpenDialog",
+      "file": "src/main/main.js",
+      "line": 1926
+    },
+    {
+      "method": "showOpenDialog",
+      "file": "src/main/main.js",
+      "line": 1946
+    },
+    {
+      "method": "showSaveDialog",
+      "file": "src/main/main.js",
+      "line": 2000
+    },
+    {
+      "method": "showSaveDialog",
+      "file": "src/main/main.js",
+      "line": 2012
+    },
+    {
+      "method": "showSaveDialog",
+      "file": "src/main/main.js",
+      "line": 2117
+    },
+    {
+      "method": "showMessageBox",
+      "file": "src/main/main.js",
+      "line": 2132
+    }
+  ],
+  "shell": [
+    {
+      "method": "openExternal",
+      "file": "src/main/main.js",
+      "line": 1592
+    },
+    {
+      "method": "openPath",
+      "file": "src/main/main.js",
+      "line": 1988
+    },
+    {
+      "method": "openExternal",
+      "file": "src/main/main.js",
+      "line": 2186
+    }
+  ],
+  "sessions": [
+    {
+      "expression": "session.defaultSession.clearStorageData",
+      "file": "src/main/main.js",
+      "line": 1622
+    },
+    {
+      "expression": "session.defaultSession",
+      "file": "src/main/main.js",
+      "line": 2364
+    },
+    {
+      "expression": "session.defaultSession.webRequest.onBeforeRequest",
+      "file": "src/main/main.js",
+      "line": 2366
+    }
+  ],
+  "protocols": [
+    {
+      "expression": "registerSchemesAsPrivileged",
+      "file": "src/main/security-boundary.js",
+      "line": 87
+    },
+    {
+      "expression": "protocol.handle",
+      "file": "src/main/security-boundary.js",
+      "line": 119
+    }
+  ],
+  "timers": [
+    {
+      "method": "setTimeout",
+      "file": "src/main/companion-sync-service.js",
+      "line": 443
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 165
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 210
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 349
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 423
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 544
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 547
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 553
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 559
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 887
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 895
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 903
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 918
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 930
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 937
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 947
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 963
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1005
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1053
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1060
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1078
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1100
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1111
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1156
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1178
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1207
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1236
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1245
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1273
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1320
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1327
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 1333
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/main.js",
+      "line": 2275
+    },
+    {
+      "method": "setInterval",
+      "file": "src/main/main.js",
+      "line": 2344
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 56
+    },
+    {
+      "method": "setTimeout",
+      "file": "src/main/security-boundary.js",
+      "line": 273
+    }
+  ],
+  "lifecycle": [
+    {
+      "event": "child-process-gone",
+      "file": "src/main/main.js",
+      "line": 2376
+    },
+    {
+      "event": "before-quit",
+      "file": "src/main/main.js",
+      "line": 2385
+    },
+    {
+      "event": "window-all-closed",
+      "file": "src/main/main.js",
+      "line": 2396
+    },
+    {
+      "event": "activate",
+      "file": "src/main/main.js",
+      "line": 2400
+    },
+    {
+      "event": "second-instance",
+      "file": "src/main/single-instance.js",
+      "line": 33
+    }
+  ],
+  "fileSystem": [
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/companion-sync-service.js",
+      "line": 165
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/companion-sync-service.js",
+      "line": 199
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/companion-sync-service.js",
+      "line": 209
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/companion-sync-service.js",
+      "line": 210
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/companion-sync-service.js",
+      "line": 229
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/companion-sync-service.js",
+      "line": 290
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/companion-sync-service.js",
+      "line": 291
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/companion-sync-service.js",
+      "line": 570
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/companion-sync-service.js",
+      "line": 577
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/companion-sync-service.js",
+      "line": 578
+    },
+    {
+      "owner": "fs",
+      "method": "createReadStream",
+      "file": "src/main/companion-sync-service.js",
+      "line": 586
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 44
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 45
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 51
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 79
+    },
+    {
+      "owner": "fs",
+      "method": "renameSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 80
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 85
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 90
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 91
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 91
+    },
+    {
+      "owner": "fs",
+      "method": "renameSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 92
+    },
+    {
+      "owner": "fs",
+      "method": "appendFileSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 100
+    },
+    {
+      "owner": "fs",
+      "method": "readdirSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 107
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 112
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 112
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 120
+    },
+    {
+      "owner": "fs",
+      "method": "readdirSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 125
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 148
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 155
+    },
+    {
+      "owner": "fs",
+      "method": "readdirSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 158
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 162
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/diagnostic-service.js",
+      "line": 162
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/excel-exporter.js",
+      "line": 256
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/file-io.js",
+      "line": 22
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/file-io.js",
+      "line": 23
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/file-io.js",
+      "line": 33
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/file-io.js",
+      "line": 34
+    },
+    {
+      "owner": "fs",
+      "method": "lstatSync",
+      "file": "src/main/file-io.js",
+      "line": 114
+    },
+    {
+      "owner": "fs",
+      "method": "readdirSync",
+      "file": "src/main/file-io.js",
+      "line": 123
+    },
+    {
+      "owner": "fs",
+      "method": "readdirSync",
+      "file": "src/main/file-io.js",
+      "line": 146
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/file-io.js",
+      "line": 162
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/file-io.js",
+      "line": 164
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/file-io.js",
+      "line": 193
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/file-io.js",
+      "line": 195
+    },
+    {
+      "owner": "fs",
+      "method": "openSync",
+      "file": "src/main/file-io.js",
+      "line": 216
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/file-io.js",
+      "line": 217
+    },
+    {
+      "owner": "fs",
+      "method": "fsyncSync",
+      "file": "src/main/file-io.js",
+      "line": 218
+    },
+    {
+      "owner": "fs",
+      "method": "closeSync",
+      "file": "src/main/file-io.js",
+      "line": 219
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/file-io.js",
+      "line": 221
+    },
+    {
+      "owner": "fs",
+      "method": "renameSync",
+      "file": "src/main/file-io.js",
+      "line": 222
+    },
+    {
+      "owner": "fs",
+      "method": "closeSync",
+      "file": "src/main/file-io.js",
+      "line": 224
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/file-io.js",
+      "line": 225
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/file-io.js",
+      "line": 225
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/file-io.js",
+      "line": 240
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/file-io.js",
+      "line": 241
+    },
+    {
+      "owner": "fs",
+      "method": "readdirSync",
+      "file": "src/main/file-io.js",
+      "line": 256
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/file-io.js",
+      "line": 269
+    },
+    {
+      "owner": "fs",
+      "method": "lstatSync",
+      "file": "src/main/file-io.js",
+      "line": 302
+    },
+    {
+      "owner": "fs",
+      "method": "readdirSync",
+      "file": "src/main/file-io.js",
+      "line": 304
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/file-io.js",
+      "line": 323
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/file-io.js",
+      "line": 325
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/file-io.js",
+      "line": 374
+    },
+    {
+      "owner": "fs",
+      "method": "readdirSync",
+      "file": "src/main/file-io.js",
+      "line": 378
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/file-io.js",
+      "line": 383
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/file-io.js",
+      "line": 397
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/file-io.js",
+      "line": 398
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/file-io.js",
+      "line": 401
+    },
+    {
+      "owner": "fs",
+      "method": "readdirSync",
+      "file": "src/main/file-io.js",
+      "line": 409
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/file-io.js",
+      "line": 414
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/file-io.js",
+      "line": 418
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/file-io.js",
+      "line": 434
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/file-io.js",
+      "line": 436
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/file-io.js",
+      "line": 468
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/file-io.js",
+      "line": 494
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/file-io.js",
+      "line": 504
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/file-io.js",
+      "line": 505
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/file-io.js",
+      "line": 507
+    },
+    {
+      "owner": "fileIO",
+      "method": "createLocalRestorePoint",
+      "file": "src/main/main.js",
+      "line": 76
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/main.js",
+      "line": 225
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/main.js",
+      "line": 226
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/main.js",
+      "line": 229
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/main.js",
+      "line": 230
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/main.js",
+      "line": 272
+    },
+    {
+      "owner": "fs",
+      "method": "copyFileSync",
+      "file": "src/main/main.js",
+      "line": 275
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/main.js",
+      "line": 276
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/main.js",
+      "line": 276
+    },
+    {
+      "owner": "fs",
+      "method": "renameSync",
+      "file": "src/main/main.js",
+      "line": 277
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/main.js",
+      "line": 291
+    },
+    {
+      "owner": "fs",
+      "method": "renameSync",
+      "file": "src/main/main.js",
+      "line": 292
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/main.js",
+      "line": 343
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/main.js",
+      "line": 344
+    },
+    {
+      "owner": "fs",
+      "method": "watch",
+      "file": "src/main/main.js",
+      "line": 347
+    },
+    {
+      "owner": "fileIO",
+      "method": "loadDatabase",
+      "file": "src/main/main.js",
+      "line": 1541
+    },
+    {
+      "owner": "fileIO",
+      "method": "saveDatabase",
+      "file": "src/main/main.js",
+      "line": 1585
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/main.js",
+      "line": 1615
+    },
+    {
+      "owner": "fileIO",
+      "method": "writeFile",
+      "file": "src/main/main.js",
+      "line": 1671
+    },
+    {
+      "owner": "fileIO",
+      "method": "readFile",
+      "file": "src/main/main.js",
+      "line": 1682
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/main.js",
+      "line": 1695
+    },
+    {
+      "owner": "fileIO",
+      "method": "writeFile",
+      "file": "src/main/main.js",
+      "line": 1723
+    },
+    {
+      "owner": "fileIO",
+      "method": "readFile",
+      "file": "src/main/main.js",
+      "line": 1735
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/main.js",
+      "line": 1749
+    },
+    {
+      "owner": "fileIO",
+      "method": "scanBackupDirectory",
+      "file": "src/main/main.js",
+      "line": 1772
+    },
+    {
+      "owner": "fileIO",
+      "method": "readValidDiscoveredBackup",
+      "file": "src/main/main.js",
+      "line": 1808
+    },
+    {
+      "owner": "fileIO",
+      "method": "discoverOneDriveBackups",
+      "file": "src/main/main.js",
+      "line": 1867
+    },
+    {
+      "owner": "fileIO",
+      "method": "scanBackupDirectory",
+      "file": "src/main/main.js",
+      "line": 1873
+    },
+    {
+      "owner": "fileIO",
+      "method": "createLocalRestorePoint",
+      "file": "src/main/main.js",
+      "line": 1914
+    },
+    {
+      "owner": "fileIO",
+      "method": "createLocalRestorePoint",
+      "file": "src/main/main.js",
+      "line": 1918
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/main.js",
+      "line": 1960
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/main.js",
+      "line": 1963
+    },
+    {
+      "owner": "fs",
+      "method": "copyFileSync",
+      "file": "src/main/main.js",
+      "line": 1968
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/main.js",
+      "line": 1987
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/main.js",
+      "line": 1994
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/main.js",
+      "line": 1994
+    },
+    {
+      "owner": "fileIO",
+      "method": "writeFile",
+      "file": "src/main/main.js",
+      "line": 2006
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/main.js",
+      "line": 2123
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 75
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 82
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 100
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 100
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 106
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 107
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 107
+    },
+    {
+      "owner": "fs",
+      "method": "renameSync",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 108
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 113
+    },
+    {
+      "owner": "fs",
+      "method": "renameSync",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 114
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/mobile-update-channel.js",
+      "line": 137
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/permission-service.js",
+      "line": 17
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/permission-service.js",
+      "line": 28
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/permission-service.js",
+      "line": 30
+    },
+    {
+      "owner": "fs",
+      "method": "renameSync",
+      "file": "src/main/permission-service.js",
+      "line": 31
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/recovery-controller.js",
+      "line": 18
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/recovery-controller.js",
+      "line": 26
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/recovery-controller.js",
+      "line": 28
+    },
+    {
+      "owner": "fs",
+      "method": "renameSync",
+      "file": "src/main/recovery-controller.js",
+      "line": 29
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/school-cloud-vault.js",
+      "line": 45
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/school-cloud-vault.js",
+      "line": 46
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/school-cloud-vault.js",
+      "line": 62
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/sf1-reader.js",
+      "line": 72
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 30
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 33
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 34
+    },
+    {
+      "owner": "fs",
+      "method": "renameSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 35
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 37
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 37
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 43
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 94
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 139
+    },
+    {
+      "owner": "fs",
+      "method": "writeFileSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 151
+    },
+    {
+      "owner": "fs",
+      "method": "renameSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 152
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 153
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 156
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 156
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 157
+    },
+    {
+      "owner": "fs",
+      "method": "unlinkSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 157
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 212
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 221
+    },
+    {
+      "owner": "fs",
+      "method": "mkdirSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 222
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 255
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 321
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 322
+    },
+    {
+      "owner": "fs",
+      "method": "readdirSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 361
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 370
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 372
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 391
+    },
+    {
+      "owner": "fs",
+      "method": "existsSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 392
+    },
+    {
+      "owner": "fs",
+      "method": "statSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 424
+    },
+    {
+      "owner": "fs",
+      "method": "readFileSync",
+      "file": "src/main/shared-folder-sync.js",
+      "line": 426
+    }
+  ],
+  "services": [
+    {
+      "service": "sharedFolderSync",
+      "method": "detectOneDriveRoots",
+      "file": "src/main/file-io.js",
+      "line": 291
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "verifyEnvelope",
+      "file": "src/main/file-io.js",
+      "line": 345
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "getDeviceInfo",
+      "file": "src/main/file-io.js",
+      "line": 455
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "backupPaths",
+      "file": "src/main/file-io.js",
+      "line": 465
+    },
+    {
+      "service": "mobileUpdateChannel",
+      "method": "refresh",
+      "file": "src/main/main.js",
+      "line": 314
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "repositoryPaths",
+      "file": "src/main/main.js",
+      "line": 339
+    },
+    {
+      "service": "updater",
+      "method": "initAutoUpdater",
+      "file": "src/main/main.js",
+      "line": 1407
+    },
+    {
+      "service": "updater",
+      "method": "checkForUpdates",
+      "file": "src/main/main.js",
+      "line": 1484
+    },
+    {
+      "service": "companionSyncService",
+      "method": "start",
+      "file": "src/main/main.js",
+      "line": 1588
+    },
+    {
+      "service": "companionSyncService",
+      "method": "startBluetooth",
+      "file": "src/main/main.js",
+      "line": 1589
+    },
+    {
+      "service": "companionSyncService",
+      "method": "stop",
+      "file": "src/main/main.js",
+      "line": 1634
+    },
+    {
+      "service": "companionSyncService",
+      "method": "publicStatus",
+      "file": "src/main/main.js",
+      "line": 1635
+    },
+    {
+      "service": "companionSyncService",
+      "method": "publish",
+      "file": "src/main/main.js",
+      "line": 1636
+    },
+    {
+      "service": "mobileUpdateChannel",
+      "method": "refresh",
+      "file": "src/main/main.js",
+      "line": 1638
+    },
+    {
+      "service": "mobileUpdateChannel",
+      "method": "status",
+      "file": "src/main/main.js",
+      "line": 1640
+    },
+    {
+      "service": "mobileUpdateChannel",
+      "method": "refresh",
+      "file": "src/main/main.js",
+      "line": 1646
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "getDeviceInfo",
+      "file": "src/main/main.js",
+      "line": 1813
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "renameDevice",
+      "file": "src/main/main.js",
+      "line": 1817
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "getState",
+      "file": "src/main/main.js",
+      "line": 1821
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "configureFolder",
+      "file": "src/main/main.js",
+      "line": 1832
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "validateOneDriveFolder",
+      "file": "src/main/main.js",
+      "line": 1871
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "validateOneDriveFolder",
+      "file": "src/main/main.js",
+      "line": 1882
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "configureFolder",
+      "file": "src/main/main.js",
+      "line": 1887
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "inspectFolder",
+      "file": "src/main/main.js",
+      "line": 1893
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "disableFolder",
+      "file": "src/main/main.js",
+      "line": 1898
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "writeEnvelope",
+      "file": "src/main/main.js",
+      "line": 1902
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "writeEnvelope",
+      "file": "src/main/main.js",
+      "line": 1906
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "scan",
+      "file": "src/main/main.js",
+      "line": 1910
+    },
+    {
+      "service": "sharedFolderSync",
+      "method": "read",
+      "file": "src/main/main.js",
+      "line": 1922
+    },
+    {
+      "service": "updater",
+      "method": "checkForUpdates",
+      "file": "src/main/main.js",
+      "line": 2172
+    },
+    {
+      "service": "updater",
+      "method": "downloadUpdate",
+      "file": "src/main/main.js",
+      "line": 2176
+    },
+    {
+      "service": "updater",
+      "method": "quitAndInstall",
+      "file": "src/main/main.js",
+      "line": 2180
+    },
+    {
+      "service": "mobileUpdateChannel",
+      "method": "refresh",
+      "file": "src/main/main.js",
+      "line": 2340
+    },
+    {
+      "service": "companionSyncService",
+      "method": "stop",
+      "file": "src/main/main.js",
+      "line": 2393
+    }
+  ]
+}

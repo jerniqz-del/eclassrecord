@@ -47,6 +47,57 @@
   font-weight: 700;
 }
 
+.companion-link-quality {
+  border: 1px solid rgba(8, 145, 178, .22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .8);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, .07), inset 0 1px 0 rgba(255, 255, 255, .9);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+
+.companion-link-quality:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(8, 145, 178, .13), inset 0 1px 0 #fff;
+}
+
+.companion-link-quality__copy {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.companion-link-quality__copy strong { color: #0f766e; }
+.companion-link-quality__track { height: 8px; overflow: hidden; border-radius: 999px; background: #e2e8f0; }
+.companion-link-quality__track span { display: block; width: 0; height: 100%; border-radius: inherit; background: #ef4444; transition: width .45s ease, background .3s ease; }
+.companion-link-quality__track span[data-quality="fair"] { background: #f59e0b; }
+.companion-link-quality__track span[data-quality="strong"] { background: linear-gradient(90deg, #10b981, #06b6d4); }
+.companion-link-quality small { display: block; margin-top: 7px; color: #64748b; }
+
+.companion-js-hidden,
+.companion-js-hidden[hidden] {
+  display: none !important;
+}
+
+.companion-js-grid,
+.companion-js-grid[hidden] {
+  display: grid !important;
+}
+
+.companion-js-flex,
+.companion-js-flex[hidden] {
+  display: flex !important;
+}
+
+.companion-js-inline-flex,
+.companion-js-inline-flex[hidden] {
+  display: inline-flex !important;
+}
+
 .companion-pairing {
   display: grid;
   grid-template-columns: minmax(210px, 300px) 1fr;
@@ -102,6 +153,28 @@
   color: #67e8f9;
   font-size: 22px;
   letter-spacing: .18em;
+}
+
+.companion-update-host {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #a5f3fc;
+}
+
+.companion-update-host strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.companion-apk-install-url {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #0f766e;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  word-break: break-all;
 }
 
 @media (max-width: 780px) {

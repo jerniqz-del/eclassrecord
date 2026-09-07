@@ -1,0 +1,15 @@
+{
+  "baselineAppVersion": "1.9.6",
+  "frozenThroughPhase": 1,
+  "versions": {
+    "databaseProfile": 7,
+    "databaseRoot": 7,
+    "backupEnvelope": 2,
+    "advisory": 2,
+    "teacherTools": 11,
+    "profileDeletionBackup": 1,
+    "mobileSnapshot": 4,
+    "mobileUpdateManifest": 1
+  },
+  "changePolicy": "Do not change a persisted schema in Phase 0 or Phase 1. A later change requires a pre-migration backup, backward-compatibility fixtures, a tested rollback path, and a tracker update in the same change."
+}

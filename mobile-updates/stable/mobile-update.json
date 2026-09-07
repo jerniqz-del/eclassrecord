@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "applicationId": "com.example.eclassrecordmobile",
+  "versionCode": 8,
+  "versionName": "1.10.0",
+  "fileName": "E-Class-Record-Mobile-v1.10.0.apk",
+  "downloadUrl": "https://github.com/jerniqz-del/eclassrecord/releases/download/mobile-v1.10.0/E-Class-Record-Mobile-v1.10.0.apk",
+  "size": 27087226,
+  "sha256": "ba09e4f1d2e0e46a835afa1968e321e80172324935488f720afb8ed8845589ee",
+  "minimumCompanionProtocol": 2,
+  "publishedAt": "2026-09-04T08:35:48.548Z",
+  "releaseNotes": "Modern Calendar, Attendance, Classes, and Grading workspaces with faster search, filters, progress insights, and 3D transitions"
+}

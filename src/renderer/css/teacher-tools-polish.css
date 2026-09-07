@@ -42,6 +42,9 @@ html[data-performance-mode="low"] #teacherToolsView *,html[data-performance-mode
 #performanceChecklistContent .simulator-toolbar__actions { margin-left: auto; gap: .55rem; }
 #performanceChecklistContent .checklist-toolbar-action { min-height: 36px; padding-inline: .9rem; border-radius: .65rem; box-shadow: 0 5px 12px #0f172a14; opacity: 1; }
 #performanceChecklistContent .checklist-toolbar-action--primary { border-color: #0891b2; background: linear-gradient(135deg, #06b6d4, #0284c7); color: #fff; }
+#performanceChecklistContent .checklist-toolbar-action--bulk { border-color: #93c5fd; background: linear-gradient(135deg, #eff6ff, #dbeafe); color: #1d4ed8; }
+#performanceChecklistContent .checklist-toolbar-action--picker { border-color: #6ee7b7; background: linear-gradient(135deg, #ecfdf5, #d1fae5); color: #047857; }
+#performanceChecklistContent .checklist-toolbar-action--more { border-color: #cbd5e1; background: linear-gradient(135deg, #f8fafc, #e2e8f0); color: #475569; }
 #performanceChecklistContent .checklist-toolbar-action:disabled { opacity: .52; box-shadow: none; }
 #performanceChecklistContent .teacher-tool__body { display: grid; gap: 1rem; width: 100%; padding: 1rem; }
 #performanceChecklistContent .checklist-summary { width: 100%; margin: 0; padding: 1rem; border-color: color-mix(in srgb, var(--checklist-accent) 24%, var(--border-color)); background: linear-gradient(145deg, var(--bg-surface), color-mix(in srgb, var(--checklist-soft) 62%, var(--bg-surface))); }

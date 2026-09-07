@@ -15,6 +15,7 @@ import kotlinx.serialization.json.Json
 import org.json.JSONObject
 import java.io.File
 import java.net.URL
+import java.net.ConnectException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -54,6 +55,10 @@ object LanSyncManager {
         private set
     var updateProgress by mutableStateOf(0)
         private set
+    var isUpdateReady by mutableStateOf(false)
+        private set
+    var updatePromptVisible by mutableStateOf(false)
+        private set
     var dataRevision by mutableStateOf(0L)
         private set
     var activeDesktopAddress by mutableStateOf("")
@@ -63,6 +68,18 @@ object LanSyncManager {
     var roundTripMs by mutableStateOf<Long?>(null)
         private set
     var diagnosticMessage by mutableStateOf("Pair the desktop to run network diagnostics.")
+        private set
+    var pairedProfiles by mutableStateOf<List<LanPairing>>(emptyList())
+        private set
+    var activeProfileKey by mutableStateOf("")
+        private set
+    var autoReconnectEnabled by mutableStateOf(true)
+        private set
+    var linkQuality by mutableStateOf("Not linked")
+        private set
+    var linkStrength by mutableStateOf(0)
+        private set
+    var remoteControlState by mutableStateOf("Desktop remote control is ready after pairing.")
         private set
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -75,19 +92,38 @@ object LanSyncManager {
     private var lastUpdateCheckAt = 0L
     @Volatile private var activeHost = ""
     private var appContext: Context? = null
+    private var downloadedUpdatePath = ""
+
+    private const val UPDATE_PREFERENCES = "mobile_update_state"
+    private const val READY_MANIFEST = "ready_manifest"
+    private const val DEFERRED_UNTIL = "deferred_until"
+    private const val UI_PREFERENCES = "mobile_ui_preferences"
+    private const val AUTO_RECONNECT = "auto_reconnect"
 
     fun init(context: Context) {
         appContext = context.applicationContext
         pairing = LanPairingStore.load(context)
+        pairedProfiles = LanPairingStore.list(context)
+        pairing?.let { DatabaseHelper.selectProfile(context, it.profileKey) }
+        activeProfileKey = pairing?.profileKey.orEmpty()
         activeHost = pairing?.host.orEmpty()
         isPaired = pairing != null
-        if (pairing != null) start(context)
+        autoReconnectEnabled = context.getSharedPreferences(UI_PREFERENCES, Context.MODE_PRIVATE)
+            .getBoolean(AUTO_RECONNECT, true)
+        restoreReadyUpdate(context.applicationContext)
+        if (pairing != null && autoReconnectEnabled) start(context)
     }
 
     fun pairFromQr(context: Context, rawValue: String): Boolean = runCatching {
         val parsed = LanPairingStore.parseQr(rawValue)
+        require(parsed.protocolVersion >= 2) {
+            "This pairing QR is outdated. Refresh the Wi-Fi QR on the desktop and scan again."
+        }
         LanPairingStore.save(context, parsed)
         pairing = parsed
+        pairedProfiles = LanPairingStore.list(context)
+        DatabaseHelper.selectProfile(context, parsed.profileKey)
+        activeProfileKey = parsed.profileKey
         activeHost = parsed.host
         isPaired = true
         syncLog = "WLAN pairing saved. Connecting to ${parsed.host}..."
@@ -98,20 +134,177 @@ object LanSyncManager {
         false
     }
 
+    fun authorizeAndPair(
+        context: Context,
+        rawValue: String,
+        authorizationPin: String,
+        onComplete: (Boolean, String) -> Unit,
+    ) {
+        actionExecutor.execute {
+            val previous = pairing
+            try {
+                val parsed = LanPairingStore.parseQr(rawValue)
+                if (parsed.protocolVersion < 2) {
+                    throw IllegalStateException("This pairing QR is outdated. Refresh the Wi-Fi QR on the desktop and scan again.")
+                }
+                require(authorizationPin.matches(Regex("\\d{6}"))) {
+                    "Enter the six-digit desktop profile PIN."
+                }
+                pairing = parsed
+                activeHost = parsed.host
+                val payload = JSONObject()
+                    .put("profileId", parsed.profileId)
+                    .put("authorizationPin", authorizationPin)
+                val body = JSONObject().put("payload", encrypt(payload.toString())).toString()
+                val response = request("POST", "/v2/pair", "", body)
+                val result = response.optJSONObject("result")
+                require(response.optBoolean("success") && result?.optBoolean("authorized") == true) {
+                    result?.optString("error").orEmpty().ifBlank { "The desktop rejected this pairing." }
+                }
+                LanPairingStore.save(context, parsed)
+                MobilePinLock.enroll(context, parsed.profileKey, authorizationPin)
+                pairedProfiles = LanPairingStore.list(context)
+                DatabaseHelper.selectProfile(context, parsed.profileKey)
+                activeProfileKey = parsed.profileKey
+                isPaired = true
+                syncLog = "Profile authorized. Connecting through Wi-Fi or hotspot..."
+                restart(context)
+                onComplete(true, syncLog)
+            } catch (error: Exception) {
+                pairing = previous
+                activeHost = previous?.host.orEmpty()
+                syncLog = when (error) {
+                    is ConnectException, is SocketTimeoutException ->
+                        "The desktop did not respond. On the desktop, open Windows Firewall, allow E-Class Record on Private networks, refresh the QR, and scan it again."
+                    else -> error.message ?: "The desktop profile could not be paired."
+                }
+                onComplete(false, syncLog)
+            }
+        }
+    }
+
+    fun selectProfile(context: Context, profileKey: String): Boolean {
+        val selected = LanPairingStore.select(context, profileKey) ?: return false
+        BluetoothPairingStore.select(context, profileKey)
+        generation += 1
+        running = false
+        pairing = selected
+        activeHost = selected.host
+        DatabaseHelper.selectProfile(context, selected.profileKey)
+        activeProfileKey = selected.profileKey
+        isPaired = true
+        isConnected = false
+        dataRevision = DatabaseHelper.getRevision()
+        syncLog = "Selected " + selected.profileName + ". Connecting through Wi-Fi or hotspot..."
+        start(context)
+        return true
+    }
+
     fun forget(context: Context) {
+        val removedProfileKey = pairing?.profileKey.orEmpty()
         generation += 1
         running = false
         LanPairingStore.clear(context)
-        pairing = null
-        isPaired = false
+        BleServerManager.forgetDesktop(context, removedProfileKey)
+        MobilePinLock.remove(context, removedProfileKey)
+        pairedProfiles = LanPairingStore.list(context)
+        pairing = LanPairingStore.load(context)
+        pairing?.let { DatabaseHelper.selectProfile(context, it.profileKey) }
+        activeProfileKey = pairing?.profileKey.orEmpty()
+        isPaired = pairing != null
         isConnected = false
-        updateInfo = null
-        connectionState = "Wi-Fi not paired"
+        connectionState = if (pairing == null) "Wi-Fi not paired" else "Profile selected"
         activeDesktopAddress = ""
         desktopInterfaces = ""
         roundTripMs = null
+        linkQuality = "Not linked"
+        linkStrength = 0
         diagnosticMessage = "Pair the desktop to run network diagnostics."
         syncLog = "WLAN pairing removed."
+        if (pairing != null && autoReconnectEnabled) start(context.applicationContext)
+    }
+
+    fun deleteProfile(context: Context, profileKey: String): Boolean {
+        if (profileKey.isBlank()) return false
+        val knownProfile = LanPairingStore.list(context).any { it.profileKey == profileKey } ||
+            BluetoothPairingStore.list(context).any { it.profileKey == profileKey }
+        if (!knownProfile) return false
+        val deletingActive = activeProfileKey == profileKey || DatabaseHelper.getActiveProfileKey() == profileKey
+        if (!DatabaseHelper.deleteProfile(context, profileKey)) {
+            syncLog = "The profile's local data could not be deleted. Nothing was unlinked."
+            return false
+        }
+
+        if (deletingActive) {
+            generation += 1
+            running = false
+        }
+        LanPairingStore.remove(context, profileKey)
+        BleServerManager.forgetDesktop(context, profileKey)
+        MobilePinLock.remove(context, profileKey)
+        pairedProfiles = LanPairingStore.list(context)
+
+        if (!deletingActive) {
+            syncLog = "Saved profile deleted from this phone."
+            return true
+        }
+
+        val nextLan = LanPairingStore.load(context)
+        val nextBluetooth = BluetoothPairingStore.load(context)
+        when {
+            nextLan != null -> {
+                pairing = nextLan
+                activeHost = nextLan.host
+                DatabaseHelper.selectProfile(context, nextLan.profileKey)
+                activeProfileKey = nextLan.profileKey
+                isPaired = true
+                isConnected = false
+                connectionState = "Profile selected"
+                syncLog = "Profile deleted. Selected ${nextLan.profileName}."
+                if (autoReconnectEnabled) start(context.applicationContext)
+            }
+            nextBluetooth != null -> {
+                pairing = null
+                activeHost = ""
+                activeProfileKey = nextBluetooth.profileKey
+                isPaired = false
+                isConnected = false
+                connectionState = "Wi-Fi not paired"
+                DatabaseHelper.selectProfile(context, nextBluetooth.profileKey)
+                BluetoothPairingStore.select(context, nextBluetooth.profileKey)
+                syncLog = "Profile deleted. Selected ${nextBluetooth.profileName} for Bluetooth fallback."
+            }
+            else -> {
+                pairing = null
+                activeHost = ""
+                activeProfileKey = ""
+                isPaired = false
+                isConnected = false
+                connectionState = "Wi-Fi not paired"
+                syncLog = "Profile and its local data deleted from this phone."
+            }
+        }
+        activeDesktopAddress = ""
+        desktopInterfaces = ""
+        roundTripMs = null
+        linkQuality = "Not linked"
+        linkStrength = 0
+        diagnosticMessage = "Pair the desktop to run network diagnostics."
+        return true
+    }
+
+    fun setAutoReconnect(context: Context, enabled: Boolean) {
+        autoReconnectEnabled = enabled
+        context.getSharedPreferences(UI_PREFERENCES, Context.MODE_PRIVATE).edit()
+            .putBoolean(AUTO_RECONNECT, enabled).apply()
+        if (enabled) {
+            start(context.applicationContext)
+        } else {
+            generation += 1
+            running = false
+            isConnected = false
+            connectionState = if (isPaired) "Automatic reconnect paused" else "Wi-Fi not paired"
+        }
     }
 
     private fun restart(context: Context) {
@@ -132,12 +325,15 @@ object LanSyncManager {
                     if (loopGeneration != generation) break
                     isConnected = true
                     connectionState = "Synced via Wi-Fi"
+                    measureLinkQuality()
                     if (System.currentTimeMillis() - lastUpdateCheckAt > 5 * 60 * 1000) {
                         checkForUpdate(appContext)
                     }
                 } catch (error: Exception) {
                     isConnected = false
                     connectionState = "Wi-Fi reconnecting"
+                    linkStrength = (linkStrength - 20).coerceAtLeast(0)
+                    linkQuality = if (linkStrength == 0) "Offline" else "Weak"
                     diagnosticMessage = when (error) {
                         is SocketTimeoutException -> "Desktop did not respond. Check Windows Firewall, guest Wi-Fi, or AP/client isolation."
                         else -> "Desktop and phone may be on isolated router segments. Retrying trusted local discovery."
@@ -158,14 +354,20 @@ object LanSyncManager {
         val decoded = decrypt(encrypted)
         val revision = response.optLong("revision")
         val payload = json.decodeFromString<SyncPayload>(decoded).copy(revision = revision)
+        val config = requireNotNull(pairing)
+        if (config.protocolVersion >= 2) {
+            require(payload.profileId == config.profileId) {
+                "The desktop returned a different profile. Local pending changes were preserved."
+            }
+        }
         DatabaseHelper.saveAuthoritativePayload(context, payload)
         dataRevision = revision
         syncLog = "Desktop revision $revision received automatically over Wi-Fi."
     }
 
     fun pushChanges(context: Context, authorizationPin: String): Boolean {
-        if (!isConnected || pairing == null) {
-            syncLog = "The paired desktop is not reachable over Wi-Fi."
+        if (pairing == null) {
+            syncLog = "Pair this profile over Wi-Fi or phone hotspot before pushing changes."
             return false
         }
         val changes = DatabaseHelper.pendingChanges()
@@ -173,21 +375,59 @@ object LanSyncManager {
             syncLog = "No unsynced mobile changes."
             return true
         }
-        syncLog = "Sending ${changes.size} authorized mobile change${if (changes.size == 1) "" else "s"} over Wi-Fi..."
+        syncLog = "Sending ${changes.size} authorized mobile change${if (changes.size == 1) "" else "s"} over Wi-Fi / hotspot..."
         actionExecutor.execute {
             try {
                 val payload = JSONObject()
+                    .put("protocolVersion", 2)
+                    .put("desktopId", pairing?.desktopId.orEmpty())
+                    .put("profileId", pairing?.profileId.orEmpty())
+                    .put("batchId", UUID.randomUUID().toString())
                     .put("baseRevision", DatabaseHelper.getRevision())
                     .put("authorizationPin", authorizationPin)
                     .put("changes", org.json.JSONArray(json.encodeToString(changes)))
                 val body = JSONObject().put("payload", encrypt(payload.toString())).toString()
                 val response = request("POST", "/v1/changes", "", body)
                 if (!response.optBoolean("success")) throw IllegalStateException(response.optString("error", "Desktop rejected the mobile changes."))
-                val accepted = response.optJSONObject("result")?.optInt("accepted", changes.size) ?: changes.size
-                DatabaseHelper.clearUnsyncedScores(context.applicationContext)
+                val result = response.optJSONObject("result")
+                val accepted = result?.optInt("accepted", changes.size) ?: changes.size
+                val idArray = result?.optJSONArray("acceptedChangeIds")
+                val acceptedIds = if (idArray == null) emptyList() else
+                    (0 until idArray.length()).mapNotNull { idArray.optString(it).takeIf(String::isNotBlank) }
+                if (acceptedIds.isNotEmpty()) {
+                    DatabaseHelper.acknowledgeChanges(context.applicationContext, acceptedIds)
+                } else if (pairing?.protocolVersion == 1 && accepted == changes.size) {
+                    DatabaseHelper.clearUnsyncedScores(context.applicationContext)
+                }
                 syncLog = "$accepted mobile change${if (accepted == 1) "" else "s"} saved automatically on the desktop."
             } catch (error: Exception) {
                 syncLog = error.message ?: "Mobile changes could not be sent. They remain saved on this phone."
+            }
+        }
+        return true
+    }
+
+    fun sendDesktopCommand(command: String, args: Map<String, String> = emptyMap()): Boolean {
+        if (pairing == null) {
+            remoteControlState = "Pair this profile over Wi-Fi or phone hotspot to control the desktop."
+            return false
+        }
+        remoteControlState = "Sending desktop control through Wi-Fi / hotspot..."
+        actionExecutor.execute {
+            try {
+                val commandArgs = JSONObject().apply { args.forEach { (key, value) -> put(key, value) } }
+                val payload = JSONObject()
+                    .put("profileId", pairing?.profileId.orEmpty())
+                    .put("command", command)
+                    .put("args", commandArgs)
+                val body = JSONObject().put("payload", encrypt(payload.toString())).toString()
+                val response = request("POST", "/v1/tool-command", "", body)
+                require(response.optBoolean("success")) {
+                    response.optString("error", "The desktop rejected this control command.")
+                }
+                remoteControlState = "Desktop command completed through Wi-Fi / hotspot."
+            } catch (error: Exception) {
+                remoteControlState = error.message ?: "The desktop control command could not be delivered."
             }
         }
         return true
@@ -206,7 +446,7 @@ object LanSyncManager {
                     @Suppress("DEPRECATION") context.packageManager.getPackageInfo(context.packageName, 0).versionCode.toLong()
                 }
                 val offered = item.optLong("versionCode")
-                updateInfo = if (offered > current) MobileUpdateInfo(
+                val available = if (offered > current) MobileUpdateInfo(
                     versionName = item.optString("versionName"),
                     versionCode = offered,
                     size = item.optLong("size"),
@@ -214,29 +454,130 @@ object LanSyncManager {
                     fileName = item.optString("fileName", "E-Class-Record-Mobile.apk"),
                     releaseNotes = item.optString("releaseNotes"),
                 ) else null
-            }.onFailure { syncLog = "Update check paused: ${it.message}" }
+                updateInfo = available
+                if (available == null) {
+                    clearReadyUpdate(context)
+                } else if (isUpdateReady && File(downloadedUpdatePath).exists() &&
+                    JSONObject(context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE)
+                        .getString(READY_MANIFEST, "{}") ?: "{}").optLong("versionCode") == available.versionCode
+                ) {
+                    updatePromptVisible = shouldPrompt(context)
+                } else {
+                    downloadUpdateInternal(context.applicationContext, available)
+                }
+            }.onFailure {
+                if (!isUpdateReady) updateProgress = 0
+                syncLog = "Update check paused: ${it.message}"
+            }
+        }
+    }
+
+    fun downloadUpdate(context: Context) {
+        val info = updateInfo ?: return
+        actionExecutor.execute {
+            try {
+                downloadUpdateInternal(context.applicationContext, info)
+            } catch (error: Exception) {
+                updateProgress = 0
+                syncLog = error.message ?: "The mobile update could not be downloaded."
+            }
         }
     }
 
     fun downloadAndInstallUpdate(context: Context) {
-        val info = updateInfo ?: return
-        actionExecutor.execute {
-            try {
-                updateProgress = 1
-                val target = File(context.cacheDir, "mobile-updates/${info.fileName}")
-                target.parentFile?.mkdirs()
-                download("/v1/mobile-update/apk", target, info.size)
-                val digest = sha256(target.readBytes())
-                require(digest.equals(info.sha256, ignoreCase = true)) { "Downloaded APK checksum verification failed." }
-                verifyApk(context, target)
-                updateProgress = 100
-                launchInstaller(context, target)
-                syncLog = "Update verified. Confirm installation in Android."
-            } catch (error: Exception) {
-                updateProgress = 0
-                syncLog = error.message ?: "The mobile update could not be installed."
-            }
+        if (isUpdateReady) installReadyUpdate(context) else downloadUpdate(context)
+    }
+
+    fun deferReadyUpdate(context: Context) {
+        updatePromptVisible = false
+        context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE).edit()
+            .putLong(DEFERRED_UNTIL, System.currentTimeMillis() + 24 * 60 * 60 * 1000L)
+            .apply()
+        syncLog = "Mobile update kept securely on this device. You can install it later from Sync."
+    }
+
+    fun installReadyUpdate(context: Context) {
+        val target = File(downloadedUpdatePath)
+        if (!isUpdateReady || !target.exists()) {
+            isUpdateReady = false
+            updateProgress = 0
+            syncLog = "The downloaded update is unavailable. Connect to the desktop to download it again."
+            return
         }
+        updatePromptVisible = false
+        runCatching {
+            verifyApk(context, target)
+            launchInstaller(context, target)
+            syncLog = "Update verified. Confirm installation in Android."
+        }.onFailure { syncLog = it.message ?: "The mobile update could not be installed." }
+    }
+
+    private fun downloadUpdateInternal(context: Context, info: MobileUpdateInfo) {
+        updateProgress = 1
+        isUpdateReady = false
+        updatePromptVisible = false
+        val directory = File(context.filesDir, "mobile-updates").apply { mkdirs() }
+        val target = File(directory, "${info.versionCode}-${File(info.fileName).name}")
+        val incoming = File(directory, "${target.name}.incoming")
+        incoming.delete()
+        download("/v1/mobile-update/apk", incoming, info.size)
+        val digest = sha256(incoming.readBytes())
+        require(digest.equals(info.sha256, ignoreCase = true)) { "Downloaded APK checksum verification failed." }
+        verifyApk(context, incoming)
+        if (target.exists()) target.delete()
+        require(incoming.renameTo(target)) { "The verified update could not be stored." }
+        directory.listFiles()?.filter { it != target }?.forEach { it.delete() }
+        downloadedUpdatePath = target.absolutePath
+        isUpdateReady = true
+        updateProgress = 100
+        val manifest = JSONObject()
+            .put("versionName", info.versionName).put("versionCode", info.versionCode)
+            .put("size", info.size).put("sha256", info.sha256).put("fileName", info.fileName)
+            .put("releaseNotes", info.releaseNotes).put("path", downloadedUpdatePath)
+        val preferences = context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE)
+        preferences.edit().putString(READY_MANIFEST, manifest.toString()).remove(DEFERRED_UNTIL).apply()
+        updatePromptVisible = true
+        syncLog = "Mobile update ${info.versionName} downloaded and verified. Install now or later."
+    }
+
+    private fun restoreReadyUpdate(context: Context) {
+        val preferences = context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE)
+        runCatching {
+            val item = JSONObject(preferences.getString(READY_MANIFEST, "{}") ?: "{}")
+            val info = MobileUpdateInfo(
+                versionName = item.getString("versionName"), versionCode = item.getLong("versionCode"),
+                size = item.getLong("size"), sha256 = item.getString("sha256"),
+                fileName = item.getString("fileName"), releaseNotes = item.optString("releaseNotes"),
+            )
+            require(info.versionCode > installedVersionCode(context))
+            val target = File(item.getString("path"))
+            require(target.exists() && sha256(target.readBytes()).equals(info.sha256, true))
+            verifyApk(context, target)
+            updateInfo = info
+            downloadedUpdatePath = target.absolutePath
+            isUpdateReady = true
+            updateProgress = 100
+            updatePromptVisible = shouldPrompt(context)
+        }.onFailure { clearReadyUpdate(context) }
+    }
+
+    private fun shouldPrompt(context: Context): Boolean =
+        context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE)
+            .getLong(DEFERRED_UNTIL, 0L) <= System.currentTimeMillis()
+
+    private fun clearReadyUpdate(context: Context) {
+        if (downloadedUpdatePath.isNotBlank()) File(downloadedUpdatePath).delete()
+        downloadedUpdatePath = ""
+        isUpdateReady = false
+        updatePromptVisible = false
+        updateProgress = 0
+        context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE).edit().clear().apply()
+    }
+
+    private fun installedVersionCode(context: Context): Long = if (Build.VERSION.SDK_INT >= 28) {
+        context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
+    } else {
+        @Suppress("DEPRECATION") context.packageManager.getPackageInfo(context.packageName, 0).versionCode.toLong()
     }
 
     private fun verifyApk(context: Context, apk: File) {
@@ -271,6 +612,7 @@ object LanSyncManager {
         val config = pairing ?: throw IllegalStateException("WLAN pairing is not configured.")
         val suffix = buildString {
             append("session=").append(Uri.encode(config.sessionId))
+            if (config.protocolVersion >= 2) append("&profile=").append(Uri.encode(config.profileId))
             if (query.isNotBlank()) append('&').append(query)
         }
         val path = "$endpoint?$suffix"
@@ -308,6 +650,8 @@ object LanSyncManager {
         val timestamp = System.currentTimeMillis().toString()
         val canonical = listOf(method, path, timestamp, sha256(body.toByteArray())).joinToString("\n")
         connection.setRequestProperty("X-Eclass-Client", clientId)
+        connection.setRequestProperty("X-Eclass-Link-Rtt", (roundTripMs ?: 0L).toString())
+        connection.setRequestProperty("X-Eclass-Link-Strength", linkStrength.toString())
         connection.setRequestProperty("X-Eclass-Timestamp", timestamp)
         connection.setRequestProperty("X-Eclass-Signature", hmac(config.secret, canonical))
         connection.setRequestProperty("Content-Type", "application/json")
@@ -325,6 +669,25 @@ object LanSyncManager {
         roundTripMs = ((System.nanoTime() - startedAt) / 1_000_000).coerceAtLeast(1)
         diagnosticMessage = "Desktop is reachable through the router. Ethernet and Wi-Fi are bridged correctly."
         return JSONObject(text)
+    }
+
+    private fun measureLinkQuality() {
+        request("GET", "/v1/health", "", "")
+        val latency = roundTripMs ?: return
+        linkStrength = when {
+            latency <= 40 -> 100
+            latency <= 100 -> 85
+            latency <= 250 -> 65
+            latency <= 500 -> 40
+            else -> 20
+        }
+        linkQuality = when (linkStrength) {
+            in 90..100 -> "Excellent"
+            in 75..89 -> "Strong"
+            in 55..74 -> "Good"
+            in 30..54 -> "Weak"
+            else -> "Poor"
+        }
     }
 
     private fun discoverDesktop(config: LanPairing): List<String>? {

@@ -5,20 +5,12 @@
  */
 
 const { contextBridge, ipcRenderer } = require('electron');
-const QRCode = require('qrcode');
-const jsQR = require('jsqr');
-const { getSudoku } = require('sudoku-gen');
 
-function requireRecoveryPayload(payload) {
-  const text = String(payload || '');
-  if (!text.startsWith('ECLASS-RECOVERY|') || text.length > 2048) throw new Error('Invalid recovery QR payload.');
-  return text;
-}
-
-function requireCompanionPayload(payload) {
-  const text = String(payload || '');
-  if (!text.startsWith('ECLASS-COMPANION|1|') || text.length > 2048) throw new Error('Invalid companion QR payload.');
-  return text;
+function subscribe(channel, callback) {
+  if (typeof callback !== 'function') throw new TypeError('A subscription callback is required.');
+  const listener = (_event, ...args) => callback(...args);
+  ipcRenderer.on(channel, listener);
+  return () => ipcRenderer.removeListener(channel, listener);
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -44,19 +36,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   restoreSchoolCloudProfile: (schoolId) => ipcRenderer.invoke('school-cloud:restore-profile', schoolId),
 
   // Android companion sync
-  startCompanionWlan: () => ipcRenderer.invoke('companion:wlan-start'),
-  startCompanionBluetooth: () => ipcRenderer.invoke('companion:bluetooth-start'),
+  startCompanionWlan: (pairingContext) => ipcRenderer.invoke('companion:wlan-start', pairingContext),
+  startCompanionBluetooth: (pairingContext) => ipcRenderer.invoke('companion:bluetooth-start', pairingContext),
+  configureCompanionFirewall: () => ipcRenderer.invoke('companion:firewall-configure'),
   stopCompanionWlan: () => ipcRenderer.invoke('companion:wlan-stop'),
   getCompanionWlanStatus: () => ipcRenderer.invoke('companion:wlan-status'),
   publishCompanionSnapshot: (snapshot) => ipcRenderer.invoke('companion:publish-snapshot', snapshot),
-  generateCompanionQr: (payload) => QRCode.toDataURL(requireCompanionPayload(payload), {
-    errorCorrectionLevel: 'M', type: 'image/png', width: 420, margin: 3,
-    color: { dark: '#0f172a', light: '#ffffff' }
-  }),
+  getCompanionMobileUpdateStatus: () => ipcRenderer.invoke('companion:mobile-update-status'),
+  refreshCompanionMobileUpdateFromGithub: () => ipcRenderer.invoke('companion:mobile-update-refresh'),
+  importCompanionMobileUpdate: () => ipcRenderer.invoke('companion:mobile-update-import'),
+  startCompanionApkInstall: () => ipcRenderer.invoke('companion:apk-install-start'),
+  stopCompanionApkInstall: () => ipcRenderer.invoke('companion:apk-install-stop'),
+  getCompanionApkInstallStatus: () => ipcRenderer.invoke('companion:apk-install-status'),
+  generateCompanionQr: (payload) => ipcRenderer.invoke('compute:generate-companion-qr', payload),
   sendCompanionChangesResult: (requestId, result) => ipcRenderer.send('companion:changes-result', requestId, result),
-  onCompanionApplyChanges: (callback) => ipcRenderer.on('companion:apply-changes', (_event, request) => callback(request)),
-  onCompanionToolCommand: (callback) => ipcRenderer.on('companion:tool-command', (_event, command) => callback(command)),
-  onCompanionClientActivity: (callback) => ipcRenderer.on('companion:client-activity', (_event, activity) => callback(activity)),
+  onCompanionApplyChanges: (callback) => subscribe('companion:apply-changes', callback),
+  onCompanionAuthorizePairing: (callback) => subscribe('companion:authorize-pairing', callback),
+  onCompanionToolCommand: (callback) => subscribe('companion:tool-command', callback),
+  onCompanionClientActivity: (callback) => subscribe('companion:client-activity', callback),
 
   // File Backup & Migration Dialogs
   exportJson: (jsonString, defaultFileName) => ipcRenderer.invoke('dialog:export-json', jsonString, defaultFileName),
@@ -83,37 +80,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createSharedSyncRestorePoint: () => ipcRenderer.invoke('shared-sync:create-restore-point'),
   createDatabaseRestorePoint: (reason) => ipcRenderer.invoke('database:create-restore-point', reason),
   readSharedSyncFile: (handle) => ipcRenderer.invoke('shared-sync:read', handle),
-  onSharedSyncFolderChanged: (callback) => ipcRenderer.on('shared-sync-folder-changed', (_event, backupRecoveryId) => callback(backupRecoveryId)),
+  onSharedSyncFolderChanged: (callback) => subscribe('shared-sync-folder-changed', callback),
   importSf1: () => ipcRenderer.invoke('dialog:import-sf1'),
   exportCsv: (csvString, defaultFileName) => ipcRenderer.invoke('dialog:export-csv', csvString, defaultFileName),
   showPrintChoose: () => ipcRenderer.invoke('dialog:print-choose'),
   exportExcelTemplate: (payload) => ipcRenderer.invoke('dialog:export-excel-template', payload),
   exportPdf: (options) => ipcRenderer.invoke('dialog:export-pdf', options),
-  generateRecoveryQr: (payload) => QRCode.toDataURL(requireRecoveryPayload(payload), {
-    errorCorrectionLevel: 'H', type: 'image/png', width: 512, margin: 4,
-    color: { dark: '#0f172a', light: '#ffffff' }
-  }),
-  decodeRecoveryQrPixels: ({ data, width, height }) => {
-    const safeWidth = Number(width);
-    const safeHeight = Number(height);
-    if (!Number.isInteger(safeWidth) || !Number.isInteger(safeHeight) || safeWidth < 21 || safeHeight < 21 || safeWidth * safeHeight > 16777216) {
-      throw new Error('Recovery QR image dimensions are invalid.');
-    }
-    const pixels = new Uint8ClampedArray(data);
-    if (pixels.length !== safeWidth * safeHeight * 4) throw new Error('Recovery QR image pixels are incomplete.');
-    return jsQR(pixels, safeWidth, safeHeight, { inversionAttempts: 'attemptBoth' })?.data || '';
-  },
-  generateSudoku: (difficulty = 'medium') => {
-    const safeDifficulty = ['easy', 'medium', 'hard', 'expert'].includes(String(difficulty))
-      ? String(difficulty)
-      : 'medium';
-    const sudoku = getSudoku(safeDifficulty);
-    return {
-      puzzle: String(sudoku.puzzle || ''),
-      solution: String(sudoku.solution || ''),
-      difficulty: safeDifficulty
-    };
-  },
+  generateRecoveryQr: (payload) => ipcRenderer.invoke('compute:generate-recovery-qr', payload),
+  decodeRecoveryQrPixels: (pixels) => ipcRenderer.invoke('compute:decode-recovery-qr', pixels),
+  generateSudoku: (difficulty = 'medium') => ipcRenderer.invoke('compute:generate-sudoku', difficulty),
+  getDiagnosticPolicy: () => ipcRenderer.invoke('diagnostics:policy'),
+  setDiagnosticCollectionEnabled: (enabled) => ipcRenderer.invoke('diagnostics:set-enabled', enabled === true),
+  exportDiagnosticSupportBundle: () => ipcRenderer.invoke('diagnostics:export'),
+  deleteDiagnosticData: () => ipcRenderer.invoke('diagnostics:delete'),
+  getPermissionPreferences: () => ipcRenderer.invoke('security:permission-preferences'),
+  setPermissionPreference: (capability, enabled) => ipcRenderer.invoke('security:set-permission-preference', capability, enabled === true),
+  requestCapability: (capability) => ipcRenderer.invoke('security:request-capability', capability),
+  unlockProfile: (profileId, pin) => ipcRenderer.invoke('security:unlock-profile', { profileId, pin: String(pin || '') }),
+  lockProfile: () => ipcRenderer.invoke('security:lock-profile'),
+  onProfileSessionLocked: (callback) => subscribe('security:profile-locked', callback),
+  onCompanionWorkspaceResumed: (callback) => subscribe('companion:workspace-resumed', callback),
   exportRecoveryQr: (dataUrl, defaultFileName) => ipcRenderer.invoke('dialog:export-recovery-qr', dataUrl, defaultFileName),
   printRecoveryQr: (dataUrl, label) => ipcRenderer.invoke('dialog:print-recovery-qr', dataUrl, label),
   importAssessmentAttachment: (assignmentId, assessmentId) => ipcRenderer.invoke('dialog:import-assessment-attachment', assignmentId, assessmentId),
@@ -130,18 +116,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fetchLinkPreview: (url) => ipcRenderer.invoke('link-preview:fetch', url),
 
   // Menu Event Listeners (Main to Renderer)
-  onMenuSave: (callback) => ipcRenderer.on('menu-save', (_event) => callback()),
-  onMenuExportJson: (callback) => ipcRenderer.on('menu-export-json', (_event) => callback()),
-  onMenuImportJson: (callback) => ipcRenderer.on('menu-import-json', (_event) => callback()),
-  onUpdateStatus: (callback) => ipcRenderer.on('update-status', (_event, status, details) => callback(status, details)),
+  onMenuSave: (callback) => subscribe('menu-save', callback),
+  onMenuExportJson: (callback) => subscribe('menu-export-json', callback),
+  onMenuImportJson: (callback) => subscribe('menu-import-json', callback),
+  onUpdateStatus: (callback) => subscribe('update-status', callback),
 
   confirmExit: () => ipcRenderer.invoke('app:confirm-exit'),
-  onAppCloseTriggered: (callback) => ipcRenderer.on('app-close-triggered', (_event) => callback()),
+  onAppCloseTriggered: (callback) => subscribe('app-close-triggered', callback),
 
   // Bluetooth Sync APIs
   selectBluetoothDevice: (deviceId) => ipcRenderer.send('bluetooth:select-device', deviceId),
   cancelBluetoothDevice: () => ipcRenderer.send('bluetooth:cancel-device'),
   resetBluetoothScan: () => ipcRenderer.invoke('bluetooth:reset-scan'),
   startAutomaticBluetoothScan: (discoveryTag) => ipcRenderer.invoke('bluetooth:auto-scan', discoveryTag),
-  onBluetoothDeviceList: (callback) => ipcRenderer.on('bluetooth:device-list', (_event, deviceList) => callback(deviceList))
+  onBluetoothDeviceList: (callback) => subscribe('bluetooth:device-list', callback)
 });

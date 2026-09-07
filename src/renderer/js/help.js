@@ -594,7 +594,7 @@ const HELP_TOPICS = [
     keywords: 'clear data danger zone delete erase reset factory profile uninstall erase everything permanent warning',
     content: `
       <p>If you want to completely clear all data from this computer (e.g. when changing computers or resetting the system), use the App Danger Zone.</p>
-      <div class="help-highlight-box" style="border-left-color: var(--color-error-500)">
+      <div class="help-highlight-box" data-eclass-style="border-left-color: var(--color-error-500)">
         <strong>⚠️ CRITICAL WARNING:</strong> Clearing local data is permanent and cannot be undone. Always download a manual backup before performing a reset!
       </div>
       <h5>Steps to Clear:</h5>
@@ -626,7 +626,7 @@ function initHelpCenter() {
   catList.innerHTML = HELP_CATEGORIES.map(cat => `
     <li class="help-cat-item ${cat.id === helpActiveCategory ? 'help-cat-item--active' : ''}" 
         id="helpCat-${cat.id}" 
-        onclick="setHelpCategory('${cat.id}')">
+        data-eclass-onclick="setHelpCategory('${cat.id}')">
       <span>${cat.name}</span>
     </li>
   `).join('');
@@ -670,12 +670,12 @@ function renderHelpContent(filteredTopics = null) {
   if (topicsToShow.length === 0) {
     contentPane.innerHTML = `
       <div class="help-empty-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 48px; height: 48px; opacity: 0.5;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" data-eclass-style="width: 48px; height: 48px; opacity: 0.5;">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <p style="margin: 0; font-size: var(--font-size-md);">No matching guides or tutorials found.</p>
-        <p style="margin: 0; font-size: var(--font-size-sm); color: var(--text-tertiary);">Try searching with different keywords.</p>
+        <p data-eclass-style="margin: 0; font-size: var(--font-size-md);">No matching guides or tutorials found.</p>
+        <p data-eclass-style="margin: 0; font-size: var(--font-size-sm); color: var(--text-tertiary);">Try searching with different keywords.</p>
       </div>
     `;
     return;

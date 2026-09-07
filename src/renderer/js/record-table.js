@@ -194,7 +194,7 @@ function recordSortButton(key, label) {
   const directionLabel = !isActive
     ? 'Sort high to low'
     : recordSortState.direction === 'desc' ? 'Sort low to high' : 'Restore roster order';
-  return `<button type="button" class="record-sort-btn${isActive ? ' record-sort-btn--active' : ''}" title="${esc(directionLabel)}" aria-label="${esc(directionLabel + ' for ' + label)}" onkeydown="event.stopPropagation()" onclick="return toggleRecordSort(event, '${esc(key)}')">${arrow}</button>`;
+  return `<button type="button" class="record-sort-btn${isActive ? ' record-sort-btn--active' : ''}" title="${esc(directionLabel)}" aria-label="${esc(directionLabel + ' for ' + label)}" data-eclass-onkeydown="event.stopPropagation()" data-eclass-onclick="return toggleRecordSort(event, '${esc(key)}')">${arrow}</button>`;
 }
 
 function recordSortValue(a, row) {
@@ -519,7 +519,7 @@ function renderRecordTable() {
     for (let gi = 0; gi < items.length; gi++) {
       const compClass = `c-comp-${items[gi].component.toLowerCase()}`;
       const headerLabel = assessmentHeaderLabel(items[gi], items);
-      html += `<th class="c-score ${compClass} assessment-header-cell" role="button" tabindex="0" title="${esc(assessmentHeaderTitle(items[gi], headerLabel))}" onclick="openAssessmentDetailsFromHeader(event, '${esc(items[gi].id)}')" onkeydown="return openAssessmentDetailsFromHeaderKey(event, '${esc(items[gi].id)}')">
+      html += `<th class="c-score ${compClass} assessment-header-cell" role="button" tabindex="0" title="${esc(assessmentHeaderTitle(items[gi], headerLabel))}" data-eclass-onclick="openAssessmentDetailsFromHeader(event, '${esc(items[gi].id)}')" data-eclass-onkeydown="return openAssessmentDetailsFromHeaderKey(event, '${esc(items[gi].id)}')">
         <span class="assessment-header-label">${esc(headerLabel)}</span>
         ${recordSortButton('assessment:' + items[gi].id, headerLabel)}
       </th>`;
@@ -540,7 +540,7 @@ function renderRecordTable() {
     for (let i = 0; i < items.length; i++) {
       const compClass = `c-comp-${items[i].component.toLowerCase()}`;
       const headerLabel = assessmentHeaderLabel(items[i], items);
-      html += `<th class="c-score ${compClass} assessment-header-cell" role="button" tabindex="0" title="${esc(assessmentHeaderTitle(items[i], headerLabel))}" onclick="openAssessmentDetailsFromHeader(event, '${esc(items[i].id)}')" onkeydown="return openAssessmentDetailsFromHeaderKey(event, '${esc(items[i].id)}')">
+      html += `<th class="c-score ${compClass} assessment-header-cell" role="button" tabindex="0" title="${esc(assessmentHeaderTitle(items[i], headerLabel))}" data-eclass-onclick="openAssessmentDetailsFromHeader(event, '${esc(items[i].id)}')" data-eclass-onkeydown="return openAssessmentDetailsFromHeaderKey(event, '${esc(items[i].id)}')">
         <span class="assessment-header-label">${esc(headerLabel)}</span>
         ${recordSortButton('assessment:' + items[i].id, headerLabel)}
       </th>`;
@@ -565,8 +565,8 @@ function renderRecordTable() {
     html += `<td class="c-score">
       <input id="hps-${h}" class="score-input max-input" value="${esc(items[h].maxScore)}" 
         data-assessment-id="${esc(items[h].id)}"
-        onkeydown="return maxNav(event, ${h}, '${esc(items[h].id)}')" 
-        onchange="updateAssessmentMax('${esc(items[h].id)}', this.value)" />
+        data-eclass-onkeydown="return maxNav(event, ${h}, '${esc(items[h].id)}')" 
+        data-eclass-onchange="updateAssessmentMax('${esc(items[h].id)}', this.value)" />
     </td>`;
     if (isExpanded) {
       const group = expandedAssessmentGroupEndingAt(assessmentGroups, h);
@@ -609,7 +609,7 @@ function renderRecordTable() {
     const isRowTI = result.isTransferredIn;
     const isDisabled = isRowTO || isRowTI;
     
-    html += `<tr class="${isRowTO ? 'row-transferred-out' : ''} ${isRowTI ? 'row-transferred-in' : ''}" style="${isRowTO ? 'opacity: 0.6; background: rgba(255, 193, 7, 0.03);' : ''} ${isRowTI ? 'background: rgba(46, 125, 50, 0.02);' : ''}">
+    html += `<tr class="${isRowTO ? 'row-transferred-out' : ''} ${isRowTI ? 'row-transferred-in' : ''}" data-eclass-style="${isRowTO ? 'opacity: 0.6; background: rgba(255, 193, 7, 0.03);' : ''} ${isRowTI ? 'background: rgba(46, 125, 50, 0.02);' : ''}">
       <td class="c-no">${r + 1}</td>
       <td class="c-learner learner-cell" title="${esc(learnerDisplayName(learner))}"><span class="learner-avatar-name">${globalThis.LearnerAvatars ? LearnerAvatars.renderLearner(learner, { size: 'xs' }) : ''}<span>${esc(learnerDisplayName(learner))}</span></span></td>
       <td class="c-sex">${esc(learner.sex)}</td>`;
@@ -632,9 +632,9 @@ function renderRecordTable() {
       html += `<td class="c-score"><div class="score-cell-wrap">
         <input id="sc-${r}-${j}" class="score-input${overMax ? ' invalid' : ''}${isPerfect ? ' perfect' : ''}${isSimilar ? ' similar' : ''}" title="${esc(scoreTitle)}" value="${isDisabled ? '' : esc(val)}"
           data-learner-index="${r}" data-learner-id="${esc(learner.id)}" data-assessment-id="${esc(items[j].id)}"
-          ${isDisabled ? 'disabled style="cursor: not-allowed; opacity: 0.5;"' : ''}
-          onkeydown="return scoreNav(event, ${r}, ${j}, '${esc(learner.id)}', '${esc(items[j].id)}')"
-          onchange="updateScore('${esc(learner.id)}', '${esc(items[j].id)}', this.value, this)" />${historyButton}</div>
+          ${isDisabled ? 'disabled data-eclass-style="cursor: not-allowed; opacity: 0.5;"' : ''}
+          data-eclass-onkeydown="return scoreNav(event, ${r}, ${j}, '${esc(learner.id)}', '${esc(items[j].id)}')"
+          data-eclass-onchange="updateScore('${esc(learner.id)}', '${esc(items[j].id)}', this.value, this)" />${historyButton}</div>
       </td>`;
       
       if (isExpanded) {
@@ -666,16 +666,19 @@ function renderRecordTable() {
     const igDisplay = isRowTO ? 'T/O' : (isRowTI ? 'T/I' : (result.hasData ? fmt(result.initialGrade) : ''));
     const tgDisplay = result.termGrade === null ? '' : formatGradeForDisplay(result.termGrade, a.policy);
     const descDisplay = esc(termDescription(a, result.termGrade));
+    const lookupOptions = { isTransferredOut: isRowTO, isTransferredIn: isRowTI, disabled: !result.hasData };
+    const tgClass = transmutationTriggerClass('c-grade', result.initialGrade, result.termGrade, lookupOptions);
+    const tgAttrs = transmutationTriggerAttrs(result.initialGrade, result.termGrade, lookupOptions);
 
     html += `<td class="c-grade">${igDisplay}</td>
-             <td class="c-grade" style="${isRowTO ? 'color: #ffb703; font-weight: bold;' : ''} ${isRowTI ? 'color: #81c784; font-weight: bold;' : ''}"><strong>${tgDisplay}</strong></td>
+             <td class="${tgClass}" data-eclass-style="${isRowTO ? 'color: #ffb703; font-weight: bold;' : ''} ${isRowTI ? 'color: #81c784; font-weight: bold;' : ''}"${tgAttrs}><strong>${tgDisplay}</strong></td>
              <td class="c-desc">${descDisplay}</td>
              </tr>`;
   }
   
   html += `</tbody></table></div>`;
   if (a.policy === 'DO15_DESCRIPTIVE') {
-    html += `<div class="compliance-footnote" style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
+    html += `<div class="compliance-footnote" data-eclass-style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
   }
   const recordTableRoot = document.getElementById('recordTable');
   recordTableRoot.innerHTML = html;
@@ -714,14 +717,14 @@ function recordColGroup(a, items, mapePart) {
     const groups = expandedAssessmentGroups(items);
     const detailColumnCount = Math.max(1, items.length + (groups.length * 3));
     const detailWidth = 60 / detailColumnCount;
-    html += "<col style='width:3%' /><col style='width:18%' /><col style='width:3%' />";
+    html += "<col data-eclass-style='width:3%' /><col data-eclass-style='width:18%' /><col data-eclass-style='width:3%' />";
     for (let i = 0; i < items.length; i++) {
-      html += `<col style='width:${detailWidth}%' />`;
+      html += `<col data-eclass-style='width:${detailWidth}%' />`;
       if (expandedAssessmentGroupEndingAt(groups, i)) {
-        html += `<col style='width:${detailWidth}%' /><col style='width:${detailWidth}%' /><col style='width:${detailWidth}%' />`;
+        html += `<col data-eclass-style='width:${detailWidth}%' /><col data-eclass-style='width:${detailWidth}%' /><col data-eclass-style='width:${detailWidth}%' />`;
       }
     }
-    html += "<col style='width:4%' /><col style='width:4%' /><col style='width:8%' />";
+    html += "<col data-eclass-style='width:4%' /><col data-eclass-style='width:4%' /><col data-eclass-style='width:8%' />";
   } else {
     let refCount = maxTermAssessmentCount(a, mapePart);
     if (refCount < 1) refCount = 1;
@@ -729,13 +732,13 @@ function recordColGroup(a, items, mapePart) {
     let spacerWidth = 45 - (items.length * scoreWidth);
     if (spacerWidth < 0) spacerWidth = 0;
     
-    html += `<col style="width:3%" /><col style="width:18%" /><col style="width:3%" />`;
+    html += `<col data-eclass-style="width:3%" /><col data-eclass-style="width:18%" /><col data-eclass-style="width:3%" />`;
     for (let j = 0; j < items.length; j++) {
-      html += `<col style="width:${scoreWidth}%" />`;
+      html += `<col data-eclass-style="width:${scoreWidth}%" />`;
     }
-    html += `<col style="width:${spacerWidth}%" />`;
-    html += `<col style="width:5%" /><col style="width:5%" /><col style="width:5%" />`;
-    html += `<col style="width:4%" /><col style="width:4%" /><col style="width:8%" />`;
+    html += `<col data-eclass-style="width:${spacerWidth}%" />`;
+    html += `<col data-eclass-style="width:5%" /><col data-eclass-style="width:5%" /><col data-eclass-style="width:5%" />`;
+    html += `<col data-eclass-style="width:4%" /><col data-eclass-style="width:4%" /><col data-eclass-style="width:8%" />`;
   }
   html += '</colgroup>';
   return html;
@@ -789,7 +792,7 @@ function groupScoreMax(items, group) {
 
 function summaryWeightedScore(result, componentKey, weight, assignment) {
   if (!result) return '';
-  if (result.termGrade === 'T/O') return '<span style="color:#ffb703; font-weight:600;">T/O</span>';
+  if (result.termGrade === 'T/O') return '<span data-eclass-style="color:#ffb703; font-weight:600;">T/O</span>';
   if (componentKey === 'WW') {
     return result.ww && result.ww.hasData ? fmt(result.ww.ps * weight / 100) : '';
   }
@@ -801,25 +804,32 @@ function summaryWeightedScore(result, componentKey, weight, assignment) {
 }
 
 function summaryGradeDisplay(grade, policy) {
-  if (grade === 'T/O') return '<span style="color:#ffb703; font-weight:600;">T/O</span>';
+  if (grade === 'T/O') return '<span data-eclass-style="color:#ffb703; font-weight:600;">T/O</span>';
   if (grade === null || grade === undefined || grade === '') return '';
   return blankNull(formatGradeForDisplay(grade, policy));
 }
 
 function summaryInitialGradeDisplay(result) {
   if (!result) return '';
-  if (result.termGrade === 'T/O') return '<span style="color:#ffb703; font-weight:600;">T/O</span>';
+  if (result.termGrade === 'T/O') return '<span data-eclass-style="color:#ffb703; font-weight:600;">T/O</span>';
   return result.hasData ? fmt(result.initialGrade) : '';
 }
 
 function summaryTermCells(result, weights, policy, termNumber, assignment) {
   const termClass = `summary-term-cell summary-term-${termNumber}`;
+  const lookupOptions = {
+    isTransferredOut: !!(result && (result.isTransferredOut || result.termGrade === 'T/O')),
+    isTransferredIn: !!(result && result.isTransferredIn),
+    disabled: !(result && result.hasData)
+  };
+  const tgClass = transmutationTriggerClass(`${termClass} summary-term-grade`, result ? result.initialGrade : null, result ? result.termGrade : null, lookupOptions);
+  const tgAttrs = transmutationTriggerAttrs(result ? result.initialGrade : null, result ? result.termGrade : null, lookupOptions);
   return `
     <td class="${termClass}">${summaryWeightedScore(result, 'WW', weights[0])}</td>
     <td class="${termClass}">${summaryWeightedScore(result, 'PT', weights[1])}</td>
     <td class="${termClass}">${summaryWeightedScore(result, 'STE', weights[2], assignment)}</td>
     <td class="${termClass} summary-term-initial">${summaryInitialGradeDisplay(result)}</td>
-    <td class="${termClass} summary-term-grade"><strong>${summaryGradeDisplay(result ? result.termGrade : null, policy)}</strong></td>
+    <td class="${tgClass}"${tgAttrs}><strong>${summaryGradeDisplay(result ? result.termGrade : null, policy)}</strong></td>
   `;
 }
 
@@ -939,7 +949,7 @@ function renderFinalOnly() {
     let remarks = '';
     if (isTO) {
       fg = 'T/O';
-      remarks = '<span style="color:#ffb703; font-weight:600;">Transferred Out</span>';
+      remarks = '<span data-eclass-style="color:#ffb703; font-weight:600;">Transferred Out</span>';
     } else {
       fg = isDescriptive
         ? (countIg > 0 ? transmute(a, sumIg / countIg) : null)
@@ -947,7 +957,11 @@ function renderFinalOnly() {
       remarks = finalRemark(a, fg);
     }
     
-    const fgDisplay = fg === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(fg, a.policy));
+    const fgDisplay = fg === 'T/O' ? '<span data-eclass-style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(fg, a.policy));
+    const finalLookupIg = isDescriptive && countIg > 0 ? (sumIg / countIg) : null;
+    const finalLookupOptions = { isTransferredOut: isTO, disabled: fg === null || fg === 'T/O' || !isDescriptive };
+    const fgClass = transmutationTriggerClass('summary-final-cell summary-final-grade', finalLookupIg, fg, finalLookupOptions);
+    const fgAttrs = transmutationTriggerAttrs(finalLookupIg, fg, finalLookupOptions);
 
     html += `<tr>
       <td>${r + 1}</td>
@@ -955,14 +969,14 @@ function renderFinalOnly() {
       ${summaryTermCells(termResults[0], weights, a.policy, 1, a)}
       ${summaryTermCells(termResults[1], weights, a.policy, 2, a)}
       ${summaryTermCells(termResults[2], weights, a.policy, 3, a)}
-      <td class="summary-final-cell summary-final-grade"><strong>${fgDisplay}</strong></td>
+      <td class="${fgClass}"${fgAttrs}><strong>${fgDisplay}</strong></td>
       <td class="summary-final-cell">${remarks}</td>
     </tr>`;
   }
   
   html += '</tbody></table>';
   if (a.policy === 'DO15_DESCRIPTIVE') {
-    html += `<div class="compliance-footnote" style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
+    html += `<div class="compliance-footnote" data-eclass-style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
   }
   document.getElementById('finalTable').innerHTML = html;
 }
@@ -973,13 +987,13 @@ function renderConsolidatedMapehTable(a) {
   const learnerRows = getRecordLearnerRows(a, term, items, 'consolidated');
   let html = `<div class="record-scroll"><table class="record-grid is-mapeh">
     <colgroup>
-      <col style="width:5%" />
-      <col style="width:25%" />
-      <col style="width:5%" />
-      <col style="width:15%" />
-      <col style="width:15%" />
-      <col style="width:15%" />
-      <col style="width:20%" />
+      <col data-eclass-style="width:5%" />
+      <col data-eclass-style="width:25%" />
+      <col data-eclass-style="width:5%" />
+      <col data-eclass-style="width:15%" />
+      <col data-eclass-style="width:15%" />
+      <col data-eclass-style="width:15%" />
+      <col data-eclass-style="width:20%" />
     </colgroup>
     <thead>
       <tr>
@@ -1004,6 +1018,7 @@ function renderConsolidatedMapehTable(a) {
     const gPE = resPE.termGrade;
     
     let consolidated = null;
+    let consolidatedIg = null;
     if (isDescriptive) {
       let sumIg = 0;
       let countIg = 0;
@@ -1015,7 +1030,8 @@ function renderConsolidatedMapehTable(a) {
         sumIg += resPE.initialGrade;
         countIg++;
       }
-      consolidated = countIg > 0 ? transmute(a, sumIg / countIg) : null;
+      consolidatedIg = countIg > 0 ? sumIg / countIg : null;
+      consolidated = countIg > 0 ? transmute(a, consolidatedIg) : null;
     } else {
       consolidated = consolidateMapehGrades(gMusic, gPE);
     }
@@ -1024,16 +1040,16 @@ function renderConsolidatedMapehTable(a) {
       <td class="c-no">${r + 1}</td>
       <td class="c-learner learner-cell" title="${esc(learnerDisplayName(learner))}"><span class="learner-avatar-name">${globalThis.LearnerAvatars ? LearnerAvatars.renderLearner(learner, { size: 'xs' }) : ''}<span>${esc(learnerDisplayName(learner))}</span></span></td>
       <td class="c-sex">${esc(learner.sex)}</td>
-      <td class="c-grade">${blankNull(formatGradeForDisplay(gMusic, a.policy))}</td>
-      <td class="c-grade">${blankNull(formatGradeForDisplay(gPE, a.policy))}</td>
-      <td class="c-grade"><strong>${blankNull(formatGradeForDisplay(consolidated, a.policy))}</strong></td>
+      <td class="${transmutationTriggerClass('c-grade', resMusic.initialGrade, gMusic, { disabled: !resMusic.hasData, isTransferredOut: gMusic === 'T/O', isTransferredIn: !!resMusic.isTransferredIn })}"${transmutationTriggerAttrs(resMusic.initialGrade, gMusic, { disabled: !resMusic.hasData, isTransferredOut: gMusic === 'T/O', isTransferredIn: !!resMusic.isTransferredIn })}>${blankNull(formatGradeForDisplay(gMusic, a.policy))}</td>
+      <td class="${transmutationTriggerClass('c-grade', resPE.initialGrade, gPE, { disabled: !resPE.hasData, isTransferredOut: gPE === 'T/O', isTransferredIn: !!resPE.isTransferredIn })}"${transmutationTriggerAttrs(resPE.initialGrade, gPE, { disabled: !resPE.hasData, isTransferredOut: gPE === 'T/O', isTransferredIn: !!resPE.isTransferredIn })}>${blankNull(formatGradeForDisplay(gPE, a.policy))}</td>
+      <td class="${transmutationTriggerClass('c-grade', consolidatedIg, consolidated, { disabled: !isDescriptive || consolidated == null })}"${transmutationTriggerAttrs(consolidatedIg, consolidated, { disabled: !isDescriptive || consolidated == null })}><strong>${blankNull(formatGradeForDisplay(consolidated, a.policy))}</strong></td>
       <td class="c-desc">${renderBadge(consolidated)}</td>
     </tr>`;
   }
   
   html += '</tbody></table></div>';
   if (a.policy === 'DO15_DESCRIPTIVE') {
-    html += `<div class="compliance-footnote" style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
+    html += `<div class="compliance-footnote" data-eclass-style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
   }
   document.getElementById('recordTable').innerHTML = html;
 }
@@ -1071,6 +1087,7 @@ function renderConsolidatedMapehSummary(a) {
     let sumMusic = 0, countMusic = 0;
     let sumPE = 0, countPE = 0;
     const consGrades = [];
+    const consIgs = [];
 
     let sumMusicIg = 0, countMusicIg = 0;
     let sumPEIg = 0, countPEIg = 0;
@@ -1080,6 +1097,7 @@ function renderConsolidatedMapehSummary(a) {
     for (let t = 1; t <= 3; t++) {
       if (isTO && t > parseInt(learner.transferredOutTerm)) {
         consGrades.push('T/O');
+        consIgs.push(null);
       } else {
         const resMusic = computeTerm(a, learner.id, String(t), 'music_arts');
         const resPE = computeTerm(a, learner.id, String(t), 'pe_health');
@@ -1107,7 +1125,8 @@ function renderConsolidatedMapehSummary(a) {
             sumTermIg += resPE.initialGrade;
             countTermIg++;
           }
-          consGrades.push(countTermIg > 0 ? transmute(a, sumTermIg / countTermIg) : null);
+          consIgs.push(countTermIg > 0 ? sumTermIg / countTermIg : null);
+          consGrades.push(countTermIg > 0 ? transmute(a, consIgs[consIgs.length - 1]) : null);
         } else {
           if (gm !== null && typeof gm === 'number') {
             sumMusic += gm;
@@ -1120,6 +1139,7 @@ function renderConsolidatedMapehSummary(a) {
           }
 
           const gc = consolidateMapehGrades(gm, gp);
+          consIgs.push(null);
           consGrades.push(gc);
         }
       }
@@ -1132,7 +1152,7 @@ function renderConsolidatedMapehSummary(a) {
       musicFinal = 'T/O';
       peFinal = 'T/O';
       finalConsolidated = 'T/O';
-      remarks = '<span style="color:#ffb703; font-weight:600;">Transferred Out</span>';
+      remarks = '<span data-eclass-style="color:#ffb703; font-weight:600;">Transferred Out</span>';
     } else {
       musicFinal = isDescriptive
         ? (countMusicIg > 0 ? transmute(a, sumMusicIg / countMusicIg) : null)
@@ -1160,21 +1180,21 @@ function renderConsolidatedMapehSummary(a) {
       remarks = finalRemark(a, finalConsolidated);
     }
     
-    const mfDisplay = musicFinal === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(musicFinal, a.policy));
-    const pfDisplay = peFinal === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(peFinal, a.policy));
-    const t1Display = consGrades[0] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(consGrades[0], a.policy));
-    const t2Display = consGrades[1] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(consGrades[1], a.policy));
-    const t3Display = consGrades[2] === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(consGrades[2], a.policy));
-    const fcDisplay = finalConsolidated === 'T/O' ? '<span style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(finalConsolidated, a.policy));
+    const mfDisplay = musicFinal === 'T/O' ? '<span data-eclass-style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(musicFinal, a.policy));
+    const pfDisplay = peFinal === 'T/O' ? '<span data-eclass-style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(peFinal, a.policy));
+    const t1Display = consGrades[0] === 'T/O' ? '<span data-eclass-style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(consGrades[0], a.policy));
+    const t2Display = consGrades[1] === 'T/O' ? '<span data-eclass-style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(consGrades[1], a.policy));
+    const t3Display = consGrades[2] === 'T/O' ? '<span data-eclass-style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(consGrades[2], a.policy));
+    const fcDisplay = finalConsolidated === 'T/O' ? '<span data-eclass-style="color:#ffb703; font-weight:600;">T/O</span>' : blankNull(formatGradeForDisplay(finalConsolidated, a.policy));
 
     html += `<tr>
       <td>${r + 1}</td>
       <td class="summary-learner-cell"><span class="learner-avatar-name">${globalThis.LearnerAvatars ? LearnerAvatars.renderLearner(learner, { size: 'xs' }) : ''}<span>${esc(learnerDisplayName(learner))}</span></span></td>
       <td class="summary-final-cell">${mfDisplay}</td>
       <td class="summary-final-cell">${pfDisplay}</td>
-      <td class="summary-term-cell summary-term-1 summary-term-grade">${t1Display}</td>
-      <td class="summary-term-cell summary-term-2 summary-term-grade">${t2Display}</td>
-      <td class="summary-term-cell summary-term-3 summary-term-grade">${t3Display}</td>
+      <td class="${transmutationTriggerClass('summary-term-cell summary-term-1 summary-term-grade', consIgs[0], consGrades[0], { isTransferredOut: isTO })}"${transmutationTriggerAttrs(consIgs[0], consGrades[0], { isTransferredOut: isTO })}>${t1Display}</td>
+      <td class="${transmutationTriggerClass('summary-term-cell summary-term-2 summary-term-grade', consIgs[1], consGrades[1], { isTransferredOut: isTO })}"${transmutationTriggerAttrs(consIgs[1], consGrades[1], { isTransferredOut: isTO })}>${t2Display}</td>
+      <td class="${transmutationTriggerClass('summary-term-cell summary-term-3 summary-term-grade', consIgs[2], consGrades[2], { isTransferredOut: isTO })}"${transmutationTriggerAttrs(consIgs[2], consGrades[2], { isTransferredOut: isTO })}>${t3Display}</td>
       <td class="summary-final-cell summary-final-grade"><strong>${fcDisplay}</strong></td>
       <td class="summary-final-cell">${remarks}</td>
     </tr>`;
@@ -1182,7 +1202,7 @@ function renderConsolidatedMapehSummary(a) {
   
   html += '</tbody></table>';
   if (a.policy === 'DO15_DESCRIPTIVE') {
-    html += `<div class="compliance-footnote" style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
+    html += `<div class="compliance-footnote" data-eclass-style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
   }
   document.getElementById('finalTable').innerHTML = html;
 }
@@ -2198,9 +2218,9 @@ function renderAssessmentAttachments() {
         <div class="assessment-attachment-name">${esc(file.originalName)}</div>
         <div class="text-muted text-xs">${esc(file.mimeType || 'file')} &middot; ${Math.max(1, Math.round((file.size || 0) / 1024))} KB</div>
       </div>
-      <div style="display:flex;gap:var(--space-2);">
-        <button class="btn btn-ghost btn-sm" type="button" onclick="openAssessmentAttachment('${esc(file.id)}')">Open</button>
-        <button class="btn btn-danger btn-sm" type="button" onclick="removeAssessmentAttachment('${esc(file.id)}')">Remove</button>
+      <div data-eclass-style="display:flex;gap:var(--space-2);">
+        <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="openAssessmentAttachment('${esc(file.id)}')">Open</button>
+        <button class="btn btn-danger btn-sm" type="button" data-eclass-onclick="removeAssessmentAttachment('${esc(file.id)}')">Remove</button>
       </div>
     </div>
   `).join('');

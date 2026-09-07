@@ -108,16 +108,16 @@ function uid(prefix = 'id') {
 function emptyState(title, hint, actionLabel, actionCallback, secondActionLabel, secondActionCallback, thirdActionLabel, thirdActionCallback) {
   let buttonsHtml = '';
   if (actionLabel) {
-    buttonsHtml += `<button class="btn btn-primary" style="padding: 8px 20px; font-size: var(--font-size-md);" onclick="${esc(actionCallback)}">${esc(actionLabel)}</button>`;
+    buttonsHtml += `<button class="btn btn-primary" data-eclass-style="padding: 8px 20px; font-size: var(--font-size-md);" data-eclass-onclick="${esc(actionCallback)}">${esc(actionLabel)}</button>`;
   }
   if (secondActionLabel) {
-    buttonsHtml += `<button class="btn btn-olive" style="padding: 8px 20px; font-size: var(--font-size-md);" onclick="${esc(secondActionCallback)}">${esc(secondActionLabel)}</button>`;
+    buttonsHtml += `<button class="btn btn-olive" data-eclass-style="padding: 8px 20px; font-size: var(--font-size-md);" data-eclass-onclick="${esc(secondActionCallback)}">${esc(secondActionLabel)}</button>`;
   }
   if (thirdActionLabel) {
-    buttonsHtml += `<button class="btn btn-olive" style="padding: 8px 20px; font-size: var(--font-size-md);" onclick="${esc(thirdActionCallback)}">${esc(thirdActionLabel)}</button>`;
+    buttonsHtml += `<button class="btn btn-olive" data-eclass-style="padding: 8px 20px; font-size: var(--font-size-md);" data-eclass-onclick="${esc(thirdActionCallback)}">${esc(thirdActionLabel)}</button>`;
   }
   
-  const container = buttonsHtml ? `<div style="display:flex; justify-content:center; align-items:center; gap:var(--space-3); margin-top:var(--space-5); flex-wrap:wrap;">${buttonsHtml}</div>` : '';
+  const container = buttonsHtml ? `<div data-eclass-style="display:flex; justify-content:center; align-items:center; gap:var(--space-3); margin-top:var(--space-5); flex-wrap:wrap;">${buttonsHtml}</div>` : '';
 
   return `
     <div class="empty-state animate-fade-in">
@@ -382,7 +382,8 @@ const MODAL_ESCAPE_CLOSE_HANDLERS = {
   importRosterModal: 'closeImportRosterModal',
   bulkAddLearnersModal: 'closeBulkAddLearnersModal',
   helpAssistantCommunityModal: 'closeHelpAssistantCommunityModal',
-  ownerSidebarAdsModal: 'closeSidebarAdOwnerModal'
+  ownerSidebarAdsModal: 'closeSidebarAdOwnerModal',
+  transmutationTableModal: 'closeTransmutationTable'
 };
 
 function isVisibleModalOverlay(modal) {
@@ -860,30 +861,30 @@ function showUpdateConfirmModal(latestVer, currentVer, changelogText, onConfirm,
   overlay.className = 'modal-overlay';
   overlay.style.zIndex = '99999'; // Float above tour overlays
   overlay.innerHTML = `
-    <div class="modal modal--wide" style="max-width: 480px">
-      <div class="modal__title" style="color: var(--color-primary-600); display:flex; align-items:center; gap:var(--space-2)">
+    <div class="modal modal--wide" data-eclass-style="max-width: 480px">
+      <div class="modal__title" data-eclass-style="color: var(--color-primary-600); display:flex; align-items:center; gap:var(--space-2)">
         🚀 Update Available: v${latestVer}
       </div>
-      <div class="modal__body" style="display:flex; flex-direction:column; gap:var(--space-4)">
-        <div style="font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 1.4">
+      <div class="modal__body" data-eclass-style="display:flex; flex-direction:column; gap:var(--space-4)">
+        <div data-eclass-style="font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 1.4">
           A new <strong>${updateType}</strong> is available for download. Review the changes below:
         </div>
         
-        <div style="max-height: 160px; overflow-y: auto; border: 1px solid var(--border-default); border-radius: var(--border-radius-md); padding: var(--space-3); background: var(--bg-muted); text-align: left">
-          <ul style="margin: 0; padding-left: 20px; font-size: var(--font-size-sm); line-height: 1.5; color: var(--text-primary)">
+        <div data-eclass-style="max-height: 160px; overflow-y: auto; border: 1px solid var(--border-default); border-radius: var(--border-radius-md); padding: var(--space-3); background: var(--bg-muted); text-align: left">
+          <ul data-eclass-style="margin: 0; padding-left: 20px; font-size: var(--font-size-sm); line-height: 1.5; color: var(--text-primary)">
             ${changelogHtml}
           </ul>
         </div>
         
-        <div style="display:flex; gap:var(--space-3); align-items:flex-start; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--border-radius-md); padding: var(--space-3); text-align: left">
-          <span style="font-size: 20px; line-height: 1">🛡️</span>
-          <div style="font-size: var(--font-size-xs); color: #166534; line-height: 1.4">
+        <div data-eclass-style="display:flex; gap:var(--space-3); align-items:flex-start; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--border-radius-md); padding: var(--space-3); text-align: left">
+          <span data-eclass-style="font-size: 20px; line-height: 1">🛡️</span>
+          <div data-eclass-style="font-size: var(--font-size-xs); color: #166534; line-height: 1.4">
             <strong>Data Safety Guarantee</strong><br>
             Your local profiles, student rosters, grading sheets, and offline backups are safe on this device and will not be affected during the update.
           </div>
         </div>
       </div>
-      <div class="modal__actions" style="margin-top: var(--space-4)">
+      <div class="modal__actions" data-eclass-style="margin-top: var(--space-4)">
         <button class="btn btn-ghost btn-sm" id="btnUpdateLater">Later</button>
         <button class="btn btn-primary btn-sm" id="btnUpdateDownload">Download & Install Now</button>
       </div>

@@ -1,0 +1,699 @@
+{
+  "target": "44.2.0",
+  "baseline": "33.4.11",
+  "checkpoints": [
+    {
+      "electronVersion": "34.5.8",
+      "recordedAt": "2026-09-05T14:10:06.797Z",
+      "platform": "win32-x64",
+      "checks": [
+        {
+          "label": "schema freeze",
+          "durationMs": 91,
+          "marker": ""
+        },
+        {
+          "label": "compatibility fixtures",
+          "durationMs": 88,
+          "marker": ""
+        },
+        {
+          "label": "database and backup compatibility",
+          "durationMs": 1867,
+          "marker": ""
+        },
+        {
+          "label": "attendance PDF/print",
+          "durationMs": 79,
+          "marker": ""
+        },
+        {
+          "label": "desktop updater",
+          "durationMs": 77,
+          "marker": ""
+        },
+        {
+          "label": "WLAN companion service",
+          "durationMs": 385,
+          "marker": ""
+        },
+        {
+          "label": "Bluetooth fallback",
+          "durationMs": 78,
+          "marker": ""
+        },
+        {
+          "label": "single instance",
+          "durationMs": 72,
+          "marker": ""
+        },
+        {
+          "label": "source offline smoke",
+          "durationMs": 19273,
+          "marker": "SMOKE_OK "
+        },
+        {
+          "label": "unpacked Windows build",
+          "durationMs": 28115,
+          "marker": ""
+        },
+        {
+          "label": "packaged offline smoke",
+          "durationMs": 15337,
+          "marker": "SMOKE_OK "
+        }
+      ],
+      "hostNodeVersion": "24.16.0"
+    },
+    {
+      "electronVersion": "35.7.5",
+      "recordedAt": "2026-09-05T14:13:25.658Z",
+      "platform": "win32-x64",
+      "checks": [
+        {
+          "label": "schema freeze",
+          "durationMs": 85,
+          "marker": ""
+        },
+        {
+          "label": "compatibility fixtures",
+          "durationMs": 83,
+          "marker": ""
+        },
+        {
+          "label": "database and backup compatibility",
+          "durationMs": 1835,
+          "marker": ""
+        },
+        {
+          "label": "attendance PDF/print",
+          "durationMs": 76,
+          "marker": ""
+        },
+        {
+          "label": "desktop updater",
+          "durationMs": 74,
+          "marker": ""
+        },
+        {
+          "label": "WLAN companion service",
+          "durationMs": 478,
+          "marker": ""
+        },
+        {
+          "label": "Bluetooth fallback",
+          "durationMs": 72,
+          "marker": ""
+        },
+        {
+          "label": "single instance",
+          "durationMs": 69,
+          "marker": ""
+        },
+        {
+          "label": "source offline smoke",
+          "durationMs": 14800,
+          "marker": "SMOKE_OK "
+        },
+        {
+          "label": "unpacked Windows build",
+          "durationMs": 25204,
+          "marker": ""
+        },
+        {
+          "label": "packaged offline smoke",
+          "durationMs": 16155,
+          "marker": "SMOKE_OK "
+        }
+      ],
+      "hostNodeVersion": "24.16.0"
+    },
+    {
+      "electronVersion": "36.9.5",
+      "recordedAt": "2026-09-05T14:15:17.354Z",
+      "platform": "win32-x64",
+      "checks": [
+        {
+          "label": "schema freeze",
+          "durationMs": 88,
+          "marker": ""
+        },
+        {
+          "label": "compatibility fixtures",
+          "durationMs": 128,
+          "marker": ""
+        },
+        {
+          "label": "database and backup compatibility",
+          "durationMs": 2155,
+          "marker": ""
+        },
+        {
+          "label": "attendance PDF/print",
+          "durationMs": 67,
+          "marker": ""
+        },
+        {
+          "label": "desktop updater",
+          "durationMs": 70,
+          "marker": ""
+        },
+        {
+          "label": "WLAN companion service",
+          "durationMs": 397,
+          "marker": ""
+        },
+        {
+          "label": "Bluetooth fallback",
+          "durationMs": 75,
+          "marker": ""
+        },
+        {
+          "label": "single instance",
+          "durationMs": 68,
+          "marker": ""
+        },
+        {
+          "label": "source offline smoke",
+          "durationMs": 14632,
+          "marker": "SMOKE_OK "
+        },
+        {
+          "label": "unpacked Windows build",
+          "durationMs": 23960,
+          "marker": ""
+        },
+        {
+          "label": "packaged offline smoke",
+          "durationMs": 15948,
+          "marker": "SMOKE_OK "
+        }
+      ],
+      "hostNodeVersion": "24.16.0"
+    },
+    {
+      "electronVersion": "37.10.3",
+      "recordedAt": "2026-09-05T14:17:04.268Z",
+      "platform": "win32-x64",
+      "checks": [
+        {
+          "label": "schema freeze",
+          "durationMs": 79,
+          "marker": ""
+        },
+        {
+          "label": "compatibility fixtures",
+          "durationMs": 80,
+          "marker": ""
+        },
+        {
+          "label": "database and backup compatibility",
+          "durationMs": 1827,
+          "marker": ""
+        },
+        {
+          "label": "attendance PDF/print",
+          "durationMs": 66,
+          "marker": ""
+        },
+        {
+          "label": "desktop updater",
+          "durationMs": 72,
+          "marker": ""
+        },
+        {
+          "label": "WLAN companion service",
+          "durationMs": 385,
+          "marker": ""
+        },
+        {
+          "label": "Bluetooth fallback",
+          "durationMs": 75,
+          "marker": ""
+        },
+        {
+          "label": "single instance",
+          "durationMs": 70,
+          "marker": ""
+        },
+        {
+          "label": "source offline smoke",
+          "durationMs": 14859,
+          "marker": "SMOKE_OK "
+        },
+        {
+          "label": "unpacked Windows build",
+          "durationMs": 23948,
+          "marker": ""
+        },
+        {
+          "label": "packaged offline smoke",
+          "durationMs": 14806,
+          "marker": "SMOKE_OK "
+        }
+      ],
+      "hostNodeVersion": "24.16.0"
+    },
+    {
+      "electronVersion": "38.8.6",
+      "recordedAt": "2026-09-05T14:19:01.289Z",
+      "platform": "win32-x64",
+      "checks": [
+        {
+          "label": "schema freeze",
+          "durationMs": 86,
+          "marker": ""
+        },
+        {
+          "label": "compatibility fixtures",
+          "durationMs": 85,
+          "marker": ""
+        },
+        {
+          "label": "database and backup compatibility",
+          "durationMs": 1861,
+          "marker": ""
+        },
+        {
+          "label": "attendance PDF/print",
+          "durationMs": 76,
+          "marker": ""
+        },
+        {
+          "label": "desktop updater",
+          "durationMs": 90,
+          "marker": ""
+        },
+        {
+          "label": "WLAN companion service",
+          "durationMs": 419,
+          "marker": ""
+        },
+        {
+          "label": "Bluetooth fallback",
+          "durationMs": 119,
+          "marker": ""
+        },
+        {
+          "label": "single instance",
+          "durationMs": 99,
+          "marker": ""
+        },
+        {
+          "label": "source offline smoke",
+          "durationMs": 15187,
+          "marker": "SMOKE_OK "
+        },
+        {
+          "label": "unpacked Windows build",
+          "durationMs": 27605,
+          "marker": ""
+        },
+        {
+          "label": "packaged offline smoke",
+          "durationMs": 16513,
+          "marker": "SMOKE_OK "
+        }
+      ],
+      "hostNodeVersion": "24.16.0"
+    },
+    {
+      "electronVersion": "39.8.10",
+      "recordedAt": "2026-09-05T14:21:09.251Z",
+      "platform": "win32-x64",
+      "checks": [
+        {
+          "label": "schema freeze",
+          "durationMs": 77,
+          "marker": ""
+        },
+        {
+          "label": "compatibility fixtures",
+          "durationMs": 86,
+          "marker": ""
+        },
+        {
+          "label": "database and backup compatibility",
+          "durationMs": 1872,
+          "marker": ""
+        },
+        {
+          "label": "attendance PDF/print",
+          "durationMs": 65,
+          "marker": ""
+        },
+        {
+          "label": "desktop updater",
+          "durationMs": 69,
+          "marker": ""
+        },
+        {
+          "label": "WLAN companion service",
+          "durationMs": 404,
+          "marker": ""
+        },
+        {
+          "label": "Bluetooth fallback",
+          "durationMs": 78,
+          "marker": ""
+        },
+        {
+          "label": "single instance",
+          "durationMs": 79,
+          "marker": ""
+        },
+        {
+          "label": "source offline smoke",
+          "durationMs": 21715,
+          "marker": "SMOKE_OK "
+        },
+        {
+          "label": "unpacked Windows build",
+          "durationMs": 27612,
+          "marker": ""
+        },
+        {
+          "label": "packaged offline smoke",
+          "durationMs": 27550,
+          "marker": "SMOKE_OK "
+        }
+      ],
+      "hostNodeVersion": "24.16.0"
+    },
+    {
+      "electronVersion": "40.10.6",
+      "recordedAt": "2026-09-05T14:23:12.612Z",
+      "platform": "win32-x64",
+      "checks": [
+        {
+          "label": "schema freeze",
+          "durationMs": 89,
+          "marker": ""
+        },
+        {
+          "label": "compatibility fixtures",
+          "durationMs": 90,
+          "marker": ""
+        },
+        {
+          "label": "database and backup compatibility",
+          "durationMs": 1886,
+          "marker": ""
+        },
+        {
+          "label": "attendance PDF/print",
+          "durationMs": 70,
+          "marker": ""
+        },
+        {
+          "label": "desktop updater",
+          "durationMs": 74,
+          "marker": ""
+        },
+        {
+          "label": "WLAN companion service",
+          "durationMs": 411,
+          "marker": ""
+        },
+        {
+          "label": "Bluetooth fallback",
+          "durationMs": 78,
+          "marker": ""
+        },
+        {
+          "label": "single instance",
+          "durationMs": 85,
+          "marker": ""
+        },
+        {
+          "label": "source offline smoke",
+          "durationMs": 20747,
+          "marker": "SMOKE_OK "
+        },
+        {
+          "label": "unpacked Windows build",
+          "durationMs": 26709,
+          "marker": ""
+        },
+        {
+          "label": "packaged offline smoke",
+          "durationMs": 15064,
+          "marker": "SMOKE_OK "
+        }
+      ],
+      "hostNodeVersion": "24.16.0"
+    },
+    {
+      "electronVersion": "41.10.7",
+      "recordedAt": "2026-09-05T14:25:26.332Z",
+      "platform": "win32-x64",
+      "checks": [
+        {
+          "label": "schema freeze",
+          "durationMs": 87,
+          "marker": ""
+        },
+        {
+          "label": "compatibility fixtures",
+          "durationMs": 84,
+          "marker": ""
+        },
+        {
+          "label": "database and backup compatibility",
+          "durationMs": 1814,
+          "marker": ""
+        },
+        {
+          "label": "attendance PDF/print",
+          "durationMs": 71,
+          "marker": ""
+        },
+        {
+          "label": "desktop updater",
+          "durationMs": 73,
+          "marker": ""
+        },
+        {
+          "label": "WLAN companion service",
+          "durationMs": 392,
+          "marker": ""
+        },
+        {
+          "label": "Bluetooth fallback",
+          "durationMs": 78,
+          "marker": ""
+        },
+        {
+          "label": "single instance",
+          "durationMs": 71,
+          "marker": ""
+        },
+        {
+          "label": "source offline smoke",
+          "durationMs": 25892,
+          "marker": "SMOKE_OK "
+        },
+        {
+          "label": "unpacked Windows build",
+          "durationMs": 29709,
+          "marker": ""
+        },
+        {
+          "label": "packaged offline smoke",
+          "durationMs": 23005,
+          "marker": "SMOKE_OK "
+        }
+      ],
+      "hostNodeVersion": "24.16.0"
+    },
+    {
+      "electronVersion": "42.11.2",
+      "recordedAt": "2026-09-05T14:28:03.770Z",
+      "platform": "win32-x64",
+      "checks": [
+        {
+          "label": "schema freeze",
+          "durationMs": 81,
+          "marker": ""
+        },
+        {
+          "label": "compatibility fixtures",
+          "durationMs": 84,
+          "marker": ""
+        },
+        {
+          "label": "database and backup compatibility",
+          "durationMs": 1828,
+          "marker": ""
+        },
+        {
+          "label": "attendance PDF/print",
+          "durationMs": 78,
+          "marker": ""
+        },
+        {
+          "label": "desktop updater",
+          "durationMs": 72,
+          "marker": ""
+        },
+        {
+          "label": "WLAN companion service",
+          "durationMs": 415,
+          "marker": ""
+        },
+        {
+          "label": "Bluetooth fallback",
+          "durationMs": 78,
+          "marker": ""
+        },
+        {
+          "label": "single instance",
+          "durationMs": 70,
+          "marker": ""
+        },
+        {
+          "label": "source offline smoke",
+          "durationMs": 14072,
+          "marker": "SMOKE_OK "
+        },
+        {
+          "label": "unpacked Windows build",
+          "durationMs": 31667,
+          "marker": ""
+        },
+        {
+          "label": "packaged offline smoke",
+          "durationMs": 14802,
+          "marker": "SMOKE_OK "
+        }
+      ],
+      "hostNodeVersion": "24.16.0"
+    },
+    {
+      "electronVersion": "43.6.0",
+      "recordedAt": "2026-09-05T14:30:00.990Z",
+      "platform": "win32-x64",
+      "checks": [
+        {
+          "label": "schema freeze",
+          "durationMs": 81,
+          "marker": ""
+        },
+        {
+          "label": "compatibility fixtures",
+          "durationMs": 84,
+          "marker": ""
+        },
+        {
+          "label": "database and backup compatibility",
+          "durationMs": 1922,
+          "marker": ""
+        },
+        {
+          "label": "attendance PDF/print",
+          "durationMs": 75,
+          "marker": ""
+        },
+        {
+          "label": "desktop updater",
+          "durationMs": 73,
+          "marker": ""
+        },
+        {
+          "label": "WLAN companion service",
+          "durationMs": 416,
+          "marker": ""
+        },
+        {
+          "label": "Bluetooth fallback",
+          "durationMs": 85,
+          "marker": ""
+        },
+        {
+          "label": "single instance",
+          "durationMs": 79,
+          "marker": ""
+        },
+        {
+          "label": "source offline smoke",
+          "durationMs": 15119,
+          "marker": "SMOKE_OK "
+        },
+        {
+          "label": "unpacked Windows build",
+          "durationMs": 32661,
+          "marker": ""
+        },
+        {
+          "label": "packaged offline smoke",
+          "durationMs": 14960,
+          "marker": "SMOKE_OK "
+        }
+      ],
+      "hostNodeVersion": "24.16.0"
+    },
+    {
+      "electronVersion": "44.2.0",
+      "hostNodeVersion": "24.16.0",
+      "recordedAt": "2026-09-05T14:48:03.273Z",
+      "platform": "win32-x64",
+      "checks": [
+        {
+          "label": "schema freeze",
+          "durationMs": 74,
+          "marker": ""
+        },
+        {
+          "label": "compatibility fixtures",
+          "durationMs": 142,
+          "marker": ""
+        },
+        {
+          "label": "database and backup compatibility",
+          "durationMs": 1804,
+          "marker": ""
+        },
+        {
+          "label": "attendance PDF/print",
+          "durationMs": 66,
+          "marker": ""
+        },
+        {
+          "label": "desktop updater",
+          "durationMs": 75,
+          "marker": ""
+        },
+        {
+          "label": "WLAN companion service",
+          "durationMs": 392,
+          "marker": ""
+        },
+        {
+          "label": "Bluetooth fallback",
+          "durationMs": 87,
+          "marker": ""
+        },
+        {
+          "label": "single instance",
+          "durationMs": 136,
+          "marker": ""
+        },
+        {
+          "label": "source offline smoke",
+          "durationMs": 13730,
+          "marker": "SMOKE_OK "
+        },
+        {
+          "label": "unpacked Windows build",
+          "durationMs": 22928,
+          "marker": ""
+        },
+        {
+          "label": "packaged offline smoke",
+          "durationMs": 16152,
+          "marker": "SMOKE_OK "
+        }
+      ]
+    }
+  ]
+}

@@ -205,7 +205,7 @@
   function classPicker(id, title) {
     return `<div class="record-class-selector u-mb-0">
       <span class="record-class-label">Active Class:</span>
-      <select id="${id}" class="field-select select-class-dropdown" onchange="TeacherTools.handleActiveClassChange(this.value, this)" title="${esc(title)}"></select>
+      <select id="${id}" class="field-select select-class-dropdown" data-eclass-onchange="TeacherTools.handleActiveClassChange(this.value, this)" title="${esc(title)}"></select>
     </div>`;
   }
 
@@ -434,21 +434,21 @@
           <div class="tool-stat"><strong>${learners.length}</strong> eligible learners</div>
           <div class="field">
             <label class="field-label" for="groupRandomizerCount">Number of groups</label>
-            <input id="groupRandomizerCount" class="field-input" type="number" min="2" max="${maximum}" value="${groupState.groupCount}" ${maximum < 2 || groupState.animating ? 'disabled' : ''} onchange="TeacherTools.setGroupCount(this.value)">
+            <input id="groupRandomizerCount" class="field-input" type="number" min="2" max="${maximum}" value="${groupState.groupCount}" ${maximum < 2 || groupState.animating ? 'disabled' : ''} data-eclass-onchange="TeacherTools.setGroupCount(this.value)">
           </div>
           <div class="field">
             <span class="field-label">Grouping mode</span>
             <div class="tool-segmented" aria-label="Grouping mode">
-              <button type="button" aria-pressed="${groupState.mode === 'random'}" onclick="TeacherTools.setGroupMode('random')" ${groupState.animating ? 'disabled' : ''}>Complete Random</button>
-              <button type="button" aria-pressed="${groupState.mode === 'balanced'}" onclick="TeacherTools.setGroupMode('balanced')" ${groupState.animating ? 'disabled' : ''}>Balance by Sex</button>
+              <button type="button" aria-pressed="${groupState.mode === 'random'}" data-eclass-onclick="TeacherTools.setGroupMode('random')" ${groupState.animating ? 'disabled' : ''}>Complete Random</button>
+              <button type="button" aria-pressed="${groupState.mode === 'balanced'}" data-eclass-onclick="TeacherTools.setGroupMode('balanced')" ${groupState.animating ? 'disabled' : ''}>Balance by Sex</button>
             </div>
           </div>
           <div class="tool-control-strip__actions">
-            <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.randomizeGroups()" ${maximum < 2 || groupState.animating ? 'disabled' : ''}>${groupState.animating ? 'Randomizing...' : (groupState.groups.length ? 'Randomize Again' : 'Randomize')}</button>
-            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.copyGroups()" ${groupState.groups.length && !groupState.animating ? '' : 'disabled'} title="Copy group lists">Copy</button>
-            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.printGroups()" ${groupState.groups.length && !groupState.animating ? '' : 'disabled'} title="Print group lists">Print</button>
-            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.undoGroupMove()" ${groupState.editHistory.length && !groupState.animating ? '' : 'disabled'} title="Undo the last manual learner move">Undo Move</button>
-            <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.restoreRandomizedGroups()" ${groupState.originalGroups.length && !sameGroupArrangement(groupState.groups, groupState.originalGroups) && !groupState.animating ? '' : 'disabled'} title="Restore the original randomized arrangement">Restore Randomized</button>
+            <button class="btn btn-primary btn-sm" type="button" data-eclass-onclick="TeacherTools.randomizeGroups()" ${maximum < 2 || groupState.animating ? 'disabled' : ''}>${groupState.animating ? 'Randomizing...' : (groupState.groups.length ? 'Randomize Again' : 'Randomize')}</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="TeacherTools.copyGroups()" ${groupState.groups.length && !groupState.animating ? '' : 'disabled'} title="Copy group lists">Copy</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="TeacherTools.printGroups()" ${groupState.groups.length && !groupState.animating ? '' : 'disabled'} title="Print group lists">Print</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="TeacherTools.undoGroupMove()" ${groupState.editHistory.length && !groupState.animating ? '' : 'disabled'} title="Undo the last manual learner move">Undo Move</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="TeacherTools.restoreRandomizedGroups()" ${groupState.originalGroups.length && !sameGroupArrangement(groupState.groups, groupState.originalGroups) && !groupState.animating ? '' : 'disabled'} title="Restore the original randomized arrangement">Restore Randomized</button>
           </div>
         </div>
         ${groupState.animating ? '<div class="group-randomizer-status" role="status">Learners are moving between groups...</div>' : ''}
@@ -467,7 +467,7 @@
       const female = members.filter(item => ['F', 'FEMALE'].includes(String(item.sex || '').toUpperCase())).length;
       const unspecified = members.length - male - female;
       const color = colors[index] || GROUP_COLOR_SCHEMES[index % GROUP_COLOR_SCHEMES.length];
-      return `<section class="group-result" style="--group-accent:${esc(color.accent)}" data-group-index="${index}" data-group-color="${esc(color.name)}">
+      return `<section class="group-result" data-eclass-style="--group-accent:${esc(color.accent)}" data-group-index="${index}" data-group-color="${esc(color.name)}">
         <header class="group-result__header">
           <div><h2 class="group-result__title"><span class="group-result__swatch" title="${esc(`${color.name} group color`)}" aria-hidden="true"></span>Group ${index + 1}</h2><span class="group-result__sex">M ${male} · F ${female}${unspecified ? ` · Unspecified ${unspecified}` : ''}</span></div>
           <span class="group-result__count">${members.length}</span>
@@ -651,7 +651,7 @@
     const assignment = activeAssignment();
     sheet.innerHTML = `<h1>${esc(assignmentLabel(assignment))}</h1>${groupState.groups.map((members, index) => {
       const color = groupState.colors[index] || GROUP_COLOR_SCHEMES[index % GROUP_COLOR_SCHEMES.length];
-      return `<section class="teacher-tools-print-group" style="--group-accent:${esc(color.accent)}">
+      return `<section class="teacher-tools-print-group" data-eclass-style="--group-accent:${esc(color.accent)}">
         <h2>Group ${index + 1}</h2>
         <ol>${members.map(learner => `<li>${esc(learnerName(learner))}</li>`).join('')}</ol>
       </section>`;
@@ -731,8 +731,8 @@
                 aria-live="${pickerState.spinning ? 'off' : 'polite'}" aria-busy="${pickerState.spinning ? 'true' : 'false'}">${esc(displayName)}</div>
             </div>
             <div class="name-picker-stage__actions">
-              <button class="btn btn-primary btn-lg" type="button" onclick="TeacherTools.pickName()" ${learners.length && !pickerState.spinning ? '' : 'disabled'}>${pickerState.spinning ? 'Picking...' : (pickerState.selected ? 'Pick Another' : 'Pick a Learner')}</button>
-              <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.resetPicker()" ${learners.length && !pickerState.spinning ? '' : 'disabled'}>Reset Draws</button>
+              <button class="btn btn-primary btn-lg" type="button" data-eclass-onclick="TeacherTools.pickName()" ${learners.length && !pickerState.spinning ? '' : 'disabled'}>${pickerState.spinning ? 'Picking...' : (pickerState.selected ? 'Pick Another' : 'Pick a Learner')}</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="TeacherTools.resetPicker()" ${learners.length && !pickerState.spinning ? '' : 'disabled'}>Reset Draws</button>
             </div>
           </div>
         </div>` : emptyTool('Create a teaching load before using Name Picker.')}
@@ -855,13 +855,13 @@
         ${classPicker('gradeSimulatorClassSelect', 'Choose the active class for grade simulation')}
         <div class="simulator-toolbar__term">
           <label class="record-class-label" for="gradeSimulatorTerm">Term:</label>
-          <select id="gradeSimulatorTerm" class="field-select" onchange="TeacherTools.changeSimulatorTerm(this.value)">
+          <select id="gradeSimulatorTerm" class="field-select" data-eclass-onchange="TeacherTools.changeSimulatorTerm(this.value)">
             ${['1', '2', '3'].map(term => `<option value="${term}" ${term === simulatorState.term ? 'selected' : ''}>Term ${term}</option>`).join('')}
           </select>
         </div>
         <div class="simulator-toolbar__actions">
-          <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.resetSimulation()" ${changes.length ? '' : 'disabled'}>Reset Preview</button>
-          <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.reviewSimulationApply()" ${changes.length ? '' : 'disabled'}>Apply to Official Record</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="TeacherTools.resetSimulation()" ${changes.length ? '' : 'disabled'}>Reset Preview</button>
+          <button class="btn btn-primary btn-sm" type="button" data-eclass-onclick="TeacherTools.reviewSimulationApply()" ${changes.length ? '' : 'disabled'}>Apply to Official Record</button>
         </div>
       </div>
       <div class="teacher-tool__body">
@@ -900,7 +900,7 @@
             <input class="simulator-score-input${changedKeys.has(key) ? ' is-changed' : ''}${hasHps ? '' : ' is-unavailable'}" type="number" min="0" ${hasHps ? `max="${esc(maxScore)}"` : ''} step="any"
               value="${simulatedState.present ? esc(simulatedState.value) : ''}"
               ${hasHps
-                ? `aria-label="${esc(label)}" onchange="TeacherTools.updateSimulationScore('${esc(learner.id)}','${esc(assessment.id)}',this.value,this)"`
+                ? `aria-label="${esc(label)}" data-eclass-onchange="TeacherTools.updateSimulationScore('${esc(learner.id)}','${esc(assessment.id)}',this.value,this)"`
                 : `disabled placeholder="Set HPS" title="Set HPS in the Grading Sheet first" aria-label="${esc(`${label}, HPS not set. Set HPS in the Grading Sheet first.`)}"`}>
             <span class="simulator-original">${changedKeys.has(key) ? `was ${officialState.present ? esc(officialState.value) : 'blank'}` : ''}</span>
           </label>`;
@@ -950,7 +950,7 @@
             <strong>Term ${esc(entry.term)} · ${entry.changes.length} score change${entry.changes.length === 1 ? '' : 's'}</strong>
             <span>${esc(new Date(entry.appliedAt).toLocaleString())} · ${esc(entry.status.replace(/-/g, ' '))}</span>
           </div>
-          <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.reviewSimulationRevert('${esc(entry.id)}')" ${entry.status === 'applied' ? '' : 'disabled'}>Revert</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="TeacherTools.reviewSimulationRevert('${esc(entry.id)}')" ${entry.status === 'applied' ? '' : 'disabled'}>Revert</button>
         </div>`).join('') : '<div class="text-muted text-sm">No simulations have been applied to this class.</div>'}</div>
     </section>`;
   }
@@ -1209,14 +1209,14 @@
     const mapeControl = isMapehAssignment(assignment) ? `
       <label class="simulator-toolbar__term">
         <span class="field-label">MAPEH strand</span>
-        <select class="field-select" onchange="TeacherTools.changeChecklistMapePart(this.value)">
+        <select class="field-select" data-eclass-onchange="TeacherTools.changeChecklistMapePart(this.value)">
           <option value="music_arts" ${checklistState.mapePart === 'music_arts' ? 'selected' : ''}>Music &amp; Arts</option>
           <option value="pe_health" ${checklistState.mapePart === 'pe_health' ? 'selected' : ''}>PE &amp; Health</option>
         </select>
       </label>` : '';
     return `<label class="simulator-toolbar__term">
         <span class="field-label">Term</span>
-        <select class="field-select" onchange="TeacherTools.changeChecklistTerm(this.value)">
+        <select class="field-select" data-eclass-onchange="TeacherTools.changeChecklistTerm(this.value)">
           ${['1', '2', '3'].map(term => `<option value="${term}" ${checklistState.term === term ? 'selected' : ''}>Term ${term}</option>`).join('')}
         </select>
       </label>${mapeControl}`;
@@ -1237,33 +1237,33 @@
       ? 'Published activity. Unlock it with your PIN before editing.'
       : '';
     const noteButton = definition.allowNotes
-      ? `<button class="checklist-note-button${entry?.note ? ' has-note' : ''}" type="button" title="${esc(lockTitle || (entry ? 'Add or edit learner note' : 'Record an entry before adding a note'))}" aria-label="${esc(`Note for ${learnerName(learner)}, ${definition.title || criterion.label}`)}" onclick="TeacherTools.openChecklistEntryNote('${esc(learner.id)}','${esc(criterion.id)}','${esc(session.id)}')" ${entry && !published ? '' : 'disabled'}>${entry?.note ? '●' : 'Note'}</button>`
+      ? `<button class="checklist-note-button${entry?.note ? ' has-note' : ''}" type="button" title="${esc(lockTitle || (entry ? 'Add or edit learner note' : 'Record an entry before adding a note'))}" aria-label="${esc(`Note for ${learnerName(learner)}, ${definition.title || criterion.label}`)}" data-eclass-onclick="TeacherTools.openChecklistEntryNote('${esc(learner.id)}','${esc(criterion.id)}','${esc(session.id)}')" ${entry && !published ? '' : 'disabled'}>${entry?.note ? '●' : 'Note'}</button>`
       : '';
     if (definition.scoringMode === 'CHECK') {
       const checkItems = (definition.checkItems || []).filter(item => item.active !== false);
       if (checkItems.length > 1) {
         const selected = new Set(entry?.selectedItemIds || []);
-        return `<fieldset class="checklist-multi-items" data-checklist-multi-cell ${disabled ? 'disabled' : ''}><legend class="sr-only">${esc(learnerName(learner))}, ${esc(definition.title || criterion.label)}</legend>${checkItems.map(item => `<label title="${esc(item.label)} (${esc(item.pointValue)} points)"><input type="checkbox" value="${esc(item.id)}" ${selected.has(item.id) ? 'checked' : ''} onchange="TeacherTools.updateChecklistItemSelection('${esc(learner.id)}','${esc(criterion.id)}',this.closest('[data-checklist-multi-cell]'),'${esc(session.id)}')"><span>${esc(item.label)} +${esc(item.pointValue)}</span></label>`).join('')}<strong>${entry?.points || 0}</strong></fieldset>`;
+        return `<fieldset class="checklist-multi-items" data-checklist-multi-cell ${disabled ? 'disabled' : ''}><legend class="sr-only">${esc(learnerName(learner))}, ${esc(definition.title || criterion.label)}</legend>${checkItems.map(item => `<label title="${esc(item.label)} (${esc(item.pointValue)} points)"><input type="checkbox" value="${esc(item.id)}" ${selected.has(item.id) ? 'checked' : ''} data-eclass-onchange="TeacherTools.updateChecklistItemSelection('${esc(learner.id)}','${esc(criterion.id)}',this.closest('[data-checklist-multi-cell]'),'${esc(session.id)}')"><span>${esc(item.label)} +${esc(item.pointValue)}</span></label>`).join('')}<strong>${entry?.points || 0}</strong></fieldset>`;
       }
       return `<div class="checklist-entry-control${published ? ' is-locked' : ''}" title="${esc(lockTitle)}"><label class="checklist-check" data-checklist-cell>
         <input type="checkbox" ${entry ? 'checked' : ''} ${disabled ? 'disabled' : ''}
           aria-label="${esc(`${learnerName(learner)}, ${definition.title || criterion.label}`)}"
-          onkeydown="TeacherTools.handleChecklistCellKey(event)"
-          onchange="TeacherTools.updateChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',this.checked ? '${esc(definition.pointsPerCheck)}' : '',this,'${esc(session.id)}')">
+          data-eclass-onkeydown="TeacherTools.handleChecklistCellKey(event)"
+          data-eclass-onchange="TeacherTools.updateChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',this.checked ? '${esc(definition.pointsPerCheck)}' : '',this,'${esc(session.id)}')">
         <span>${entry ? esc(entry.points) : ''}</span>
       </label>${noteButton}</div>`;
     }
     return `<div class="checklist-entry-control checklist-entry-stepper${published ? ' is-locked' : ''}" title="${esc(lockTitle)}">
       <button class="checklist-stepper-button" type="button" title="Subtract 1 point" aria-label="${esc(`Subtract one point from ${learnerName(learner)}`)}"
-        onclick="TeacherTools.adjustChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',-1,'${esc(session.id)}')"
+        data-eclass-onclick="TeacherTools.adjustChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',-1,'${esc(session.id)}')"
         ${disabled || !entry || currentPoints <= 0 ? 'disabled' : ''}>&minus;</button>
       <input class="field-input checklist-points-input" type="number" min="0" max="${esc(definition.maxPointsPerSession)}" step="any"
       value="${entry ? esc(entry.points) : ''}" ${disabled ? 'disabled' : ''}
       aria-label="${esc(`${learnerName(learner)}, ${definition.title || criterion.label}`)}"
-      onkeydown="TeacherTools.handleChecklistCellKey(event)"
-      onchange="TeacherTools.updateChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',this.value,this,'${esc(session.id)}')">
+      data-eclass-onkeydown="TeacherTools.handleChecklistCellKey(event)"
+      data-eclass-onchange="TeacherTools.updateChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',this.value,this,'${esc(session.id)}')">
       <button class="checklist-stepper-button" type="button" title="Add 1 point" aria-label="${esc(`Add one point to ${learnerName(learner)}`)}"
-        onclick="TeacherTools.adjustChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',1,'${esc(session.id)}')"
+        data-eclass-onclick="TeacherTools.adjustChecklistEntry('${esc(learner.id)}','${esc(criterion.id)}',1,'${esc(session.id)}')"
         ${disabled || currentPoints >= maximum ? 'disabled' : ''}>+</button>
       ${noteButton}
     </div>`;
@@ -1350,7 +1350,7 @@
             <strong>${entry.activityTitle ? `${esc(entry.activityTitle)} · ` : ''}${esc(checklistComponentLabel(entry.component))} · ${esc(assessment?.title || 'Assessment')} · ${entry.changes.length} learner${entry.changes.length === 1 ? '' : 's'}</strong>
             <span>${esc(new Date(entry.appliedAt).toLocaleString())} · ${esc(entry.status)}</span>
           </div>
-          <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.reviewChecklistPublicationRevert('${esc(entry.id)}')" ${entry.status === 'applied' ? '' : 'disabled'}>Revert</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="TeacherTools.reviewChecklistPublicationRevert('${esc(entry.id)}')" ${entry.status === 'applied' ? '' : 'disabled'}>Revert</button>
         </div>`;
       }).join('') : '<div class="text-muted text-sm">No checklist points have been published for this term.</div>'}</div>
     </section>`;
@@ -1363,20 +1363,20 @@
         <h2>Start a Term ${esc(checklistState.term)} checklist</h2>
         <p>Begin immediately with the standard Tracking Only checklist, choose a saved template, or configure a custom checklist.</p>
         <div class="checklist-quick-start">
-          <button class="checklist-quick-start__card" type="button" onclick="TeacherTools.quickStartChecklist()">
+          <button class="checklist-quick-start__card" type="button" data-eclass-onclick="TeacherTools.quickStartChecklist()">
             <strong>Use Standard Checklist</strong>
             <span>Recitation, Notebook, and Assignment · Tracking Only</span>
           </button>
-          <button class="checklist-quick-start__card" type="button" onclick="TeacherTools.openCreateChecklist()">
+          <button class="checklist-quick-start__card" type="button" data-eclass-onclick="TeacherTools.openCreateChecklist()">
             <strong>Create Custom Checklist</strong>
             <span>Choose criteria, destinations, and point values first</span>
           </button>
-          ${templates.map(template => `<button class="checklist-quick-start__card" type="button" onclick="TeacherTools.quickStartChecklist('${esc(template.id)}')">
+          ${templates.map(template => `<button class="checklist-quick-start__card" type="button" data-eclass-onclick="TeacherTools.quickStartChecklist('${esc(template.id)}')">
             <strong>${esc(template.name)}</strong>
             <span>${esc(template.criteria.length)} saved criteria${template.description ? ` · ${esc(template.description)}` : ''}</span>
           </button>`).join('')}
         </div>
-        <button class="btn btn-ghost btn-sm checklist-welcome__tutorial" type="button" onclick="TeacherTools.openChecklistTutorial()">Show Me How It Works</button>
+        <button class="btn btn-ghost btn-sm checklist-welcome__tutorial" type="button" data-eclass-onclick="TeacherTools.openChecklistTutorial()">Show Me How It Works</button>
       </div>
     </div>`;
   }
@@ -1410,11 +1410,11 @@
         <div class="checklist-primary-toolbar__context">${renderChecklistContextControls(assignment)}</div>
         <div class="checklist-primary-toolbar__actions">
           ${checklist ? `
-            <button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" onclick="TeacherTools.openAddChecklistActivity()">${checklistActionIcon('add')}<span>Create Checklist</span></button>
-            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--bulk" type="button" onclick="TeacherTools.openChecklistBulkMark()" title="${activityPublished ? 'Unlock the published activity before changing points.' : 'Mark several learners at once'}" ${session && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('bulk')}<span>Bulk Mark</span></button>
-            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--picker" type="button" onclick="TeacherTools.openChecklistPicker()" title="${activityPublished ? 'Unlock the published activity before changing points.' : 'Select a learner from this class'}" ${session && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('picker')}<span>Mini Name Picker</span></button>
-            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--review" type="button" onclick="TeacherTools.openGradeContributionDashboard()">${checklistActionIcon('review')}<span>Review Grade Contributions</span></button>
-            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--more" type="button" onclick="TeacherTools.openChecklistMoreActions()">${checklistActionIcon('more')}<span>More Actions</span></button>` : ''}
+            <button class="btn btn-primary btn-sm checklist-toolbar-action checklist-toolbar-action--primary" type="button" data-eclass-onclick="TeacherTools.openAddChecklistActivity()">${checklistActionIcon('add')}<span>Create Checklist</span></button>
+            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--bulk" type="button" data-eclass-onclick="TeacherTools.openChecklistBulkMark()" title="${activityPublished ? 'Unlock the published activity before changing points.' : 'Mark several learners at once'}" ${session && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('bulk')}<span>Bulk Mark</span></button>
+            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--picker" type="button" data-eclass-onclick="TeacherTools.openChecklistPicker()" title="${activityPublished ? 'Unlock the published activity before changing points.' : 'Select a learner from this class'}" ${session && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('picker')}<span>Mini Name Picker</span></button>
+            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--review" type="button" data-eclass-onclick="TeacherTools.openGradeContributionDashboard()">${checklistActionIcon('review')}<span>Review Grade Contributions</span></button>
+            <button class="btn btn-sm checklist-toolbar-action checklist-toolbar-action--more" type="button" data-eclass-onclick="TeacherTools.openChecklistMoreActions()">${checklistActionIcon('more')}<span>More Actions</span></button>` : ''}
         </div>
       </div>
       <div class="teacher-tool__body">
@@ -1486,14 +1486,14 @@
         return `<option value="${esc(item.id)}" ${item.id === session?.id ? 'selected' : ''}>${esc(item.title)} · ${esc(item.date)} · ${esc(detail)}</option>`;
       }).join('');
     const restoredAction = (checklist.sessions || []).some(item => item.activity?.deletedAt)
-      ? `<button class="checklist-quick-action" type="button" onclick="TeacherTools.restoreChecklistActivity()">${checklistActionIcon('undo')}<span>Restore</span></button>`
+      ? `<button class="checklist-quick-action" type="button" data-eclass-onclick="TeacherTools.restoreChecklistActivity()">${checklistActionIcon('undo')}<span>Restore</span></button>`
       : '';
     const activityActions = session?.activity
       ? activityPublished
-        ? `<button class="checklist-quick-action checklist-quick-action--warning" type="button" onclick="TeacherTools.reviewChecklistActivityUnlock('${esc(session.activity.id || session.id)}')">${checklistActionIcon('unlock')}<span>Unlock</span></button>`
-        : `<button class="checklist-quick-action" type="button" onclick="TeacherTools.openEditChecklistActivity()">${checklistActionIcon('edit')}<span>Edit</span></button>
-          <button class="checklist-quick-action" type="button" onclick="TeacherTools.duplicateChecklistActivity()">${checklistActionIcon('copy')}<span>Duplicate</span></button>
-          <button class="checklist-quick-action checklist-quick-action--danger" type="button" onclick="TeacherTools.deleteChecklistActivity()">${checklistActionIcon('delete')}<span>Delete</span></button>`
+        ? `<button class="checklist-quick-action checklist-quick-action--warning" type="button" data-eclass-onclick="TeacherTools.reviewChecklistActivityUnlock('${esc(session.activity.id || session.id)}')">${checklistActionIcon('unlock')}<span>Unlock</span></button>`
+        : `<button class="checklist-quick-action" type="button" data-eclass-onclick="TeacherTools.openEditChecklistActivity()">${checklistActionIcon('edit')}<span>Edit</span></button>
+          <button class="checklist-quick-action" type="button" data-eclass-onclick="TeacherTools.duplicateChecklistActivity()">${checklistActionIcon('copy')}<span>Duplicate</span></button>
+          <button class="checklist-quick-action checklist-quick-action--danger" type="button" data-eclass-onclick="TeacherTools.deleteChecklistActivity()">${checklistActionIcon('delete')}<span>Delete</span></button>`
       : '';
     return `<div class="checklist-overview-grid">
         <section class="checklist-overview-card checklist-overview-card--summary">
@@ -1508,11 +1508,11 @@
         </section>
         <section class="checklist-overview-card checklist-overview-card--actions no-print">
           <span class="checklist-eyebrow">Quick actions</span>
-          <div class="checklist-quick-actions">${activityActions}${restoredAction}<button class="checklist-quick-action" type="button" onclick="TeacherTools.undoLastChecklistEntryChange()" ${entryHistory && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('undo')}<span>Undo entry</span></button></div>
+          <div class="checklist-quick-actions">${activityActions}${restoredAction}<button class="checklist-quick-action" type="button" data-eclass-onclick="TeacherTools.undoLastChecklistEntryChange()" ${entryHistory && !activityPublished ? '' : 'disabled'}>${checklistActionIcon('undo')}<span>Undo entry</span></button></div>
         </section>
         <section class="checklist-overview-card checklist-overview-card--active no-print">
           <span class="checklist-eyebrow">Choose checklist to conduct</span>
-          <label class="checklist-active-activity"><span class="checklist-active-activity__icon">▤</span><span><select class="field-select" onchange="TeacherTools.selectChecklistToConduct(this.value)" aria-label="Checklist to conduct"><option value="">Select a checklist…</option>${activityOptions}</select><small>${session ? `${esc(session.date)} · ${esc(checklistComponentLabel(activeDefinition?.destinationComponent))} · HPS ${esc(activeDefinition?.maxPointsPerSession || 0)}` : 'Select one checklist before recording learner results.'}</small></span></label>
+          <label class="checklist-active-activity"><span class="checklist-active-activity__icon">▤</span><span><select class="field-select" data-eclass-onchange="TeacherTools.selectChecklistToConduct(this.value)" aria-label="Checklist to conduct"><option value="">Select a checklist…</option>${activityOptions}</select><small>${session ? `${esc(session.date)} · ${esc(checklistComponentLabel(activeDefinition?.destinationComponent))} · HPS ${esc(activeDefinition?.maxPointsPerSession || 0)}` : 'Select one checklist before recording learner results.'}</small></span></label>
         </section>
         <section class="checklist-overview-card checklist-overview-card--save">
           <span class="checklist-eyebrow">Saved status</span>
@@ -1522,14 +1522,14 @@
       ${!session ? `<div class="checklist-no-session">
         <div><strong>No checklist selected</strong><span>Choose the specific checklist you want to conduct, or create a new one.</span></div>
         <div class="checklist-no-session__actions">
-          <button class="btn btn-primary btn-sm" type="button" onclick="TeacherTools.openAddChecklistActivity()">${checklistActionIcon('add')} Create Checklist</button>
+          <button class="btn btn-primary btn-sm" type="button" data-eclass-onclick="TeacherTools.openAddChecklistActivity()">${checklistActionIcon('add')} Create Checklist</button>
         </div>
       </div>` : ''}
       ${session && criteria.length ? `<section class="checklist-grid-shell">
         <div class="checklist-entry-toolbar no-print">
-          <label class="checklist-filter checklist-filter--search"><span class="sr-only">Search learner</span><span class="checklist-filter__icon">⌕</span><input id="checklistLearnerSearch" class="field-input" type="search" value="${esc(checklistState.search)}" placeholder="Search learner…" oninput="TeacherTools.filterChecklistRows(this.value)"></label>
-          <label class="checklist-filter"><span class="sr-only">Checklist entry type</span><select class="field-select" onchange="TeacherTools.changeChecklistGridCriterion(this.value)">${gridCriteria.map(item => `<option value="${esc(item.id)}" ${item.id === checklistState.gridCriterionId ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select></label>
-          <label class="checklist-filter"><span class="sr-only">Learner entry filter</span><select id="checklistEntryFilter" class="field-select" onchange="TeacherTools.changeChecklistFilter(this.value)"><option value="all" ${checklistState.filter === 'all' ? 'selected' : ''}>All learners</option><option value="missing" ${checklistState.filter === 'missing' ? 'selected' : ''}>Not yet recorded</option><option value="recorded" ${checklistState.filter === 'recorded' ? 'selected' : ''}>Has an entry</option></select></label>
+          <label class="checklist-filter checklist-filter--search"><span class="sr-only">Search learner</span><span class="checklist-filter__icon">⌕</span><input id="checklistLearnerSearch" class="field-input" type="search" value="${esc(checklistState.search)}" placeholder="Search learner…" data-eclass-oninput="TeacherTools.filterChecklistRows(this.value)"></label>
+          <label class="checklist-filter"><span class="sr-only">Checklist entry type</span><select class="field-select" data-eclass-onchange="TeacherTools.changeChecklistGridCriterion(this.value)">${gridCriteria.map(item => `<option value="${esc(item.id)}" ${item.id === checklistState.gridCriterionId ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select></label>
+          <label class="checklist-filter"><span class="sr-only">Learner entry filter</span><select id="checklistEntryFilter" class="field-select" data-eclass-onchange="TeacherTools.changeChecklistFilter(this.value)"><option value="all" ${checklistState.filter === 'all' ? 'selected' : ''}>All learners</option><option value="missing" ${checklistState.filter === 'missing' ? 'selected' : ''}>Not yet recorded</option><option value="recorded" ${checklistState.filter === 'recorded' ? 'selected' : ''}>Has an entry</option></select></label>
           <span class="checklist-column-count">Conducting 1 checklist</span>
         </div>
         <div class="checklist-table-wrap">
@@ -2973,10 +2973,10 @@ ${labels}`, '1')) - 1;
     const status = checklistState.picker.status();
     content.innerHTML = `<div class="checklist-picker">
       <div class="checklist-picker__controls">
-        <label><span class="field-label">Criterion to record</span><select class="field-select" onchange="TeacherTools.changeChecklistPickerCriterion(this.value)" ${checklistState.spinning ? 'disabled' : ''}>
+        <label><span class="field-label">Criterion to record</span><select class="field-select" data-eclass-onchange="TeacherTools.changeChecklistPickerCriterion(this.value)" ${checklistState.spinning ? 'disabled' : ''}>
           ${core.checklistSessionCriteria(checklist, session).filter(item => item.active).map(item => `<option value="${esc(item.id)}" ${item.id === criterion?.id ? 'selected' : ''}>${esc(item.label)} · ${esc(checklistComponentLabel(item.destinationComponent))}</option>`).join('')}
         </select></label>
-        <label><span class="field-label">Picker group</span><select class="field-select" onchange="TeacherTools.changeChecklistPickerFilter(this.value)" ${checklistState.spinning ? 'disabled' : ''}>
+        <label><span class="field-label">Picker group</span><select class="field-select" data-eclass-onchange="TeacherTools.changeChecklistPickerFilter(this.value)" ${checklistState.spinning ? 'disabled' : ''}>
           <option value="all" ${checklistState.pickerFilter === 'all' ? 'selected' : ''}>All active learners</option>
           <option value="missing" ${checklistState.pickerFilter === 'missing' ? 'selected' : ''}>Missing this criterion</option>
         </select></label>
@@ -2991,11 +2991,11 @@ ${labels}`, '1')) - 1;
         <span>${checklistState.spinning ? 'Slowly narrowing down the draw...' : (selected && criterion ? `${esc(criterion.label)}: ${currentEntry ? `${esc(currentEntry.points)} this session` : 'not recorded'}` : 'Selecting a learner does not award points.')}</span>
       </div>
       <div class="checklist-picker__actions">
-        <button class="btn btn-primary" type="button" onclick="TeacherTools.pickChecklistName()" ${learners.length && !checklistState.spinning ? '' : 'disabled'}>${checklistState.spinning ? 'Picking...' : (selected ? 'Skip / Pick Another' : 'Pick a Learner')}</button>
-        <button class="btn btn-ghost" type="button" onclick="TeacherTools.awardChecklistPickerPoints()" ${!checklistState.spinning && selected && criterion && !(criterion.scoringMode === 'CHECK' && currentEntry) && Number(currentEntry?.points || 0) < Number(criterion?.maxPointsPerSession || 0) ? '' : 'disabled'}>${criterion?.scoringMode === 'CHECK' ? `Award ${esc(criterion.pointsPerCheck)} point${criterion.pointsPerCheck === 1 ? '' : 's'}` : `Add ${esc(criterion?.pointsPerCheck || 1)} point${criterion?.pointsPerCheck === 1 ? '' : 's'}`}</button>
-        <button class="btn btn-ghost" type="button" onclick="TeacherTools.clearChecklistPickerEntry()" ${!checklistState.spinning && selected && currentEntry ? '' : 'disabled'}>Clear Entry</button>
-        ${criterion?.allowNotes ? `<button class="btn btn-ghost" type="button" onclick="TeacherTools.openChecklistEntryNote('${esc(selected?.id || '')}','${esc(criterion.id)}')" ${!checklistState.spinning && selected && currentEntry ? '' : 'disabled'}>${currentEntry?.note ? 'Edit Note' : 'Add Note'}</button>` : ''}
-        <button class="btn btn-ghost btn-sm" type="button" onclick="TeacherTools.resetChecklistPicker()" ${checklistState.spinning ? 'disabled' : ''}>Reset Draws</button>
+        <button class="btn btn-primary" type="button" data-eclass-onclick="TeacherTools.pickChecklistName()" ${learners.length && !checklistState.spinning ? '' : 'disabled'}>${checklistState.spinning ? 'Picking...' : (selected ? 'Skip / Pick Another' : 'Pick a Learner')}</button>
+        <button class="btn btn-ghost" type="button" data-eclass-onclick="TeacherTools.awardChecklistPickerPoints()" ${!checklistState.spinning && selected && criterion && !(criterion.scoringMode === 'CHECK' && currentEntry) && Number(currentEntry?.points || 0) < Number(criterion?.maxPointsPerSession || 0) ? '' : 'disabled'}>${criterion?.scoringMode === 'CHECK' ? `Award ${esc(criterion.pointsPerCheck)} point${criterion.pointsPerCheck === 1 ? '' : 's'}` : `Add ${esc(criterion?.pointsPerCheck || 1)} point${criterion?.pointsPerCheck === 1 ? '' : 's'}`}</button>
+        <button class="btn btn-ghost" type="button" data-eclass-onclick="TeacherTools.clearChecklistPickerEntry()" ${!checklistState.spinning && selected && currentEntry ? '' : 'disabled'}>Clear Entry</button>
+        ${criterion?.allowNotes ? `<button class="btn btn-ghost" type="button" data-eclass-onclick="TeacherTools.openChecklistEntryNote('${esc(selected?.id || '')}','${esc(criterion.id)}')" ${!checklistState.spinning && selected && currentEntry ? '' : 'disabled'}>${currentEntry?.note ? 'Edit Note' : 'Add Note'}</button>` : ''}
+        <button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="TeacherTools.resetChecklistPicker()" ${checklistState.spinning ? 'disabled' : ''}>Reset Draws</button>
       </div>
     </div>`;
   }
@@ -3740,12 +3740,12 @@ ${labels}`, '1')) - 1;
     container.innerHTML = `<div class="game-tool">
       <div class="game-tool__switcher no-print">
         <div class="tool-segmented" role="tablist" aria-label="Games">
-          <button type="button" aria-selected="${activeGameId === 'sudoku'}" onclick="TeacherTools.openGame('sudoku')">Sudoku</button>
-          <button type="button" aria-selected="${activeGameId === '2048'}" onclick="TeacherTools.openGame('2048')">2048</button>
-          <button type="button" aria-selected="${activeGameId === 'minesweeper'}" onclick="TeacherTools.openGame('minesweeper')">Minesweeper</button>
-          <button type="button" aria-selected="${activeGameId === 'memory'}" onclick="TeacherTools.openGame('memory')">Memory Match</button>
-          <button type="button" aria-selected="${activeGameId === 'reaction'}" onclick="TeacherTools.openGame('reaction')">Reaction Challenge</button>
-          <button type="button" aria-selected="${activeGameId === 'word-scramble'}" onclick="TeacherTools.openGame('word-scramble')">Word Scramble</button>
+          <button type="button" aria-selected="${activeGameId === 'sudoku'}" data-eclass-onclick="TeacherTools.openGame('sudoku')">Sudoku</button>
+          <button type="button" aria-selected="${activeGameId === '2048'}" data-eclass-onclick="TeacherTools.openGame('2048')">2048</button>
+          <button type="button" aria-selected="${activeGameId === 'minesweeper'}" data-eclass-onclick="TeacherTools.openGame('minesweeper')">Minesweeper</button>
+          <button type="button" aria-selected="${activeGameId === 'memory'}" data-eclass-onclick="TeacherTools.openGame('memory')">Memory Match</button>
+          <button type="button" aria-selected="${activeGameId === 'reaction'}" data-eclass-onclick="TeacherTools.openGame('reaction')">Reaction Challenge</button>
+          <button type="button" aria-selected="${activeGameId === 'word-scramble'}" data-eclass-onclick="TeacherTools.openGame('word-scramble')">Word Scramble</button>
         </div>
       </div>
       <iframe id="teacherToolsGameFrame" class="game-frame" sandbox="allow-scripts" title="${esc(activeGameId)} game" src="${gameSources[activeGameId]}"></iframe>
@@ -3816,7 +3816,7 @@ ${labels}`, '1')) - 1;
     applyWorkspaceMotionStyle();
     const counts = usageCounts();
     const tools = Array.from(registry.values()).filter(tool => tool.showInLauncher !== false);
-    content.innerHTML = `<section class="teacher-tools-launcher"><header class="teacher-tools-launcher__hero"><div><h2>Choose a classroom tool</h2><p>Everything you need for fair participation, classroom routines, records, and learner-friendly activities.</p></div><div class="teacher-tools-launcher__controls"><strong>${tools.length} tools</strong><label>Motion <select aria-label="Workspace motion style" onchange="TeacherTools.setWorkspaceMotionStyle(this.value)"><option value="calm" ${workspaceMotionStyle() === 'calm' ? 'selected' : ''}>Calm</option><option value="standard" ${workspaceMotionStyle() === 'standard' ? 'selected' : ''}>Standard</option><option value="playful" ${workspaceMotionStyle() === 'playful' ? 'selected' : ''}>Playful</option></select></label></div></header><div class="teacher-tools-grid">${tools.map(tool => `<button class="teacher-tool-card" type="button" style="--card-accent:${TOOL_ACCENTS[tool.id] || '#06b6d4'}" onclick="TeacherTools.openTool('${esc(tool.id)}')"><span class="teacher-tool-card__icon" aria-hidden="true">${icons[tool.id] || tool.launchIcon || '★'}</span><span class="teacher-tool-card__copy"><strong>${esc(tool.label)}</strong><small>${esc(tool.description || TOOL_DESCRIPTIONS[tool.id] || '')}</small></span><span class="teacher-tool-card__count">Used ${Number(counts[tool.id] || 0)} time${Number(counts[tool.id] || 0) === 1 ? '' : 's'}</span></button>`).join('')}</div></section>`;
+    content.innerHTML = `<section class="teacher-tools-launcher"><header class="teacher-tools-launcher__hero"><div><h2>Choose a classroom tool</h2><p>Everything you need for fair participation, classroom routines, records, and learner-friendly activities.</p></div><div class="teacher-tools-launcher__controls"><strong>${tools.length} tools</strong><label>Motion <select aria-label="Workspace motion style" data-eclass-onchange="TeacherTools.setWorkspaceMotionStyle(this.value)"><option value="calm" ${workspaceMotionStyle() === 'calm' ? 'selected' : ''}>Calm</option><option value="standard" ${workspaceMotionStyle() === 'standard' ? 'selected' : ''}>Standard</option><option value="playful" ${workspaceMotionStyle() === 'playful' ? 'selected' : ''}>Playful</option></select></label></div></header><div class="teacher-tools-grid">${tools.map(tool => `<button class="teacher-tool-card" type="button" data-eclass-style="--card-accent:${TOOL_ACCENTS[tool.id] || '#06b6d4'}" data-eclass-onclick="TeacherTools.openTool('${esc(tool.id)}')"><span class="teacher-tool-card__icon" aria-hidden="true">${icons[tool.id] || tool.launchIcon || '★'}</span><span class="teacher-tool-card__copy"><strong>${esc(tool.label)}</strong><small>${esc(tool.description || TOOL_DESCRIPTIONS[tool.id] || '')}</small></span><span class="teacher-tool-card__count">Used ${Number(counts[tool.id] || 0)} time${Number(counts[tool.id] || 0) === 1 ? '' : 's'}</span></button>`).join('')}</div></section>`;
   }
   function showLauncher() {
     registry.get(activeToolId)?.onDeactivate?.();
@@ -3834,7 +3834,7 @@ ${labels}`, '1')) - 1;
       content.dataset.activeTool = toolId;
       applyWorkspaceMotionStyle();
       next.render(content);
-      if (!containerOverride && toolId !== 'checklist') content.insertAdjacentHTML('afterbegin', `<div class="teacher-tool-pagebar no-print"><button class="btn btn-ghost btn-sm teacher-tools-back" type="button" onclick="TeacherTools.showLauncher()"><span class="teacher-tools-back__icon" aria-hidden="true">←</span><span>All Tools</span></button><strong>${esc(next.label)}</strong><span class="teacher-tool-pagebar__count">Used ${Number(usageCounts()[toolId] || 0)} times</span></div>`);
+      if (!containerOverride && toolId !== 'checklist') content.insertAdjacentHTML('afterbegin', `<div class="teacher-tool-pagebar no-print"><button class="btn btn-ghost btn-sm teacher-tools-back" type="button" data-eclass-onclick="TeacherTools.showLauncher()"><span class="teacher-tools-back__icon" aria-hidden="true">←</span><span>All Tools</span></button><strong>${esc(next.label)}</strong><span class="teacher-tool-pagebar__count">Used ${Number(usageCounts()[toolId] || 0)} times</span></div>`);
     }
     next.onActivate?.();
   }

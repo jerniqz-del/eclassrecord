@@ -69,11 +69,11 @@ function renderDashboardViewToggle() {
     toggle.className = 'dashboard-view-toggle';
     toggle.setAttribute('aria-label', 'Dashboard view mode');
     toggle.innerHTML = `
-      <button type="button" class="dashboard-view-toggle__btn" data-dashboard-view="grid" onclick="setDashboardViewMode('grid')" title="Grid view">
+      <button type="button" class="dashboard-view-toggle__btn" data-dashboard-view="grid" data-eclass-onclick="setDashboardViewMode('grid')" title="Grid view">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
         Grid
       </button>
-      <button type="button" class="dashboard-view-toggle__btn" data-dashboard-view="list" onclick="setDashboardViewMode('list')" title="List view">
+      <button type="button" class="dashboard-view-toggle__btn" data-dashboard-view="list" data-eclass-onclick="setDashboardViewMode('list')" title="List view">
         <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle></svg>
         List
       </button>
@@ -199,12 +199,12 @@ function renderDashboardOverview() {
 
     html += `
       <div class="${cardClass}" draggable="true" data-dashboard-draggable="true" data-assignment-id="${esc(a.id)}"
-        onclick="handleDashboardCardClick(event, '${esc(a.id)}');"
-        ondragstart="handleDashboardCardDragStart(event)"
-        ondragover="handleDashboardCardDragOver(event)"
-        ondragleave="handleDashboardCardDragLeave(event)"
-        ondrop="handleDashboardCardDrop(event)"
-        ondragend="handleDashboardCardDragEnd(event)"
+        data-eclass-onclick="handleDashboardCardClick(event, '${esc(a.id)}');"
+        data-eclass-ondragstart="handleDashboardCardDragStart(event)"
+        data-eclass-ondragover="handleDashboardCardDragOver(event)"
+        data-eclass-ondragleave="handleDashboardCardDragLeave(event)"
+        data-eclass-ondrop="handleDashboardCardDrop(event)"
+        data-eclass-ondragend="handleDashboardCardDragEnd(event)"
         data-active-term="1" ${isMapeh ? 'data-active-part="music_arts"' : ''}>
         ${subjectWatermarkMarkup(a.subject, a.gradeLevel)}
         
@@ -219,18 +219,18 @@ function renderDashboardOverview() {
           <span>F: ${females}</span>
         </div>
 
-        <div class="dashboard-card__selectors" onclick="event.stopPropagation();">
+        <div class="dashboard-card__selectors" data-eclass-onclick="event.stopPropagation();">
           <div class="card-pills-row">
-            <span class="text-xs text-muted" style="margin-right:4px;">Term:</span>
-            <button type="button" class="card-pill card-pill--term card-pill--active" onclick="switchCardTab(this, 'term', '1')">Term 1</button>
-            <button type="button" class="card-pill card-pill--term" onclick="switchCardTab(this, 'term', '2')">Term 2</button>
-            <button type="button" class="card-pill card-pill--term" onclick="switchCardTab(this, 'term', '3')">Term 3</button>
+            <span class="text-xs text-muted" data-eclass-style="margin-right:4px;">Term:</span>
+            <button type="button" class="card-pill card-pill--term card-pill--active" data-eclass-onclick="switchCardTab(this, 'term', '1')">Term 1</button>
+            <button type="button" class="card-pill card-pill--term" data-eclass-onclick="switchCardTab(this, 'term', '2')">Term 2</button>
+            <button type="button" class="card-pill card-pill--term" data-eclass-onclick="switchCardTab(this, 'term', '3')">Term 3</button>
           </div>
           ${isMapeh ? `
-          <div class="card-pills-row" style="margin-top: 4px;">
-            <span class="text-xs text-muted" style="margin-right:4px;">Strand:</span>
-            <button type="button" class="card-pill card-pill--part card-pill--active" onclick="switchCardTab(this, 'part', 'music_arts')">Music & Arts</button>
-            <button type="button" class="card-pill card-pill--part" onclick="switchCardTab(this, 'part', 'pe_health')">PE & Health</button>
+          <div class="card-pills-row" data-eclass-style="margin-top: 4px;">
+            <span class="text-xs text-muted" data-eclass-style="margin-right:4px;">Strand:</span>
+            <button type="button" class="card-pill card-pill--part card-pill--active" data-eclass-onclick="switchCardTab(this, 'part', 'music_arts')">Music & Arts</button>
+            <button type="button" class="card-pill card-pill--part" data-eclass-onclick="switchCardTab(this, 'part', 'pe_health')">PE & Health</button>
           </div>
           ` : ''}
         </div>
@@ -253,11 +253,11 @@ function renderDashboardOverview() {
           }).join('')}
         </div>
 
-        <div class="dashboard-card__actions" onclick="event.stopPropagation();">
-          <button class="btn btn-primary btn-sm dashboard-card__export-btn" type="button" onclick="showGradeTransferExportModal('${esc(a.id)}')">
+        <div class="dashboard-card__actions" data-eclass-onclick="event.stopPropagation();">
+          <button class="btn btn-primary btn-sm dashboard-card__export-btn" type="button" data-eclass-onclick="showGradeTransferExportModal('${esc(a.id)}')">
             Export Final Grades
           </button>
-          <button class="btn btn-olive btn-sm dashboard-card__report-btn" type="button" onclick="openDashboardReport(this, '${esc(a.id)}')">
+          <button class="btn btn-olive btn-sm dashboard-card__report-btn" type="button" data-eclass-onclick="openDashboardReport(this, '${esc(a.id)}')">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 20V10"></path>
               <path d="M12 20V4"></path>
@@ -270,7 +270,7 @@ function renderDashboardOverview() {
     `;
   }
   html += `
-      <button class="dashboard-card dashboard-card--add" onclick="showAddClassLoadModal()" type="button">
+      <button class="dashboard-card dashboard-card--add" data-eclass-onclick="showAddClassLoadModal()" type="button">
         <span class="dashboard-card--add__icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -531,7 +531,7 @@ function renderDashboardAssessmentSummary(a, term, mapePart) {
           <strong>${completionPercent}%</strong>
         </div>
         <div class="dashboard-progress-row__bar" aria-hidden="true">
-          <span style="width:${completionPercent}%"></span>
+          <span data-eclass-style="width:${completionPercent}%"></span>
         </div>
       </div>
     `;

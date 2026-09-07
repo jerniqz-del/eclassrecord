@@ -1063,6 +1063,21 @@ function transmuteDescriptive(ig) {
   return 'E';
 }
 
+function formatTransmutationInitialGrade(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '—';
+  return (Math.round((num + 1e-12) * 100) / 100).toFixed(2);
+}
+
+function formatTransmutationGrade(value) {
+  if (value == null || value === '') return '—';
+  const text = String(value).trim();
+  if (/^[A-E]$/i.test(text)) return text.toUpperCase();
+  const num = Number(text);
+  if (!Number.isFinite(num)) return text;
+  return String(Math.round(num));
+}
+
 function formatGradeForDisplay(grade, policy) {
   if (grade === null || grade === undefined || grade === '') return '';
   if (policy === 'DO15_DESCRIPTIVE' && typeof db !== 'undefined' && db.showNumericalEquivalents) {
@@ -1079,5 +1094,125 @@ function formatGradeForDisplay(grade, policy) {
     }
   }
   return grade;
+}
+
+function isNonLookupGrade(grade) {
+  const value = String(grade == null ? '' : grade).trim().toUpperCase();
+  return !value || value === 'T/O' || value === 'T/I' || value === 'TRANSFERRED OUT' || value === 'TRANSFERRED IN' || value === '—';
+}
+
+function canOpenTransmutationTable(ig, tg, options) {
+  if (options && (options.isTransferredIn || options.isTransferredOut || options.disabled)) return false;
+  if (isNonLookupGrade(tg)) return false;
+  return Number.isFinite(Number(ig));
+}
+
+function transmutationTriggerAttrs(ig, tg, options) {
+  if (!canOpenTransmutationTable(ig, tg, options)) return '';
+  const igText = typeof fmt === 'function' ? String(fmt(ig)) : String(ig);
+  const tgText = String(tg);
+  return ` tabindex="0" role="button" title="View transmutation table" aria-label="${esc(`View transmutation table. Initial grade ${igText}, transmuted grade ${tgText}`)}" data-initial-grade="${esc(String(ig))}" data-transmuted-grade="${esc(tgText)}"`;
+}
+
+function transmutationTriggerClass(baseClass, ig, tg, options) {
+  const extra = canOpenTransmutationTable(ig, tg, options) ? 'tg-lookup-trigger' : '';
+  return [baseClass, extra].filter(Boolean).join(' ');
+}
+
+function wrapTransmutationTrigger(innerHtml, ig, tg, options) {
+  if (!canOpenTransmutationTable(ig, tg, options)) return innerHtml;
+  const extraClass = options && options.className ? ` ${options.className}` : '';
+  return `<span class="tg-lookup-trigger${extraClass}"${transmutationTriggerAttrs(ig, tg, options)}>${innerHtml}</span>`;
+}
+
+function transmutationRangeHigh(nextLowerBound) {
+  if (!Number.isFinite(Number(nextLowerBound))) return 100;
+  return roundInitialGradeForTable(Number(nextLowerBound) - 0.01);
+}
+
+function transmutationTableModel(assignment, ig) {
+  const a = assignment || {};
+  const schoolYear = a.schoolYear || (typeof db !== 'undefined' ? db.schoolYear : '');
+  const policy = determinePolicy(a.gradeLevel, a.subject, schoolYear);
+  const zeroBased = isZeroBasedSy(schoolYear) || policy === 'DO15_ZERO';
+  const roundedIg = roundInitialGradeForTable(ig);
+  const transmutedGrade = transmute(a, ig);
+  const numeric = Number.isFinite(Number(ig));
+
+  if (isKeyStage2(a) && !zeroBased) {
+    const rows = keyStage2Transmutation.map((row, index) => ({
+      low: row[0],
+      high: index === 0 ? 100 : transmutationRangeHigh(keyStage2Transmutation[index - 1][0]),
+      tg: row[1]
+    }));
+    return {
+      kind: 'ks2',
+      title: 'Key Stage 2 Transmutation Table',
+      sourceLabel: 'DepEd Key Stage 2 trimester transmutation',
+      policy,
+      roundedIg,
+      initialGrade: numeric ? Number(ig) : null,
+      transmutedGrade,
+      rows,
+      matchIndex: matchTransmutationRowIndex(rows, roundedIg)
+    };
+  }
+
+  if (policy === 'DO15_DESCRIPTIVE') {
+    const rows = [
+      { low: 90, high: 100, tg: 'A', descriptor: 'Advancing (Namumukod-tangi)' },
+      { low: 80, high: 89.99, tg: 'B', descriptor: 'Benchmarking (Napamamalas)' },
+      { low: 75, high: 79.99, tg: 'C', descriptor: 'Connecting (Natutungo)' },
+      { low: 65, high: 74.99, tg: 'D', descriptor: 'Developing (Napauunlad)' },
+      { low: 0, high: 64.99, tg: 'E', descriptor: 'Emerging (Nagsisimula)' }
+    ];
+    return {
+      kind: 'descriptive',
+      title: 'Descriptive Transmutation Table',
+      sourceLabel: 'DO 15, s. 2026 descriptive equivalents',
+      policy,
+      roundedIg,
+      initialGrade: numeric ? Number(ig) : null,
+      transmutedGrade,
+      rows,
+      matchIndex: matchTransmutationRowIndex(rows, roundedIg)
+    };
+  }
+
+  if (zeroBased) {
+    return {
+      kind: 'zero',
+      title: 'Zero-based grading',
+      sourceLabel: 'SY 2027-2028 onward: the transmuted grade is the rounded initial grade',
+      policy,
+      roundedIg,
+      initialGrade: numeric ? Number(ig) : null,
+      transmutedGrade,
+      rows: [],
+      matchIndex: -1
+    };
+  }
+
+  const rows = adjusted2026.map(row => ({ low: row[0], high: row[1], tg: row[2] }));
+  return {
+    kind: 'adjusted2026',
+    title: 'Transmutation Table',
+    sourceLabel: 'DO 15, s. 2026 adjusted transmutation (SY 2026-2027)',
+    policy,
+    roundedIg,
+    initialGrade: numeric ? Number(ig) : null,
+    transmutedGrade,
+    rows,
+    matchIndex: matchTransmutationRowIndex(rows, roundedIg)
+  };
+}
+
+function matchTransmutationRowIndex(rows, roundedIg) {
+  const value = Number(roundedIg);
+  if (!Number.isFinite(value) || !Array.isArray(rows)) return -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (value >= rows[i].low) return i;
+  }
+  return rows.length ? rows.length - 1 : -1;
 }
 

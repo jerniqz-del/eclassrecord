@@ -1,0 +1,48 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const root = path.join(__dirname, '..');
+const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
+const lan = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'data', 'LanSyncManager.kt');
+const pin = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'data', 'MobilePinLock.kt');
+const unlock = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'ui', 'MobilePinUnlockScreen.kt');
+const navigation = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'Navigation.kt');
+const sync = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'ui', 'SyncScreen.kt');
+const design = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'ui', 'design', 'MobileDesignSystem.kt');
+const desktopService = read('src', 'main', 'companion-sync-service.js');
+const desktopUi = read('src', 'renderer', 'js', 'mobile-sync-companion.js');
+const desktopHtml = read('src', 'renderer', 'index.html');
+const desktopCss = read('src', 'renderer', 'css', 'mobile-sync-companion.css');
+
+assert.match(lan, /autoReconnectEnabled/);
+assert.match(lan, /if \(pairing != null && autoReconnectEnabled\) start\(context\)/);
+assert.match(lan, /fun setAutoReconnect/);
+assert.match(lan, /var linkStrength by mutableStateOf/);
+assert.match(lan, /X-Eclass-Link-Rtt/);
+assert.match(lan, /measureLinkQuality/);
+assert.match(lan, /MobilePinLock\.enroll/);
+assert.match(pin, /PBKDF2WithHmacSHA256/);
+assert.match(pin, /SecureFileStore\.writeText/);
+assert.doesNotMatch(pin, /put\("pin"/);
+assert.match(navigation, /MobilePinLock\.requiresUnlock/);
+assert.match(navigation, /MobilePinUnlockScreen/);
+assert.match(unlock, /same six-digit PIN used on the desktop/);
+assert.match(sync, /Unlink this desktop profile/);
+assert.match(sync, /Encrypted offline records and pending mobile changes will remain/);
+assert.match(sync, /lan-link-strength/);
+assert.match(design, /depth-icon-tilt/);
+assert.match(desktopService, /x-eclass-link-strength/);
+assert.match(desktopUi, /companionWlanLinkMeter/);
+assert.match(desktopUi, /function setCompanionDisplay/);
+assert.match(desktopUi, /element\.hidden = !visible/);
+assert.match(desktopUi, /eclass-generated-style-/);
+assert.match(desktopUi, /setCompanionDisplay\(panel, wlanReady, 'companion-js-grid'\)/);
+assert.match(desktopUi, /setCompanionDisplay\(refresh, wlanReady, 'companion-js-inline-flex'\)/);
+assert.doesNotMatch(desktopUi, /panel\.style\.display = wlanReady \? '' : 'none'/);
+assert.match(desktopCss, /\.companion-js-hidden\[hidden\] \{[\s\S]*display: none !important/);
+assert.match(desktopCss, /\.companion-js-grid\[hidden\] \{[\s\S]*display: grid !important/);
+assert.match(desktopHtml, /class="companion-pairing companion-js-hidden" id="companionPairingPanel"/);
+assert.match(desktopHtml, /Phone link/);
+
+console.log('Mobile trusted-link, PIN lock, link-quality, unlink, and 3D motion tests passed.');

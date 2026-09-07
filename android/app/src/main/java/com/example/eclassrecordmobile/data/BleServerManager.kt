@@ -42,6 +42,8 @@ object BleServerManager {
     var syncLog by mutableStateOf("No sync logs yet.")
     var pairedDesktopName by mutableStateOf("")
     var isPaired by mutableStateOf(false)
+    var pairedProfiles by mutableStateOf<List<BluetoothPairing>>(emptyList())
+        private set
     var linkQuality by mutableStateOf("Offline")
     var roundTripMs by mutableStateOf<Long?>(null)
     var lastHeartbeatAt by mutableStateOf("")
@@ -59,6 +61,9 @@ object BleServerManager {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var advertisingRetryCount = 0
     private var pairingDiscoveryTag = ""
+    private var pendingPairingQr: DesktopBluetoothPairingQr? = null
+    private var failedPairAttempts = 0
+    private var pairBlockedUntil = 0L
     private var isPreparingAdvertising = false
     private var pendingAdvertiseSettings: AdvertiseSettings? = null
     private var pendingAdvertiseData: AdvertiseData? = null
@@ -87,9 +92,11 @@ object BleServerManager {
         bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
         bluetoothAdapter = bluetoothManager?.adapter
         deviceCode = BluetoothPairingStore.deviceCode(context)
+        pairedProfiles = BluetoothPairingStore.list(context)
         BluetoothPairingStore.load(context)?.let {
             isPaired = true
             pairedDesktopName = it.desktopName
+            DatabaseHelper.selectProfile(context, it.profileKey)
         }
         linkQuality = if (isPaired) "Ready to reconnect" else "Not paired"
         connectionProgress = if (isPaired) 10 else 0
@@ -105,15 +112,41 @@ object BleServerManager {
         connectionProgressLabel = "Pairing details ready"
     }
 
-    fun forgetDesktop(context: Context) {
-        BluetoothPairingStore.clear(context)
-        isPaired = false
-        pairedDesktopName = ""
-        pinCode = ""
-        pairingDiscoveryTag = ""
-        linkQuality = "Not paired"
-        connectionProgress = 0
-        connectionProgressLabel = "Ready to pair"
+    fun prepareFirstPairing(context: Context, pairing: DesktopBluetoothPairingQr) {
+        pendingPairingQr = pairing
+        prepareFirstPairing(pairing.pin, pairing.sessionId)
+        if (pairing.desktopId.isNotBlank() && pairing.profileId.isNotBlank()) {
+            DatabaseHelper.selectProfile(context, pairing.desktopId + ":" + pairing.profileId)
+        }
+    }
+
+    fun forgetDesktop(context: Context, profileKey: String = "") {
+        val activeBefore = BluetoothPairingStore.load(context)?.profileKey.orEmpty()
+        val removingActive = profileKey.isBlank() || profileKey == activeBefore
+        if (profileKey.isBlank()) BluetoothPairingStore.clear(context)
+        else BluetoothPairingStore.clear(context, profileKey)
+        pairedProfiles = BluetoothPairingStore.list(context)
+        val next = BluetoothPairingStore.load(context)
+        isPaired = next != null
+        pairedDesktopName = next?.desktopName.orEmpty()
+        if (removingActive) {
+            pinCode = ""
+            pairingDiscoveryTag = ""
+            linkQuality = if (next == null) "Not paired" else "Ready to reconnect"
+            connectionProgress = if (next == null) 0 else 10
+            connectionProgressLabel = if (next == null) "Ready to pair" else "Trusted desktop remembered"
+        }
+    }
+
+    fun selectProfile(context: Context, profileKey: String): Boolean {
+        val selected = BluetoothPairingStore.select(context, profileKey) ?: return false
+        LanPairingStore.select(context, profileKey)
+        DatabaseHelper.selectProfile(context, selected.profileKey)
+        isPaired = true
+        pairedDesktopName = selected.desktopName
+        syncLog = "Selected " + selected.profileName + ". Waiting for its desktop Bluetooth connection."
+        ensureAdvertising(context)
+        return true
     }
 
     fun ensureAdvertising(context: Context) {
@@ -294,12 +327,36 @@ object BleServerManager {
             val suppliedPin = message?.optString("pin").orEmpty()
             val desktopId = message?.optString("desktopId").orEmpty()
             val desktopName = message?.optString("desktopName", "E-Class Record Desktop").orEmpty()
-            if (pinCode.isBlank() || suppliedPin != pinCode || desktopId.isBlank()) return false
+            val qr = pendingPairingQr
+            if (pairBlockedUntil > System.currentTimeMillis()) return false
+            if (pinCode.isBlank() || suppliedPin != pinCode || desktopId.isBlank()) {
+                failedPairAttempts += 1
+                if (failedPairAttempts >= 5) {
+                    failedPairAttempts = 0
+                    pairBlockedUntil = System.currentTimeMillis() + 5 * 60 * 1000L
+                }
+                return false
+            }
+            if (!qr?.desktopId.isNullOrBlank() && desktopId != qr?.desktopId) return false
+            val profileId = message?.optString("profileId").orEmpty().ifBlank {
+                qr?.profileId ?: "legacy-active-profile"
+            }
+            val profileName = message?.optString("profileName").orEmpty().ifBlank {
+                qr?.profileName ?: "Teacher profile"
+            }
             val token = BluetoothPairingStore.newReconnectToken()
+            val savedPairing = BluetoothPairing(
+                desktopId, desktopName, token, Instant.now().toString(),
+                profileId, profileName, qr?.schoolYear.orEmpty(),
+            )
             BluetoothPairingStore.save(
                 context,
-                BluetoothPairing(desktopId, desktopName, token, Instant.now().toString()),
+                savedPairing,
             )
+            pairedProfiles = BluetoothPairingStore.list(context)
+            DatabaseHelper.selectProfile(context, savedPairing.profileKey)
+            pendingPairingQr = null
+            failedPairAttempts = 0
             isPaired = true
             pairedDesktopName = desktopName
             handshakeResponse = JSONObject()
@@ -315,6 +372,7 @@ object BleServerManager {
             val valid = message?.optString("desktopId") == pairing.desktopId &&
                 message.optString("reconnectToken") == pairing.reconnectToken
             if (!valid) return false
+            DatabaseHelper.selectProfile(context, pairing.profileKey)
             pairedDesktopName = pairing.desktopName
             handshakeResponse = JSONObject().put("status", "reconnected").put("deviceCode", deviceCode).toString()
             return true
@@ -331,7 +389,7 @@ object BleServerManager {
             handshakeResponse = JSONObject().put("status", "quality-received").toString()
             return true
         }
-        return data == pinCode && pinCode.isNotBlank()
+        return false
     }
 
 
@@ -428,25 +486,22 @@ object BleServerManager {
             Log.d(TAG, "Write request on ${characteristic?.uuid}: $dataStr")
 
             if (characteristic?.uuid == HANDSHAKE_CHAR_UUID) {
-                val wasAuthorized = isAuthorized
                 val authorized = handleHandshake(dataStr)
-                isAuthorized = authorized || wasAuthorized
-                if (!wasAuthorized) {
-                    connectionState = if (authorized) "Connected & Authorized" else "Authorization Failed"
-                    linkQuality = if (authorized) "Measuring..." else "Offline"
-                    connectionProgress = if (authorized) 70 else 0
-                    connectionProgressLabel = if (authorized) "Secure link verified" else "Authorization failed"
-                    syncLog = if (authorized) {
-                        "Secure Bluetooth link ready. Desktop is the source of truth."
-                    } else {
-                        "Unauthorized desktop connection rejected."
-                    }
+                isAuthorized = authorized
+                connectionState = if (authorized) "Connected & Authorized" else "Authorization Failed"
+                linkQuality = if (authorized) "Measuring..." else "Offline"
+                connectionProgress = if (authorized) 70 else 0
+                connectionProgressLabel = if (authorized) "Secure link verified" else "Authorization failed"
+                syncLog = if (authorized) {
+                    "Secure Bluetooth link ready. Desktop is the source of truth."
+                } else {
+                    "Unauthorized desktop connection rejected."
                 }
                 if (responseNeeded) bluetoothGattServer?.sendResponse(
                     device, requestId, if (authorized) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_FAILURE,
                     offset, null,
                 )
-                if (!authorized && !isAuthorized) device?.let { bluetoothGattServer?.cancelConnection(it) }
+                if (!authorized) device?.let { bluetoothGattServer?.cancelConnection(it) }
                 return
             }
 
@@ -550,6 +605,7 @@ object BleServerManager {
                 "snapshot" -> {
                     val envelope = codec.decodeFromString(BluetoothEnvelope.serializer(), jsonStr)
                     val snapshot = requireNotNull(envelope.snapshot).copy(revision = envelope.revision)
+                    validateSnapshotProfile(context, snapshot)
                     DatabaseHelper.saveAuthoritativePayload(context, snapshot)
                     sendDataToDesktop(outboundJson.encodeToString(
                         SnapshotAcknowledgement(revision = envelope.revision, success = true)
@@ -561,6 +617,7 @@ object BleServerManager {
                     val decoded = GZIPInputStream(ByteArrayInputStream(compressed)).bufferedReader().use { it.readText() }
 
                     val snapshot = codec.decodeFromString(SyncPayload.serializer(), decoded).copy(revision = revision)
+                    validateSnapshotProfile(context, snapshot)
                     DatabaseHelper.saveAuthoritativePayload(context, snapshot)
                     sendDataToDesktop(outboundJson.encodeToString(
                         SnapshotAcknowledgement(revision = revision, success = true)
@@ -574,7 +631,11 @@ object BleServerManager {
                         syncLog = lastPayloadError
                         return false
                     }
-                    DatabaseHelper.clearUnsyncedScores(context)
+                    if (envelope.acceptedChangeIds.isNotEmpty()) {
+                        DatabaseHelper.acknowledgeChanges(context, envelope.acceptedChangeIds)
+                    } else if (envelope.protocolVersion < 2) {
+                        DatabaseHelper.clearUnsyncedScores(context)
+                    }
                     syncLog = "${envelope.accepted} mobile change${if (envelope.accepted == 1) "" else "s"} saved on the desktop."
                 }
                 else -> {
@@ -612,15 +673,30 @@ object BleServerManager {
         }
 
         syncLog = "Sending ${changes.size} authorized change${if (changes.size == 1) "" else "s"} to the desktop..."
+        val pairing = BluetoothPairingStore.load(context)
         val payloadStr = outboundJson.encodeToString(
             MobileChangesEnvelope(
+                desktopId = pairing?.desktopId.orEmpty(),
+                profileId = pairing?.profileId.orEmpty(),
+                batchId = UUID.randomUUID().toString(),
                 baseRevision = DatabaseHelper.getRevision(),
                 changes = changes,
                 authorizationPin = authorizationPin,
             )
         )
         sendDataToDesktop(payloadStr, "mobile changes")
+        if (authorizationPin.matches(Regex("\\d{6}")) && pairing != null) {
+            MobilePinLock.enroll(context, pairing.profileKey, authorizationPin)
+        }
         return true
+    }
+
+    private fun validateSnapshotProfile(context: Context, snapshot: SyncPayload) {
+        if (snapshot.protocolVersion < 2) return
+        val pairing = BluetoothPairingStore.load(context) ?: return
+        require(snapshot.desktopId == pairing.desktopId && snapshot.profileId == pairing.profileId) {
+            "Bluetooth received a different desktop profile. Pending changes were preserved."
+        }
     }
 
     fun openDesktopLearnerPicker(): Boolean = sendApprovedToolCommand("open-picker")
@@ -629,14 +705,20 @@ object BleServerManager {
     fun randomizeGroupsOnDesktop(): Boolean = sendApprovedToolCommand("randomize-groups")
     fun openDesktopChecklist(): Boolean = sendApprovedToolCommand("open-checklist")
 
-    private fun sendApprovedToolCommand(command: String): Boolean {
-        val approved = setOf("open-picker", "pick-learner", "open-groups", "randomize-groups", "open-checklist")
+    fun sendDesktopCommand(command: String, args: Map<String, String> = emptyMap()): Boolean =
+        sendApprovedToolCommand(command, args)
+
+    private fun sendApprovedToolCommand(command: String, args: Map<String, String> = emptyMap()): Boolean {
+        val approved = setOf(
+            "open-page", "open-tool", "tool-action",
+            "open-picker", "pick-learner", "open-groups", "randomize-groups", "open-checklist",
+        )
         check(command in approved) { "Unsupported desktop tool command." }
         if (connectedDevice == null || bluetoothGattServer == null || !isAuthorized) {
             syncLog = "Connect to the paired desktop before using remote teacher tools."
             return false
         }
-        sendDataToDesktop(outboundJson.encodeToString(ToolCommand(command = command)), "tool command")
+        sendDataToDesktop(outboundJson.encodeToString(ToolCommand(command = command, args = args)), "tool command")
         syncLog = "Approved teacher tool command sent to the desktop."
         return true
     }

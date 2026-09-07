@@ -737,6 +737,7 @@ function fixture() {
   const toolsCss = fs.readFileSync(path.join(root, 'src/renderer/css/teacher-tools.css'), 'utf8');
   const database = fs.readFileSync(path.join(root, 'src/renderer/js/database.js'), 'utf8');
   const preload = fs.readFileSync(path.join(root, 'src/main/preload.js'), 'utf8');
+  const computeService = fs.readFileSync(path.join(root, 'src/main/compute-service.js'), 'utf8');
   const sudoku = fs.readFileSync(path.join(root, 'src/renderer/games/sudoku/index.html'), 'utf8');
   const game2048 = fs.readFileSync(path.join(root, 'src/renderer/games/2048/index.html'), 'utf8');
   const minesweeper = fs.readFileSync(path.join(root, 'src/renderer/games/minesweeper/index.html'), 'utf8');
@@ -909,7 +910,8 @@ function fixture() {
   assert(ui.includes('if (!await globalScope.saveDatabase())'));
   assert(database.includes('const DB_VERSION = 7;'));
   assert(database.includes('ToolsData.normalize(db)'));
-  assert(preload.includes("require('sudoku-gen')"));
+  assert(computeService.includes("require('sudoku-gen')"));
+  assert(preload.includes("ipcRenderer.invoke('compute:generate-sudoku'"));
   assert(preload.includes('generateSudoku:'));
   [sudoku, game2048, minesweeper].forEach(source => {
     assert(source.includes("connect-src 'none'"));

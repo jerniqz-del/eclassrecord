@@ -4,6 +4,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class SyncPayload(
+    val protocolVersion: Int = 1,
+    val desktopId: String = "",
+    val profileId: String = "",
+    val profileName: String = "",
     val teacherName: String = "",
     val schoolName: String = "",
     val schoolYear: String = "",
@@ -102,15 +106,21 @@ data class LearnerGradeSummary(
 @Serializable
 data class BluetoothEnvelope(
     val kind: String,
+    val protocolVersion: Int = 1,
+    val desktopId: String = "",
+    val profileId: String = "",
+    val batchId: String = "",
     val revision: Long = 0,
     val snapshot: SyncPayload? = null,
     val success: Boolean = false,
     val accepted: Int = 0,
+    val acceptedChangeIds: List<String> = emptyList(),
     val error: String = ""
 )
 
 @Serializable
 data class MobileChange(
+    val changeId: String = "",
     val type: String,
     val classId: String,
     val learnerId: String,
@@ -125,12 +135,17 @@ data class MobileChange(
 @Serializable
 data class ToolCommand(
     val kind: String = "tool-command",
-    val command: String
+    val command: String,
+    val args: Map<String, String> = emptyMap(),
 )
 
 @Serializable
 data class MobileChangesEnvelope(
     val kind: String = "changes",
+    val protocolVersion: Int = 2,
+    val desktopId: String = "",
+    val profileId: String = "",
+    val batchId: String = "",
     val baseRevision: Long,
     val changes: List<MobileChange>,
     val authorizationPin: String = ""

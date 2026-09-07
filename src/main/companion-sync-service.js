@@ -4,12 +4,15 @@ const selfsigned = require('selfsigned');
 const os = require('os');
 const fs = require('fs');
 const dgram = require('dgram');
+const companionIdentity = require('./companion-identity');
 
 const DISCOVERY_PORT = 38472;
 const DISCOVERY_MULTICAST = '239.255.77.77';
 const SYNC_PORT = 38473;
 
 const PROTOCOL_VERSION = 1;
+const CURRENT_PROTOCOL_VERSION = 2;
+const PAIRING_TTL_MS = 5 * 60 * 1000;
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const REQUEST_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
@@ -94,6 +97,42 @@ function pairingPayload(status) {
   ].join('|');
 }
 
+function pairingPayloadV2(status) {
+  return JSON.stringify({
+    type: 'eclass-companion-pairing',
+    version: CURRENT_PROTOCOL_VERSION,
+    desktopId: status.desktopId,
+    desktopName: status.desktopName || os.hostname() || 'E-Class Record Desktop',
+    profileId: status.profileId,
+    profileName: status.profileName || 'Teacher profile',
+    schoolYear: status.schoolYear || '',
+    pairingSessionId: status.sessionId,
+    bootstrapSecret: status.secret,
+    expiresAt: status.pairingExpiresAt,
+    transport: status.transport || 'wlan',
+    lan: status.transport === 'wlan' ? {
+      hosts: status.availableHosts?.length ? status.availableHosts : [status.host].filter(Boolean),
+      port: status.port,
+      certificateFingerprint: status.certificateFingerprint
+    } : null,
+    bluetooth: status.transport === 'bluetooth' ? {
+      discoveryTag: String(status.sessionId || '').replaceAll('-', '').slice(0, 6).toUpperCase(),
+      transportPin: String(status.pin || '')
+    } : null
+  });
+}
+
+function normalizePairingContext(value = {}) {
+  const profileId = String(value.profileId || '').trim().slice(0, 160);
+  if (!profileId) throw new Error('Open an E-Class Record profile before creating a companion QR.');
+  return {
+    profileId,
+    profileName: String(value.profileName || 'Teacher profile').trim().slice(0, 160),
+    schoolYear: String(value.schoolYear || '').trim().slice(0, 40),
+    desktopName: String(value.desktopName || os.hostname() || 'E-Class Record Desktop').trim().slice(0, 160)
+  };
+}
+
 function readBody(request) {
   return new Promise((resolve, reject) => {
     let size = 0;
@@ -123,65 +162,107 @@ function json(response, statusCode, value) {
   response.end(payload);
 }
 
-function runIdentityRead(identityPath) {
+function isUsableTlsIdentity(value) {
   try {
-    const value = JSON.parse(fs.readFileSync(identityPath, 'utf8'));
-    if (!value || !/^[a-f0-9]{64}$/i.test(value.certificateFingerprint || '')) return null;
-    if (!/^[A-Za-z0-9_-]{32,128}$/.test(value.secret || '')) return null;
-    if (!value.privateKey || !value.certificate || !value.sessionId) return null;
+    if (!value || !/^[a-f0-9]{64}$/i.test(value.certificateFingerprint || '')) return false;
+    if (!/^[A-Za-z0-9_-]{32,128}$/.test(value.secret || '')) return false;
+    if (!value.privateKey || !value.certificate || !value.sessionId) return false;
     const certificate = new crypto.X509Certificate(value.certificate);
-    if (Date.parse(certificate.validTo) < Date.now() + 24 * 60 * 60 * 1000) return null;
-    return value;
+    return Date.parse(certificate.validTo) >= Date.now() + 24 * 60 * 60 * 1000;
   } catch (_error) {
-    return null;
+    return false;
   }
 }
 
 class CompanionSyncService {
-  constructor({ onChanges, onToolCommand, onClientActivity, getMobileUpdate, identityPath = '', discoveryPort = DISCOVERY_PORT } = {}) {
+  constructor({
+    onPair,
+    onChanges,
+    onToolCommand,
+    onClientActivity,
+    getMobileUpdate,
+    identityPath = '',
+    identityStorage = null,
+    discoveryPort = DISCOVERY_PORT
+  } = {}) {
     this.server = null;
     this.status = null;
     this.snapshot = null;
     this.revision = 0;
     this.onChanges = onChanges;
+    this.onPair = onPair;
     this.onToolCommand = onToolCommand;
     this.onClientActivity = onClientActivity;
     this.getMobileUpdate = getMobileUpdate;
     this.identityPath = identityPath;
+    this.identityStorage = identityStorage;
+    this.memoryIdentity = null;
+    this.commandLock = false;
     this.discoveryPort = discoveryPort;
     this.failedPins = new Map();
     this.snapshotWaiters = new Set();
     this.discoverySocket = null;
   }
 
-  async start() {
-    if (this.server && this.status?.transport === 'wlan') return this.publicStatus();
+  readStoredIdentity() {
+    const stored = companionIdentity.read(this.identityPath, this.identityStorage);
+    if (stored) this.memoryIdentity = stored;
+    return stored || this.memoryIdentity || null;
+  }
+
+  persistIdentity(identity) {
+    this.memoryIdentity = identity;
+    if (!this.identityPath) return;
+    const result = companionIdentity.write(this.identityPath, identity, this.identityStorage);
+    if (!result.persisted && result.reason === 'safe-storage-unavailable') {
+      try { if (fs.existsSync(this.identityPath)) fs.unlinkSync(this.identityPath); } catch (_error) {}
+    }
+  }
+
+  async createTlsIdentity(hosts, existing = {}) {
+    const notAfterDate = new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000);
+    const pems = await selfsigned.generate([{ name: 'commonName', value: 'E-Class Record Desktop' }], {
+      keyType: 'ec', curve: 'P-256', algorithm: 'sha256', notAfterDate,
+      extensions: [
+        { name: 'basicConstraints', cA: false, critical: true },
+        { name: 'keyUsage', digitalSignature: true, keyEncipherment: true, critical: true },
+        { name: 'extKeyUsage', serverAuth: true },
+        { name: 'subjectAltName', altNames: hosts.map((address) => ({ type: 7, ip: address })).concat([{ type: 7, ip: '127.0.0.1' }]) }
+      ]
+    });
+    return {
+      desktopId: existing.desktopId || crypto.randomUUID(),
+      sessionId: existing.sessionId || crypto.randomUUID(),
+      secret: existing.secret || base64url(crypto.randomBytes(32)),
+      pin: existing.pin || String(crypto.randomInt(0, 1000000)).padStart(6, '0'),
+      certificateFingerprint: new crypto.X509Certificate(pems.cert).fingerprint256.replaceAll(':', '').toLowerCase(),
+      privateKey: pems.private,
+      certificate: pems.cert,
+      port: Number(existing.port || 0)
+    };
+  }
+
+  ensureDesktopId() {
+    const existing = this.readStoredIdentity() || {};
+    if (!/^[a-f0-9-]{36}$/i.test(String(existing.desktopId || ''))) existing.desktopId = crypto.randomUUID();
+    if (!existing.sessionId) existing.sessionId = crypto.randomUUID();
+    if (!existing.secret) existing.secret = base64url(crypto.randomBytes(32));
+    this.persistIdentity(existing);
+    return existing;
+  }
+
+  async start(pairingContext = {}) {
+    const context = normalizePairingContext(pairingContext);
+    if (this.server && this.status?.transport === 'wlan') {
+      this.refreshPairingContext(context);
+      return this.publicStatus();
+    }
     if (this.status) await this.stop();
     const hosts = localIpv4Addresses();
     if (!hosts.length) throw new Error('Connect this computer to a private local network first.');
-    let identity = this.identityPath && fs.existsSync(this.identityPath)
-      ? runIdentityRead(this.identityPath)
-      : null;
-    if (!identity) {
-      const notAfterDate = new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000);
-      const pems = await selfsigned.generate([{ name: 'commonName', value: 'E-Class Record Desktop' }], {
-        keyType: 'ec', curve: 'P-256', algorithm: 'sha256', notAfterDate,
-        extensions: [
-          { name: 'basicConstraints', cA: false, critical: true },
-          { name: 'keyUsage', digitalSignature: true, keyEncipherment: true, critical: true },
-          { name: 'extKeyUsage', serverAuth: true },
-          { name: 'subjectAltName', altNames: hosts.map((address) => ({ type: 7, ip: address })).concat([{ type: 7, ip: '127.0.0.1' }]) }
-        ]
-      });
-      identity = {
-        sessionId: crypto.randomUUID(),
-        secret: base64url(crypto.randomBytes(32)),
-        pin: String(crypto.randomInt(0, 1000000)).padStart(6, '0'),
-        certificateFingerprint: new crypto.X509Certificate(pems.cert).fingerprint256.replaceAll(':', '').toLowerCase(),
-        privateKey: pems.private,
-        certificate: pems.cert,
-        port: 0
-      };
+    let identity = this.readStoredIdentity();
+    if (!isUsableTlsIdentity(identity)) {
+      identity = await this.createTlsIdentity(hosts, identity || {});
     }
     this.status = {
       running: true,
@@ -196,8 +277,14 @@ class CompanionSyncService {
       pin: identity.pin,
       certificateFingerprint: identity.certificateFingerprint,
       startedAt: new Date().toISOString(),
-      lastClientAt: ''
+      lastClientAt: '',
+      linkRttMs: 0,
+      linkStrength: 0,
+      linkQuality: 'Waiting for phone'
     };
+    if (!identity.desktopId) identity.desktopId = crypto.randomUUID();
+    this.status.desktopId = identity.desktopId;
+    this.refreshPairingContext(context);
     this.server = https.createServer({ key: identity.privateKey, cert: identity.certificate, minVersion: 'TLSv1.2' }, (request, response) => {
       this.handle(request, response).catch((error) => {
         json(response, error.statusCode || 500, { success: false, error: error.message || 'Sync request failed.' });
@@ -212,10 +299,33 @@ class CompanionSyncService {
     });
     this.status.port = this.server.address().port;
     identity.port = this.status.port;
-    if (this.identityPath) {
-      fs.mkdirSync(require('path').dirname(this.identityPath), { recursive: true });
-      fs.writeFileSync(this.identityPath, JSON.stringify(identity), { mode: 0o600 });
+    this.persistIdentity(identity);
+    await this.startDiscovery();
+    return this.publicStatus();
+  }
+
+  setCommandLock(locked) {
+    this.commandLock = Boolean(locked);
+  }
+
+  async pauseDiscovery() {
+    const discovery = this.discoverySocket;
+    this.discoverySocket = null;
+    if (!discovery) return;
+    await new Promise((resolve) => {
+      try { discovery.close(() => resolve()); } catch (_error) { resolve(); }
+    });
+  }
+
+  async resumeAfterSleep() {
+    if (!this.status || this.status.transport !== 'wlan' || !this.server) return this.publicStatus();
+    const hosts = localIpv4Addresses();
+    if (hosts.length) {
+      this.status.host = hosts[0];
+      this.status.availableHosts = hosts;
+      this.status.networkInterfaces = localNetworkInterfaces();
     }
+    await this.pauseDiscovery();
     await this.startDiscovery();
     return this.publicStatus();
   }
@@ -264,9 +374,14 @@ class CompanionSyncService {
     }
   }
 
-  async startBluetooth() {
-    if (this.status?.transport === 'bluetooth') return this.publicStatus();
+  async startBluetooth(pairingContext = {}) {
+    const context = normalizePairingContext(pairingContext);
+    if (this.status?.transport === 'bluetooth') {
+      this.refreshPairingContext(context);
+      return this.publicStatus();
+    }
     if (this.status) await this.stop();
+    const identity = this.ensureDesktopId();
     this.status = {
       running: true,
       transport: 'bluetooth',
@@ -280,7 +395,18 @@ class CompanionSyncService {
       startedAt: new Date().toISOString(),
       lastClientAt: ''
     };
+    this.status.desktopId = identity.desktopId;
+    this.refreshPairingContext(context);
     return this.publicStatus();
+  }
+
+  refreshPairingContext(context) {
+    if (!this.status) return;
+    this.status.profileId = context.profileId;
+    this.status.profileName = context.profileName;
+    this.status.schoolYear = context.schoolYear;
+    this.status.desktopName = context.desktopName;
+    this.status.pairingExpiresAt = new Date(Date.now() + PAIRING_TTL_MS).toISOString();
   }
 
   async stop() {
@@ -305,6 +431,7 @@ class CompanionSyncService {
     return {
       ...this.status,
       pairingPayload: pairingPayload(this.status),
+      pairingPayloadV2: pairingPayloadV2(this.status),
       hasSnapshot: Boolean(this.snapshot),
       revision: this.revision
     };
@@ -315,6 +442,11 @@ class CompanionSyncService {
     const serialized = JSON.stringify(snapshot);
     if (Buffer.byteLength(serialized) > MAX_BODY_BYTES) throw new Error('Companion snapshot exceeds the 2 MB live-sync limit.');
     this.snapshot = JSON.parse(serialized);
+    if (this.status) {
+      this.snapshot.desktopId = this.snapshot.desktopId || this.status.desktopId;
+      this.snapshot.profileId = this.snapshot.profileId || this.status.profileId;
+    }
+    if (this.snapshot.profileId) this.status.profileId = String(this.snapshot.profileId);
     this.revision += 1;
     for (const waiter of [...this.snapshotWaiters]) {
       this.snapshotWaiters.delete(waiter);
@@ -361,7 +493,13 @@ class CompanionSyncService {
     const expected = crypto.createHmac('sha256', this.status.secret).update(canonical).digest('hex');
     if (!safeEqual(signature, expected)) throw Object.assign(new Error('Companion authentication failed.'), { statusCode: 401 });
     this.status.lastClientAt = new Date().toISOString();
-    this.onClientActivity?.({ clientId, at: this.status.lastClientAt });
+    const linkRttMs = Math.max(0, Math.min(60000, Number(request.headers['x-eclass-link-rtt'] || 0) || 0));
+    const linkStrength = Math.max(0, Math.min(100, Number(request.headers['x-eclass-link-strength'] || 0) || 0));
+    const linkQuality = linkStrength >= 90 ? 'Excellent' : linkStrength >= 75 ? 'Strong' : linkStrength >= 55 ? 'Good' : linkStrength >= 30 ? 'Weak' : 'Poor';
+    this.status.linkRttMs = linkRttMs;
+    this.status.linkStrength = linkStrength;
+    this.status.linkQuality = linkQuality;
+    this.onClientActivity?.({ clientId, at: this.status.lastClientAt, linkRttMs, linkStrength, linkQuality });
     return clientId;
   }
 
@@ -389,6 +527,41 @@ class CompanionSyncService {
     if (url.searchParams.get('session') !== this.status?.sessionId) {
       return json(response, 404, { success: false, error: 'Pairing session not found.' });
     }
+    if (request.method === 'POST' && url.pathname === '/v2/pair') {
+      if (Date.parse(this.status.pairingExpiresAt || '') < Date.now()) {
+        return json(response, 410, { success: false, error: 'This pairing QR has expired. Generate a new QR.' });
+      }
+      const rawBody = await readBody(request);
+      const clientId = this.verify(request, rawBody);
+      const body = JSON.parse(rawBody || '{}');
+      const payload = decryptJson(this.status.secret, body.payload);
+      if (String(payload.profileId || '') !== String(this.status.profileId || '')) {
+        return json(response, 403, { success: false, error: 'The pairing request is for a different profile.' });
+      }
+      const attempt = this.failedPins.get(clientId) || { count: 0, blockedUntil: 0 };
+      if (attempt.blockedUntil > Date.now()) {
+        return json(response, 429, { success: false, error: 'Too many incorrect PIN attempts. Try again later.' });
+      }
+      const result = await this.onPair?.({
+        clientId,
+        desktopId: this.status.desktopId,
+        profileId: this.status.profileId,
+        profileName: this.status.profileName,
+        schoolYear: this.status.schoolYear,
+        authorizationPin: String(payload.authorizationPin || '')
+      });
+      if (!result?.authorized) {
+        attempt.count += 1;
+        if (attempt.count >= 5) {
+          attempt.count = 0;
+          attempt.blockedUntil = Date.now() + 5 * 60 * 1000;
+        }
+        this.failedPins.set(clientId, attempt);
+        return json(response, 403, { success: false, error: String(result?.error || 'Incorrect profile PIN.') });
+      }
+      this.failedPins.delete(clientId);
+      return json(response, 200, { success: true, result });
+    }
     if (request.method === 'GET' && url.pathname === '/v1/snapshot') {
       const clientId = this.verify(request);
       const knownRevision = Number(url.searchParams.get('revision') || 0);
@@ -408,6 +581,10 @@ class CompanionSyncService {
       if (!Array.isArray(payload.changes) || payload.changes.length > 10000) throw Object.assign(new Error('Mobile changes are invalid.'), { statusCode: 400 });
       const result = await this.onChanges?.({
         clientId,
+        protocolVersion: Number(payload.protocolVersion || 1),
+        desktopId: String(payload.desktopId || this.status.desktopId || ''),
+        profileId: String(payload.profileId || this.snapshot?.profileId || this.status.profileId || ''),
+        batchId: String(payload.batchId || ''),
         baseRevision: Number(payload.baseRevision || 0),
         changes: payload.changes,
         authorizationPin: String(payload.authorizationPin || payload.pin || '')
@@ -436,11 +613,21 @@ class CompanionSyncService {
       return fs.createReadStream(update.path).pipe(response);
     }
     if (request.method === 'POST' && url.pathname === '/v1/tool-command') {
+      if (this.commandLock) {
+        return json(response, 403, { success: false, error: 'Unlock the desktop profile before using remote controls.' });
+      }
       const rawBody = await readBody(request);
       const clientId = this.verify(request, rawBody);
+      const requestedProfile = String(url.searchParams.get('profile') || '');
+      if (requestedProfile && requestedProfile !== String(this.status.profileId || '')) {
+        return json(response, 409, { success: false, error: 'Open the matching desktop profile before using remote controls.' });
+      }
       const body = JSON.parse(rawBody || '{}');
       const payload = decryptJson(this.status.secret, body.payload);
-      const result = await this.onToolCommand?.({ clientId, command: String(payload.command || ''), args: payload.args || {} });
+      if (payload.profileId && String(payload.profileId) !== String(this.status.profileId || '')) {
+        return json(response, 409, { success: false, error: 'The remote command belongs to another desktop profile.' });
+      }
+      const result = await this.onToolCommand?.({ clientId, profileId: this.status.profileId, command: String(payload.command || ''), args: payload.args || {} });
       return json(response, 200, { success: true, result: result || { accepted: true } });
     }
     return json(response, 404, { success: false, error: 'Companion endpoint not found.' });
@@ -450,11 +637,14 @@ class CompanionSyncService {
 module.exports = {
   CompanionSyncService,
   PROTOCOL_VERSION,
+  CURRENT_PROTOCOL_VERSION,
   decryptJson,
   encryptJson,
+  isPrivateIpv4,
   localIpv4Addresses,
   localNetworkInterfaces,
   pairingPayload,
+  pairingPayloadV2,
   sessionKey,
   sha256
 };

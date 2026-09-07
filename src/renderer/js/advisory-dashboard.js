@@ -87,7 +87,7 @@
     return `
       <article class="dashboard-card dashboard-card--advisory${listClass}" draggable="false"
         data-dashboard-fixed="true" data-advisory-class-id="${advisoryClass ? escHtml(advisoryClass.id) : ''}"
-        aria-label="Advisory Class" onclick="openAdvisoryClassDashboard(event)">
+        aria-label="Advisory Class" data-eclass-onclick="openAdvisoryClassDashboard(event)">
         <div class="dashboard-card__identity advisory-card__identity">
           <span class="advisory-card__eyebrow">Fixed first card</span>
           <h3 class="dashboard-card__title">Advisory Class</h3>
@@ -104,17 +104,17 @@
             <span>${progressText}</span>
             <strong>${summary.completionPercent}%</strong>
           </div>
-          <div class="advisory-card__progress-bar" aria-hidden="true"><span style="width:${summary.completionPercent}%"></span></div>
+          <div class="advisory-card__progress-bar" aria-hidden="true"><span data-eclass-style="width:${summary.completionPercent}%"></span></div>
         </div>
         <div class="advisory-card__status">
           <span class="advisory-card__status-item ${summary.missingGrades ? 'is-warning' : ''}">${summary.missingGrades} missing grades</span>
           <span class="advisory-card__status-item ${summary.conflicts ? 'is-conflict' : ''}">${summary.conflicts} unresolved conflicts</span>
         </div>
-        <div class="dashboard-card__actions advisory-card__actions" onclick="event.stopPropagation();">
-          <button class="btn btn-primary btn-sm" type="button" onclick="openAdvisoryClassDashboard(event)">
+        <div class="dashboard-card__actions advisory-card__actions" data-eclass-onclick="event.stopPropagation();">
+          <button class="btn btn-primary btn-sm" type="button" data-eclass-onclick="openAdvisoryClassDashboard(event)">
             ${advisoryClass ? 'Open Advisory Class' : 'Set Up Advisory Class'}
           </button>
-          ${advisoryClass ? '<button class="btn btn-ghost btn-sm" type="button" onclick="showAdvisoryClassSetupModal()">Edit Details</button>' : ''}
+          ${advisoryClass ? '<button class="btn btn-ghost btn-sm" type="button" data-eclass-onclick="showAdvisoryClassSetupModal()">Edit Details</button>' : ''}
         </div>
       </article>
     `;
@@ -161,7 +161,7 @@
       <div class="modal modal--wide advisory-setup-modal" role="dialog" aria-modal="true" aria-labelledby="advisorySetupTitle">
         <div class="modal__title" id="advisorySetupTitle">${existing ? 'Edit' : 'Set Up'} Advisory Class</div>
         <div class="modal__body advisory-setup-modal__body">
-          <p class="text-muted" style="margin-top:0">This is the adviser&apos;s central record for School Year ${escHtml(schoolYear)}. Previous school-year records are preserved.</p>
+          <p class="text-muted" data-eclass-style="margin-top:0">This is the adviser&apos;s central record for School Year ${escHtml(schoolYear)}. Previous school-year records are preserved.</p>
           <div class="split-row">
             <div class="field"><label class="field-label" for="advisoryGradeLevel">Grade Level <span aria-hidden="true">*</span></label><select class="field-select" id="advisoryGradeLevel" required><option value="">Select grade level</option>${gradeLevels.map(level => `<option value="${escHtml(level)}" ${selectedGrade === level ? 'selected' : ''} ${supportedGrades.has(level) ? '' : 'disabled'}>${level === 'Kindergarten' ? level : `Grade ${level}`}${supportedGrades.has(level) ? '' : ' (Not yet available)'}</option>`).join('')}</select></div>
             <div class="field"><label class="field-label" for="advisorySectionSelect">Section <span aria-hidden="true">*</span></label><select class="field-select" id="advisorySectionSelect" required><option value="">Select a section</option>${sections.map(item => `<option value="${escHtml(item.value)}" ${selectedSection === item.value ? 'selected' : ''}>${escHtml(item.value)}${item.gradeLevel ? ` (Grade ${escHtml(item.gradeLevel)})` : ''}</option>`).join('')}<option value="__custom__" ${useCustomSection ? 'selected' : ''}>Add a different section...</option></select><input class="field-input advisory-custom-section" id="advisoryCustomSection" value="${escHtml(useCustomSection ? existing.section : '')}" placeholder="Enter the section name" ${useCustomSection ? '' : 'hidden'} /></div>

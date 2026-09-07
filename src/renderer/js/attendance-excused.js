@@ -228,7 +228,7 @@
         type="button"
         class="attendance-status-btn attendance-status-btn--excused ${activeStatus === EXCUSED_STATUS ? 'attendance-status-btn--active' : ''}"
         title="${EXCUSED_LABEL}"
-        onclick="setAttendanceRollCallStatus('${escapeHtml(learnerId)}', '${EXCUSED_STATUS}')">
+        data-eclass-onclick="setAttendanceRollCallStatus('${escapeHtml(learnerId)}', '${EXCUSED_STATUS}')">
         ${EXCUSED_LABEL}
       </button>
     `;
@@ -500,7 +500,7 @@
             type="checkbox"
             id="attendanceNoClassToggle"
             ${day ? 'checked' : ''}
-            onchange="toggleAttendanceNoClassDate(this.checked)">
+            data-eclass-onchange="toggleAttendanceNoClassDate(this.checked)">
           <span>No classes / holiday for this date</span>
         </label>
         <input
@@ -509,7 +509,7 @@
           value="${escapeHtml(day?.reason || '')}"
           placeholder="Reason (optional)"
           ${day ? '' : 'disabled'}
-          onchange="updateAttendanceNoClassReason(this.value)">
+          data-eclass-onchange="updateAttendanceNoClassReason(this.value)">
         <span class="attendance-no-class-note">Shows as NC in the attendance table and is excluded from attendance totals.</span>
       </div>
     `;

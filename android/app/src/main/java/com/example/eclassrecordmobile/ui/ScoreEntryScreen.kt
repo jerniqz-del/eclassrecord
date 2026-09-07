@@ -34,6 +34,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.eclassrecordmobile.data.DatabaseHelper
+import com.example.eclassrecordmobile.ui.design.EClassTopBar
+import com.example.eclassrecordmobile.ui.design.NeonCard
+import com.example.eclassrecordmobile.ui.design.WarningBadge
+import com.example.eclassrecordmobile.ui.design.themePanel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,31 +140,18 @@ fun ScoreEntryScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(assessment.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text("Grade ${assignment.gradeLevel} - ${assignment.section} · HPS: ${assessment.maxScore}", fontSize = 12.sp)
-                    }
+            EClassTopBar(
+                title = assessment.title,
+                subtitle = "Grade ${assignment.gradeLevel} · ${assignment.section} · HPS ${assessment.maxScore}",
+                onBack = {
+                    saveScore(textState.text)
+                    onBack()
                 },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        saveScore(textState.text)
-                        onBack()
-                    }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showRosterSheet = true }) {
-                        Icon(Icons.Default.List, contentDescription = "Roster Jump List")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                actionIcon = Icons.Default.List,
+                actionDescription = "Roster jump list",
+                onAction = { showRosterSheet = true },
             )
         },
         modifier = modifier
@@ -176,13 +167,12 @@ fun ScoreEntryScreen(
             verticalArrangement = Arrangement.spacedBy(if (keyboardVisible) 12.dp else 24.dp)
         ) {
             // Student Card Header (Top)
-            Card(
+            NeonCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                accent = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
             ) {
                 Column(
-                    modifier = Modifier.padding(if (keyboardVisible) 12.dp else 20.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -198,9 +188,7 @@ fun ScoreEntryScreen(
                         fontSize = if (keyboardVisible) 17.sp else 20.sp,
                         fontWeight = FontWeight.ExtraBold,
                         textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (!keyboardVisible) {
+                        color = MaterialTheme.colorScheme.onSurface
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -277,27 +265,10 @@ fun ScoreEntryScreen(
                 
                 // Real-time validation warning badge
                 if (validationError != null) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                if (validationError!!.contains("exceeds"))
-                                    Color(0xFFFFF3E0) // Orange/Warning
-                                else
-                                    Color(0xFFFFEBEE) // Red/Error
-                            )
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = validationError!!,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (validationError!!.contains("exceeds"))
-                                Color(0xFFE65100)
-                            else
-                                Color(0xFFC62828)
-                        )
-                    }
+                    WarningBadge(
+                        message = validationError!!,
+                        warning = validationError!!.contains("exceeds"),
+                    )
                 }
             }
 
@@ -314,7 +285,7 @@ fun ScoreEntryScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Prev")
                     Spacer(modifier = Modifier.width(4.dp))
@@ -329,7 +300,7 @@ fun ScoreEntryScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Text(
                         text = if (currentIndex < learners.size - 1) "Next" else "Finish",
@@ -375,7 +346,7 @@ fun ScoreEntryScreen(
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(
                                         if (index == currentIndex)
-                                            MaterialTheme.colorScheme.primaryContainer
+                                            themePanel(raised = true)
                                         else
                                             Color.Transparent
                                     )

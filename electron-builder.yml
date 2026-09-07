@@ -10,11 +10,22 @@ files:
   - src/**/*
   - "!src/**/*.map"
 
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  loadBrowserProcessSpecificV8Snapshot: false
+  grantFileProtocolExtraPrivileges: false
+
 extraResources:
   - from: android/app/build/outputs/apk/debug
     to: mobile
     filter:
       - E-Class-Record-Mobile-v*.apk
+      - mobile-update.json
 
 win:
   target: nsis

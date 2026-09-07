@@ -1,0 +1,23 @@
+{
+  "appVersion": "1.9.6",
+  "electronVersion": "33.4.11",
+  "builtAt": "2026-09-05",
+  "signed": false,
+  "artifacts": [
+    {
+      "path": "dist/phase0-baseline/E-Class-Record-Setup-1.9.6.exe",
+      "bytes": 160657828,
+      "sha256": "1a2e9e961d27bb43fef7c5d3e0221108d18b80d7b3402d48d7b104409a0199fd"
+    },
+    {
+      "path": "dist/phase0-baseline/E-Class-Record-Setup-1.9.6.exe.blockmap",
+      "bytes": 165843,
+      "sha256": "360d33baa45c04904aee3fd90813413c60fc25a115f185830242e5d6b5c3b8b6"
+    },
+    {
+      "path": "dist/phase0-baseline/win-unpacked/resources/app.asar",
+      "bytes": 157542949,
+      "sha256": "029964cd6bbfe3f91f2ad38619c6462f0dc70f27ac849ec232c4809ac7bd1942"
+    }
+  ]
+}

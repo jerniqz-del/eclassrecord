@@ -234,10 +234,10 @@ function renderClassAnalysisModal(a, term, mapePart) {
           <p>Grade ${esc(a.gradeLevel)} - ${esc(a.section)} &middot; ${esc(a.subject)} &middot; SY ${esc(a.schoolYear)}${strandLabel ? ' &middot; ' + esc(strandLabel) : ''}</p>
         </div>
         <div class="record-tabs no-print-modal">
-          <button class="record-tab ${term === '1' ? 'record-tab--active' : ''}" onclick="switchClassAnalysisTerm('1')">Term 1</button>
-          <button class="record-tab ${term === '2' ? 'record-tab--active' : ''}" onclick="switchClassAnalysisTerm('2')">Term 2</button>
-          <button class="record-tab ${term === '3' ? 'record-tab--active' : ''}" onclick="switchClassAnalysisTerm('3')">Term 3</button>
-          <button class="record-tab record-tab--summary ${term === 'summary' ? 'record-tab--active' : ''}" onclick="switchClassAnalysisTerm('summary')">Summary</button>
+          <button class="record-tab ${term === '1' ? 'record-tab--active' : ''}" data-eclass-onclick="switchClassAnalysisTerm('1')">Term 1</button>
+          <button class="record-tab ${term === '2' ? 'record-tab--active' : ''}" data-eclass-onclick="switchClassAnalysisTerm('2')">Term 2</button>
+          <button class="record-tab ${term === '3' ? 'record-tab--active' : ''}" data-eclass-onclick="switchClassAnalysisTerm('3')">Term 3</button>
+          <button class="record-tab record-tab--summary ${term === 'summary' ? 'record-tab--active' : ''}" data-eclass-onclick="switchClassAnalysisTerm('summary')">Summary</button>
         </div>
       </div>
 
@@ -313,7 +313,7 @@ function reportBar(label, pct, caption, valueLabel) {
   return `
     <div class="report-bar-row">
       <span>${esc(label)}</span>
-      <div class="report-bar-track"><div class="report-bar-fill" style="width:${width}%"></div></div>
+      <div class="report-bar-track"><div class="report-bar-fill" data-eclass-style="width:${width}%"></div></div>
       <strong>${esc(valueLabel || reportPct(pct))}</strong>
       <em>${esc(caption || '')}</em>
     </div>
@@ -348,7 +348,7 @@ function renderPerformanceChart(assessments) {
 
 function stackSegment(key, width, count) {
   if (!width) return '';
-  return `<div class="report-stack-segment report-stack-${key}" style="width:${width}%" title="${key}: ${count}">${count > 0 ? count : ''}</div>`;
+  return `<div class="report-stack-segment report-stack-${key}" data-eclass-style="width:${width}%" title="${key}: ${count}">${count > 0 ? count : ''}</div>`;
 }
 
 function reportTableHeader(label, tooltip) {
@@ -363,7 +363,7 @@ function renderScoreDistributionChart(assessments) {
       <div class="report-histogram-bars">
         ${item.distribution.map((count, idx) => {
           const max = Math.max(...item.distribution, 1);
-          return `<div class="report-histogram-bin" title="${labels[idx]}: ${count}"><i style="height:${Math.max(4, count / max * 70)}px"></i><small>${esc(labels[idx])}</small><b>${count}</b></div>`;
+          return `<div class="report-histogram-bin" title="${labels[idx]}: ${count}"><i data-eclass-style="height:${Math.max(4, count / max * 70)}px"></i><small>${esc(labels[idx])}</small><b>${count}</b></div>`;
         }).join('')}
       </div>
     </div>

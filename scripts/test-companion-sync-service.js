@@ -11,6 +11,7 @@ const {
   encryptJson,
   sha256
 } = require('../src/main/companion-sync-service');
+const { createMemoryStorage } = require('../src/main/companion-identity');
 
 function signedHeaders(secret, method, path, body = '') {
   const timestamp = String(Date.now());
@@ -76,10 +77,15 @@ function discoverLan(status) {
   const updateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eclass-mobile-update-'));
   const updatePath = path.join(updateDir, 'mobile.apk');
   const identityPath = path.join(updateDir, 'lan-identity.json');
+  const identityStorage = createMemoryStorage();
   fs.writeFileSync(updatePath, 'signed-mobile-apk-test');
   const service = new CompanionSyncService({
     identityPath,
+    identityStorage,
     discoveryPort: 39472,
+    onPair: async (payload) => payload.authorizationPin === '123456'
+      ? { authorized: true }
+      : { authorized: false, error: 'Incorrect profile PIN.' },
     onChanges: async (payload) => { received.push(payload); return { accepted: payload.changes.length }; },
     onToolCommand: async (payload) => { commands.push(payload); return { accepted: true }; },
     getMobileUpdate: async () => ({
@@ -91,13 +97,44 @@ function discoverLan(status) {
       sha256: sha256(fs.readFileSync(updatePath))
     })
   });
-  const status = await service.start();
+  const status = await service.start({ profileId: 'legacy-active-profile' });
   try {
     assert(status.running);
     assert(/^\d{6}$/.test(status.pin));
     assert(/^[a-f0-9]{64}$/.test(status.certificateFingerprint));
     assert(status.pairingPayload.startsWith('ECLASS-COMPANION|1|wlan|'));
     assert.strictEqual(status.pairingPayload.split('|').at(-1), status.pin);
+    const v2Pairing = JSON.parse(status.pairingPayloadV2);
+    assert.strictEqual(v2Pairing.version, 2);
+    assert.strictEqual(v2Pairing.desktopId, status.desktopId);
+    assert.strictEqual(v2Pairing.profileId, 'legacy-active-profile');
+    assert.strictEqual(v2Pairing.pin, undefined);
+    const pairPath = `/v2/pair?session=${encodeURIComponent(status.sessionId)}&profile=${encodeURIComponent(v2Pairing.profileId)}`;
+    const rejectedPairBody = JSON.stringify({ payload: encryptJson(status.secret, {
+      profileId: v2Pairing.profileId,
+      authorizationPin: '000000'
+    }) });
+    const rejectedPair = await requestJson(
+      status.port,
+      'POST',
+      pairPath,
+      signedHeaders(status.secret, 'POST', pairPath, rejectedPairBody),
+      rejectedPairBody
+    );
+    assert.strictEqual(rejectedPair.status, 403);
+    const acceptedPairBody = JSON.stringify({ payload: encryptJson(status.secret, {
+      profileId: v2Pairing.profileId,
+      authorizationPin: '123456'
+    }) });
+    const acceptedPair = await requestJson(
+      status.port,
+      'POST',
+      pairPath,
+      signedHeaders(status.secret, 'POST', pairPath, acceptedPairBody),
+      acceptedPairBody
+    );
+    assert.strictEqual(acceptedPair.status, 200);
+    assert.strictEqual(acceptedPair.body.success, true);
     const discovery = await discoverLan(status);
     assert(discovery.hosts.includes(status.host));
     assert(discovery.interfaces.some((item) => item.address === status.host));
@@ -107,7 +144,10 @@ function discoverLan(status) {
     const snapshotResponse = await requestJson(status.port, 'GET', snapshotPath, signedHeaders(status.secret, 'GET', snapshotPath));
     assert.strictEqual(snapshotResponse.status, 200);
     assert.strictEqual(snapshotResponse.fingerprint, status.certificateFingerprint);
-    assert.strictEqual(decryptJson(status.secret, snapshotResponse.body.payload).marker, 'desktop-truth');
+    const firstSnapshot = decryptJson(status.secret, snapshotResponse.body.payload);
+    assert.strictEqual(firstSnapshot.marker, 'desktop-truth');
+    assert.strictEqual(firstSnapshot.desktopId, status.desktopId);
+    assert.strictEqual(firstSnapshot.profileId, 'legacy-active-profile');
 
     const eventsPath = `/v1/events?session=${encodeURIComponent(status.sessionId)}&revision=1`;
     const pendingEvent = requestJson(status.port, 'GET', eventsPath, signedHeaders(status.secret, 'GET', eventsPath));
@@ -130,6 +170,10 @@ function discoverLan(status) {
 
     const commandPath = `/v1/tool-command?session=${encodeURIComponent(status.sessionId)}`;
     const commandBody = JSON.stringify({ payload: encryptJson(status.secret, { command: 'pick-learner', args: {} }) });
+    service.setCommandLock(true);
+    const lockedCommand = await requestJson(status.port, 'POST', commandPath, signedHeaders(status.secret, 'POST', commandPath, commandBody), commandBody);
+    assert.strictEqual(lockedCommand.status, 403);
+    service.setCommandLock(false);
     const commandResponse = await requestJson(status.port, 'POST', commandPath, signedHeaders(status.secret, 'POST', commandPath, commandBody), commandBody);
     assert.strictEqual(commandResponse.status, 200);
     assert.strictEqual(commands[0].command, 'pick-learner');
@@ -147,8 +191,10 @@ function discoverLan(status) {
       port: status.port
     };
     await service.stop();
-    const restartedService = new CompanionSyncService({ identityPath, discoveryPort: 39472 });
-    const restartedStatus = await restartedService.start();
+    const storedEnvelope = JSON.parse(fs.readFileSync(identityPath, 'utf8'));
+    assert.strictEqual(storedEnvelope.protection, 'electron-safe-storage');
+    const restartedService = new CompanionSyncService({ identityPath, identityStorage, discoveryPort: 39472 });
+    const restartedStatus = await restartedService.start({ profileId: 'legacy-active-profile' });
     assert.strictEqual(restartedStatus.sessionId, persistentIdentity.sessionId);
     assert.strictEqual(restartedStatus.secret, persistentIdentity.secret);
     assert.strictEqual(restartedStatus.certificateFingerprint, persistentIdentity.certificateFingerprint);

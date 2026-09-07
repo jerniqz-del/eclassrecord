@@ -1,7 +1,6 @@
 package com.example.eclassrecordmobile.theme
 
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -9,30 +8,34 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.eclassrecordmobile.ui.design.LocalFluidLayout
+import com.example.eclassrecordmobile.ui.design.rememberFluidLayout
 
 private val DarkColorScheme =
   darkColorScheme(
-    primary = Brand300,
-    onPrimary = Color(0xFF083344),
-    primaryContainer = Brand800,
-    onPrimaryContainer = Brand100,
-    secondary = Indigo300,
-    onSecondary = Indigo950,
-    secondaryContainer = Color(0xFF312E81),
-    onSecondaryContainer = Indigo100,
-    tertiary = Amber300,
-    onTertiary = Color(0xFF451A03),
-    tertiaryContainer = Color(0xFF78350F),
-    onTertiaryContainer = Amber100,
+    primary = NeonPurple,
+    onPrimary = Color.White,
+    primaryContainer = NeonPurpleDark,
+    onPrimaryContainer = Color.White,
+    secondary = NeonBlue,
+    onSecondary = Color.White,
+    secondaryContainer = NeonBlueDark,
+    onSecondaryContainer = Color.White,
+    tertiary = NeonGreen,
+    onTertiary = Color(0xFF03140A),
+    tertiaryContainer = NeonGreenDark,
+    onTertiaryContainer = Color.White,
     background = DarkBackground,
     onBackground = DarkOnSurface,
-    surface = DarkSurface,
+    surface = NeonPanel,
     onSurface = DarkOnSurface,
-    surfaceVariant = DarkSurfaceVariant,
+    surfaceVariant = NeonPanelRaised,
     onSurfaceVariant = DarkOnSurfaceVariant,
     outline = DarkOutline,
     outlineVariant = Color(0xFF30363D),
@@ -72,17 +75,28 @@ private val LightColorScheme =
 
 private val AppShapes =
   Shapes(
-    extraSmall = RoundedCornerShape(6.dp),
-    small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(14.dp),
-    large = RoundedCornerShape(20.dp),
-    extraLarge = RoundedCornerShape(28.dp),
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(18.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(30.dp),
   )
+
+data class ThemeController(
+  val darkTheme: Boolean,
+  val setDarkTheme: (Boolean) -> Unit,
+) {
+  fun toggle() = setDarkTheme(!darkTheme)
+}
+
+val LocalDarkTheme = staticCompositionLocalOf { false }
+val LocalThemeController = staticCompositionLocalOf {
+  ThemeController(darkTheme = false, setDarkTheme = {})
+}
 
 @Composable
 fun EClassRecordMobileTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
-  // Dynamic color is available on Android 12+
+  darkTheme: Boolean = false,
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
 ) {
@@ -95,11 +109,17 @@ fun EClassRecordMobileTheme(
       darkTheme -> DarkColorScheme
       else -> LightColorScheme
     }
+  val fluid = rememberFluidLayout()
 
-  MaterialTheme(
-    colorScheme = colorScheme,
-    typography = Typography,
-    shapes = AppShapes,
-    content = content,
-  )
+  CompositionLocalProvider(
+    LocalDarkTheme provides darkTheme,
+    LocalFluidLayout provides fluid,
+  ) {
+    MaterialTheme(
+      colorScheme = colorScheme,
+      typography = Typography,
+      shapes = AppShapes,
+      content = content,
+    )
+  }
 }

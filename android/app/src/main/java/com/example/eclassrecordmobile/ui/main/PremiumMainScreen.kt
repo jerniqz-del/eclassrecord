@@ -43,13 +43,12 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -60,13 +59,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -94,11 +93,29 @@ import com.example.eclassrecordmobile.Sync
 import com.example.eclassrecordmobile.data.Assignment
 import com.example.eclassrecordmobile.data.BleServerManager
 import com.example.eclassrecordmobile.data.DatabaseHelper
+import com.example.eclassrecordmobile.data.DesktopRemoteController
+import com.example.eclassrecordmobile.data.LanSyncManager
 import com.example.eclassrecordmobile.data.SyncPayload
+import com.example.eclassrecordmobile.theme.LocalDarkTheme
+import com.example.eclassrecordmobile.theme.LocalThemeController
 import com.example.eclassrecordmobile.ui.DesktopFeatureNames
+import com.example.eclassrecordmobile.ui.design.BrandMark
+import com.example.eclassrecordmobile.ui.design.DepthIcon
+import com.example.eclassrecordmobile.ui.ModernClassesTab
+import com.example.eclassrecordmobile.ui.ModernGradingTab
+import com.example.eclassrecordmobile.ui.design.EClassTopBar
+import com.example.eclassrecordmobile.ui.design.GradientSection
+import com.example.eclassrecordmobile.ui.design.LocalFluidLayout
+import com.example.eclassrecordmobile.ui.design.NeonCard
+import com.example.eclassrecordmobile.ui.design.RemoteToolChip
+import com.example.eclassrecordmobile.ui.design.SectionHeader
+import com.example.eclassrecordmobile.ui.design.themePanel
+import com.example.eclassrecordmobile.theme.NeonBlue
+import com.example.eclassrecordmobile.theme.NeonGreen
+import com.example.eclassrecordmobile.theme.NeonPurple
 import kotlin.math.roundToInt
 
-private enum class HomeTab(val label: String, val icon: ImageVector) {
+internal enum class HomeTab(val label: String, val icon: ImageVector) {
     Dashboard("Dashboard", Icons.Default.Home),
     Classes("Classes", Icons.Default.School),
     Grading("Grading", Icons.Default.List),
@@ -127,6 +144,7 @@ object MobileUiPreferences {
     private const val STORE = "mobile_ui_preferences"
     private const val AUTO_RECONNECT = "auto_reconnect"
     private const val SMOOTH_MOTION = "smooth_motion"
+    private const val DARK_THEME = "dark_theme"
 
     fun autoReconnect(context: Context): Boolean =
         context.getSharedPreferences(STORE, Context.MODE_PRIVATE).getBoolean(AUTO_RECONNECT, true)
@@ -140,6 +158,13 @@ object MobileUiPreferences {
 
     fun setSmoothMotion(context: Context, enabled: Boolean) {
         context.getSharedPreferences(STORE, Context.MODE_PRIVATE).edit().putBoolean(SMOOTH_MOTION, enabled).apply()
+    }
+
+    fun darkTheme(context: Context): Boolean =
+        context.getSharedPreferences(STORE, Context.MODE_PRIVATE).getBoolean(DARK_THEME, false)
+
+    fun setDarkTheme(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(STORE, Context.MODE_PRIVATE).edit().putBoolean(DARK_THEME, enabled).apply()
     }
 }
 
@@ -161,35 +186,12 @@ fun PremiumMainScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(selected.label, fontWeight = FontWeight.ExtraBold, fontSize = 21.sp)
-                        Text(
-                            payload?.schoolName?.ifBlank { "E-Class Record Mobile" } ?: "E-Class Record Mobile",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                },
-                actions = {
-                    Surface(
-                        shape = CircleShape,
-                        color = if (BleServerManager.isAuthorized) Color(0xFFDCFCE7) else MaterialTheme.colorScheme.surfaceVariant,
-                    ) {
-                        IconButton(onClick = { onNavigate(Sync) }) {
-                            Icon(
-                                Icons.Default.Refresh,
-                                contentDescription = "Desktop sync",
-                                tint = if (BleServerManager.isAuthorized) Color(0xFF15803D) else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.width(12.dp))
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+            EClassTopBar(
+                title = selected.label,
+                subtitle = payload?.schoolName?.ifBlank { "E-Class Record Mobile" } ?: "E-Class Record Mobile",
+                actionIcon = if (LanSyncManager.isConnected) Icons.Default.Wifi else Icons.Default.Refresh,
+                actionDescription = "Desktop connection",
+                onAction = { onNavigate(Sync) },
             )
         },
     ) { padding ->
@@ -215,8 +217,8 @@ fun PremiumMainScreen(
                     onSync = { onNavigate(Sync) },
                     onOpenClass = { onNavigate(ClassDetail(it)) },
                 )
-                HomeTab.Classes -> ClassesTab(payload?.assignments.orEmpty()) { onNavigate(ClassDetail(it)) }
-                HomeTab.Grading -> GradingTab(payload) { onNavigate(ClassDetail(it)) }
+                HomeTab.Classes -> ModernClassesTab(payload?.assignments.orEmpty()) { onNavigate(ClassDetail(it)) }
+                HomeTab.Grading -> ModernGradingTab(payload?.assignments.orEmpty()) { onNavigate(ClassDetail(it)) }
                 HomeTab.Tools -> ToolsTab(payload, onNavigate)
                 HomeTab.Settings -> SettingsTab(
                     payload = payload,
@@ -238,27 +240,48 @@ fun PersistentAppDock(
     onSelectedIndexChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(modifier = modifier, shadowElevation = 18.dp, tonalElevation = 4.dp) {
+    val panel = themePanel()
+    Surface(
+        modifier = modifier,
+        shadowElevation = 18.dp,
+        tonalElevation = 4.dp,
+        color = panel,
+        border = BorderStroke(1.dp, NeonPurple.copy(alpha = .30f)),
+    ) {
         NavigationBar(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = panel,
             tonalElevation = 0.dp,
         ) {
             HomeTab.entries.forEachIndexed { index, tab ->
                 val selected = selectedIndex == index
+                val accent = when (index % 3) {
+                    0 -> NeonPurple
+                    1 -> NeonBlue
+                    else -> NeonGreen
+                }
                 val scale by animateFloatAsState(
                     targetValue = if (selected) 1.08f else 0.96f,
                     label = "dock-icon-scale",
+                )
+                val rotation by animateFloatAsState(
+                    targetValue = if (selected) 8f else 0f,
+                    label = "dock-icon-rotation",
                 )
                 NavigationBarItem(
                     selected = selected,
                     onClick = { onSelectedIndexChange(index) },
                     icon = {
-                        Icon(
-                            imageVector = tab.icon,
+                        DepthIcon(
+                            icon = tab.icon,
                             contentDescription = tab.label,
+                            selected = selected,
+                            size = 38.dp,
+                            accent = accent,
                             modifier = Modifier.graphicsLayer {
                                 scaleX = scale
                                 scaleY = scale
+                                rotationY = rotation
+                                cameraDistance = 14f * density
                             },
                         )
                     },
@@ -273,12 +296,61 @@ fun PersistentAppDock(
                     },
                     alwaysShowLabel = true,
                     colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        indicatorColor = Color.Transparent,
+                        selectedIconColor = accent,
+                        selectedTextColor = accent,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     ),
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun PersistentAppRail(
+    selectedIndex: Int,
+    onSelectedIndexChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val panel = themePanel()
+    NavigationRail(
+        modifier = modifier,
+        containerColor = panel,
+        header = {
+            BrandMark(size = 42.dp, modifier = Modifier.padding(vertical = 8.dp))
+        },
+    ) {
+        HomeTab.entries.forEachIndexed { index, tab ->
+            val selected = selectedIndex == index
+            val accent = when (index % 3) {
+                0 -> NeonPurple
+                1 -> NeonBlue
+                else -> NeonGreen
+            }
+            NavigationRailItem(
+                selected = selected,
+                onClick = { onSelectedIndexChange(index) },
+                icon = {
+                    DepthIcon(
+                        icon = tab.icon,
+                        contentDescription = tab.label,
+                        selected = selected,
+                        size = 34.dp,
+                        accent = accent,
+                    )
+                },
+                label = { Text(tab.label, fontSize = 11.sp, maxLines = 1) },
+                alwaysShowLabel = true,
+                colors = NavigationRailItemDefaults.colors(
+                    indicatorColor = Color.Transparent,
+                    selectedIconColor = accent,
+                    selectedTextColor = accent,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            )
         }
     }
 }
@@ -299,23 +371,21 @@ private fun DashboardTab(
     val completion = CompletionStats(enteredScores, expectedScores).fraction
     val animatedCompletion by animateFloatAsState(completion, label = "grading-completion")
     var classLayout by rememberSaveable { mutableStateOf(ClassLayout.List) }
+    val fluid = LocalFluidLayout.current
+    val classColumns = if (classLayout == ClassLayout.Grid) fluid.columns.coerceAtLeast(2) else 1
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(fluid.gutter),
+        verticalArrangement = Arrangement.spacedBy(fluid.itemGap),
     ) {
         item {
-            Card(
-                shape = RoundedCornerShape(26.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            ) {
-                Box(
-                    Modifier.fillMaxWidth().background(
-                        Brush.linearGradient(listOf(Color(0xFF312E81), Color(0xFF2563EB), Color(0xFF06B6D4)))
-                    ).padding(22.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            GradientSection {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         Text(
                             if (payload == null) "Your teaching workspace" else "Good day, ${payload.teacherName.substringBefore(' ')}",
                             color = Color.White,
@@ -329,39 +399,53 @@ private fun DashboardTab(
                             fontSize = 13.sp,
                         )
                         Button(onClick = onSync) {
-                            Icon(Icons.Default.Bluetooth, contentDescription = null)
+                            Icon(
+                                if (LanSyncManager.isConnected) Icons.Default.Wifi else Icons.Default.Refresh,
+                                contentDescription = null,
+                            )
                             Spacer(Modifier.width(8.dp))
-                            Text(if (BleServerManager.isAuthorized) "Desktop connected" else "Connect desktop")
+                            Text(
+                                when {
+                                    LanSyncManager.isConnected -> "Connected by Wi-Fi"
+                                    LanSyncManager.isPaired -> "Reconnect desktop"
+                                    else -> "Connect desktop"
+                                }
+                            )
                         }
                     }
+                    BrandMark(size = fluid.mediaHeight * 0.55f)
                 }
             }
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                MetricCard("Classes", assignments.size.toString(), Icons.Default.School, Modifier.weight(1f))
-                MetricCard("Learners", learnerCount.toString(), Icons.Default.People, Modifier.weight(1f))
-            }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                MetricCard("Assessments", assignments.sumOf { it.assessments.size }.toString(), Icons.Default.Assignment, Modifier.weight(1f))
-                MetricCard("Term grades", payload?.grades?.size?.toString() ?: "0", Icons.Default.CheckCircle, Modifier.weight(1f))
-            }
-        }
-        item {
-            ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Grading progress", fontWeight = FontWeight.Bold)
-                        Text("${(completion * 100).roundToInt()}%", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
+            val metrics = listOf(
+                Triple("Classes", assignments.size.toString(), Icons.Default.School),
+                Triple("Learners", learnerCount.toString(), Icons.Default.People),
+                Triple("Assessments", assignments.sumOf { it.assessments.size }.toString(), Icons.Default.Assignment),
+                Triple("Term grades", payload?.grades?.size?.toString() ?: "0", Icons.Default.CheckCircle),
+            )
+            metrics.chunked(fluid.metricColumns).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+                    row.forEach { (label, value, icon) ->
+                        MetricCard(label, value, icon, Modifier.weight(1f))
                     }
-                    LinearProgressIndicator(
-                        progress = { animatedCompletion },
-                        modifier = Modifier.fillMaxWidth().height(9.dp).clip(CircleShape),
-                    )
-                    Text("$enteredScores of $expectedScores score cells completed", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    repeat(fluid.metricColumns - row.size) { Spacer(Modifier.weight(1f)) }
                 }
+            }
+        }
+        item {
+            NeonCard(modifier = Modifier.fillMaxWidth(), accent = NeonPurple.copy(alpha = 0.35f)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Grading progress", fontWeight = FontWeight.Bold)
+                    Text("${(completion * 100).roundToInt()}%", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
+                }
+                Spacer(Modifier.height(10.dp))
+                LinearProgressIndicator(
+                    progress = { animatedCompletion },
+                    modifier = Modifier.fillMaxWidth().height(9.dp).clip(CircleShape),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("$enteredScores of $expectedScores score cells completed", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         item { SectionHeader("Quick actions", "Continue where you left off") }
@@ -383,7 +467,7 @@ private fun DashboardTab(
                         else -> "Some grading entries are incomplete"
                     },
                     detail = when {
-                        payload == null -> "Pair over Bluetooth to receive the latest approved class record."
+                        payload == null -> "Pair over Wi-Fi or a phone hotspot to receive the latest class record."
                         hasUnsynced -> "Submit drafts so the desktop can validate and commit them."
                         else -> "${expectedScores - enteredScores} score cells still need an entry."
                     },
@@ -414,12 +498,12 @@ private fun DashboardTab(
                     )
                 }
             }
-            if (classLayout == ClassLayout.List) {
+            if (classLayout == ClassLayout.List && classColumns == 1) {
                 items(assignments, key = { it.id }) { assignment ->
                     PremiumClassCard(item = assignment, onClick = { onOpenClass(assignment.id) })
                 }
             } else {
-                items(assignments.chunked(2), key = { row -> row.joinToString("|") { it.id } }) { row ->
+                items(assignments.chunked(classColumns.coerceAtLeast(2)), key = { row -> row.joinToString("|") { it.id } }) { row ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -432,7 +516,7 @@ private fun DashboardTab(
                                 compact = true,
                             )
                         }
-                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                        repeat(classColumns.coerceAtLeast(2) - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
             }
@@ -445,117 +529,215 @@ private fun DashboardTab(
         }
     }
 }
-@Composable
-private fun ClassesTab(assignments: List<Assignment>, onOpen: (String) -> Unit) {
- var query by rememberSaveable { mutableStateOf("") }
- val shown=assignments.filter{query.isBlank()||"${it.subject} ${it.gradeLevel} ${it.section}".contains(query,true)}
- LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
-  item{OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),leadingIcon={Icon(Icons.Default.Search,null)},label={Text("Search classes")},singleLine=true,shape=RoundedCornerShape(18.dp))}
-  item{SectionHeader("Teaching loads","${assignments.size} classes from the authoritative desktop record")}
-  if(shown.isEmpty())item{EmptyState("No matching classes","Sync the desktop or try another search.")}
-  items(shown,key={it.id}){item->PremiumClassCard(item){onOpen(item.id)}}
- }
-}
+private val desktopToolEntries = listOf(
+    "Name Picker" to "picker",
+    "Group Randomizer" to "groups",
+    "Grade Simulator" to "simulator",
+    "Performance Checklist" to "checklist",
+    "Games" to "games",
+    "Activity Timer" to "timer",
+    "Participation Tracker" to "participation",
+    "Noise Meter" to "noise",
+    "Class Duels" to "duels",
+    "Seating Chart" to "seating",
+    "Exit Ticket" to "exit",
+    "Anecdotal Notes" to "notes",
+    "Boat Race" to "race",
+)
 
-@Composable
-private fun GradingTab(payload: SyncPayload?, onOpen: (String) -> Unit) {
- var term by rememberSaveable{mutableStateOf("1")}
- val assignments=payload?.assignments.orEmpty()
- LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
-  item{LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){items(listOf("1","2","3")){q->FilterChip(term==q,{term=q},{Text("Term $q")})}}}
-  item{SectionHeader("Grading sheets","Mobile entries remain drafts until accepted by desktop")}
-  if(assignments.isEmpty())item{EmptyState("No grading sheets","Sync classes from the desktop app.")}
-  items(assignments,key={it.id}){assignment->
-   val assessments=assignment.assessments.filter{it.term==term}
-   val stats=gradingCompletion(assignment,term)
-   val expected=stats.expected
-   val entered=stats.entered
-   val progress=stats.fraction
-   ElevatedCard(Modifier.fillMaxWidth().clickable{onOpen(assignment.id)},shape=RoundedCornerShape(20.dp)){
-    Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-      Column{Text(assignment.subject,fontWeight=FontWeight.ExtraBold,fontSize=17.sp);Text("Grade ${assignment.gradeLevel} - ${assignment.section}",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-      Text("${stats.percent}%",fontWeight=FontWeight.ExtraBold,color=MaterialTheme.colorScheme.primary)
-     }
-     LinearProgressIndicator({progress},Modifier.fillMaxWidth().height(8.dp).clip(CircleShape))
-     Text("${assessments.size} assessments - $entered/$expected scores",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-     Text("Open grading sheet  >",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold)
-    }
-   }
-  }
- }
-}
+private val desktopActionEntries = listOf(
+    "Pick learner now" to "pick-learner",
+    "Reset learner picker" to "reset-picker",
+    "Randomize groups" to "randomize-groups",
+    "Reveal groups" to "reveal-groups",
+    "Start / resume timer" to "timer-start",
+    "Pause timer" to "timer-pause",
+    "Skip timer segment" to "timer-skip",
+    "Reset timer" to "timer-reset",
+    "Randomize seating" to "randomize-seating",
+    "Start noise meter" to "noise-start",
+    "Stop noise meter" to "noise-stop",
+    "Calibrate noise meter" to "noise-calibrate",
+)
 
 @Composable
 private fun ToolsTab(payload: SyncPayload?, onNavigate: (NavKey) -> Unit) {
- val learners=payload?.assignments.orEmpty().flatMap{it.learners}.distinctBy{it.id}
- var picked by remember{mutableStateOf("No learner selected")}
- var groups by remember{mutableStateOf<List<List<String>>>(emptyList())}
- LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
-  item{SectionHeader("Teacher tools","Native tools plus secure desktop controls")}
-  item{SettingsCard("Random learner picker",Icons.Default.Person){
-   Text(picked,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold)
-   Button({picked=learners.randomOrNull()?.name?:"Sync a roster first"},enabled=learners.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text("Pick learner")}
-  }}
-  item{SettingsCard("Random group maker",Icons.Default.People){
-   Button({groups=learners.shuffled().map{it.name}.withIndex().groupBy{it.index%4}.values.map{g->g.map{it.value}}},enabled=learners.isNotEmpty(),modifier=Modifier.fillMaxWidth()){Text("Create four groups")}
-   groups.forEachIndexed{i,g->Text("Group ${i+1}: ${g.joinToString()}",fontSize=12.sp)}
-  }}
-  item{SectionHeader("Classroom workspace","Synchronized desktop-equivalent features")}
-  item{LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-   item{QuickAction("Attendance",Icons.Default.People){onNavigate(DesktopFeature(DesktopFeatureNames.ATTENDANCE))}}
-   item{QuickAction("Checklist",Icons.Default.CheckCircle){onNavigate(DesktopFeature(DesktopFeatureNames.CHECKLIST))}}
-   item{QuickAction("Calendar",Icons.Default.DateRange){onNavigate(DesktopFeature(DesktopFeatureNames.CALENDAR))}}
-   item{QuickAction("All tools",Icons.Default.Build){onNavigate(DesktopFeature(DesktopFeatureNames.TOOLS))}}
-  }}
-  item{SettingsCard("Control the desktop",Icons.Default.Bluetooth){
-   val enabled=BleServerManager.isAuthorized
-   listOf(
-    "Open learner picker" to {BleServerManager.openDesktopLearnerPicker()},
-    "Pick learner now" to {BleServerManager.pickLearnerOnDesktop()},
-    "Open group maker" to {BleServerManager.openDesktopGroupMaker()},
-    "Randomize groups" to {BleServerManager.randomizeGroupsOnDesktop()},
-    "Open checklist" to {BleServerManager.openDesktopChecklist()},
-   ).forEach{(label,action)->Button({action()},enabled=enabled,modifier=Modifier.fillMaxWidth()){Text(label)}}
-   if(!enabled)Text("Connect Bluetooth to enable desktop controls.",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-  }}
- }
+    val learners = payload?.assignments.orEmpty().flatMap { it.learners }.distinctBy { it.id }
+    var picked by remember { mutableStateOf("No learner selected") }
+    var groups by remember { mutableStateOf<List<List<String>>>(emptyList()) }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(LocalFluidLayout.current.gutter), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { SectionHeader("Teacher tools", "Native tools plus secure desktop controls") }
+        item {
+            SettingsCard("Random learner picker", Icons.Default.Person) {
+                Text(picked, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = { picked = learners.randomOrNull()?.name ?: "Sync a roster first" },
+                    enabled = learners.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                ) { Text("Pick learner") }
+            }
+        }
+        item {
+            SettingsCard("Random group maker", Icons.Default.People) {
+                Button(
+                    onClick = {
+                        groups = learners.shuffled().map { it.name }.withIndex().groupBy { it.index % 4 }.values.map { g -> g.map { it.value } }
+                    },
+                    enabled = learners.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                ) { Text("Create four groups") }
+                groups.forEachIndexed { i, g -> Text("Group ${i + 1}: ${g.joinToString()}", fontSize = 12.sp) }
+            }
+        }
+        item { SectionHeader("Classroom workspace", "Synchronized desktop-equivalent features") }
+        item {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item { QuickAction("Attendance", Icons.Default.People) { onNavigate(DesktopFeature(DesktopFeatureNames.ATTENDANCE)) } }
+                item { QuickAction("Checklist", Icons.Default.CheckCircle) { onNavigate(DesktopFeature(DesktopFeatureNames.CHECKLIST)) } }
+                item { QuickAction("Calendar", Icons.Default.DateRange) { onNavigate(DesktopFeature(DesktopFeatureNames.CALENDAR)) } }
+                item { QuickAction("All tools", Icons.Default.Build) { onNavigate(DesktopFeature(DesktopFeatureNames.TOOLS)) } }
+            }
+        }
+        item {
+            SettingsCard("Control the desktop", Icons.Default.Wifi) {
+                val enabled = DesktopRemoteController.isAvailable
+                Text(DesktopRemoteController.transportLabel, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(
+                    "Opening a page on this phone also opens its desktop equivalent. Commands use Wi-Fi or your phone hotspot first, with Bluetooth only as fallback.",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                HorizontalDivider()
+                Text("Open every desktop tool", fontWeight = FontWeight.Bold)
+                desktopToolEntries.chunked(2).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { (label, tool) ->
+                            RemoteToolChip(label, enabled, { DesktopRemoteController.openTool(tool) }, Modifier.weight(1f))
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+                HorizontalDivider()
+                Text("Live desktop actions", fontWeight = FontWeight.Bold)
+                desktopActionEntries.chunked(2).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { (label, action) ->
+                            RemoteToolChip(label, enabled, { DesktopRemoteController.toolAction(action) }, Modifier.weight(1f))
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+                if (!enabled) {
+                    Text("Pair through Wi-Fi or a phone hotspot to enable desktop controls.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
 }
 
 @Composable
-private fun SettingsTab(payload: SyncPayload?,smoothMotion:Boolean,onSmoothMotionChange:(Boolean)->Unit,onSync:()->Unit){
- val context=LocalContext.current
- var reconnect by rememberSaveable{mutableStateOf(MobileUiPreferences.autoReconnect(context))}
- LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
-  item{SectionHeader("Android settings","Only options that apply to this phone")}
-  item{SettingsCard("Desktop connection",Icons.Default.Bluetooth){
-   SettingsToggle("Reconnect automatically","Resume the trusted Bluetooth link when this app opens.",reconnect){reconnect=it;MobileUiPreferences.setAutoReconnect(context,it)}
-   HorizontalDivider();SettingsLine("Status",if(BleServerManager.isAuthorized)"Connected - ${BleServerManager.linkQuality}" else BleServerManager.connectionState)
-   Button(onSync,modifier=Modifier.fillMaxWidth()){Text("Manage Bluetooth sync")}
-  }}
-  item{SettingsCard("Experience",Icons.Default.PhoneAndroid){
-   SettingsToggle("Smooth motion","Use premium transitions and animated progress.",smoothMotion,onSmoothMotionChange)
-   HorizontalDivider();SettingsLine("Theme","Follows Android light or dark mode")
-  }}
-  item{SettingsCard("Data and security",Icons.Default.Lock){
-   SettingsLine("Source of truth","Desktop app");SettingsLine("Local storage","Encrypted")
-   SettingsLine("Desktop revision",payload?.revision?.toString()?:"Not synced")
-   SettingsLine("Desktop version",payload?.sourceAppVersion?.ifBlank{"Unknown"}?:"Not synced")
-  }}
- }
+private fun SettingsTab(
+    payload: SyncPayload?,
+    smoothMotion: Boolean,
+    onSmoothMotionChange: (Boolean) -> Unit,
+    onSync: () -> Unit,
+) {
+    val context = LocalContext.current
+    var reconnect by rememberSaveable { mutableStateOf(MobileUiPreferences.autoReconnect(context)) }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(LocalFluidLayout.current.gutter), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { SectionHeader("Android settings", "Only options that apply to this phone") }
+        item {
+            SettingsCard("Desktop connection", Icons.Default.Bluetooth) {
+                SettingsToggle(
+                    "Reconnect automatically",
+                    "Reconnect to the trusted desktop through Wi-Fi, hotspot, or Bluetooth when this app opens.",
+                    reconnect,
+                ) {
+                    reconnect = it
+                    MobileUiPreferences.setAutoReconnect(context, it)
+                    LanSyncManager.setAutoReconnect(context, it)
+                    if (it && BleServerManager.isPaired) BleServerManager.ensureAdvertising(context)
+                    else if (!it) BleServerManager.stopAdvertising()
+                }
+                HorizontalDivider()
+                SettingsLine(
+                    "Status",
+                    if (LanSyncManager.isConnected) "Linked - ${LanSyncManager.linkQuality}"
+                    else if (BleServerManager.isAuthorized) "Connected - ${BleServerManager.linkQuality}"
+                    else LanSyncManager.connectionState,
+                )
+                Button(onClick = onSync, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                    Text("Manage desktop link")
+                }
+            }
+        }
+        item {
+            SettingsCard("Experience", Icons.Default.PhoneAndroid) {
+                val theme = LocalThemeController.current
+                val dark = LocalDarkTheme.current
+                SettingsToggle(
+                    "Dark mode",
+                    "Light mode is the default. Turn this on for the high-contrast neon classroom look.",
+                    dark,
+                ) { theme.setDarkTheme(it) }
+                HorizontalDivider()
+                SettingsToggle("Smooth motion", "Use premium transitions and animated progress.", smoothMotion, onSmoothMotionChange)
+                HorizontalDivider()
+                SettingsLine("Theme", if (dark) "Dark neon" else "Light classroom")
+            }
+        }
+        item {
+            SettingsCard("Data and security", Icons.Default.Lock) {
+                SettingsLine("Source of truth", "Desktop app")
+                SettingsLine("Local storage", "Encrypted")
+                SettingsLine("Desktop revision", payload?.revision?.toString() ?: "Not synced")
+                SettingsLine("Desktop version", payload?.sourceAppVersion?.ifBlank { "Unknown" } ?: "Not synced")
+            }
+        }
+    }
 }
 
-@Composable private fun MetricCard(label:String,value:String,icon:ImageVector,modifier:Modifier=Modifier){
- ElevatedCard(modifier,shape=RoundedCornerShape(20.dp)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Icon(icon,null,tint=MaterialTheme.colorScheme.primary);Text(value,fontSize=24.sp,fontWeight=FontWeight.ExtraBold);Text(label,fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}}
+@Composable
+private fun MetricCard(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
+    NeonCard(modifier = modifier, accent = NeonBlue.copy(alpha = 0.28f), contentPadding = PaddingValues(16.dp)) {
+        DepthIcon(icon, label, size = 38.dp)
+        Text(value, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+        Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
-@Composable private fun SectionHeader(title:String,subtitle:String){Column{Text(title,fontSize=18.sp,fontWeight=FontWeight.ExtraBold);Text(subtitle,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}}
-@Composable private fun QuickAction(label:String,icon:ImageVector,onClick:()->Unit){
- ElevatedCard(Modifier.width(132.dp).clickable(onClick=onClick),shape=RoundedCornerShape(18.dp)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){Icon(icon,null,tint=MaterialTheme.colorScheme.primary);Text(label,fontWeight=FontWeight.Bold,fontSize=13.sp)}}
+
+@Composable
+private fun QuickAction(label: String, icon: ImageVector, onClick: () -> Unit) {
+    NeonCard(modifier = Modifier.width(140.dp), onClick = onClick, accent = NeonPurple.copy(alpha = 0.28f), contentPadding = PaddingValues(16.dp)) {
+        DepthIcon(icon, label, size = 44.dp)
+        Text(label, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    }
 }
-@Composable private fun AttentionCard(title:String,detail:String,onClick:()->Unit){
- Card(Modifier.fillMaxWidth().clickable(onClick=onClick),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Color(0xFFFFF7ED))){Row(Modifier.padding(17.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Warning,null,tint=Color(0xFFEA580C));Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(title,fontWeight=FontWeight.Bold,color=Color(0xFF9A3412));Text(detail,fontSize=12.sp,color=Color(0xFF9A3412))};Icon(Icons.Default.ArrowForward,null,tint=Color(0xFFEA580C))}}
+
+@Composable
+private fun AttentionCard(title: String, detail: String, onClick: () -> Unit) {
+    Card(
+        Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = .55f)),
+        colors = CardDefaults.cardColors(containerColor = themePanel(raised = true)),
+    ) {
+        Row(Modifier.padding(17.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Warning, null, tint = Color(0xFFF59E0B))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text(detail, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Default.ArrowForward, null, tint = Color(0xFFF59E0B))
+        }
+    }
 }
-@Composable private fun PremiumClassCard(item:Assignment,modifier:Modifier=Modifier,compact:Boolean=false,onClick:()->Unit){
+
+@Composable
+private fun PremiumClassCard(item: Assignment, modifier: Modifier = Modifier, compact: Boolean = false, onClick: () -> Unit) {
  val males=item.learners.count{it.sex.equals("M",true)}
  val females=item.learners.count{it.sex.equals("F",true)}
  val visual=SubjectVisuals.forAssignment(item)
@@ -563,12 +745,13 @@ private fun SettingsTab(payload: SyncPayload?,smoothMotion:Boolean,onSmoothMotio
   modifier=modifier.fillMaxWidth().clickable(onClick=onClick),
   shape=RoundedCornerShape(22.dp),
   border=BorderStroke(1.dp,visual.color.copy(alpha=0.38f)),
+  colors=CardDefaults.cardColors(containerColor=themePanel()),
  ){
   Column{
    Box(Modifier.fillMaxWidth().height(4.dp).background(visual.color.copy(alpha=0.85f)))
    Column(Modifier.padding(if(compact) 13.dp else 18.dp),verticalArrangement=Arrangement.spacedBy(if(compact) 7.dp else 10.dp)){
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-     SubjectIcon(item,size=if(compact) 36.dp else 46.dp)
+     SubjectIconTile(item,size=if(compact) 44.dp else 56.dp)
      Spacer(Modifier.width(if(compact) 8.dp else 12.dp))
      Column(Modifier.weight(1f)){
       Text(item.subject,fontWeight=FontWeight.ExtraBold)
@@ -591,16 +774,51 @@ private fun SettingsTab(payload: SyncPayload?,smoothMotion:Boolean,onSmoothMotio
   }
  }
 }
-@Composable private fun FeatureLine(icon:ImageVector,title:String,subtitle:String,detail:String){
- ElevatedCard(shape=RoundedCornerShape(18.dp)){Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically){Icon(icon,null,tint=MaterialTheme.colorScheme.primary);Spacer(Modifier.width(12.dp));Column{Text(title,fontWeight=FontWeight.Bold);Text(subtitle,fontSize=12.sp,color=MaterialTheme.colorScheme.primary);if(detail.isNotBlank())Text(detail,fontSize=11.sp)}}}
+@Composable
+private fun FeatureLine(icon: ImageVector, title: String, subtitle: String, detail: String) {
+    NeonCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp), accent = NeonBlue.copy(alpha = 0.28f)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            DepthIcon(icon, title, size = 40.dp)
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(title, fontWeight = FontWeight.Bold)
+                Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                if (detail.isNotBlank()) Text(detail, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
 }
-@Composable private fun SettingsCard(title:String,icon:ImageVector,content: @Composable () -> Unit){
- ElevatedCard(shape=RoundedCornerShape(22.dp),modifier=Modifier.fillMaxWidth()){Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Row{Icon(icon,null,tint=MaterialTheme.colorScheme.primary);Spacer(Modifier.width(10.dp));Text(title,fontWeight=FontWeight.ExtraBold)};content()}}
+
+@Composable
+private fun SettingsCard(title: String, icon: ImageVector, content: @Composable () -> Unit) {
+    NeonCard(modifier = Modifier.fillMaxWidth(), accent = NeonPurple.copy(alpha = 0.28f)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            DepthIcon(icon, title, size = 40.dp)
+            Spacer(Modifier.width(12.dp))
+            Text(title, fontWeight = FontWeight.ExtraBold)
+        }
+        Spacer(Modifier.height(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp), content = { content() })
+    }
 }
-@Composable private fun SettingsToggle(title:String,detail:String,checked:Boolean,onChange:(Boolean)->Unit){
- Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(title,fontWeight=FontWeight.Bold);Text(detail,fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};Switch(checked,onChange)}
+
+@Composable
+private fun SettingsToggle(title: String, detail: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.Bold)
+            Text(detail, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked, onChange)
+    }
 }
-@Composable private fun SettingsLine(label:String,value:String){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(value,fontSize=12.sp,fontWeight=FontWeight.SemiBold)}}
-@Composable private fun EmptyState(title:String,detail:String){Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(22.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceVariant)){Column(Modifier.padding(28.dp),horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Person,null,modifier=Modifier.size(40.dp));Text(title,fontWeight=FontWeight.ExtraBold);Text(detail,fontSize=12.sp)}}}
+
+@Composable
+private fun SettingsLine(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
 
 
