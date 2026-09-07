@@ -67,7 +67,7 @@ const window = {
 };
 const context = {
   window,
-  document: { title: 'E-Class Record v1.9.7', getElementById: () => null },
+  document: { title: 'E-Class Record v1.9.8', getElementById: () => null },
   console,
   setTimeout: () => 0,
   clearTimeout() {},

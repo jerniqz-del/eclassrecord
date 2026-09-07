@@ -2,7 +2,7 @@
 
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
-Current app version: 1.9.7
+Current app version: 1.9.8
 Last reviewed: 2026-09-08
 
 ## 1. Project Foundation
@@ -250,6 +250,7 @@ Adjusted patches:
 | v1.9.5 | Redesigned the Name Picker and presentation mode with Wheel of Learners, Carnival Prize Wheel, picking history, star leaderboard, configurable pick retention, wheel sizing and speed; added drag-and-drop Group Randomizer controls; replicated the new School Calendar; refined Performance Checklist deletion; limited score-history actions to changed cells; removed score-change highlighting; and enabled differential silent updates. | Feature and maintenance release focused on classroom presentation, fair learner selection, flexible grouping, calendar usability, cleaner grading feedback, and update delivery without a full reinstall. |
 | v1.9.6 | Corrected SY 2026-2027 TLE and other numerically graded subjects to use DO 15's adjusted transmutation table, closed hundredth-boundary lookup gaps, added full-table and supplied-PDF row regression coverage, and removed MAPEH from Grade 3 class creation and Advisory records. | Grading-integrity patch release; existing records are preserved and recalculated from their stored raw scores when displayed or exported. |
 | v1.9.7 | Added click-to-open transmutation table lookup with highlighted matching ranges, two-decimal initial grades and whole transmuted grades in the popup, desktop profile backup/restore/delete, Windows-lock profile locking, and local crash recovery with teacher-controlled diagnostics. | Patch release focused on transmutation transparency and safer desktop profile handling; existing records remain compatible. |
+| v1.9.8 | Added DepEd Order No. 017 s. 2026 Strengthened SHS catalogs for Grade 11, with Grade 12 in SY 2026-2027 defaulting to the 2016 K to 12 subjects and DepEd Order No. 8 s. 2015 weights unless marked as a pilot SSHS class; auto-unlocks the 6-digit profile PIN; and keeps Android Quick Grade on the current learner after live publish. | Patch release for the phased SSHS rollout; existing Grade 12 SSHS loads and stored scores remain compatible. |
 | v2.0.0 (unreleased) | Added secure School Cloud services and announcements; expanded Bluetooth, QR, and relay-based desktop-to-mobile companion synchronization; strengthened calendar integration, score history, learner avatars, and Performance Checklist behavior; and distinguished Summative Test 1 from Summative Test 2 in Quick Grade Entry. | Unreleased major-version work retained in the repository for later completion and release. |
 | v2.0.2 (unreleased) | Unified the desktop and Android companion workspace; added Bluetooth QR pairing, retained personal checklists, expanded mobile teaching tools, introduced a shared premium desktop and Material 3 visual system, and redesigned attendance checking around an accessible date carousel. | Unreleased patch-line work retained in the repository; it is not the current releasable app version. |
 
