@@ -168,6 +168,13 @@
           </div>
           <section class="advisory-shs-subject-picker" id="advisorySeniorHighSubjects" hidden>
             <div><strong>Select the subjects handled by this adviser</strong><p>Only selected subjects will appear in the Senior High grading sheet. You can change this list later in Advisory Settings.</p></div>
+            <div id="advisoryShsCurriculumField" hidden>
+              <p id="advisoryShsCurriculumNote" class="text-muted"></p>
+              <label class="checkbox-row" id="advisoryShsPilotRow" hidden>
+                <input type="checkbox" id="advisoryShsPilotCurriculum">
+                This Grade 12 class uses Strengthened SHS (pilot school)
+              </label>
+            </div>
             <div data-advisory-shs-picker></div>
           </section>
           <div class="field"><label class="field-label" for="advisoryAdviserName">Adviser Name <span aria-hidden="true">*</span></label><input class="field-input" id="advisoryAdviserName" value="${escHtml(existing?.adviserName || profileDb.teacherName || '')}" required /></div>
@@ -212,6 +219,10 @@
     const sourceSelect = overlay.querySelector('#advisorySetupSourceClass');
     const seniorHighSection = overlay.querySelector('#advisorySeniorHighSubjects');
     const seniorHighPicker = overlay.querySelector('[data-advisory-shs-picker]');
+    const shsCurriculumField = overlay.querySelector('#advisoryShsCurriculumField');
+    const shsCurriculumNote = overlay.querySelector('#advisoryShsCurriculumNote');
+    const shsPilotRow = overlay.querySelector('#advisoryShsPilotRow');
+    const shsPilotCheckbox = overlay.querySelector('#advisoryShsPilotCurriculum');
     const specialClassInput = overlay.querySelector('#advisoryIsSpecialClass');
     const specialClassFields = overlay.querySelector('#advisorySpecialClassFields');
     const syncSpecialClassFields = () => {
@@ -222,6 +233,22 @@
     specialClassInput.addEventListener('change', syncSpecialClassFields);
     syncSpecialClassFields();
     let selectedSeniorHighSubjects = [];
+    const catalogOptions = () => globalScope.AdvisoryGradeTransfer?.seniorHighCatalogOptions?.(
+      gradeInput.value,
+      schoolYear,
+      shsPilotCheckbox?.checked ? 'SSHS' : ''
+    ) || { curriculum: 'SSHS', schoolYear };
+    const syncCurriculumField = () => {
+      const isSeniorHigh = globalScope.AdvisoryGradeTransfer?.isSeniorHighGrade?.(gradeInput.value);
+      if (shsCurriculumField) shsCurriculumField.hidden = !isSeniorHigh;
+      if (!isSeniorHigh) return;
+      const info = typeof shsCurriculumOptionsForGrade === 'function'
+        ? shsCurriculumOptionsForGrade(gradeInput.value, schoolYear)
+        : { showPilotOverride: false, note: '' };
+      if (shsCurriculumNote) shsCurriculumNote.textContent = info.note || '';
+      if (shsPilotRow) shsPilotRow.hidden = !info.showPilotOverride;
+      if (!info.showPilotOverride && shsPilotCheckbox) shsPilotCheckbox.checked = false;
+    };
     const syncSeniorHighPicker = () => {
       if (!seniorHighSection || !seniorHighPicker) return;
       if (!seniorHighSection.hidden) {
@@ -229,11 +256,13 @@
       }
       const isSeniorHigh = globalScope.AdvisoryGradeTransfer?.isSeniorHighGrade?.(gradeInput.value);
       seniorHighSection.hidden = !isSeniorHigh;
+      syncCurriculumField();
       seniorHighPicker.innerHTML = isSeniorHigh
-        ? (globalScope.AdvisoryGradeTransfer?.seniorHighSubjectPickerMarkup?.(gradeInput.value, selectedSeniorHighSubjects) || '')
+        ? (globalScope.AdvisoryGradeTransfer?.seniorHighSubjectPickerMarkup?.(gradeInput.value, selectedSeniorHighSubjects, catalogOptions()) || '')
         : '';
     };
     gradeInput.addEventListener('change', syncSeniorHighPicker);
+    shsPilotCheckbox?.addEventListener('change', syncSeniorHighPicker);
     syncSeniorHighPicker();
     const setSection = section => {
       const normalized = String(section || '').trim();
@@ -280,6 +309,11 @@
         region: overlay.querySelector('#advisoryRegion').value.trim(),
         isSpecialClass: specialClassInput.checked,
         specialProgramName: overlay.querySelector('#advisorySpecialProgramName').value.trim(),
+        shsCurriculum: globalScope.AdvisoryGradeTransfer?.isSeniorHighGrade?.(gradeInput.value.trim())
+          ? (typeof resolveShsCurriculum === 'function'
+            ? resolveShsCurriculum(gradeInput.value.trim(), schoolYear, shsPilotCheckbox?.checked ? 'SSHS' : '')
+            : '')
+          : '',
         isActive: existing ? !overlay.querySelector('#advisoryArchived').checked : true,
         isArchived: existing ? overlay.querySelector('#advisoryArchived').checked : false
       };

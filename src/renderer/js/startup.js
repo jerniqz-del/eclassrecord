@@ -31,3 +31,20 @@ if (window.__ECLASS_SAFE_MODE || window.__ECLASS_RECOVERY_START) {
     : 'The workspace recovered safely and is locked. Select a profile to continue.';
   document.body.prepend(banner);
 }
+
+function installProfilePinAutoUnlock() {
+  const field = document.getElementById('passcodeField');
+  if (!field || field.dataset.autoUnlockInstalled === '1') return;
+  field.dataset.autoUnlockInstalled = '1';
+  field.setAttribute('inputmode', 'numeric');
+  let busy = false;
+  field.addEventListener('input', () => {
+    const pin = String(field.value || '').replace(/\D/g, '').slice(0, 6);
+    if (field.value !== pin) field.value = pin;
+    if (pin.length !== 6 || busy || typeof submitPasscode !== 'function') return;
+    busy = true;
+    Promise.resolve(submitPasscode()).finally(() => { busy = false; });
+  });
+}
+
+installProfilePinAutoUnlock();

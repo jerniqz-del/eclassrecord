@@ -127,7 +127,9 @@ function createProfile() {
     ['Sports Coaching', 'shs-physical-education-sports'],
     ['Computer Systems Servicing', 'shs-technical-vocational'],
     ['Research 1', 'shs-research-immersion'],
-    ['Life and Career Skills', 'shs-values-personal-development']
+    ['Life and Career Skills', 'shs-values-personal-development'],
+    ['Oral Communication', 'shs-language-communication'],
+    ['Practical Research 1', 'shs-research-immersion']
   ];
   seniorHighIconCases.forEach(([subject, key]) => {
     assert(context.subjectWatermarkMarkup(subject, '11').includes(`subject-watermark--${key}`), `${subject} should use the ${key} Senior High watermark`);
@@ -135,7 +137,11 @@ function createProfile() {
   });
   assert(context.subjectCardIconMarkup('Mathematics', '10').includes('assets/subject-icons/mathematics.png'), 'Grade 10 Mathematics must retain its original icon');
   assert(context.subjectCardIconMarkup('Mathematics', '11').includes('assets/subject-icons/shs-mathematics.png'), 'Grade 11 Mathematics must use the Senior High group icon');
-  context.getSubjectsForGrade('12').forEach(subject => {
+  const catalogsToIconCheck = [
+    ...context.getSubjectsForGrade('12'),
+    ...context.getSubjectsForGrade('12', { curriculum: 'SSHS' })
+  ];
+  catalogsToIconCheck.forEach(subject => {
     assert(context.subjectIconKey(subject, '12').startsWith('shs-'), `${subject} must resolve to a Senior High subject-group icon`);
   });
   assert.strictEqual(context.subjectWatermarkMarkup('Campus Journalism'), '', 'a special subject without its own image should not receive a background');

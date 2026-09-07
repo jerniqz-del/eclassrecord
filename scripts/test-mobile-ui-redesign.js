@@ -50,5 +50,11 @@ assert.match(premium, /fun PersistentAppRail/);
 assert.match(sync, /Wi-Fi \/ hotspot first/);
 assert.match(sync, /DepthIcon/);
 [classDetail, scoreEntry, desktopFeature].forEach((source) => assert.match(source, /EClassTopBar/));
+assert.doesNotMatch(navigation, /key\(liveDataRevision\)/);
+assert.match(navigation, /LanSyncManager\.dataRevision/);
+assert.match(navigation, /DatabaseHelper\.observedRevision/);
+assert.match(scoreEntry, /rememberSaveable\(assignmentId, assessmentId\)/);
+assert.match(scoreEntry, /currentIndex\.coerceIn/);
+assert.match(scoreEntry, /DatabaseHelper\.observedRevision/);
 
 console.log('Mobile 3D branding, navigation, transitions, and screen-wide design-system tests passed.');

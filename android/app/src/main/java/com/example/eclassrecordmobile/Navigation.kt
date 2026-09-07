@@ -30,7 +30,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -115,6 +114,9 @@ fun MainNavigation() {
   }
 
   val liveDataRevision = LanSyncManager.dataRevision
+  val observedRevision = DatabaseHelper.observedRevision
+  val snapshotEpoch = liveDataRevision + observedRevision
+  check(snapshotEpoch >= 0L)
   val activeRoute = backStack.lastOrNull()
   val remoteAvailable = DesktopRemoteController.isAvailable
   val fluid = LocalFluidLayout.current
@@ -147,7 +149,6 @@ fun MainNavigation() {
       }
     },
   ) { outerPadding ->
-      key(liveDataRevision) {
       Row(Modifier.fillMaxSize().padding(outerPadding)) {
         if (fluid.useRailNavigation) {
           PersistentAppRail(
@@ -206,7 +207,6 @@ fun MainNavigation() {
         }
     )
       }
-  }
   }
 
   if (showExitDialog) {

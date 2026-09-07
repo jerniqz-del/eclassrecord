@@ -470,18 +470,41 @@ const HELP_TOPICS = [
       <ul>
         <li><strong>Recommended assessment pacing:</strong> For Grades 4&ndash;12, Table 3 recommends <strong>3&ndash;5 Written Works</strong>, <strong>2&ndash;3 Performance Tasks</strong>, and <strong>2 Summative Tests plus 1 Term Examination</strong> per learning area, per term. DepEd describes these ranges as flexible guidance rather than fixed compliance requirements.</li>
         <li><strong>Grades 1&ndash;3:</strong> Teachers determine a sufficient and manageable quantity of assessment evidence; DO 15 does not prescribe a numeric WW/PT range for these grades.</li>
-        <li><strong>Component weighting:</strong> Grades 4&ndash;10 and Grades 11&ndash;12 use the prescribed WW, PT, and examination weights for their applicable learning area or SHS subject classification.</li>
+        <li><strong>Component weighting:</strong> Grades 4&ndash;10 and Strengthened SHS (Grades 11&ndash;12) use the prescribed WW, PT, and examination weights for their applicable learning area or SHS subject classification. Non-pilot Grade 12 classes in SY 2026-2027 use DepEd Order No. 8, s. 2015 weights with the DO 15 transmutation table.</li>
         <li><strong>Zero-based calculations:</strong> Computations are adjusted so that zero scores are not inflated, representing actual student performance.</li>
-        <li><strong>Descriptive Grading Scale:</strong> Grades are translated to letters:
+        <li><strong>Descriptive grading (Key Stage 1):</strong> Grade 1 in SY 2026-2027 uses letters A–E. The engine uses the DO 15 names, not the old DO 8 names:
           <ul>
-            <li><strong>A (Outstanding):</strong> 90–100</li>
-            <li><strong>B (Very Satisfactory):</strong> 85–89</li>
-            <li><strong>C (Satisfactory):</strong> 80–84</li>
-            <li><strong>D (Fairly Satisfactory):</strong> 75–79</li>
-            <li><strong>E (Did Not Meet Expectations):</strong> Below 75</li>
+            <li><strong>A Advancing (Namumukod-tangi):</strong> 90–100</li>
+            <li><strong>B Benchmarking (Napamamalas):</strong> 80–89</li>
+            <li><strong>C Connecting (Natutungo):</strong> 75–79</li>
+            <li><strong>D Developing (Napauunlad):</strong> 65–74</li>
+            <li><strong>E Emerging (Nagsisimula):</strong> 0–64</li>
           </ul>
+          Annex C ranges appear next to letters only when <strong>Show Numerical Equivalents</strong> is on, and only when a number is formally required (for example a transfer).
         </li>
       </ul>
+    `
+  },
+  {
+    id: 'deped_order_17',
+    category: 'deped_policies',
+    title: 'DepEd Order No. 017 s. 2026 — Strengthened Senior High School',
+    keywords: 'deped order 17 s 2026 strengthened senior high school sshs grade 11 grade 12 2016 curriculum pilot school techpro academic electives do 8 weights',
+    content: `
+      <p><strong>DepEd Order No. 017, s. 2026</strong> implements the Strengthened Senior High School (SSHS) Curriculum. This app uses that order for subject catalogs. Grading percentages and transmutation still come from <strong>DepEd Order No. 15, s. 2026</strong>, except as noted below.</p>
+      <h5>Who uses which curriculum:</h5>
+      <ul>
+        <li><strong>Grade 11</strong> (SY 2026-2027 onward): Strengthened SHS &mdash; five core subjects, Academic and TechPro elective clusters, no strands.</li>
+        <li><strong>Grade 12 in SY 2026-2027:</strong> the 2016 K to 12 SHS subjects by default. Check <strong>This Grade 12 class uses Strengthened SHS (pilot school)</strong> only if the school piloted SSHS in SY 2025-2026.</li>
+        <li><strong>Grade 12 from SY 2027-2028:</strong> Strengthened SHS for all schools.</li>
+      </ul>
+      <h5>How grades are computed:</h5>
+      <ul>
+        <li>SSHS classes use the DO 15 Senior High weights (for example 20/50/30 for core and academic electives).</li>
+        <li>2016 Grade 12 classes use <strong>DepEd Order No. 8, s. 2015</strong> component weights (for example 25/50/25 for core subjects).</li>
+        <li>Both catalogs still use the three-term sheet and the DO 15 adjusted transmutation table in SY 2026-2027. Zero-based grading begins in SY 2027-2028.</li>
+      </ul>
+      <p>Changing the curriculum or subject type after scores exist recalculates term grades from unchanged raw scores, after confirmation.</p>
     `
   },
   {

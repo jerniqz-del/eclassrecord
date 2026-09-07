@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,7 +50,9 @@ fun ScoreEntryScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val payload = DatabaseHelper.getPayload()
+    val liveRevision = DatabaseHelper.observedRevision
+    var currentIndex by rememberSaveable(assignmentId, assessmentId) { mutableStateOf(0) }
+    val payload = remember(liveRevision) { DatabaseHelper.getPayload() }
     val assignment = payload?.assignments?.find { it.id == assignmentId }
     val assessment = assignment?.assessments?.find { it.id == assessmentId }
 
@@ -68,8 +71,11 @@ fun ScoreEntryScreen(
         return
     }
 
-    var currentIndex by remember { mutableStateOf(0) }
-    val activeLearner = learners[currentIndex]
+    val safeIndex = currentIndex.coerceIn(0, learners.lastIndex)
+    LaunchedEffect(learners.size, currentIndex) {
+        if (currentIndex != safeIndex) currentIndex = safeIndex
+    }
+    val activeLearner = learners[safeIndex]
 
     // Read score from database
     val scoreKey = "${activeLearner.id}|$assessmentId"

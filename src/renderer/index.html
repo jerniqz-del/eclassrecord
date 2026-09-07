@@ -1162,7 +1162,7 @@
           </div>
           <div class="field">
             <label class="field-label">School Year</label>
-            <select id="newClassSchoolYear" class="field-select">
+            <select id="newClassSchoolYear" class="field-select" data-eclass-onchange="populateSubjects()">
               <option value="2025-2026">2025-2026</option>
               <option value="2026-2027">2026-2027</option>
               <option value="2027-2028">2027-2028</option>
@@ -1176,6 +1176,14 @@
               <option value="2035-2036">2035-2036</option>
             </select>
           </div>
+        </div>
+
+        <div id="seniorHighCurriculumField" class="field" hidden>
+          <p id="newSeniorHighCurriculumNote" class="text-muted u-mb-0">Strengthened SHS Curriculum (DepEd Order No. 017, s. 2026).</p>
+          <label id="newShsPilotCurriculumRow" class="checkbox-row" hidden>
+            <input type="checkbox" id="newShsPilotCurriculum" data-eclass-onchange="populateSubjects()">
+            This Grade 12 class uses Strengthened SHS (pilot school)
+          </label>
         </div>
         
         <div class="field">
@@ -1967,7 +1975,7 @@
       <h2 class="profile-panel-title" id="unlockTitle">Enter Your PIN</h2>
       <p class="profile-panel-desc">Type your 6-digit passcode to unlock the profile.</p>
       <div class="passcode-input-wrap">
-        <input type="password" id="passcodeField" class="passcode-field" placeholder="••••••" maxlength="6" autocomplete="off" />
+        <input type="password" id="passcodeField" class="passcode-field" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="off" />
       </div>
       <div id="unlockErrorMsg" class="unlock-error-msg"></div>
       <button class="btn btn-primary btn-sm btn-block u-mt-3" data-eclass-onclick="submitPasscode()">Unlock Profile</button>

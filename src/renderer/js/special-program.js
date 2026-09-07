@@ -27,9 +27,45 @@
     updateWeightTotal('new');
   }
 
-  function populateSeniorHighSubjects(select, grade) {
+  function selectedNewShsCurriculum() {
+    const grade = Number(document.getElementById('newGrade')?.value);
+    const schoolYear = document.getElementById('newClassSchoolYear')?.value
+      || (typeof db !== 'undefined' && db?.schoolYear)
+      || '2026-2027';
+    const pilot = document.getElementById('newShsPilotCurriculum')?.checked === true;
+    if (typeof resolveShsCurriculum !== 'function') return 'SSHS';
+    return resolveShsCurriculum(grade, schoolYear, pilot ? 'SSHS' : '');
+  }
+
+  function syncNewSeniorHighCurriculumField() {
+    const grade = Number(document.getElementById('newGrade')?.value);
+    const schoolYear = document.getElementById('newClassSchoolYear')?.value
+      || (typeof db !== 'undefined' && db?.schoolYear)
+      || '2026-2027';
+    const field = document.getElementById('seniorHighCurriculumField');
+    const note = document.getElementById('newSeniorHighCurriculumNote');
+    const row = document.getElementById('newShsPilotCurriculumRow');
+    const isSeniorHigh = grade >= 11 && grade <= 12;
+    if (field) field.hidden = !isSeniorHigh;
+    if (!isSeniorHigh) return selectedNewShsCurriculum();
+    const info = typeof shsCurriculumOptionsForGrade === 'function'
+      ? shsCurriculumOptionsForGrade(grade, schoolYear)
+      : { showPilotOverride: false, note: '' };
+    if (note) note.textContent = info.note || '';
+    if (row) row.hidden = !info.showPilotOverride;
+    if (!info.showPilotOverride) {
+      const checkbox = document.getElementById('newShsPilotCurriculum');
+      if (checkbox) checkbox.checked = false;
+    }
+    return selectedNewShsCurriculum();
+  }
+
+  function populateSeniorHighSubjects(select, grade, curriculum) {
     if (!select || typeof seniorHighSubjectCatalog !== 'function') return false;
-    const catalog = seniorHighSubjectCatalog(grade);
+    const schoolYear = document.getElementById('newClassSchoolYear')?.value
+      || (typeof db !== 'undefined' && db?.schoolYear)
+      || '2026-2027';
+    const catalog = seniorHighSubjectCatalog(grade, { curriculum, schoolYear });
     if (!catalog.length) return false;
     select.innerHTML = '';
     catalog.forEach(category => {
@@ -47,15 +83,19 @@
     return true;
   }
 
-  function ensureSeniorHighGroupOptions() {
-    const select = document.getElementById('newSeniorHighSubjectGroup');
-    if (!select || select.options.length || typeof seniorHighSubjectGroupOptions !== 'function') return;
-    seniorHighSubjectGroupOptions().forEach(group => {
+  function fillSeniorHighGroupOptions(select, curriculum) {
+    if (!select || typeof seniorHighSubjectGroupOptions !== 'function') return;
+    const previous = select.value;
+    select.innerHTML = '';
+    seniorHighSubjectGroupOptions(curriculum).forEach(group => {
       const option = document.createElement('option');
       option.value = group.value;
       option.textContent = `${group.label} — ${group.weights[0]}% Written, ${group.weights[1]}% Performance, ${group.weights[2]}% Assessment`;
       select.appendChild(option);
     });
+    if (previous && Array.from(select.options).some(option => option.value === previous)) {
+      select.value = previous;
+    }
   }
 
   function syncSeniorHighSubjectGroup() {
@@ -64,14 +104,24 @@
     const isSeniorHigh = grade >= 11 && grade <= 12;
     const field = document.getElementById('seniorHighSubjectGroupField');
     const select = document.getElementById('newSeniorHighSubjectGroup');
+    const help = document.getElementById('newSeniorHighSubjectGroupHelp');
+    const curriculum = syncNewSeniorHighCurriculumField();
     if (field) field.hidden = !isSeniorHigh;
     if (!isSeniorHigh || !select) return;
-    ensureSeniorHighGroupOptions();
+    fillSeniorHighGroupOptions(select, curriculum);
+    if (help) {
+      help.textContent = curriculum === 'K12_2016'
+        ? 'Percentages follow DepEd Order No. 8, s. 2015. Transmutation still follows DepEd Order No. 15, s. 2026.'
+        : 'Percentages follow DepEd Order No. 15, s. 2026 for the Strengthened SHS subject type.';
+    }
     if (subject !== 'Custom') {
       const subjectOption = document.getElementById('newSubject')?.selectedOptions?.[0];
-      select.value = subjectOption?.dataset?.shsGroup || determineSubjectGroup(grade, subject);
+      select.value = subjectOption?.dataset?.shsGroup
+        || determineSubjectGroup(grade, subject, null, '', curriculum);
     }
-    if (!select.value) select.value = 'SHS_ACADEMIC';
+    if (!select.value) select.value = typeof defaultSeniorHighSubjectGroup === 'function'
+      ? defaultSeniorHighSubjectGroup(curriculum)
+      : 'SHS_ACADEMIC';
   }
 
   const originalPopulateSubjects = globalScope.populateSubjects;
@@ -79,7 +129,8 @@
     const result = typeof originalPopulateSubjects === 'function' ? originalPopulateSubjects.apply(this, args) : undefined;
     const subjectSelect = document.getElementById('newSubject');
     const grade = Number(document.getElementById('newGrade')?.value);
-    if (grade >= 11 && grade <= 12) populateSeniorHighSubjects(subjectSelect, grade);
+    const curriculum = syncNewSeniorHighCurriculumField();
+    if (grade >= 11 && grade <= 12) populateSeniorHighSubjects(subjectSelect, grade, curriculum);
     addCustomOption(subjectSelect);
     globalScope.handleSubjectChanged?.();
     return result;
@@ -106,6 +157,7 @@
 
   globalScope.syncNewSpecialProgramWeights = syncNewSpecialProgramWeights;
   globalScope.syncSeniorHighSubjectGroup = syncSeniorHighSubjectGroup;
+  globalScope.selectedNewShsCurriculum = selectedNewShsCurriculum;
   document.addEventListener('input', event => {
     if (event.target?.id && /^newSpecial(?:Ww|Pt|Exam)Weight$/.test(event.target.id)) updateWeightTotal('new');
   });

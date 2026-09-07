@@ -290,11 +290,25 @@ function normalizeDatabase() {
     }
 
     // Automatically set policy and subjectGroup based on grade, subject, and school year
+    if (parseInt(a.gradeLevel) >= 11) {
+      a.shsCurriculum = inferShsCurriculum(a);
+    } else {
+      delete a.shsCurriculum;
+    }
     a.policy = determinePolicy(a.gradeLevel, a.subject, a.schoolYear);
-    a.subjectGroup = determineSubjectGroup(a.gradeLevel, a.subject, a.policy, a.shsSubjectGroup || a.subjectGroup);
+    a.subjectGroup = determineSubjectGroup(
+      a.gradeLevel,
+      a.subject,
+      a.policy,
+      a.shsSubjectGroup || a.subjectGroup,
+      a.shsCurriculum
+    );
     if (parseInt(a.gradeLevel) >= 11) a.shsSubjectGroup = a.subjectGroup;
     else delete a.shsSubjectGroup;
-    const isCustomSubject = !getSubjectsForGrade(a.gradeLevel).includes(a.subject);
+    const isCustomSubject = !getSubjectsForGrade(a.gradeLevel, {
+      curriculum: a.shsCurriculum,
+      schoolYear: a.schoolYear
+    }).includes(a.subject);
     a.isSpecialProgramSubject = isCustomSubject && a.isSpecialProgramSubject === true;
     if (a.isSpecialProgramSubject) {
       const custom = normalizeSpecialProgramWeights(a.specialProgramWeights);
@@ -527,10 +541,17 @@ function addAssignment() {
   }
 
   const policy = determinePolicy(gradeLevel, subject, classSchoolYear);
+  const shsCurriculum = parseInt(gradeLevel) >= 11
+    ? resolveShsCurriculum(
+      gradeLevel,
+      classSchoolYear,
+      document.getElementById('newShsPilotCurriculum')?.checked ? 'SSHS' : ''
+    )
+    : '';
   const shsSubjectGroup = parseInt(gradeLevel) >= 11
     ? normalizeSeniorHighSubjectGroup(document.getElementById('newSeniorHighSubjectGroup')?.value)
     : '';
-  const subjectGroup = determineSubjectGroup(gradeLevel, subject, policy, shsSubjectGroup);
+  const subjectGroup = determineSubjectGroup(gradeLevel, subject, policy, shsSubjectGroup, shsCurriculum);
   const isSpecialProgramSubject = parseInt(gradeLevel) < 11 && isCustomSubject && document.getElementById('newSpecialProgramSubject')?.checked === true;
   const specialProgramWeights = isSpecialProgramSubject ? [
     Number(document.getElementById('newSpecialWwWeight')?.value),
@@ -549,6 +570,7 @@ function addAssignment() {
     subject,
     subjectGroup,
     ...(shsSubjectGroup ? { shsSubjectGroup } : {}),
+    ...(shsCurriculum ? { shsCurriculum } : {}),
     isSpecialProgramSubject,
     ...(isSpecialProgramSubject ? { specialProgramWeights } : {}),
     policy,
@@ -720,6 +742,7 @@ function promptPinVerification(onSuccess) {
     const numeric = pinInput.value.replace(/\D/g, '').slice(0, 6);
     if (pinInput.value !== numeric) pinInput.value = numeric;
     errorEl.innerText = '';
+    if (numeric.length === 6) submit();
   });
   pinInput.addEventListener('keydown', (e) => {
     e.stopPropagation();
@@ -859,16 +882,21 @@ function editAssignmentModal(id) {
             </select>
           </div>
         </div>
+        <div id="editSeniorHighCurriculumField" class="field" hidden>
+          <p id="editSeniorHighCurriculumNote" class="text-muted u-mb-0"></p>
+          <label id="editShsPilotCurriculumRow" class="checkbox-row" hidden>
+            <input type="checkbox" id="editShsPilotCurriculum">
+            This Grade 12 class uses Strengthened SHS (pilot school)
+          </label>
+        </div>
         <div class="field">
           <label class="field-label">Subject</label>
           <select id="editSubject" class="field-input"></select>
         </div>
         <div id="editSeniorHighSubjectGroupField" class="field" hidden>
           <label class="field-label" for="editSeniorHighSubjectGroup">Senior High Subject Type</label>
-          <select id="editSeniorHighSubjectGroup" class="field-input">
-            ${seniorHighSubjectGroupOptions().map(group => `<option value="${group.value}">${esc(group.label)} — ${group.weights[0]}% Written, ${group.weights[1]}% Performance, ${group.weights[2]}% Assessment</option>`).join('')}
-          </select>
-          <p class="text-muted u-mb-0">This category determines the official grading percentages.</p>
+          <select id="editSeniorHighSubjectGroup" class="field-input"></select>
+          <p id="editSeniorHighSubjectGroupHelp" class="text-muted u-mb-0">This category determines the official grading percentages.</p>
         </div>
         <div id="editCustomSubjectField" class="field" data-eclass-style="display:none">
           <label class="field-label">Custom Subject Name</label>
@@ -898,11 +926,17 @@ function editAssignmentModal(id) {
   const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
 
   const editGradeSelect = overlay.querySelector('#editGrade');
+  const editSchoolYearSelect = overlay.querySelector('#editSchoolYear');
   const editSubjectSelect = overlay.querySelector('#editSubject');
   const editCustomField = overlay.querySelector('#editCustomSubjectField');
   const editCustomInput = overlay.querySelector('#editCustomSubjectInput');
+  const editSeniorHighCurriculumField = overlay.querySelector('#editSeniorHighCurriculumField');
+  const editSeniorHighCurriculumNote = overlay.querySelector('#editSeniorHighCurriculumNote');
+  const editShsPilotRow = overlay.querySelector('#editShsPilotCurriculumRow');
+  const editShsPilotCheckbox = overlay.querySelector('#editShsPilotCurriculum');
   const editSeniorHighGroupField = overlay.querySelector('#editSeniorHighSubjectGroupField');
   const editSeniorHighGroupSelect = overlay.querySelector('#editSeniorHighSubjectGroup');
+  const editSeniorHighGroupHelp = overlay.querySelector('#editSeniorHighSubjectGroupHelp');
   const editSpecialField = overlay.querySelector('#editSpecialProgramSubjectField');
   const editSpecialCheckbox = overlay.querySelector('#editSpecialProgramSubject');
   const editSpecialWeights = overlay.querySelector('#editSpecialProgramWeights');
@@ -910,6 +944,48 @@ function editAssignmentModal(id) {
   const startingWeights = weightsForAssignment(a);
   editWeightInputs.forEach((input, index) => { input.value = String(startingWeights[index]); });
   editSpecialCheckbox.checked = a.isSpecialProgramSubject === true;
+  if (editShsPilotCheckbox) {
+    editShsPilotCheckbox.checked = inferShsCurriculum(a) === 'SSHS' && parseInt(a.gradeLevel, 10) === 12
+      && parseSchoolYearStart(a.schoolYear) === 2026;
+  }
+
+  const selectedEditCurriculum = () => {
+    const grade = parseInt(editGradeSelect.value, 10);
+    const schoolYear = editSchoolYearSelect.value;
+    return resolveShsCurriculum(grade, schoolYear, editShsPilotCheckbox?.checked ? 'SSHS' : '');
+  };
+
+  const syncEditCurriculumField = () => {
+    const grade = parseInt(editGradeSelect.value, 10);
+    const schoolYear = editSchoolYearSelect.value;
+    const isSeniorHigh = grade >= 11 && grade <= 12;
+    if (editSeniorHighCurriculumField) editSeniorHighCurriculumField.hidden = !isSeniorHigh;
+    if (!isSeniorHigh) return selectedEditCurriculum();
+    const info = shsCurriculumOptionsForGrade(grade, schoolYear);
+    if (editSeniorHighCurriculumNote) editSeniorHighCurriculumNote.textContent = info.note || '';
+    if (editShsPilotRow) editShsPilotRow.hidden = !info.showPilotOverride;
+    if (!info.showPilotOverride && editShsPilotCheckbox) editShsPilotCheckbox.checked = false;
+    return selectedEditCurriculum();
+  };
+
+  const fillEditGroupOptions = curriculum => {
+    const previous = editSeniorHighGroupSelect.value;
+    editSeniorHighGroupSelect.innerHTML = '';
+    seniorHighSubjectGroupOptions(curriculum).forEach(group => {
+      const option = document.createElement('option');
+      option.value = group.value;
+      option.textContent = `${group.label} — ${group.weights[0]}% Written, ${group.weights[1]}% Performance, ${group.weights[2]}% Assessment`;
+      editSeniorHighGroupSelect.appendChild(option);
+    });
+    if (previous && Array.from(editSeniorHighGroupSelect.options).some(option => option.value === previous)) {
+      editSeniorHighGroupSelect.value = previous;
+    }
+    if (editSeniorHighGroupHelp) {
+      editSeniorHighGroupHelp.textContent = curriculum === 'K12_2016'
+        ? 'Percentages follow DepEd Order No. 8, s. 2015. Transmutation still follows DepEd Order No. 15, s. 2026.'
+        : 'Percentages follow DepEd Order No. 15, s. 2026 for the Strengthened SHS subject type.';
+    }
+  };
 
   const updateEditWeightTotal = () => {
     const values = editWeightInputs.map(input => Number(input.value));
@@ -921,16 +997,36 @@ function editAssignmentModal(id) {
 
   const populateEditSubjects = () => {
     const grade = parseInt(editGradeSelect.value);
-    const subjects = getSubjectsForGrade(grade);
-    
-    editSubjectSelect.innerHTML = '';
-    subjects.forEach(sub => {
-      const opt = document.createElement('option');
-      opt.value = sub;
-      opt.innerText = sub;
-      editSubjectSelect.appendChild(opt);
+    const curriculum = syncEditCurriculumField();
+    const subjects = getSubjectsForGrade(grade, {
+      curriculum,
+      schoolYear: editSchoolYearSelect.value
     });
-    
+    fillEditGroupOptions(curriculum);
+
+    editSubjectSelect.innerHTML = '';
+    if (grade >= 11 && grade <= 12 && typeof seniorHighSubjectCatalog === 'function') {
+      seniorHighSubjectCatalog(grade, { curriculum, schoolYear: editSchoolYearSelect.value }).forEach(category => {
+        const group = document.createElement('optgroup');
+        group.label = category.label;
+        category.subjects.forEach(sub => {
+          const opt = document.createElement('option');
+          opt.value = sub;
+          opt.textContent = sub;
+          opt.dataset.shsGroup = category.group;
+          group.appendChild(opt);
+        });
+        editSubjectSelect.appendChild(group);
+      });
+    } else {
+      subjects.forEach(sub => {
+        const opt = document.createElement('option');
+        opt.value = sub;
+        opt.innerText = sub;
+        editSubjectSelect.appendChild(opt);
+      });
+    }
+
     const otherOpt = document.createElement('option');
     otherOpt.value = 'Custom';
     otherOpt.innerText = 'Other / Custom Subject…';
@@ -940,12 +1036,17 @@ function editAssignmentModal(id) {
   const handleEditSubjectChange = () => {
     const isCustom = editSubjectSelect.value === 'Custom';
     const isSeniorHigh = parseInt(editGradeSelect.value) >= 11;
+    const curriculum = selectedEditCurriculum();
     editCustomField.style.display = isCustom ? 'block' : 'none';
     editSeniorHighGroupField.hidden = !isSeniorHigh;
     editSpecialField.hidden = !isCustom || isSeniorHigh;
     if (!isCustom || isSeniorHigh) editSpecialCheckbox.checked = false;
     editSpecialWeights.hidden = !isCustom || isSeniorHigh || !editSpecialCheckbox.checked;
-    if (isSeniorHigh && !isCustom) editSeniorHighGroupSelect.value = determineSubjectGroup(editGradeSelect.value, editSubjectSelect.value);
+    if (isSeniorHigh && !isCustom) {
+      const subjectOption = editSubjectSelect.selectedOptions?.[0];
+      editSeniorHighGroupSelect.value = subjectOption?.dataset?.shsGroup
+        || determineSubjectGroup(editGradeSelect.value, editSubjectSelect.value, null, '', curriculum);
+    }
     updateEditWeightTotal();
   };
 
@@ -955,7 +1056,10 @@ function editAssignmentModal(id) {
 
   // Populate initial state
   populateEditSubjects();
-  const subjectsForInitialGrade = getSubjectsForGrade(a.gradeLevel);
+  const subjectsForInitialGrade = getSubjectsForGrade(a.gradeLevel, {
+    curriculum: inferShsCurriculum(a),
+    schoolYear: a.schoolYear
+  });
   if (subjectsForInitialGrade.includes(a.subject)) {
     editSubjectSelect.value = a.subject;
     editCustomField.style.display = 'none';
@@ -967,13 +1071,22 @@ function editAssignmentModal(id) {
   }
   handleEditSubjectChange();
   if (parseInt(a.gradeLevel) >= 11) {
-    editSeniorHighGroupSelect.value = normalizeSeniorHighSubjectGroup(a.shsSubjectGroup || a.subjectGroup) || determineSubjectGroup(a.gradeLevel, a.subject);
+    editSeniorHighGroupSelect.value = normalizeSeniorHighSubjectGroup(a.shsSubjectGroup || a.subjectGroup)
+      || determineSubjectGroup(a.gradeLevel, a.subject, a.policy, '', inferShsCurriculum(a));
   }
 
-  editGradeSelect.addEventListener('change', () => {
+  const refreshEditSubjects = () => {
+    const previousSubject = editSubjectSelect.value === 'Custom' ? 'Custom' : editSubjectSelect.value;
     populateEditSubjects();
+    if (previousSubject && Array.from(editSubjectSelect.options).some(option => option.value === previousSubject)) {
+      editSubjectSelect.value = previousSubject;
+    }
     handleEditSubjectChange();
-  });
+  };
+
+  editGradeSelect.addEventListener('change', refreshEditSubjects);
+  editSchoolYearSelect.addEventListener('change', refreshEditSubjects);
+  editShsPilotCheckbox?.addEventListener('change', refreshEditSubjects);
 
   overlay.querySelector('#editModalCancel').addEventListener('click', close);
   overlay.querySelector('#editModalSave').addEventListener('click', () => {
@@ -990,6 +1103,9 @@ function editAssignmentModal(id) {
     const newGrade = editGradeSelect.value;
     const newPolicy = determinePolicy(newGrade, newSubject, newSchoolYear);
     const isCustom = editSubjectSelect.value === 'Custom';
+    const shsCurriculum = parseInt(newGrade) >= 11
+      ? resolveShsCurriculum(newGrade, newSchoolYear, editShsPilotCheckbox?.checked ? 'SSHS' : '')
+      : '';
     const shsSubjectGroup = parseInt(newGrade) >= 11 ? normalizeSeniorHighSubjectGroup(editSeniorHighGroupSelect.value) : '';
     const isSpecialProgramSubject = parseInt(newGrade) < 11 && isCustom && editSpecialCheckbox.checked;
     const specialProgramWeights = editWeightInputs.map(input => Number(input.value));
@@ -998,7 +1114,7 @@ function editAssignmentModal(id) {
       editWeightInputs[0].focus();
       return;
     }
-    const nextGroup = determineSubjectGroup(newGrade, newSubject, newPolicy, shsSubjectGroup);
+    const nextGroup = determineSubjectGroup(newGrade, newSubject, newPolicy, shsSubjectGroup, shsCurriculum);
     const nextWeights = isSpecialProgramSubject ? specialProgramWeights : weightsFor(nextGroup);
     const weightsChanged = JSON.stringify(weightsForAssignment(a)) !== JSON.stringify(nextWeights)
       || a.isSpecialProgramSubject !== isSpecialProgramSubject;
@@ -1012,6 +1128,8 @@ function editAssignmentModal(id) {
       a.subjectGroup = nextGroup;
       if (shsSubjectGroup) a.shsSubjectGroup = shsSubjectGroup;
       else delete a.shsSubjectGroup;
+      if (shsCurriculum) a.shsCurriculum = shsCurriculum;
+      else delete a.shsCurriculum;
       a.isSpecialProgramSubject = isSpecialProgramSubject;
       if (isSpecialProgramSubject) a.specialProgramWeights = specialProgramWeights;
       else delete a.specialProgramWeights;

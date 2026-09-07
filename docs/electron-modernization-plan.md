@@ -8,7 +8,7 @@ Original Electron baseline: 33.4.11
 Current Electron runtime: 44.2.0
 Overall status: In progress
 Current phase: Phase 4 - Sleep, resume, lock, and network lifecycle
-Next action: On a disposable Windows 10/11 laptop and one Android device, verify Bluetooth v2 QR pairing, APK FileProvider install, Windows lock/sleep profile lock, and trusted LAN reconnection after resume. Do not mark Phase 2 or Phase 4 Complete from this code pass.
+Next action: On a disposable Windows 10/11 laptop and one Android device, verify Bluetooth v2 QR pairing, APK FileProvider install, Windows lock/sleep profile lock, trusted LAN reconnection after resume, and that live grade publish keeps the current learner on the phone. Do not mark Phase 2 or Phase 4 Complete from this code pass.
 
 ## Tracker maintenance rules
 
@@ -322,7 +322,7 @@ Status: In progress
 
 ## Evidence
 
-Implemented security-critical slice in `src/main/power-lifecycle.js`: Windows lock/suspend locks the E-Class profile session, creates a restore-point checkpoint, pauses companion LAN discovery, and rejects `/v1/tool-command` until the teacher unlocks the profile again. Resume re-enumerates private IPv4 interfaces, restarts discovery, and asks the renderer to republish the companion snapshot. Cold start and profile unlock now restore the persisted WLAN identity without opening a pairing QR: `restoreTrustedLink()` runs after `unlockProfileAndEnter`, when the profile overlay hides, and after an unlocked workspace resume. Existing phone pairings continue to use `/v1/events` after the 5-minute QR TTL; a new scan is only required for first-time pairing or a changed desktop certificate. Automated coverage: `npm run test:electron-profile-auth`, `npm run test:electron-phase2`, companion identity reconnect plus expired-QR live-sync coverage in `scripts/test-companion-sync-service.js`, and `scripts/test-mobile-link-experience.js` passed 2026-09-07. Wi-Fi/hotspot transitions, duplicate-timer physical gates, and packaged sleep/resume remain. Do not mark Phase 4 Complete until the physical Windows 10/11 + Android matrix is run.
+Implemented security-critical slice in `src/main/power-lifecycle.js`: Windows lock/suspend locks the E-Class profile session, creates a restore-point checkpoint, pauses companion LAN discovery, and rejects `/v1/tool-command` until the teacher unlocks the profile again. Resume re-enumerates private IPv4 interfaces, restarts discovery, and asks the renderer to republish the companion snapshot. Cold start and profile unlock now restore the persisted WLAN identity without opening a pairing QR: `restoreTrustedLink()` runs after `unlockProfileAndEnter`, when the profile overlay hides, and after an unlocked workspace resume. Existing phone pairings continue to use `/v1/events` after the 5-minute QR TTL; a new scan is only required for first-time pairing or a changed desktop certificate. Automated coverage: `npm run test:electron-profile-auth`, `npm run test:electron-phase2`, companion identity reconnect plus expired-QR live-sync coverage in `scripts/test-companion-sync-service.js`, and `scripts/test-mobile-link-experience.js` passed 2026-09-07. Live grade publish no longer remounts Android navigation on `LanSyncManager.dataRevision`, so Quick Grade stays on the current learner; source coverage is in `scripts/test-mobile-ui-redesign.js` and `scripts/test-mobile-link-experience.js`. Wi-Fi/hotspot transitions, duplicate-timer physical gates, and packaged sleep/resume remain. Do not mark Phase 4 Complete until the physical Windows 10/11 + Android matrix is run.
 
 # Phase 5 - Native Windows integration
 
@@ -625,3 +625,5 @@ Approved by:
 | 2026-09-07 | Linked WLAN sessions now live-send mobile score, attendance, profile, and calendar edits to an unlocked desktop without a manual Push or extra PIN. Push remains for leftover offline batches. | 4 | In progress |
 | 2026-09-07 | Every mobile record edit now auto-publishes over the live Wi-Fi or Bluetooth link. Bluetooth change-results return accepted ids so pending entries clear. Push stays only as a retry when the desktop was locked or offline. | 4 | In progress |
 | 2026-09-07 | Published Android 1.12.0 (versionCode 15) on the independent mobile update channel. Live auto-publish and trusted WLAN reconnect. Desktop remains v1.9.7. APK sha256 `9357f39f43c2536df514ca79ed99d8502bbc0f421471f71fecd04d879dbb7623`. | 4 | In progress |
+| 2026-09-07 | Profile PIN lock unlocks automatically after the sixth correct digit on desktop and Android. Unlock buttons remain as a fallback. | 4 | In progress |
+| 2026-09-07 | Live grade publish no longer remounts Android navigation, so Quick Grade stays on the current learner after the desktop snapshot arrives. | 4 | In progress |

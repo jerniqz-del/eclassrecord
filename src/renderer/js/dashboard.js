@@ -117,21 +117,24 @@ function seniorHighSubjectIconKey(subject) {
     ? seniorHighSubjectGroupForSubject(subject)
     : '';
 
-  if (gradingGroup === 'SHS_TECHPRO') return 'shs-technical-vocational';
-  if (/aesthetic services|caregiving|hairdressing|agricultural|aquaculture|fish capture|food processing|organic agriculture|poultry|ruminants|swine|garments|handicrafts|automotive|driving|motorcycle|carpentry|construction|welding|drafting|animation|illustration|graphic design|bakery|events management|food and beverage|hotel operation|kitchen operations|tourism|broadband|computer programming|computer systems|contact center|air conditioning|refrigeration|electrical installation|electronics product|mechatronics|photovoltaic|marine engineering|marine transportation|ships catering/.test(value)) return 'shs-technical-vocational';
-  if (/research|work immersion|apprenticeship|field exposure|design and innovation/.test(value)) return 'shs-research-immersion';
-  if (/sports|physical education|human movement|exercise|fitness|first aid|life support/.test(value)) return 'shs-physical-education-sports';
-  if (/business|accounting|finance|taxation|economics|marketing|entrepreneurship|organization and management/.test(value)) return 'shs-business-entrepreneurship';
-  if (/mathematics|calculus/.test(value)) return 'shs-mathematics';
-  if (/science|biology|chemistry|physics|database|data analytics|empowerment technologies/.test(value)) return 'shs-science-technology';
-  if (/citizenship|civic engagement|history|kasaysayan|lipunang pilipino|philosophy|governance|politics|social sciences/.test(value)) return 'shs-social-sciences-humanities';
+  if (gradingGroup === 'SHS_TECHPRO' || gradingGroup === 'SHS2016_TVL') return 'shs-technical-vocational';
+  if (/aesthetic services|barbering|caregiving|hairdressing|wellness services|agricultural|aquaculture|fish capture|food processing|organic agriculture|poultry|ruminants|swine|garments|handicrafts|automotive|driving|motorcycle|carpentry|construction|welding|drafting|animation|illustration|graphic design|bakery|events management|food and beverage|hotel operation|kitchen operations|tourism|broadband|computer programming|computer systems|contact center|air conditioning|refrigeration|electrical installation|electronics product|mechatronics|photovoltaic|marine engineering|marine transportation|ships catering|cookery|bread and pastry|housekeeping|front office|dressmaking|crop production|programming|shielded metal/.test(value)) return 'shs-technical-vocational';
+  if (/research|work immersion|apprenticeship|field exposure|design and innovation|inquiries, investigations|culminating activity|practicum/.test(value)) return 'shs-research-immersion';
+  if (/sports|physical education|human movement|exercise|fitness|first aid|life support|coaching|officiating/.test(value)) return 'shs-physical-education-sports';
+  if (/business|accounting|finance|taxation|economics|marketing|entrepreneurship|organization and management|principles of marketing/.test(value)) return 'shs-business-entrepreneurship';
+  if (/mathematics|calculus|statistics and probability|business math|pre-calculus|finite mathematics/.test(value)) return 'shs-mathematics';
+  if (/science|biology|chemistry|physics|database|data analytics|empowerment technologies|disaster readiness/.test(value)) return 'shs-science-technology';
+  if (/citizenship|civic engagement|history|kasaysayan|lipunang pilipino|philosophy|governance|politics|social sciences|world religions|disciplines and ideas|community engagement|trends, networks|humanities|understanding culture/.test(value)) return 'shs-social-sciences-humanities';
   if (/life and career skills|personal development|values|good manners|religion/.test(value)) return 'shs-values-personal-development';
-  if (/art|creative|composition|dance|literary|literature|malikhaing|media|music|theater|visual/.test(value)) return 'shs-arts-media-design';
-  if (/communication|komunikasyon|filipino|language|reading|writing/.test(value)) return 'shs-language-communication';
+  if (/art|creative|composition|dance|literary|literature|malikhaing|media|music|theater|visual|performing arts|filipino identity/.test(value)) return 'shs-arts-media-design';
+  if (/communication|komunikasyon|filipino|language|reading|writing|oral communication|pagbasa|pagsusuri/.test(value)) return 'shs-language-communication';
 
-  if (gradingGroup === 'SHS_RESEARCH' || gradingGroup === 'SHS_WORK' || gradingGroup === 'SHS_FIELD') return 'shs-research-immersion';
+  if (gradingGroup === 'SHS_RESEARCH' || gradingGroup === 'SHS_WORK' || gradingGroup === 'SHS_FIELD' || gradingGroup === 'SHS2016_WORK_ACADEMIC' || gradingGroup === 'SHS2016_WORK_TVL') return 'shs-research-immersion';
   if (gradingGroup === 'SHS_ARTS') return 'shs-arts-media-design';
-  return '';
+  if (gradingGroup === 'SHS2016_CORE' || gradingGroup === 'SHS2016_ACADEMIC' || gradingGroup === 'SHS_CORE' || gradingGroup === 'SHS_ACADEMIC') {
+    return 'shs-language-communication';
+  }
+  return gradingGroup ? 'shs-language-communication' : '';
 }
 
 function subjectIconKey(subject, gradeLevel) {

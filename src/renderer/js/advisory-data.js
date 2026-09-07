@@ -69,6 +69,9 @@
       specialProgramName: cleanString(item.specialProgramName),
       isActive: item.isActive === true,
       isArchived: item.isArchived === true,
+      shsCurriculum: cleanString(item.shsCurriculum) === 'SSHS' || cleanString(item.shsCurriculum) === 'K12_2016'
+        ? cleanString(item.shsCurriculum)
+        : '',
       createdAt,
       updatedAt: normalizeTimestamp(item.updatedAt) || createdAt
     };
@@ -270,6 +273,19 @@
       const rows = hasCollection ? source[collection] : [];
       normalized[collection] = rows.map(NORMALIZERS[collection]);
     });
+    if (typeof inferAdvisoryShsCurriculum === 'function') {
+      normalized.classes.forEach(advisoryClass => {
+        const grade = Number.parseInt(advisoryClass.gradeLevel, 10);
+        if (grade >= 11 && grade <= 12) {
+          const names = normalized.subjects
+            .filter(subject => subject.advisoryClassId === advisoryClass.id)
+            .map(subject => subject.subjectName);
+          advisoryClass.shsCurriculum = inferAdvisoryShsCurriculum(advisoryClass, names);
+        } else {
+          advisoryClass.shsCurriculum = '';
+        }
+      });
+    }
     if (Number.isFinite(sourceVersion) && sourceVersion < 2) {
       const classesById = new Map(normalized.classes.map(item => [item.id, item]));
       normalized.subjects.forEach(subject => {

@@ -48,6 +48,9 @@ const preloadSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'main', 
 const sessionBridge = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'js', 'session-bridge.js'), 'utf8');
 const markup = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'js', 'legacy-markup-runtime.js'), 'utf8');
 const companionBridge = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'js', 'mobile-sync-companion.js'), 'utf8');
+const startupSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'js', 'startup.js'), 'utf8');
+const htmlSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'index.html'), 'utf8');
+const databaseSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'js', 'database.js'), 'utf8');
 assert.doesNotMatch(mainSource, /security:set-profile-session/);
 assert.match(mainSource, /security:unlock-profile/);
 assert.match(mainSource, /profileAuth\.verifyAuthorizationPin/);
@@ -61,6 +64,11 @@ assert.match(companionBridge, /canRestoreTrustedLink/);
 assert.match(companionBridge, /isProfileSessionActive/);
 assert.match(markup, /'electronAPI'/);
 assert.match(markup, /BLOCKED_MEMBERS = new Set\(\['__proto__', 'prototype', 'constructor', 'electronAPI'\]\)/);
+assert.match(startupSource, /function installProfilePinAutoUnlock\(\)/);
+assert.match(startupSource, /pin\.length !== 6 \|\| busy/);
+assert.match(startupSource, /submitPasscode\(\)/);
+assert.match(htmlSource, /id="passcodeField"[^>]*inputmode="numeric"/);
+assert.match(databaseSource, /if \(numeric\.length === 6\) submit\(\);/);
 
 const identityDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eclass-identity-'));
 const identityPath = path.join(identityDir, 'companion-lan-identity.json');

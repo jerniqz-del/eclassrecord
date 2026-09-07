@@ -2,7 +2,8 @@
  * E-Class Record — Grading Calculation Engine
  *
  * Implements standard DepEd Department Order (DO) grading rules,
- * including DO 15 s.2026 and Key Stage 2 Trimester.
+ * including DO 15 s.2026, DO 017 s.2026 Strengthened SHS curriculum
+ * selection, and DO 8 s.2015 weights for non-pilot Grade 12.
  */
 
 let currentMapehSubTab = 'music_arts';
@@ -114,6 +115,95 @@ function templateForGrade(gradeLevel) {
   if (grade <= 6) return keyStage2Template;
   if (grade <= 10) return juniorHighTemplate;
   return seniorHighTemplate;
+}
+
+const SHS_CURRICULUM_SSHS = 'SSHS';
+const SHS_CURRICULUM_K12_2016 = 'K12_2016';
+
+function parseSchoolYearStart(sy) {
+  if (sy) {
+    const parsed = parseInt(String(sy).split('-')[0], 10);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return 2026;
+}
+
+function normalizeShsCurriculum(value) {
+  return value === SHS_CURRICULUM_SSHS || value === SHS_CURRICULUM_K12_2016 ? value : '';
+}
+
+/**
+ * Resolves whether a Senior High class uses Strengthened SHS (DO 017)
+ * or the 2016 K to 12 SHS curriculum. Grade 12 in SY 2026-2027 defaults
+ * to 2016 unless the teacher marks the class as a pilot SSHS section.
+ */
+function resolveShsCurriculum(gradeLevel, schoolYear, override) {
+  const explicit = normalizeShsCurriculum(override);
+  if (explicit) return explicit;
+  const grade = parseInt(gradeLevel, 10);
+  const startYear = parseSchoolYearStart(schoolYear);
+  if (grade === 11 && startYear >= 2025) return SHS_CURRICULUM_SSHS;
+  if (grade === 12 && startYear >= 2027) return SHS_CURRICULUM_SSHS;
+  if (grade === 12) return SHS_CURRICULUM_K12_2016;
+  return SHS_CURRICULUM_SSHS;
+}
+
+function isShsSshsSubjectGroup(group) {
+  return Boolean(SENIOR_HIGH_SSHS_SUBJECT_GROUPS[group]);
+}
+
+/**
+ * Infers curriculum for existing assignments without rewriting scores.
+ * Unique SSHS Grade 12 subjects and stored SSHS groups stay on SSHS.
+ */
+function inferShsCurriculum(assignment) {
+  const existing = normalizeShsCurriculum(assignment?.shsCurriculum);
+  if (existing) return existing;
+  const grade = parseInt(assignment?.gradeLevel, 10);
+  if (grade < 11 || grade > 12) return '';
+  const startYear = parseSchoolYearStart(assignment?.schoolYear);
+  const subject = assignment?.subject;
+  const inSshs = isSubjectInSeniorHighCatalog(subject, SHS_CURRICULUM_SSHS);
+  const in2016 = isSubjectInSeniorHighCatalog(subject, SHS_CURRICULUM_K12_2016);
+  if (grade === 12 && startYear === 2026 && inSshs && !in2016) return SHS_CURRICULUM_SSHS;
+  const storedGroup = assignment?.shsSubjectGroup || assignment?.subjectGroup;
+  if (grade === 12 && startYear === 2026 && isShsSshsSubjectGroup(storedGroup)) {
+    return SHS_CURRICULUM_SSHS;
+  }
+  return resolveShsCurriculum(grade, assignment?.schoolYear);
+}
+
+function inferAdvisoryShsCurriculum(advisoryClass, subjectNames) {
+  const existing = normalizeShsCurriculum(advisoryClass?.shsCurriculum);
+  if (existing) return existing;
+  const grade = parseInt(advisoryClass?.gradeLevel, 10);
+  if (grade < 11 || grade > 12) return '';
+  const names = Array.isArray(subjectNames) ? subjectNames : [];
+  const uniquelySshs = names.some(name => (
+    isSubjectInSeniorHighCatalog(name, SHS_CURRICULUM_SSHS)
+    && !isSubjectInSeniorHighCatalog(name, SHS_CURRICULUM_K12_2016)
+  ));
+  if (grade === 12 && parseSchoolYearStart(advisoryClass?.schoolYear) === 2026 && uniquelySshs) {
+    return SHS_CURRICULUM_SSHS;
+  }
+  return resolveShsCurriculum(grade, advisoryClass?.schoolYear);
+}
+
+function shsCurriculumOptionsForGrade(gradeLevel, schoolYear) {
+  const grade = parseInt(gradeLevel, 10);
+  const startYear = parseSchoolYearStart(schoolYear);
+  const resolved = resolveShsCurriculum(gradeLevel, schoolYear);
+  return {
+    grade,
+    startYear,
+    resolved,
+    showPilotOverride: grade === 12 && startYear === 2026,
+    note: grade === 11
+      ? 'Strengthened SHS Curriculum (DepEd Order No. 017, s. 2026).'
+      : (grade === 12 && startYear >= 2027
+        ? 'Strengthened SHS Curriculum (DepEd Order No. 017, s. 2026).'
+        : '2016 K to 12 SHS Curriculum. Grade 12 in SY 2026-2027 uses DepEd Order No. 8, s. 2015 weights with the DO 15 transmutation table.')
+  };
 }
 
 /**
@@ -268,13 +358,13 @@ const SENIOR_HIGH_SUBJECT_CATALOG = Object.freeze([
     label: 'TechPro — Aesthetic, Wellness, and Human Care',
     grades: [11, 12],
     group: 'SHS_TECHPRO',
-    subjects: ['Aesthetic Services (Beauty Care)', 'Caregiving (Adult Care)', 'Caregiving (Child Care)', 'Hairdressing Services']
+    subjects: ['Aesthetic Services (Beauty Care)', 'Barbering Services', 'Caregiving (Adult Care)', 'Caregiving (Child Care)', 'Hairdressing Services', 'Wellness Services (Hilot / Massage)']
   },
   {
     label: 'TechPro — Agri-Fishery Business and Food Innovation',
     grades: [11, 12],
     group: 'SHS_TECHPRO',
-    subjects: ['Agricultural Crops Production', 'Agro-Entrepreneurship', 'Aquaculture', 'Fish Capture', 'Food Processing', 'Organic Agriculture Production', 'Poultry Production (Chicken)', 'Ruminants Production', 'Swine Production']
+    subjects: ['Agricultural Crops Production', 'Agro-Entrepreneurship', 'Aquaculture', 'Fish Capture', 'Fish Capture Operation', 'Food Processing', 'Organic Agriculture Production', 'Poultry Production (Chicken)', 'Ruminants Production', 'Swine Production']
   },
   {
     label: 'TechPro — Artisanry and Creative Enterprise',
@@ -332,9 +422,185 @@ const SENIOR_HIGH_SUBJECT_CATALOG = Object.freeze([
   }
 ]);
 
-function seniorHighSubjectCatalog(gradeLevel) {
-  const grade = parseInt(gradeLevel);
-  return SENIOR_HIGH_SUBJECT_CATALOG
+const SENIOR_HIGH_2016_SUBJECT_CATALOG = Object.freeze([
+  {
+    label: 'Core Subjects',
+    grades: [11, 12],
+    group: 'SHS2016_CORE',
+    subjects: [
+      'Oral Communication',
+      'Reading and Writing',
+      'Komunikasyon at Pananaliksik sa Wika at Kulturang Pilipino',
+      'Pagbasa at Pagsusuri ng Iba\'t Ibang Teksto Tungo sa Pananaliksik',
+      '21st Century Literature from the Philippines and the World',
+      'Contemporary Philippine Arts from the Regions',
+      'Media and Information Literacy',
+      'General Mathematics',
+      'Statistics and Probability',
+      'Earth and Life Science',
+      'Physical Science',
+      'Earth Science',
+      'Disaster Readiness and Risk Reduction',
+      'Personal Development',
+      'Understanding Culture, Society and Politics',
+      'Introduction to the Philosophy of the Human Person',
+      'Physical Education and Health'
+    ]
+  },
+  {
+    label: 'Applied Track Subjects',
+    grades: [11, 12],
+    group: 'SHS2016_ACADEMIC',
+    subjects: [
+      'English for Academic and Professional Purposes',
+      'Practical Research 1',
+      'Practical Research 2',
+      'Filipino sa Piling Larang — Akademik',
+      'Filipino sa Piling Larang — Isports',
+      'Filipino sa Piling Larang — Sining',
+      'Filipino sa Piling Larang — Tech-Voc',
+      'Empowerment Technologies',
+      'Entrepreneurship'
+    ]
+  },
+  {
+    label: 'Applied — Research / Immersion',
+    grades: [11, 12],
+    group: 'SHS2016_WORK_ACADEMIC',
+    subjects: ['Inquiries, Investigations and Immersion']
+  },
+  {
+    label: 'Specialized — STEM',
+    grades: [11, 12],
+    group: 'SHS2016_ACADEMIC',
+    subjects: [
+      'Pre-Calculus',
+      'Basic Calculus',
+      'General Biology 1',
+      'General Biology 2',
+      'General Chemistry 1',
+      'General Chemistry 2',
+      'General Physics 1',
+      'General Physics 2'
+    ]
+  },
+  {
+    label: 'Specialized — ABM',
+    grades: [11, 12],
+    group: 'SHS2016_ACADEMIC',
+    subjects: [
+      'Applied Economics',
+      'Business Ethics and Social Responsibility',
+      'Fundamentals of Accountancy, Business and Management 1',
+      'Fundamentals of Accountancy, Business and Management 2',
+      'Business Math',
+      'Business Finance',
+      'Organization and Management',
+      'Principles of Marketing'
+    ]
+  },
+  {
+    label: 'Specialized — HUMSS',
+    grades: [11, 12],
+    group: 'SHS2016_ACADEMIC',
+    subjects: [
+      'Creative Writing',
+      'Creative Nonfiction',
+      'World Religions and Belief Systems',
+      'Disciplines and Ideas in the Social Sciences',
+      'Disciplines and Ideas in the Applied Social Sciences',
+      'Philippine Politics and Governance',
+      'Community Engagement, Solidarity, and Citizenship',
+      'Trends, Networks, and Critical Thinking in the 21st Century Culture'
+    ]
+  },
+  {
+    label: 'Specialized — GAS',
+    grades: [11, 12],
+    group: 'SHS2016_ACADEMIC',
+    subjects: ['Humanities 1', 'Humanities 2', 'Social Science 1']
+  },
+  {
+    label: 'Academic — Work Immersion / Research / Enterprise',
+    grades: [11, 12],
+    group: 'SHS2016_WORK_ACADEMIC',
+    subjects: [
+      'Work Immersion / Research / Business Enterprise Simulation',
+      'Culminating Activity'
+    ]
+  },
+  {
+    label: 'Specialized — TVL',
+    grades: [11, 12],
+    group: 'SHS2016_TVL',
+    subjects: [
+      'Animation',
+      'Automotive Servicing',
+      'Beauty Care',
+      'Bread and Pastry Production',
+      'Computer Systems Servicing',
+      'Contact Center Services',
+      'Cookery',
+      'Crop Production',
+      'Dressmaking',
+      'Electrical Installation and Maintenance',
+      'Food and Beverage Services',
+      'Front Office Services',
+      'Hairdressing',
+      'Housekeeping',
+      'Illustration',
+      'Organic Agriculture',
+      'Programming',
+      'Shielded Metal Arc Welding'
+    ]
+  },
+  {
+    label: 'Specialized — Sports',
+    grades: [11, 12],
+    group: 'SHS2016_TVL',
+    subjects: [
+      'Safety and First Aid',
+      'Human Movement',
+      'Fundamentals of Coaching',
+      'Sports Officiating and Activity Management',
+      'Fitness, Sports and Recreation',
+      'Psychosocial Aspects of Sports and Exercise',
+      'Fitness Testing and Exercise Programming',
+      'Practicum (in-campus)',
+      'Apprenticeship (off-campus)'
+    ]
+  },
+  {
+    label: 'Specialized — Arts and Design',
+    grades: [11, 12],
+    group: 'SHS2016_TVL',
+    subjects: [
+      'Creative Industries I: Arts and Design Appreciation and Production',
+      'Creative Industries II: Performing Arts',
+      'Physical and Personal Development in the Arts',
+      'Developing Filipino Identity in the Arts',
+      'Integrating the Elements and Principles of Organization in the Arts',
+      'Leadership and Management in Different Arts Fields',
+      'Apprenticeship and Exploration in the Performing Arts',
+      'Work Immersion / Exhibit / Performance'
+    ]
+  },
+  {
+    label: 'Work Immersion',
+    grades: [11, 12],
+    group: 'SHS2016_WORK_TVL',
+    subjects: ['Work Immersion']
+  }
+]);
+
+function catalogForShsCurriculum(curriculum) {
+  return curriculum === SHS_CURRICULUM_K12_2016
+    ? SENIOR_HIGH_2016_SUBJECT_CATALOG
+    : SENIOR_HIGH_SUBJECT_CATALOG;
+}
+
+function mapSeniorHighCatalog(catalog, grade) {
+  return catalog
     .filter(category => category.grades.includes(grade))
     .map(category => ({
       label: category.label,
@@ -343,15 +609,42 @@ function seniorHighSubjectCatalog(gradeLevel) {
     }));
 }
 
-function seniorHighSubjectGroupForSubject(subject) {
+function seniorHighSubjectCatalog(gradeLevel, options) {
+  const grade = parseInt(gradeLevel, 10);
+  const settings = options && typeof options === 'object' ? options : {};
+  const curriculum = resolveShsCurriculum(
+    gradeLevel,
+    settings.schoolYear,
+    settings.curriculum || settings.shsCurriculum
+  );
+  return mapSeniorHighCatalog(catalogForShsCurriculum(curriculum), grade);
+}
+
+function isSubjectInSeniorHighCatalog(subject, curriculum) {
   const normalized = String(subject || '').trim().toLocaleLowerCase();
-  for (const category of SENIOR_HIGH_SUBJECT_CATALOG) {
-    if (category.subjects.some(item => item.toLocaleLowerCase() === normalized)) return category.group;
+  if (!normalized) return false;
+  const catalogs = curriculum
+    ? [catalogForShsCurriculum(curriculum)]
+    : [SENIOR_HIGH_SUBJECT_CATALOG, SENIOR_HIGH_2016_SUBJECT_CATALOG];
+  return catalogs.some(catalog =>
+    catalog.some(category => category.subjects.some(item => item.toLocaleLowerCase() === normalized))
+  );
+}
+
+function seniorHighSubjectGroupForSubject(subject, curriculum) {
+  const normalized = String(subject || '').trim().toLocaleLowerCase();
+  const catalogs = curriculum
+    ? [catalogForShsCurriculum(curriculum)]
+    : [SENIOR_HIGH_SUBJECT_CATALOG, SENIOR_HIGH_2016_SUBJECT_CATALOG];
+  for (const catalog of catalogs) {
+    for (const category of catalog) {
+      if (category.subjects.some(item => item.toLocaleLowerCase() === normalized)) return category.group;
+    }
   }
   return '';
 }
 
-function getSubjectsForGrade(gradeLevel) {
+function getSubjectsForGrade(gradeLevel, options) {
   const grade = parseInt(gradeLevel);
   if (grade === 1) {
     return [
@@ -414,13 +707,17 @@ function getSubjectsForGrade(gradeLevel) {
       'MAPEH'
     ];
   } else if (grade >= 11 && grade <= 12) {
-    return seniorHighSubjectCatalog(grade).flatMap(category => category.subjects);
+    const settings = options && typeof options === 'object' ? { ...options } : {};
+    if (!settings.schoolYear && typeof db !== 'undefined' && db?.schoolYear) {
+      settings.schoolYear = db.schoolYear;
+    }
+    return seniorHighSubjectCatalog(grade, settings).flatMap(category => category.subjects);
   } else {
     return [];
   }
 }
 
-const SENIOR_HIGH_SUBJECT_GROUPS = Object.freeze({
+const SENIOR_HIGH_SSHS_SUBJECT_GROUPS = Object.freeze({
   SHS_CORE: { label: 'Core Subject', weights: [20, 50, 30] },
   SHS_ACADEMIC: { label: 'Academic - All Other Electives', weights: [20, 50, 30] },
   SHS_ARTS: { label: 'Sports and Arts Elective', weights: [20, 60, 20] },
@@ -430,8 +727,24 @@ const SENIOR_HIGH_SUBJECT_GROUPS = Object.freeze({
   SHS_WORK: { label: 'Work Immersion', weights: [20, 80, 0] }
 });
 
-function seniorHighSubjectGroupOptions() {
-  return Object.entries(SENIOR_HIGH_SUBJECT_GROUPS).map(([value, config]) => ({
+const SENIOR_HIGH_2016_SUBJECT_GROUPS = Object.freeze({
+  SHS2016_CORE: { label: 'Core Subject (DO 8 s.2015)', weights: [25, 50, 25] },
+  SHS2016_ACADEMIC: { label: 'Academic / Applied Track (DO 8 s.2015)', weights: [25, 45, 30] },
+  SHS2016_TVL: { label: 'TVL / Sports / Arts and Design (DO 8 s.2015)', weights: [20, 60, 20] },
+  SHS2016_WORK_ACADEMIC: { label: 'Work Immersion / Research / Enterprise (DO 8 s.2015)', weights: [35, 40, 25] },
+  SHS2016_WORK_TVL: { label: 'Work Immersion / Research / Exhibit / Performance (DO 8 s.2015)', weights: [20, 60, 20] }
+});
+
+const SENIOR_HIGH_SUBJECT_GROUPS = Object.freeze({
+  ...SENIOR_HIGH_SSHS_SUBJECT_GROUPS,
+  ...SENIOR_HIGH_2016_SUBJECT_GROUPS
+});
+
+function seniorHighSubjectGroupOptions(curriculum) {
+  const source = curriculum === SHS_CURRICULUM_K12_2016
+    ? SENIOR_HIGH_2016_SUBJECT_GROUPS
+    : SENIOR_HIGH_SSHS_SUBJECT_GROUPS;
+  return Object.entries(source).map(([value, config]) => ({
     value,
     label: config.label,
     weights: config.weights.slice()
@@ -446,6 +759,10 @@ function normalizeSeniorHighSubjectGroup(value) {
   return SENIOR_HIGH_SUBJECT_GROUPS[normalized] ? normalized : '';
 }
 
+function defaultSeniorHighSubjectGroup(curriculum) {
+  return curriculum === SHS_CURRICULUM_K12_2016 ? 'SHS2016_ACADEMIC' : 'SHS_ACADEMIC';
+}
+
 /**
  * Returns weight configuration [Written Work %, Performance Task %, Exam %].
  * @param {string} group Subject group key.
@@ -457,56 +774,111 @@ function weightsFor(group) {
     CORE_20_50_30: [20, 50, 30],
     SKILLS_20_60_20: [20, 60, 20],
     ...Object.fromEntries(Object.entries(SENIOR_HIGH_SUBJECT_GROUPS).map(([key, config]) => [key, config.weights])),
-    SHS_ARTS_SPORTS: SENIOR_HIGH_SUBJECT_GROUPS.SHS_ARTS.weights
+    SHS_ARTS_SPORTS: SENIOR_HIGH_SSHS_SUBJECT_GROUPS.SHS_ARTS.weights
   };
   return map[group] || [20, 50, 30];
+}
+
+function resolveCurriculumArgument(gradeLevel, policy, curriculumOrOptions) {
+  if (typeof curriculumOrOptions === 'string') {
+    return resolveShsCurriculum(gradeLevel, policy && typeof policy === 'object' ? policy.schoolYear : '', curriculumOrOptions);
+  }
+  if (curriculumOrOptions && typeof curriculumOrOptions === 'object') {
+    return resolveShsCurriculum(
+      gradeLevel,
+      curriculumOrOptions.schoolYear,
+      curriculumOrOptions.curriculum || curriculumOrOptions.shsCurriculum
+    );
+  }
+  const schoolYear = policy && typeof policy === 'object' ? policy.schoolYear : undefined;
+  return resolveShsCurriculum(gradeLevel, schoolYear);
+}
+
+function determineSshsSubjectGroup(subject, seniorHighOverride) {
+  const explicitGroup = normalizeSeniorHighSubjectGroup(seniorHighOverride);
+  if (explicitGroup && isShsSshsSubjectGroup(explicitGroup)) return explicitGroup;
+  const catalogGroup = seniorHighSubjectGroupForSubject(subject, SHS_CURRICULUM_SSHS);
+  if (catalogGroup) return catalogGroup;
+  const s = (subject || '').toLowerCase();
+  if (/work\s*immersion/i.test(s)) return 'SHS_WORK';
+  if (/field\s*experience|field\s*exposure|exposure|arts?\s*apprenticeship|creative\s*production/i.test(s)) {
+    return 'SHS_FIELD';
+  }
+  if (/research|design\s*(and|&)\s*innovation/i.test(s)) return 'SHS_RESEARCH';
+  if (/techpro|nc\s*i{1,3}\b/i.test(s)) return 'SHS_TECHPRO';
+  if (/\barts?\b|\bsports?\b|health and wellness|human movement|physical education/i.test(s)) {
+    return 'SHS_ARTS';
+  }
+  const coreSubjects = new Set([
+    'effective communication',
+    'mabisang komunikasyon',
+    'general mathematics',
+    'general science',
+    'life and career skills',
+    'pag-aaral ng kasaysayan at lipunang pilipino'
+  ]);
+  return coreSubjects.has(s.trim()) ? 'SHS_CORE' : 'SHS_ACADEMIC';
+}
+
+function determine2016SubjectGroup(subject, seniorHighOverride) {
+  const explicitGroup = normalizeSeniorHighSubjectGroup(seniorHighOverride);
+  if (explicitGroup && SENIOR_HIGH_2016_SUBJECT_GROUPS[explicitGroup]) return explicitGroup;
+  const catalogGroup = seniorHighSubjectGroupForSubject(subject, SHS_CURRICULUM_K12_2016);
+  if (catalogGroup) return catalogGroup;
+  const s = (subject || '').toLowerCase();
+  if (/inquiries|investigations and immersion|business enterprise simulation|culminating activity/i.test(s)) {
+    return 'SHS2016_WORK_ACADEMIC';
+  }
+  if (/work\s*immersion|exhibit|performance|apprenticeship/i.test(s)) {
+    if (/academic|research|enterprise/i.test(s)) return 'SHS2016_WORK_ACADEMIC';
+    return 'SHS2016_WORK_TVL';
+  }
+  if (/cookery|bread and pastry|housekeeping|welding|automotive|dressmaking|css|computer systems|contact center|tvl|nc\s*i{1,3}\b/i.test(s)) {
+    return 'SHS2016_TVL';
+  }
+  if (/sports|arts and design|physical education and health|human movement|first aid/i.test(s)) {
+    return 'SHS2016_TVL';
+  }
+  const coreSubjects = new Set([
+    'oral communication',
+    'reading and writing',
+    'general mathematics',
+    'statistics and probability',
+    'earth and life science',
+    'physical science',
+    'earth science',
+    'personal development',
+    'media and information literacy',
+    'physical education and health'
+  ]);
+  if (coreSubjects.has(s.trim()) || /komunikasyon at pananaliksik|pagbasa at pagsusuri|21st century literature|contemporary philippine arts|understanding culture|philosophy of the human person|disaster readiness/i.test(s)) {
+    return 'SHS2016_CORE';
+  }
+  return 'SHS2016_ACADEMIC';
 }
 
 /**
  * Automatically calculates and assigns the weight set (subjectGroup)
  * based on the grade level, subject keywords, and selected policy mode.
  */
-function determineSubjectGroup(gradeLevel, subject, policy, seniorHighOverride) {
+function determineSubjectGroup(gradeLevel, subject, policy, seniorHighOverride, curriculumOrOptions) {
   const grade = parseInt(gradeLevel);
   const s = (subject || '').toLowerCase();
-  
+
   if (grade >= 11) {
-    const explicitGroup = normalizeSeniorHighSubjectGroup(seniorHighOverride);
-    if (explicitGroup) return explicitGroup;
-    const catalogGroup = seniorHighSubjectGroupForSubject(subject);
-    if (catalogGroup) return catalogGroup;
-    if (/work\s*immersion/i.test(s)) {
-      return 'SHS_WORK';
+    const curriculum = resolveCurriculumArgument(gradeLevel, policy, curriculumOrOptions);
+    if (curriculum === SHS_CURRICULUM_K12_2016) {
+      return determine2016SubjectGroup(subject, seniorHighOverride);
     }
-    if (/field\s*experience|field\s*exposure|exposure|arts?\s*apprenticeship|creative\s*production/i.test(s)) {
-      return 'SHS_FIELD';
-    }
-    if (/research|design\s*(and|&)\s*innovation/i.test(s)) {
-      return 'SHS_RESEARCH';
-    }
-    if (/techpro|nc\s*i{1,3}\b/i.test(s)) {
-      return 'SHS_TECHPRO';
-    }
-    if (/\barts?\b|\bsports?\b|health and wellness|human movement|physical education/i.test(s)) {
-      return 'SHS_ARTS';
-    }
-    const coreSubjects = new Set([
-      'effective communication',
-      'mabisang komunikasyon',
-      'general mathematics',
-      'general science',
-      'life and career skills'
-    ]);
-    return coreSubjects.has(s.trim()) ? 'SHS_CORE' : 'SHS_ACADEMIC';
-  } else {
-    if (/mapeh|music|arts|physical|health|tle|epp|livelihood|pantahanan|pangkabuhayan|technology/i.test(s)) {
-      return 'SKILLS_20_60_20';
-    }
-    if (grade >= 4 && grade <= 6) {
-      return 'KS2_TRIMESTER';
-    }
-    return 'CORE_20_50_30';
+    return determineSshsSubjectGroup(subject, seniorHighOverride);
   }
+  if (/mapeh|music|arts|physical|health|tle|epp|livelihood|pantahanan|pangkabuhayan|technology/i.test(s)) {
+    return 'SKILLS_20_60_20';
+  }
+  if (grade >= 4 && grade <= 6) {
+    return 'KS2_TRIMESTER';
+  }
+  return 'CORE_20_50_30';
 }
 
 /**
@@ -518,15 +890,7 @@ function determineSubjectGroup(gradeLevel, subject, policy, seniorHighOverride) 
  */
 function determinePolicy(gradeLevel, subject, sy) {
   const grade = parseInt(gradeLevel);
-  const s = (subject || '').toLowerCase();
-  
-  // Resolve school year start
-  let startYear = 2026;
-  if (sy) {
-    const parts = String(sy).split('-');
-    const parsed = parseInt(parts[0]);
-    if (!isNaN(parsed)) startYear = parsed;
-  }
+  const startYear = parseSchoolYearStart(sy);
   
   // KS1 Transition rules (Grades 1-3)
   if (grade <= 3) {
@@ -618,15 +982,23 @@ function examinationComponentsForAssignment(assignment) {
   const grade = parseInt(assignment?.gradeLevel);
   if (grade < 11 || grade > 12) return ['ST1', 'ST2', 'TE'];
 
+  const curriculum = inferShsCurriculum(assignment) || resolveShsCurriculum(
+    assignment?.gradeLevel,
+    assignment?.schoolYear,
+    assignment?.shsCurriculum
+  );
   const explicitGroup = normalizeSeniorHighSubjectGroup(
     assignment?.shsSubjectGroup || assignment?.subjectGroup
   );
   const group = explicitGroup || determineSubjectGroup(
     assignment?.gradeLevel,
     assignment?.subject,
-    assignment?.policy
+    assignment?.policy,
+    assignment?.shsSubjectGroup,
+    curriculum
   );
 
+  if (curriculum === SHS_CURRICULUM_K12_2016) return ['ST1', 'ST2', 'TE'];
   if (group === 'SHS_RESEARCH' || group === 'SHS_WORK') return [];
   if (group === 'SHS_FIELD') return ['TE'];
   return ['ST1', 'ST2', 'TE'];

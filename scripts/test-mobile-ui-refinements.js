@@ -20,6 +20,9 @@ assert.match(navigation, /if \(!imeVisible && !fluid\.useRailNavigation\) \{\s*P
 assert.doesNotMatch(quickGrade, /\.imePadding\(\)/);
 assert.match(quickGrade, /delay\(450\)/);
 assert.match(quickGrade, /LaunchedEffect\(textState\.text, currentIndex\)/);
+assert.doesNotMatch(navigation, /key\(liveDataRevision\)/);
+assert.match(quickGrade, /rememberSaveable\(assignmentId, assessmentId\)/);
+assert.match(quickGrade, /currentIndex\.coerceIn/);
 assert.match(quickGrade, /LazyColumn\(\s*modifier = Modifier\s*\.fillMaxWidth\(\)\s*\.weight\(1f\)/);
 assert.match(grading, /modifier = Modifier.weight\(1f\).fillMaxWidth\(\)/);
 assert.match(grading, /LazyColumn\(modifier = Modifier.weight\(1f\).fillMaxWidth\(\)\)/);

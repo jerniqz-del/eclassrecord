@@ -59,16 +59,17 @@ object SubjectVisuals {
         if (grade == 11 || grade == 12) {
             val group = subjectGroup.uppercase()
             return when {
-                group == "SHS_TECHPRO" || listOf("caregiving", "agricultural", "automotive", "carpentry", "welding", "computer programming", "computer systems", "electrical installation", "electronics", "tourism").any(value::contains) -> "shs-technical-vocational"
-                group in setOf("SHS_RESEARCH", "SHS_WORK", "SHS_FIELD") || listOf("research", "work immersion", "apprenticeship", "field exposure", "design and innovation").any(value::contains) -> "shs-research-immersion"
+                group == "SHS_TECHPRO" || group == "SHS2016_TVL" || listOf("caregiving", "agricultural", "automotive", "carpentry", "welding", "computer programming", "computer systems", "electrical installation", "electronics", "tourism", "cookery", "bread and pastry", "housekeeping").any(value::contains) -> "shs-technical-vocational"
+                group in setOf("SHS_RESEARCH", "SHS_WORK", "SHS_FIELD", "SHS2016_WORK_ACADEMIC", "SHS2016_WORK_TVL") || listOf("research", "work immersion", "apprenticeship", "field exposure", "design and innovation", "inquiries, investigations", "culminating activity").any(value::contains) -> "shs-research-immersion"
                 listOf("sports", "physical education", "human movement", "exercise", "fitness", "first aid").any(value::contains) -> "shs-physical-education-sports"
                 listOf("business", "accounting", "finance", "taxation", "economics", "marketing", "entrepreneurship", "organization and management").any(value::contains) -> "shs-business-entrepreneurship"
-                listOf("mathematics", "calculus").any(value::contains) -> "shs-mathematics"
-                listOf("science", "biology", "chemistry", "physics", "database", "data analytics", "empowerment technologies").any(value::contains) -> "shs-science-technology"
-                listOf("citizenship", "civic engagement", "history", "kasaysayan", "philosophy", "governance", "politics", "social sciences").any(value::contains) -> "shs-social-sciences-humanities"
+                listOf("mathematics", "calculus", "statistics and probability", "business math", "pre-calculus").any(value::contains) -> "shs-mathematics"
+                listOf("science", "biology", "chemistry", "physics", "database", "data analytics", "empowerment technologies", "disaster readiness").any(value::contains) -> "shs-science-technology"
+                listOf("citizenship", "civic engagement", "history", "kasaysayan", "philosophy", "governance", "politics", "social sciences", "world religions", "understanding culture").any(value::contains) -> "shs-social-sciences-humanities"
                 listOf("life and career skills", "personal development", "values", "good manners", "religion").any(value::contains) -> "shs-values-personal-development"
                 group == "SHS_ARTS" || listOf("art", "creative", "composition", "dance", "literary", "literature", "media", "music", "theater", "visual").any(value::contains) -> "shs-arts-media-design"
-                listOf("communication", "komunikasyon", "filipino", "language", "reading", "writing").any(value::contains) -> "shs-language-communication"
+                listOf("communication", "komunikasyon", "filipino", "language", "reading", "writing", "oral communication").any(value::contains) -> "shs-language-communication"
+                group.startsWith("SHS") -> "shs-language-communication"
                 else -> ""
             }
         }

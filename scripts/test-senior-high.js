@@ -26,24 +26,56 @@ assert.deepStrictEqual(Array.from(context.getSubjectsForGrade('11')).slice(0, 5)
 ]);
 assert(context.getSubjectsForGrade('11').includes('Pag-aaral ng Kasaysayan at Lipunang Pilipino'));
 assert(context.getSubjectsForGrade('11').includes('Computer Programming (Java)'));
-assert(context.getSubjectsForGrade('12').includes('Creative Production and Presentation'));
-assert(context.getSubjectsForGrade('12').includes('Research 2'));
+assert(context.getSubjectsForGrade('11').includes('Barbering Services'));
+assert(context.getSubjectsForGrade('11').includes('Wellness Services (Hilot / Massage)'));
+assert.strictEqual(context.resolveShsCurriculum('11', '2026-2027'), 'SSHS');
+assert.strictEqual(context.resolveShsCurriculum('12', '2026-2027'), 'K12_2016');
+assert.strictEqual(context.resolveShsCurriculum('12', '2026-2027', 'SSHS'), 'SSHS');
+assert.strictEqual(context.resolveShsCurriculum('12', '2027-2028'), 'SSHS');
+assert(context.getSubjectsForGrade('12').includes('Oral Communication'), 'Grade 12 SY 2026-2027 defaults to the 2016 SHS catalog');
+assert(context.getSubjectsForGrade('12').includes('Practical Research 1'));
+assert(!context.getSubjectsForGrade('12').includes('Research 2'), 'SSHS-only Grade 12 subjects must not appear in the default 2016 catalog');
+assert(context.getSubjectsForGrade('12', { curriculum: 'SSHS' }).includes('Creative Production and Presentation'));
+assert(context.getSubjectsForGrade('12', { curriculum: 'SSHS' }).includes('Research 2'));
 assert(!context.getSubjectsForGrade('11').includes('Research 2'), 'new Grade 12 subjects must not appear in the Grade 11 list');
-assert.strictEqual(context.seniorHighSubjectGroupForSubject('Computer Programming (Java)'), 'SHS_TECHPRO');
-assert.strictEqual(context.seniorHighSubjectGroupForSubject('Creative Production and Presentation'), 'SHS_FIELD');
-assert.strictEqual(context.seniorHighSubjectGroupForSubject('Research 1'), 'SHS_RESEARCH');
+assert.strictEqual(context.seniorHighSubjectGroupForSubject('Computer Programming (Java)', 'SSHS'), 'SHS_TECHPRO');
+assert.strictEqual(context.seniorHighSubjectGroupForSubject('Creative Production and Presentation', 'SSHS'), 'SHS_FIELD');
+assert.strictEqual(context.seniorHighSubjectGroupForSubject('Research 1', 'SSHS'), 'SHS_RESEARCH');
+assert.strictEqual(context.seniorHighSubjectGroupForSubject('Oral Communication', 'K12_2016'), 'SHS2016_CORE');
+assert.strictEqual(context.seniorHighSubjectGroupForSubject('Practical Research 1', 'K12_2016'), 'SHS2016_ACADEMIC');
+assert.strictEqual(context.seniorHighSubjectGroupForSubject('Cookery', 'K12_2016'), 'SHS2016_TVL');
 assert.strictEqual(context.determineSubjectGroup('11', 'Computer Programming (Java)'), 'SHS_TECHPRO');
-assert.strictEqual(context.determineSubjectGroup('12', 'Creative Production and Presentation'), 'SHS_FIELD');
+assert.strictEqual(context.determineSubjectGroup('12', 'Creative Production and Presentation', null, null, 'SSHS'), 'SHS_FIELD');
 assert.strictEqual(context.determineSubjectGroup('11', 'General Mathematics'), 'SHS_CORE');
+assert.strictEqual(context.determineSubjectGroup('12', 'Oral Communication'), 'SHS2016_CORE');
+assert.strictEqual(context.determineSubjectGroup('12', 'Practical Research 2'), 'SHS2016_ACADEMIC');
+assert.strictEqual(context.determineSubjectGroup('12', 'Inquiries, Investigations and Immersion'), 'SHS2016_WORK_ACADEMIC');
+assert.strictEqual(context.determineSubjectGroup('12', 'Work Immersion'), 'SHS2016_WORK_TVL');
+assert.strictEqual(context.determineSubjectGroup('12', 'Cookery'), 'SHS2016_TVL');
 assert.strictEqual(context.determineSubjectGroup('11', 'Physics 1'), 'SHS_ACADEMIC');
 assert.strictEqual(context.determineSubjectGroup('11', 'Human Movement 1'), 'SHS_ARTS');
-assert.strictEqual(context.determineSubjectGroup('12', 'Field Experience / Exposure'), 'SHS_FIELD');
+assert.strictEqual(context.determineSubjectGroup('12', 'Field Experience / Exposure', null, null, 'SSHS'), 'SHS_FIELD');
 assert.strictEqual(context.determineSubjectGroup('11', 'Arts Apprenticeship'), 'SHS_FIELD');
 assert.strictEqual(context.determineSubjectGroup('11', 'Creative Production and Innovation'), 'SHS_FIELD');
 assert.strictEqual(context.determineSubjectGroup('11', 'Research, Design and Innovation'), 'SHS_RESEARCH');
-assert.strictEqual(context.determineSubjectGroup('12', 'Work Immersion'), 'SHS_WORK');
+assert.strictEqual(context.determineSubjectGroup('12', 'Work Immersion', null, null, 'SSHS'), 'SHS_WORK');
 assert.strictEqual(context.determineSubjectGroup('11', 'Computer Programming NC II'), 'SHS_TECHPRO');
 assert.strictEqual(context.determineSubjectGroup('11', 'School-specific elective', null, 'SHS_TECHPRO'), 'SHS_TECHPRO');
+
+assert.strictEqual(
+  context.inferShsCurriculum({ gradeLevel: '12', schoolYear: '2026-2027', subject: 'Research 2' }),
+  'SSHS',
+  'existing unique SSHS Grade 12 subjects must stay on Strengthened SHS'
+);
+assert.strictEqual(
+  context.inferShsCurriculum({ gradeLevel: '12', schoolYear: '2026-2027', subject: 'General Mathematics', subjectGroup: 'SHS_CORE' }),
+  'SSHS',
+  'existing Grade 12 loads with SSHS groups must keep Strengthened SHS weights'
+);
+assert.strictEqual(
+  context.inferShsCurriculum({ gradeLevel: '12', schoolYear: '2026-2027', subject: 'Oral Communication' }),
+  'K12_2016'
+);
 
 const expectedWeights = {
   SHS_CORE: [20, 50, 30],
@@ -52,7 +84,12 @@ const expectedWeights = {
   SHS_FIELD: [15, 70, 15],
   SHS_RESEARCH: [40, 60, 0],
   SHS_TECHPRO: [15, 65, 20],
-  SHS_WORK: [20, 80, 0]
+  SHS_WORK: [20, 80, 0],
+  SHS2016_CORE: [25, 50, 25],
+  SHS2016_ACADEMIC: [25, 45, 30],
+  SHS2016_TVL: [20, 60, 20],
+  SHS2016_WORK_ACADEMIC: [35, 40, 25],
+  SHS2016_WORK_TVL: [20, 60, 20]
 };
 Object.entries(expectedWeights).forEach(([group, weights]) => {
   assert.deepStrictEqual(Array.from(context.weightsFor(group)), weights, `${group} weights must match the strengthened-SHS policy`);
@@ -80,6 +117,17 @@ assert.deepStrictEqual(
   ['ST1', 'ST2', 'TE'],
   'the special examination rules must remain isolated to Grades 11-12'
 );
+assert.deepStrictEqual(
+  Array.from(context.examinationComponentsForAssignment({
+    gradeLevel: '12', schoolYear: '2026-2027', shsCurriculum: 'K12_2016', subjectGroup: 'SHS2016_CORE'
+  })),
+  ['ST1', 'ST2', 'TE'],
+  '2016 Grade 12 classes keep the full examination bucket'
+);
+assert.deepStrictEqual(
+  Array.from(context.seniorHighSubjectGroupOptions('K12_2016').map(item => item.value)),
+  ['SHS2016_CORE', 'SHS2016_ACADEMIC', 'SHS2016_TVL', 'SHS2016_WORK_ACADEMIC', 'SHS2016_WORK_TVL']
+);
 
 function gradingAssignment(group, scores = {}) {
   return {
@@ -102,6 +150,10 @@ function gradingAssignment(group, scores = {}) {
 const allScores = { ww: 80, pt: 90, st1: 70, st2: 80, te: 100 };
 const regularResult = context.computeTerm(gradingAssignment('SHS_CORE', allScores), 'learner-1', '1');
 assert.strictEqual(regularResult.examPS, 85, 'other SHS subjects must combine ST1 30%, ST2 30%, and TE 40%');
+
+const core2016 = context.computeTerm(gradingAssignment('SHS2016_CORE', allScores), 'learner-1', '1');
+assert.strictEqual(core2016.examPS, 85);
+assert.strictEqual(core2016.initialGrade, 86.25, '2016 core subjects must use 25% WW, 50% PT, and 25% examination');
 
 const fieldResult = context.computeTerm(gradingAssignment('SHS_FIELD', allScores), 'learner-1', '1');
 assert.strictEqual(fieldResult.examPS, 100, 'field/apprenticeship/creative subjects must use TE as the whole examination score');
@@ -171,13 +223,18 @@ assert.strictEqual(legacySeniorHigh.scores['learner-1|legacy-pt-5'], 88, 'legacy
 assert(legacySeniorHigh.assessments.some(item => item.id === 'legacy-pt-5'), 'the populated legacy assessment must be retained');
 
 const htmlSource = fs.readFileSync(path.join(__dirname, '../src/renderer/index.html'), 'utf8');
+const helpSource = fs.readFileSync(path.join(__dirname, '../src/renderer/js/help.js'), 'utf8');
+assert(helpSource.includes("id: 'deped_order_17'"), 'Help must document DepEd Order No. 017 s. 2026');
 const databaseSource = fs.readFileSync(path.join(__dirname, '../src/renderer/js/database.js'), 'utf8');
 const specialProgramSource = fs.readFileSync(path.join(__dirname, '../src/renderer/js/special-program.js'), 'utf8');
 const printCss = fs.readFileSync(path.join(__dirname, '../src/renderer/css/print.css'), 'utf8');
 assert(htmlSource.includes('<option>11</option><option>12</option>'));
 assert(htmlSource.includes('id="newSeniorHighSubjectGroup"'));
+assert(htmlSource.includes('id="newShsPilotCurriculum"'));
+assert(htmlSource.includes('This Grade 12 class uses Strengthened SHS (pilot school)'));
 assert(databaseSource.includes('[1,2,3,4,5,6,7,8,9,10,11,12]'));
-assert(databaseSource.includes('a.shsSubjectGroup = a.subjectGroup'));
+assert(databaseSource.includes('a.shsCurriculum = inferShsCurriculum(a)'));
+assert(specialProgramSource.includes('selectedNewShsCurriculum'));
 assert(specialProgramSource.includes("document.createElement('optgroup')"), 'Add Class Load must group the official SHS subject catalog');
 assert(specialProgramSource.includes('option.dataset.shsGroup = category.group'), 'subject choices must carry their grading category');
 assert(printCss.includes('@page eclass-pdf-with-header'), 'PDF exports must reserve space for the repeating metadata header');

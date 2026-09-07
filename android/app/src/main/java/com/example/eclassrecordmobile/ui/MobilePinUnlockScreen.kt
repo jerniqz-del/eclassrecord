@@ -49,7 +49,16 @@ import com.example.eclassrecordmobile.theme.NeonPurple
 fun MobilePinUnlockScreen(profileName: String, onVerify: (String) -> Boolean) {
     var pin by rememberSaveable { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf(false) }
+    var submitting by rememberSaveable { mutableStateOf(false) }
     val depth by animateFloatAsState(if (error) 0.97f else 1f, label = "pin-card-depth")
+    fun tryUnlock(candidate: String) {
+        if (candidate.length != 6 || submitting) return
+        submitting = true
+        if (!onVerify(candidate)) {
+            error = true
+            submitting = false
+        }
+    }
     Box(
         Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center,
@@ -84,7 +93,13 @@ fun MobilePinUnlockScreen(profileName: String, onVerify: (String) -> Boolean) {
                 Spacer(Modifier.height(2.dp))
                 OutlinedTextField(
                     value = pin,
-                    onValueChange = { pin = it.filter(Char::isDigit).take(6); error = false },
+                    onValueChange = {
+                        val next = it.filter(Char::isDigit).take(6)
+                        pin = next
+                        error = false
+                        if (next.length < 6) submitting = false
+                        tryUnlock(next)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Profile PIN") },
                     singleLine = true,
@@ -105,9 +120,7 @@ fun MobilePinUnlockScreen(profileName: String, onVerify: (String) -> Boolean) {
                     )
                 }
                 Button(
-                    onClick = {
-                        if (!onVerify(pin)) error = true
-                    },
+                    onClick = { tryUnlock(pin) },
                     enabled = pin.length == 6,
                     modifier = Modifier.fillMaxWidth().height(54.dp),
                     shape = RoundedCornerShape(17.dp),

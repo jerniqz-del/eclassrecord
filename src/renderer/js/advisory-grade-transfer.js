@@ -268,15 +268,24 @@
     return grade >= 11 && grade <= 12;
   }
 
-  function seniorHighCatalogForGrade(gradeLevel) {
+  function seniorHighCatalogOptions(gradeLevel, schoolYear, override) {
+    return {
+      curriculum: typeof resolveShsCurriculum === 'function'
+        ? resolveShsCurriculum(gradeLevel, schoolYear, override)
+        : 'SSHS',
+      schoolYear
+    };
+  }
+
+  function seniorHighCatalogForGrade(gradeLevel, options) {
     return typeof globalScope.seniorHighSubjectCatalog === 'function'
-      ? globalScope.seniorHighSubjectCatalog(gradeLevel)
+      ? globalScope.seniorHighSubjectCatalog(gradeLevel, options || {})
       : [];
   }
 
-  function seniorHighSubjectPickerMarkup(gradeLevel, selectedSubjects = []) {
+  function seniorHighSubjectPickerMarkup(gradeLevel, selectedSubjects = [], options) {
     const selectedKeys = new Set(selectedSubjects.map(normalizeSubjectKey));
-    const catalog = seniorHighCatalogForGrade(gradeLevel);
+    const catalog = seniorHighCatalogForGrade(gradeLevel, options);
     const catalogKeys = new Set(catalog.flatMap(category => category.subjects).map(normalizeSubjectKey));
     const customSubjects = selectedSubjects.filter(subject => !catalogKeys.has(normalizeSubjectKey(subject)));
     return `
@@ -2010,7 +2019,14 @@
           </div>
           <section class="advisory-shs-subject-picker" data-advisory-inline-shs ${isSeniorHighGrade(advisoryClass.gradeLevel) ? '' : 'hidden'}>
             <div><strong>Senior High Subjects</strong><p>Select only the subjects handled by this adviser. Removing a subject archives it, preserving grades and import history.</p></div>
-            <div data-advisory-inline-shs-picker>${isSeniorHighGrade(advisoryClass.gradeLevel) ? seniorHighSubjectPickerMarkup(advisoryClass.gradeLevel, activeRegularSubjects.map(item => item.subjectName)) : ''}</div>
+            <div id="advisoryInlineShsCurriculumField" ${isSeniorHighGrade(advisoryClass.gradeLevel) ? '' : 'hidden'}>
+              <p id="advisoryInlineShsCurriculumNote" class="text-muted"></p>
+              <label class="checkbox-row" id="advisoryInlineShsPilotRow" hidden>
+                <input type="checkbox" id="advisoryInlineShsPilotCurriculum" ${advisoryClass.shsCurriculum === 'SSHS' && Number.parseInt(advisoryClass.gradeLevel, 10) === 12 ? 'checked' : ''}>
+                This Grade 12 class uses Strengthened SHS (pilot school)
+              </label>
+            </div>
+            <div data-advisory-inline-shs-picker>${isSeniorHighGrade(advisoryClass.gradeLevel) ? seniorHighSubjectPickerMarkup(advisoryClass.gradeLevel, activeRegularSubjects.map(item => item.subjectName), seniorHighCatalogOptions(advisoryClass.gradeLevel, advisoryClass.schoolYear, advisoryClass.shsCurriculum)) : ''}</div>
           </section>
           <div class="special-program-weight-panel">
             <label class="checkbox-row"><input type="checkbox" id="advisoryInlineSpecialClass" ${advisoryClass.isSpecialClass ? 'checked' : ''}> This is a Special Class</label>
@@ -2125,19 +2141,42 @@
     const customSection = settingsForm?.querySelector('#advisoryInlineCustomSection');
     const inlineSeniorHighSection = settingsForm?.querySelector('[data-advisory-inline-shs]');
     const inlineSeniorHighPicker = settingsForm?.querySelector('[data-advisory-inline-shs-picker]');
+    const inlineShsCurriculumField = settingsForm?.querySelector('#advisoryInlineShsCurriculumField');
+    const inlineShsCurriculumNote = settingsForm?.querySelector('#advisoryInlineShsCurriculumNote');
+    const inlineShsPilotRow = settingsForm?.querySelector('#advisoryInlineShsPilotRow');
+    const inlineShsPilotCheckbox = settingsForm?.querySelector('#advisoryInlineShsPilotCurriculum');
     let selectedSeniorHighSubjects = isSeniorHighGrade(advisoryClass.gradeLevel)
       ? activeRegularSubjects.map(item => item.subjectName)
       : [];
+    const inlineCatalogOptions = () => seniorHighCatalogOptions(
+      inlineGradeInput?.value,
+      profileDb.schoolYear || advisoryClass.schoolYear,
+      inlineShsPilotCheckbox?.checked ? 'SSHS' : ''
+    );
+    const syncInlineCurriculumField = () => {
+      const seniorHigh = isSeniorHighGrade(inlineGradeInput?.value);
+      if (inlineShsCurriculumField) inlineShsCurriculumField.hidden = !seniorHigh;
+      if (!seniorHigh) return;
+      const info = typeof shsCurriculumOptionsForGrade === 'function'
+        ? shsCurriculumOptionsForGrade(inlineGradeInput.value, profileDb.schoolYear || advisoryClass.schoolYear)
+        : { showPilotOverride: false, note: '' };
+      if (inlineShsCurriculumNote) inlineShsCurriculumNote.textContent = info.note || '';
+      if (inlineShsPilotRow) inlineShsPilotRow.hidden = !info.showPilotOverride;
+      if (!info.showPilotOverride && inlineShsPilotCheckbox) inlineShsPilotCheckbox.checked = false;
+    };
     const syncInlineSeniorHighPicker = () => {
       if (!inlineGradeInput || !inlineSeniorHighSection || !inlineSeniorHighPicker) return;
       if (!inlineSeniorHighSection.hidden) selectedSeniorHighSubjects = collectSeniorHighSubjects(inlineSeniorHighPicker);
       const seniorHigh = isSeniorHighGrade(inlineGradeInput.value);
       inlineSeniorHighSection.hidden = !seniorHigh;
+      syncInlineCurriculumField();
       inlineSeniorHighPicker.innerHTML = seniorHigh
-        ? seniorHighSubjectPickerMarkup(inlineGradeInput.value, selectedSeniorHighSubjects)
+        ? seniorHighSubjectPickerMarkup(inlineGradeInput.value, selectedSeniorHighSubjects, inlineCatalogOptions())
         : '';
     };
     inlineGradeInput?.addEventListener('change', syncInlineSeniorHighPicker);
+    inlineShsPilotCheckbox?.addEventListener('change', syncInlineSeniorHighPicker);
+    syncInlineCurriculumField();
     const syncCustomSection = () => {
       const isCustom = sectionSelect?.value === '__custom__';
       if (!customSection) return;
@@ -2221,6 +2260,9 @@
             region: profileDb.region || advisoryClass.region,
             isSpecialClass,
             specialProgramName: isSpecialClass ? specialProgramName : '',
+            shsCurriculum: seniorHigh
+              ? resolveShsCurriculum(gradeLevel, profileDb.schoolYear || advisoryClass.schoolYear, inlineShsPilotCheckbox?.checked ? 'SSHS' : '')
+              : '',
             isActive: !archived,
             isArchived: archived
           });
@@ -2261,6 +2303,7 @@
     clearLocalSubjectGrades,
     standardSubjectsForGrade,
     isSeniorHighGrade,
+    seniorHighCatalogOptions,
     seniorHighSubjectPickerMarkup,
     collectSeniorHighSubjects,
     syncSeniorHighSubjects,

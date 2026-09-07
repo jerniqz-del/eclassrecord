@@ -3,7 +3,7 @@
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
 Current app version: 1.9.7
-Last reviewed: 2026-09-07
+Last reviewed: 2026-09-08
 
 ## 1. Project Foundation
 
@@ -29,6 +29,7 @@ Adjusted patches:
 Implemented changes:
 
 - Added DepEd Order No. 15 s. 2026 transitional grading support.
+- Added DepEd Order No. 017 s. 2026 Strengthened SHS catalogs for Grade 11, with Grade 12 in SY 2026-2027 defaulting to the 2016 K to 12 SHS subjects and DepEd Order No. 8 s. 2015 weights unless marked as a pilot SSHS class.
 - Added zero-based and descriptive grading behavior.
 - Added legacy DepEd Order No. 8 s. 2015 compatibility.
 - Added Key Stage 2 trimester calculation and universal trimester layout support.

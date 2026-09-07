@@ -28,6 +28,9 @@ assert.doesNotMatch(pin, /put\("pin"/);
 assert.match(navigation, /MobilePinLock\.requiresUnlock/);
 assert.match(navigation, /MobilePinUnlockScreen/);
 assert.match(unlock, /same six-digit PIN used on the desktop/);
+assert.match(unlock, /fun tryUnlock\(candidate: String\)/);
+assert.match(unlock, /if \(candidate\.length != 6 \|\| submitting\) return/);
+assert.match(unlock, /tryUnlock\(next\)/);
 assert.match(sync, /Unlink this desktop profile/);
 assert.match(sync, /Encrypted offline records and pending mobile changes will remain/);
 assert.match(sync, /lan-link-strength/);
@@ -53,5 +56,8 @@ assert.match(desktopCss, /\.companion-js-hidden\[hidden\] \{[\s\S]*display: none
 assert.match(desktopCss, /\.companion-js-grid\[hidden\] \{[\s\S]*display: grid !important/);
 assert.match(desktopHtml, /class="companion-pairing companion-js-hidden" id="companionPairingPanel"/);
 assert.match(desktopHtml, /Phone link/);
+assert.doesNotMatch(navigation, /key\(liveDataRevision\)/);
+assert.match(navigation, /DatabaseHelper\.observedRevision/);
+assert.match(read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'ui', 'ScoreEntryScreen.kt'), /rememberSaveable\(assignmentId, assessmentId\)/);
 
 console.log('Mobile trusted-link, PIN lock, link-quality, unlink, and 3D motion tests passed.');
