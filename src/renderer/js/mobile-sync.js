@@ -489,8 +489,13 @@ async function handleMobilePayload(payload) {
   if (payloadKind === 'changes') {
     try {
       const result = await window.MobileSyncBridge.applyBluetoothEnvelope(payload, isBleAuthorized);
-      await sendPayloadToMobile({ kind: 'change-result', success: true, accepted: result.accepted || 0 }, 'change result');
-      addSyncLog(`${result.accepted || 0} authorized mobile change${result.accepted === 1 ? '' : 's'} saved automatically.`);
+      await sendPayloadToMobile({
+        kind: 'change-result',
+        success: true,
+        accepted: result.accepted || 0,
+        acceptedChangeIds: result.acceptedChangeIds || []
+      }, 'change result');
+      addSyncLog(`${result.accepted || 0} mobile ${result.accepted === 1 ? 'entry' : 'entries'} saved automatically.`);
     } catch (error) {
       await sendPayloadToMobile({ kind: 'change-result', success: false, accepted: 0, error: error.message || 'Mobile entries were rejected.' }, 'change rejection');
       throw error;

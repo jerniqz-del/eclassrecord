@@ -100,6 +100,13 @@ object LanSyncManager {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val pollExecutor = Executors.newSingleThreadExecutor()
     private val actionExecutor = Executors.newSingleThreadExecutor()
+    private val livePushHandler = Handler(Looper.getMainLooper())
+    private val livePushRunnable = Runnable {
+        val ctx = appContext ?: return@Runnable
+        if (pairing == null || !isConnected) return@Runnable
+        if (!DatabaseHelper.hasUnsyncedChanges()) return@Runnable
+        pushChanges(ctx, "", null, null, true)
+    }
     @Volatile private var running = false
     @Volatile private var generation = 0L
     @Volatile private var pairing: LanPairing? = null
@@ -145,6 +152,7 @@ object LanSyncManager {
         refreshPhoneVersion(context.applicationContext)
         restoreReadyUpdate(context.applicationContext)
         scheduleUpdateReminder(context.applicationContext)
+        MobileUpdateNotifier.ensureChannel(context.applicationContext)
         if (pairing != null && autoReconnectEnabled) start(context)
     }
 
@@ -359,8 +367,9 @@ object LanSyncManager {
                     if (loopGeneration != generation) break
                     isConnected = true
                     connectionState = "Synced via Wi-Fi"
+                    if (DatabaseHelper.hasUnsyncedChanges()) scheduleLivePush(appContext)
                     measureLinkQuality()
-                    if (System.currentTimeMillis() - lastUpdateCheckAt > 5 * 60 * 1000) {
+                    if (System.currentTimeMillis() - lastUpdateCheckAt > 15 * 1000) {
                         checkForUpdate(appContext)
                     }
                 } catch (error: Exception) {
@@ -369,8 +378,8 @@ object LanSyncManager {
                     linkStrength = (linkStrength - 20).coerceAtLeast(0)
                     linkQuality = if (linkStrength == 0) "Offline" else "Weak"
                     diagnosticMessage = when (error) {
-                        is SocketTimeoutException -> "Desktop did not respond. Check Windows Firewall, guest Wi-Fi, or AP/client isolation."
-                        else -> "Desktop and phone may be on isolated router segments. Retrying trusted local discovery."
+                        is SocketTimeoutException -> "Desktop did not respond. Unlock the desktop profile if it is locked, then wait. A new QR is not required for this saved pairing."
+                        else -> "Waiting for the desktop WLAN server. Unlock the desktop profile if it is locked. The saved pairing stays trusted; a new QR is not required."
                     }
                     syncLog = error.message ?: diagnosticMessage
                     Thread.sleep(2000)
@@ -399,21 +408,38 @@ object LanSyncManager {
         syncLog = "Desktop revision $revision received automatically over Wi-Fi."
     }
 
+    fun scheduleLivePush(context: Context) {
+        appContext = context.applicationContext
+        livePushHandler.removeCallbacks(livePushRunnable)
+        livePushHandler.postDelayed(livePushRunnable, 450)
+    }
+
     fun pushChanges(
         context: Context,
         authorizationPin: String,
         changeIds: Collection<String>? = null,
+        onComplete: ((Boolean) -> Unit)? = null,
+        liveSync: Boolean = false,
     ): Boolean {
+        fun finish(success: Boolean): Boolean {
+            Handler(Looper.getMainLooper()).post { onComplete?.invoke(success) }
+            return success
+        }
         if (pairing == null) {
             syncLog = "Pair this profile over Wi-Fi or phone hotspot before pushing changes."
-            return false
+            return finish(false)
         }
         val changes = DatabaseHelper.pendingChanges(changeIds)
         if (changes.isEmpty()) {
+            if (liveSync) return finish(true)
             syncLog = if (changeIds == null) "No unsynced mobile changes." else "No reviewed mobile changes were selected."
-            return changeIds == null
+            return finish(changeIds == null)
         }
-        syncLog = "Sending ${changes.size} authorized mobile change${if (changes.size == 1) "" else "s"} over Wi-Fi / hotspot..."
+        syncLog = if (liveSync) {
+            "Sending ${changes.size} live ${if (changes.size == 1) "entry" else "entries"} to the desktop..."
+        } else {
+            "Sending ${changes.size} authorized mobile change${if (changes.size == 1) "" else "s"} over Wi-Fi / hotspot..."
+        }
         actionExecutor.execute {
             try {
                 val payload = JSONObject()
@@ -422,6 +448,7 @@ object LanSyncManager {
                     .put("profileId", pairing?.profileId.orEmpty())
                     .put("batchId", UUID.randomUUID().toString())
                     .put("baseRevision", DatabaseHelper.getRevision())
+                    .put("liveSync", liveSync)
                     .put("authorizationPin", authorizationPin)
                     .put("changes", org.json.JSONArray(json.encodeToString(changes)))
                 val body = JSONObject().put("payload", encrypt(payload.toString())).toString()
@@ -437,9 +464,15 @@ object LanSyncManager {
                 } else if (pairing?.protocolVersion == 1 && accepted == changes.size) {
                     DatabaseHelper.clearUnsyncedScores(context.applicationContext)
                 }
-                syncLog = "$accepted mobile change${if (accepted == 1) "" else "s"} saved automatically on the desktop."
+                syncLog = if (liveSync) {
+                    "$accepted ${if (accepted == 1) "entry" else "entries"} appeared on the desktop."
+                } else {
+                    "$accepted mobile change${if (accepted == 1) "" else "s"} saved automatically on the desktop."
+                }
+                Handler(Looper.getMainLooper()).post { onComplete?.invoke(true) }
             } catch (error: Exception) {
                 syncLog = error.message ?: "Mobile changes could not be sent. They remain saved on this phone."
+                Handler(Looper.getMainLooper()).post { onComplete?.invoke(false) }
             }
         }
         return true
@@ -504,10 +537,14 @@ object LanSyncManager {
                     updatePromptVisible = shouldPrompt(context)
                     scheduleUpdateReminder(context)
                     syncLog = "Desktop has Android ${available.versionName}. The verified package is already on this phone."
+                } else if (updateProgress in 1..99) {
+                    updateOfferVisible = false
+                    syncLog = "The desktop is sending Android ${available.versionName} to this phone..."
                 } else {
+                    updateOfferVisible = false
                     updatePromptVisible = false
-                    updateOfferVisible = shouldShowUpdateOffer(context, available.versionCode)
-                    syncLog = "Desktop has Android ${available.versionName} (build ${available.versionCode}). This phone is ${currentName.ifBlank { "older" }} (build $current). Ask the desktop to send the package when you are ready."
+                    syncLog = "Desktop has Android ${available.versionName}. Receiving the package now..."
+                    downloadUpdateInternal(context.applicationContext, available)
                 }
             }.onFailure {
                 if (!isUpdateReady) updateProgress = 0
@@ -520,7 +557,7 @@ object LanSyncManager {
         val info = updateInfo ?: return
         updateOfferVisible = false
         downloadUpdate(context)
-        syncLog = "Asking the desktop to send Android ${info.versionName} over Wi-Fi or hotspot..."
+        syncLog = "Receiving Android ${info.versionName} from the desktop over Wi-Fi or hotspot..."
     }
 
     fun dismissUpdateOffer(context: Context) {
@@ -567,6 +604,10 @@ object LanSyncManager {
         scheduleUpdateReminder(context)
     }
 
+    fun openReadyUpdatePrompt() {
+        if (isUpdateReady) updatePromptVisible = true
+    }
+
     fun installReadyUpdate(context: Context) {
         val target = File(downloadedUpdatePath)
         if (!isUpdateReady || !target.exists()) {
@@ -611,7 +652,8 @@ object LanSyncManager {
         updateOfferVisible = false
         updatePromptVisible = true
         reminderHandler.removeCallbacks(reminderRunnable)
-        syncLog = "Mobile update ${info.versionName} downloaded and verified. Install now or remind later."
+        MobileUpdateNotifier.notifyUpdateReady(context, info)
+        syncLog = "Mobile update ${info.versionName} arrived from the desktop. Install now or later."
     }
 
     private fun restoreReadyUpdate(context: Context) {

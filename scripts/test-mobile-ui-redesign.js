@@ -12,16 +12,22 @@ const sync = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'ec
 const classDetail = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'ui', 'ClassDetailScreen.kt');
 const scoreEntry = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'ui', 'ScoreEntryScreen.kt');
 const desktopFeature = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'ui', 'DesktopFeatureScreen.kt');
-const markPath = path.join(root, 'android', 'app', 'src', 'main', 'res', 'drawable-nodpi', 'eclass_3d_mark.png');
+const markPath = path.join(root, 'android', 'app', 'src', 'main', 'res', 'drawable-nodpi', 'eclass_app_icon.png');
 
-assert(fs.existsSync(markPath), 'The generated 3D app emblem must ship in the Android project.');
+assert(fs.existsSync(markPath), 'The desktop-matching app emblem must ship in the Android project.');
 const mark = fs.readFileSync(markPath);
 assert.strictEqual(mark.subarray(1, 4).toString(), 'PNG');
-assert(mark.length > 100_000, 'The 3D emblem should not be an empty placeholder.');
+assert(mark.length > 100_000, 'The app emblem should not be an empty placeholder.');
 
 assert.match(design, /fun BrandMark/);
+assert.match(design, /R\.drawable\.eclass_app_icon/);
+assert.match(read('android', 'app', 'src', 'main', 'res', 'mipmap-anydpi-v26', 'ic_launcher.xml'), /@color\/launcher_background/);
+assert.match(read('android', 'app', 'src', 'main', 'res', 'drawable', 'ic_launcher_foreground.xml'), /@drawable\/eclass_app_icon/);
 assert.match(design, /fun DepthIcon/);
 assert.match(design, /fun EClassTopBar/);
+assert.match(design, /LanSyncManager\.isUpdateReady/);
+assert.match(design, /openReadyUpdatePrompt/);
+assert.match(design, /Text\("Update"/);
 assert.match(design, /E-Class Record App v\$version/);
 assert.match(design, /getPackageInfo\(context\.packageName, 0\)\.versionName/);
 assert.match(design, /fun NeonCard/);

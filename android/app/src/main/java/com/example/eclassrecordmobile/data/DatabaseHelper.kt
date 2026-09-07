@@ -763,6 +763,8 @@ object DatabaseHelper {
     ) {
         val payload = currentPayload ?: return
         val key = "$learnerId|$assessmentId"
+        val existing = payload.assignments.find { it.id == assignmentId }?.scores?.get(key).orEmpty()
+        if (existing == score && unsyncedScores[assignmentId]?.containsKey(key) != true) return
 
         // Persist the pending desktop commit first so a process interruption cannot orphan the edit.
         val classScores = unsyncedScores.getOrPut(assignmentId) { mutableMapOf() }
@@ -791,7 +793,7 @@ object DatabaseHelper {
         }
         val newPayload = payload.copy(assignments = updatedAssignments)
         savePayload(context, newPayload)
-
+        notifyLivePush(context)
     }
 
     @Synchronized
@@ -840,6 +842,7 @@ object DatabaseHelper {
             assignment.copy(attendance = sessions)
         }
         savePayload(context, payload.copy(assignments = updatedAssignments))
+        notifyLivePush(context)
     }
 
     @Synchronized
@@ -872,6 +875,7 @@ object DatabaseHelper {
                 district = patch.district,
             ),
         )
+        notifyLivePush(context)
     }
 
     @Synchronized
@@ -900,6 +904,7 @@ object DatabaseHelper {
         val index = calendar.indexOfFirst { it.id == entry.id }
         if (index >= 0) calendar[index] = entry else calendar.add(entry)
         savePayload(context, payload.copy(calendar = calendar.sortedBy { it.date }))
+        notifyLivePush(context)
     }
 
     @Synchronized
@@ -917,5 +922,17 @@ object DatabaseHelper {
         )
         saveUnsyncedExtras(context)
         savePayload(context, payload.copy(calendar = payload.calendar.filterNot { it.id == eventId }))
+        notifyLivePush(context)
+    }
+
+    fun requestLivePublish(context: Context) {
+        notifyLivePush(context)
+    }
+
+    private fun notifyLivePush(context: Context) {
+        LanSyncManager.scheduleLivePush(context)
+        if (!LanSyncManager.isConnected) {
+            BleServerManager.scheduleLivePush(context)
+        }
     }
 }

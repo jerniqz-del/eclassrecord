@@ -189,7 +189,7 @@ fun ClassDetailScreen(
             }
             AnimatedContent(
                 targetState = selectedSheetTab,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 transitionSpec = {
                     val direction = if (targetState >= initialState) 1 else -1
                     (fadeIn() + slideInHorizontally { direction * it / 5 }) togetherWith
@@ -324,11 +324,9 @@ private fun GridGradeSheet(assignment: Assignment, term: String, mapePart: Strin
     val scoreWidth = 96.dp
     val sheetWidth = nameWidth + scoreWidth * assessments.size
     val horizontal = rememberScrollState()
-    Box(
-        modifier = Modifier.fillMaxSize().horizontalScroll(horizontal),
-    ) {
-        Column(modifier = Modifier.width(sheetWidth).fillMaxSize()) {
-            Row {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxWidth().horizontalScroll(horizontal)) {
+            Row(modifier = Modifier.width(sheetWidth)) {
                 GradeSheetCell("Learner", nameWidth, header = true)
                 assessments.forEach { assessment ->
                     GradeSheetCell(
@@ -338,17 +336,17 @@ private fun GridGradeSheet(assignment: Assignment, term: String, mapePart: Strin
                     )
                 }
             }
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(assignment.learners, key = { it.id }) { learner ->
-                    Row {
-                        GradeSheetCell(learner.name, nameWidth)
-                        assessments.forEach { assessment ->
-                            GradeSheetCell(
-                                assignment.scores["${learner.id}|${assessment.id}"].orEmpty(),
-                                scoreWidth,
-                                centered = true,
-                            )
-                        }
+        }
+        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            items(assignment.learners, key = { it.id }) { learner ->
+                Row(modifier = Modifier.width(sheetWidth).horizontalScroll(horizontal)) {
+                    GradeSheetCell(learner.name, nameWidth)
+                    assessments.forEach { assessment ->
+                        GradeSheetCell(
+                            assignment.scores["${learner.id}|${assessment.id}"].orEmpty(),
+                            scoreWidth,
+                            centered = true,
+                        )
                     }
                 }
             }

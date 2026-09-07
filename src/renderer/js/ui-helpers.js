@@ -375,6 +375,7 @@ const MODAL_ESCAPE_CLOSE_HANDLERS = {
   welcomeModal: 'closeWelcomeModal',
   donateModal: 'closeDonateModal',
   donateQrModal: 'closeDonateQrModal',
+  companionQrModal: 'closeCompanionQrModal',
   quickGradeModal: 'closeQuickGradeModal',
   scoreTransferPreviewModal: 'closeScoreTransferPreviewModal',
   scoreTransferModal: 'closeScoreTransferModal',

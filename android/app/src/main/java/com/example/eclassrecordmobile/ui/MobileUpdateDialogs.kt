@@ -33,14 +33,14 @@ fun MobileUpdateOfferDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(versionComparison(phoneVersionName, phoneVersionCode, update))
-                Text("Ask the desktop to send the verified Android package over Wi-Fi or hotspot. It is not installed until you confirm.")
+                Text("The desktop will send the verified Android package over Wi-Fi or hotspot. It is not installed until you confirm.")
                 if (update.releaseNotes.isNotBlank()) {
                     Text(update.releaseNotes, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         },
         confirmButton = {
-            Button(onClick = onRequestPackage) { Text("Ask desktop to send update") }
+            Button(onClick = onRequestPackage) { Text("Receive package now") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Not now") }

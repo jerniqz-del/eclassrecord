@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onCompanionAuthorizePairing: (callback) => subscribe('companion:authorize-pairing', callback),
   onCompanionToolCommand: (callback) => subscribe('companion:tool-command', callback),
   onCompanionClientActivity: (callback) => subscribe('companion:client-activity', callback),
+  onCompanionMobileUpdate: (callback) => subscribe('companion:mobile-update', callback),
 
   // File Backup & Migration Dialogs
   exportJson: (jsonString, defaultFileName) => ipcRenderer.invoke('dialog:export-json', jsonString, defaultFileName),

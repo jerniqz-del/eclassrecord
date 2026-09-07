@@ -5,7 +5,7 @@
  * file I/O and native dialogs, and initialises auto-updates.
  */
 
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session, safeStorage, protocol, net, crashReporter, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session, safeStorage, protocol, net, crashReporter, powerMonitor, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -71,6 +71,7 @@ let selectBluetoothDeviceCallback = null;
 let automaticBluetoothScanPending = false;
 let automaticBluetoothDiscoveryTag = '';
 let mobileUpdateCheckTimer = null;
+let lastNotifiedMobileVersion = 0;
 let rendererRecoveryPending = false;
 let unresponsiveDialogPending = false;
 let rendererStableTimer = null;
@@ -261,6 +262,29 @@ function mobileUpdatePackage() {
   return manifests.map(readMobileUpdateManifest).filter(Boolean).sort((a, b) => b.versionCode - a.versionCode)[0] || null;
 }
 
+function publicMobileUpdateStatus(github = mobileUpdateChannel.status()) {
+  const update = mobileUpdatePackage();
+  if (!update) return { available: false, github };
+  const { path: _privatePath, ...publicUpdate } = update;
+  return { available: true, update: publicUpdate, github };
+}
+
+function publishCompanionMobileUpdateStatus(status, { notifyUser = false } = {}) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('companion:mobile-update', status);
+  }
+  const version = Number(status?.update?.versionCode || 0);
+  if (!notifyUser || !status?.available || !version || version === lastNotifiedMobileVersion) return;
+  if (!Notification.isSupported()) return;
+  lastNotifiedMobileVersion = version;
+  const notification = new Notification({
+    title: 'Mobile update available',
+    body: `Android ${status.update.versionName} is cached and will be sent to linked phones.`,
+    icon: path.join(__dirname, '..', 'assets', 'icon.png')
+  });
+  notification.show();
+}
+
 async function importMobileUpdatePackage() {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: 'Import Android Mobile Update Manifest',
@@ -311,7 +335,7 @@ const companionSyncService = new CompanionSyncService({
     if (!profileAuth.isUnlocked() || (profileId && profileAuth.sessionProfileId() !== profileId)) {
       throw Object.assign(new Error('Unlock the matching desktop profile before pushing mobile changes.'), { statusCode: 403 });
     }
-    if (!profileAuth.authorizeChanges(profileId, payload.authorizationPin, companionSyncService.status?.pin)) {
+    if (!payload.liveSync && !profileAuth.authorizeChanges(profileId, payload.authorizationPin, companionSyncService.status?.pin)) {
       throw Object.assign(new Error('Incorrect profile PIN. Mobile changes were not applied.'), { statusCode: 403 });
     }
     return requestCompanionRenderer('companion:apply-changes', payload, 30000);
@@ -1685,18 +1709,13 @@ ipcMain.handle('companion:apk-install-stop', async () => mobileApkInstallService
 ipcMain.handle('companion:apk-install-status', async () => mobileApkInstallService.publicStatus());
 ipcMain.handle('companion:mobile-update-status', async () => {
   await mobileUpdateChannel.refresh(mobileUpdateRoot());
-  const update = mobileUpdatePackage();
-  const github = mobileUpdateChannel.status();
-  if (!update) return { available: false, github };
-  const { path: _privatePath, ...publicUpdate } = update;
-  return { available: true, update: publicUpdate, github };
+  return publicMobileUpdateStatus();
 });
 ipcMain.handle('companion:mobile-update-refresh', async () => {
   const github = await mobileUpdateChannel.refresh(mobileUpdateRoot(), { force: true });
-  const update = mobileUpdatePackage();
-  if (!update) return { available: false, github };
-  const { path: _privatePath, ...publicUpdate } = update;
-  return { available: true, update: publicUpdate, github };
+  const status = publicMobileUpdateStatus(github);
+  publishCompanionMobileUpdateStatus(status, { notifyUser: Boolean(status.available) });
+  return status;
 });
 ipcMain.handle('companion:mobile-update-import', importMobileUpdatePackage);
 ipcMain.on('companion:changes-result', (_event, requestId, result) => {
@@ -2387,6 +2406,10 @@ function startMobileUpdateBackgroundChecks() {
   if (mobileUpdateCheckTimer || isOfflineSmokeTest) return;
   const check = () => {
     mobileUpdateChannel.refresh(mobileUpdateRoot(), { force: true })
+      .then((github) => {
+        const status = publicMobileUpdateStatus(github);
+        publishCompanionMobileUpdateStatus(status, { notifyUser: github?.state === 'downloaded' });
+      })
       .catch(error => console.error('Background mobile update check failed:', error));
   };
   check();

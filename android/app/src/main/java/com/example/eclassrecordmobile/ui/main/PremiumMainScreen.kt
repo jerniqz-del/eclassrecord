@@ -487,15 +487,17 @@ private fun DashboardTab(
                 AttentionCard(
                     title = when {
                         payload == null -> "Connect to your desktop"
-                        hasUnsynced -> "Mobile changes are waiting"
+                        hasUnsynced && desktopLinked -> "Sending to desktop"
+                        hasUnsynced -> "Waiting to send"
                         else -> "Some grading entries are incomplete"
                     },
                     detail = when {
                         payload == null -> "Pair over Wi-Fi or a phone hotspot to receive the latest class record."
-                        hasUnsynced -> "Submit drafts so the desktop can validate and commit them."
+                        hasUnsynced && desktopLinked -> "New scores, attendance, profile, and calendar edits publish automatically. No Push needed."
+                        hasUnsynced -> "Entries stay on this phone and send themselves when the desktop is linked and unlocked."
                         else -> "${expectedScores - enteredScores} score cells still need an entry."
                     },
-                    onClick = if (payload == null || hasUnsynced) onSync else ({ onSelectTab(HomeTab.Grading) }),
+                    onClick = if (payload == null) onSync else ({ onSelectTab(HomeTab.Grading) }),
                 )
             }
         }

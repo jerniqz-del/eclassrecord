@@ -76,6 +76,20 @@ object BleServerManager {
     private var isReceivingBase64 = false
     private var lastPayloadWasChangeResult = false
     private var lastPayloadError = ""
+    private var livePushInFlight = false
+    private val livePushHandler = Handler(Looper.getMainLooper())
+    private val livePushRunnable = Runnable {
+        val ctx = contextRef ?: return@Runnable
+        if (!isAuthorized || isReceiving || livePushInFlight) return@Runnable
+        if (!DatabaseHelper.hasUnsyncedChanges()) return@Runnable
+        livePushInFlight = true
+        val queued = syncScoresToDesktop(ctx, "", null, liveSync = true)
+        if (!queued) {
+            livePushInFlight = false
+        } else {
+            livePushHandler.postDelayed({ livePushInFlight = false }, 15_000)
+        }
+    }
 
     private data class TxFrame(val label: String, val chunks: List<ByteArray>)
 
@@ -380,6 +394,7 @@ object BleServerManager {
         if (kind == "ping" && isAuthorized) {
             lastHeartbeatAt = Instant.now().toString()
             handshakeResponse = JSONObject().put("status", "pong").put("sentAt", message?.optLong("sentAt")).toString()
+            contextRef?.let { if (DatabaseHelper.hasUnsyncedChanges()) scheduleLivePush(it) }
             return true
         }
         if (kind == "quality" && isAuthorized) {
@@ -450,6 +465,7 @@ object BleServerManager {
                     txRetryCount += 1
                     if (txRetryCount > 3) {
                         syncLog = "Grade transfer failed while waiting for Bluetooth delivery. Please try again."
+                        livePushInFlight = false
                         activeTxFrame = null
                         activeTxIndex = 0
                         txRetryCount = 0
@@ -487,7 +503,11 @@ object BleServerManager {
 
             if (characteristic?.uuid == HANDSHAKE_CHAR_UUID) {
                 val authorized = handleHandshake(dataStr)
+                val wasAuthorized = isAuthorized
                 isAuthorized = authorized
+                if (!wasAuthorized) {
+                    if (authorized) contextRef?.let { scheduleLivePush(it) }
+                }
                 connectionState = if (authorized) "Connected & Authorized" else "Authorization Failed"
                 linkQuality = if (authorized) "Measuring..." else "Offline"
                 connectionProgress = if (authorized) 70 else 0
@@ -576,6 +596,9 @@ object BleServerManager {
                 connectionState = "Synced"
                 connectionProgress = 100
                 connectionProgressLabel = "Connected and synchronized"
+                if (DatabaseHelper.hasUnsyncedChanges()) {
+                    ctx?.let { scheduleLivePush(it) }
+                }
             } else {
                 syncLog = "Error: Sync succeeded but database parse failed."
                 connectionState = "Sync Error"
@@ -625,18 +648,21 @@ object BleServerManager {
                 }
                 "change-result" -> {
                     lastPayloadWasChangeResult = true
+                    livePushInFlight = false
                     val envelope = codec.decodeFromString(BluetoothEnvelope.serializer(), jsonStr)
                     if (!envelope.success) {
                         lastPayloadError = envelope.error.ifBlank { "Desktop rejected mobile changes." }
                         syncLog = lastPayloadError
                         return false
                     }
+                    livePushInFlight = false
                     if (envelope.acceptedChangeIds.isNotEmpty()) {
                         DatabaseHelper.acknowledgeChanges(context, envelope.acceptedChangeIds)
                     } else if (envelope.protocolVersion < 2) {
                         DatabaseHelper.clearUnsyncedScores(context)
                     }
                     syncLog = "${envelope.accepted} mobile change${if (envelope.accepted == 1) "" else "s"} saved on the desktop."
+                    if (DatabaseHelper.hasUnsyncedChanges()) scheduleLivePush(context)
                 }
                 else -> {
                     val payload = codec.decodeFromString(SyncPayload.serializer(), jsonStr)
@@ -651,11 +677,19 @@ object BleServerManager {
         }
     }
 
+    fun scheduleLivePush(context: Context) {
+        contextRef = context.applicationContext
+        if (!isAuthorized || isReceiving) return
+        livePushHandler.removeCallbacks(livePushRunnable)
+        livePushHandler.postDelayed(livePushRunnable, 450)
+    }
+
     // Trigger score sync back to desktop
     fun syncScoresToDesktop(
         context: Context,
         authorizationPin: String = "",
         changeIds: Collection<String>? = null,
+        liveSync: Boolean = false,
     ): Boolean {
         val device = connectedDevice
         val server = bluetoothGattServer
@@ -666,17 +700,22 @@ object BleServerManager {
 
         val changes = DatabaseHelper.pendingChanges(changeIds)
         if (changes.isEmpty()) {
+            if (liveSync) return true
             syncLog = if (changeIds == null) "No unsynced scores to upload." else "No reviewed mobile changes were selected."
             return changeIds == null
         }
 
-        val pinRequired = DatabaseHelper.getPayload()?.pushPinRequired ?: true
+        val pinRequired = !liveSync && (DatabaseHelper.getPayload()?.pushPinRequired ?: true)
         if (pinRequired && !authorizationPin.matches(Regex("\\d{6}"))) {
             syncLog = "Enter the six-digit desktop profile PIN to authorize this push."
             return false
         }
 
-        syncLog = "Sending ${changes.size} authorized change${if (changes.size == 1) "" else "s"} to the desktop..."
+        syncLog = if (liveSync) {
+            "Sending ${changes.size} live ${if (changes.size == 1) "entry" else "entries"} to the desktop..."
+        } else {
+            "Sending ${changes.size} authorized change${if (changes.size == 1) "" else "s"} to the desktop..."
+        }
         val pairing = BluetoothPairingStore.load(context)
         val payloadStr = outboundJson.encodeToString(
             MobileChangesEnvelope(
@@ -686,6 +725,7 @@ object BleServerManager {
                 baseRevision = DatabaseHelper.getRevision(),
                 changes = changes,
                 authorizationPin = authorizationPin,
+                liveSync = liveSync,
             )
         )
         sendDataToDesktop(payloadStr, "mobile changes")

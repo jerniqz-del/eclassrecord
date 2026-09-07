@@ -12,6 +12,8 @@ const review = read('android', 'app', 'src', 'main', 'java', 'com', 'example', '
 const lan = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'data', 'LanSyncManager.kt');
 const ble = read('android', 'app', 'src', 'main', 'java', 'com', 'example', 'eclassrecordmobile', 'data', 'BleServerManager.kt');
 
+const companion = read('src', 'renderer', 'js', 'mobile-sync-companion.js');
+
 assert.match(model, /data class PendingChangeReviewItem/);
 assert.match(model, /val affectsExisting: Boolean/);
 assert.match(model, /data class PendingChangeReview/);
@@ -38,6 +40,21 @@ assert.match(lan, /DatabaseHelper\.pendingChanges\(changeIds\)/);
 assert.match(ble, /changeIds: Collection<String>\? = null/);
 assert.match(ble, /DatabaseHelper\.pendingChanges\(changeIds\)/);
 assert.match(sync, /LanSyncManager\.pushChanges\([\s\S]*selectedPushChangeIds/);
-assert.match(sync, /syncScoresToDesktop\([\s\S]*if \(pushPinRequired\) pushPin else ""/);
+assert.match(sync, /pushSending/);
+assert.match(sync, /Sending\.\.\./);
+assert.match(sync, /BleServerManager\.syncScoresToDesktop/);
+assert.match(lan, /onComplete: \(\(Boolean\) -> Unit\)\? = null/);
+assert.match(sync, /While this phone is linked and the desktop profile is unlocked/);
+assert.match(sync, /publish automatically/);
+assert.match(lan, /fun scheduleLivePush/);
+assert.match(lan, /put\("liveSync", liveSync\)/);
+assert.match(helper, /notifyLivePush/);
+assert.match(helper, /fun requestLivePublish/);
+assert.match(ble, /fun scheduleLivePush/);
+assert.match(ble, /liveSync = liveSync/);
+assert.match(companion, /baseRevision > desktopRevision/);
+assert.match(companion, /renderRecordTable/);
+assert.match(companion, /if \(!request\.liveSync\)/);
+assert.doesNotMatch(companion, /Desktop data changed after these mobile edits were started/);
 
 console.log('Mobile push review tests passed.');

@@ -105,8 +105,12 @@ fun MainNavigation() {
   BackHandler {
     when {
       backStack.size > 1 -> backStack.removeLastOrNull()
-      DatabaseHelper.hasUnsyncedChanges() -> showExitDialog = true
-      else -> activity?.finish()
+      DatabaseHelper.hasUnsyncedChanges() && !LanSyncManager.isConnected && !BleServerManager.isAuthorized ->
+        showExitDialog = true
+      else -> {
+        if (DatabaseHelper.hasUnsyncedChanges()) DatabaseHelper.requestLivePublish(context)
+        activity?.finish()
+      }
     }
   }
 
@@ -157,8 +161,12 @@ fun MainNavigation() {
       modifier = Modifier.weight(1f).fillMaxSize(),
       onBack = {
         if (backStack.size > 1) backStack.removeLastOrNull()
-        else if (DatabaseHelper.hasUnsyncedChanges()) showExitDialog = true
-        else activity?.finish()
+        else if (DatabaseHelper.hasUnsyncedChanges() && !LanSyncManager.isConnected && !BleServerManager.isAuthorized) {
+          showExitDialog = true
+        } else {
+          if (DatabaseHelper.hasUnsyncedChanges()) DatabaseHelper.requestLivePublish(context)
+          activity?.finish()
+        }
       },
       entryProvider =
         entryProvider {
@@ -205,11 +213,10 @@ fun MainNavigation() {
     val pending = DatabaseHelper.pendingChangeCount()
     AlertDialog(
       onDismissRequest = { showExitDialog = false },
-      title = { Text("Unsynced mobile changes") },
+      title = { Text("Waiting to send") },
       text = {
         Text(
-          "$pending change${if (pending == 1) "" else "s"} are safely encrypted on this phone. " +
-            "Push them to the desktop now, keep editing, or close without pushing."
+          "$pending change${if (pending == 1) "" else "s"} stay encrypted on this phone and publish automatically once the desktop is linked and unlocked. Close anyway, or keep the app open."
         )
       },
       confirmButton = {
@@ -219,7 +226,7 @@ fun MainNavigation() {
             backStack.add(Sync)
           },
         ) {
-          Text(if (BleServerManager.isAuthorized) "Authorize push" else "Connect & push")
+          Text("Open connection")
         }
       },
       dismissButton = {

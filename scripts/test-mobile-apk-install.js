@@ -39,7 +39,9 @@ assert.match(mainSource, /companion:apk-install-start/);
 assert.match(preload, /startCompanionApkInstall/);
 assert.match(html, /id="companionApkInstallPanel"[^>]*companion-js-hidden|class="companion-pairing companion-js-hidden" id="companionApkInstallPanel"/);
 assert.doesNotMatch(html, /id="companionApkInstallPanel"[^>]*style=/);
+assert.match(html, /id="companionQrModal"/);
 assert.match(companion, /function startCompanionApkInstall/);
+assert.match(companion, /openCompanionQrModal/);
 assert.match(companion, /setCompanionDisplay\(document\.getElementById\('companionApkInstallPanel'\)/);
 assert.match(installer, /localport=38474 remoteip=LocalSubnet/);
 

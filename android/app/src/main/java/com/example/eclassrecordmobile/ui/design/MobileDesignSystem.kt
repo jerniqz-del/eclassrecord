@@ -27,8 +27,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,6 +62,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.eclassrecordmobile.R
+import com.example.eclassrecordmobile.data.LanSyncManager
 import com.example.eclassrecordmobile.theme.LocalDarkTheme
 import com.example.eclassrecordmobile.theme.LocalThemeController
 import com.example.eclassrecordmobile.theme.NeonBlue
@@ -90,7 +93,7 @@ fun BrandMark(
     size: Dp = 48.dp,
 ) {
     Image(
-        painter = painterResource(R.drawable.eclass_3d_mark),
+        painter = painterResource(R.drawable.eclass_app_icon),
         contentDescription = "E-Class Record",
         modifier = modifier.size(size),
     )
@@ -372,6 +375,21 @@ fun EClassTopBar(
             }
         },
         actions = {
+            if (LanSyncManager.isUpdateReady) {
+                TextButton(
+                    onClick = { LanSyncManager.openReadyUpdatePrompt() },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    modifier = Modifier.height(32.dp),
+                ) {
+                    Icon(
+                        Icons.Default.SystemUpdate,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Update", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
             if (showThemeToggle) {
                 IconButton(onClick = { themeController.toggle() }) {
                     DepthIcon(

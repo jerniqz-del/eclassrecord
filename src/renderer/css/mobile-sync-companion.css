@@ -177,7 +177,47 @@
   word-break: break-all;
 }
 
+#companionQrModal.modal-z-higher {
+  z-index: 13020;
+}
+
+.companion-update-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #dbeafe;
+  color: #1e3a8a;
+  border: 1px solid #93c5fd;
+}
+
+.companion-update-banner strong {
+  margin: 0;
+}
+
+.companion-qr-modal__body {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.companion-qr-modal__frame {
+  margin: 0;
+  padding: 10px;
+}
+
+.companion-qr-modal__timer {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-weight: 700;
+  color: #0f766e;
+}
+
 @media (max-width: 780px) {
   .companion-pairing { grid-template-columns: 1fr; }
   .companion-pairing__qr { max-width: 280px; }
+  .companion-qr-modal__body { grid-template-columns: 1fr; }
 }

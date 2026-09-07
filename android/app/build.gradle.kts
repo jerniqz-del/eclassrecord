@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.eclassrecordmobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 14
-        versionName = "1.11.4"
+        versionCode = 15
+        versionName = "1.12.0"
     }
 
     buildTypes {

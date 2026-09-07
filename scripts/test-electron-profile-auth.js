@@ -51,10 +51,14 @@ const companionBridge = fs.readFileSync(path.join(__dirname, '..', 'src', 'rende
 assert.doesNotMatch(mainSource, /security:set-profile-session/);
 assert.match(mainSource, /security:unlock-profile/);
 assert.match(mainSource, /profileAuth\.verifyAuthorizationPin/);
+assert.match(mainSource, /payload\.liveSync/);
 assert.match(preloadSource, /unlockProfile:/);
 assert.doesNotMatch(preloadSource, /setProfileSession:/);
 assert.match(sessionBridge, /api\.unlockProfile\(/);
-assert.doesNotMatch(companionBridge, /verifyActiveProfilePinForMobile\(String\(request\.authorizationPin/);
+assert.match(sessionBridge, /restoreTrustedLink/);
+assert.match(sessionBridge, /payload\?\.locked/);
+assert.match(companionBridge, /canRestoreTrustedLink/);
+assert.match(companionBridge, /isProfileSessionActive/);
 assert.match(markup, /'electronAPI'/);
 assert.match(markup, /BLOCKED_MEMBERS = new Set\(\['__proto__', 'prototype', 'constructor', 'electronAPI'\]\)/);
 

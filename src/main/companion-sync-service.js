@@ -587,6 +587,7 @@ class CompanionSyncService {
         batchId: String(payload.batchId || ''),
         baseRevision: Number(payload.baseRevision || 0),
         changes: payload.changes,
+        liveSync: Boolean(payload.liveSync),
         authorizationPin: String(payload.authorizationPin || payload.pin || '')
       });
       return json(response, 200, { success: true, result: result || { accepted: payload.changes.length } });

@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.eclassrecordmobile.data.DatabaseHelper
 import com.example.eclassrecordmobile.ui.design.EClassTopBar
+import kotlinx.coroutines.delay
 import com.example.eclassrecordmobile.ui.design.NeonCard
 import com.example.eclassrecordmobile.ui.design.WarningBadge
 import com.example.eclassrecordmobile.ui.design.themePanel
@@ -88,7 +89,7 @@ fun ScoreEntryScreen(
     val keyboardVisible = WindowInsets.ime.getBottom(density) > 0
 
     // Bottom sheet for quick jump roster list
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showRosterSheet by remember { mutableStateOf(false) }
 
     // Validation
@@ -121,6 +122,11 @@ fun ScoreEntryScreen(
     fun saveScore(value: String) {
         val cleaned = value.trim()
         DatabaseHelper.updateScore(context, assignmentId, activeLearner.id, assessmentId, cleaned)
+    }
+
+    LaunchedEffect(textState.text, currentIndex) {
+        delay(450)
+        saveScore(textState.text)
     }
 
     fun navigateNext() {
@@ -320,21 +326,25 @@ fun ScoreEntryScreen(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.92f)
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp)
                 ) {
                     Text(
                         "Jump to Student",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
                     )
                     
                     Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                     
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentPadding = PaddingValues(start = 0.dp, top = 8.dp, end = 0.dp, bottom = 24.dp)
                     ) {
                         itemsIndexed(learners) { index, learner ->
                             val sKey = "${learner.id}|$assessmentId"

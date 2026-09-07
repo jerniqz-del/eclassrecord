@@ -3,9 +3,14 @@
 
   const VALID_ATTENDANCE = new Set(['present', 'absent', 'tardy', 'excused']);
   const COMPANION_DISPLAY_CLASSES = ['companion-js-hidden', 'companion-js-grid', 'companion-js-flex', 'companion-js-inline-flex'];
+  const WLAN_QR_TTL_MS = 5 * 60 * 1000;
+  const INSTALL_QR_TTL_MS = 15 * 60 * 1000;
   let wlanStatus = { running: false };
   let apkInstallStatus = { running: false };
   let publishTimer = null;
+  let companionQrTimer = null;
+  let companionQrDeadline = 0;
+  let companionQrKind = '';
 
   function setCompanionDisplay(element, visible, shownClass) {
     if (!element) return;
@@ -34,6 +39,97 @@
       schoolYear: String(database.schoolYear || ''),
       desktopName: 'E-Class Record Desktop'
     };
+  }
+
+  function escapeCompanionHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+  }
+
+  function formatQrCountdown(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function stopCompanionQrTimer() {
+    if (!companionQrTimer) return;
+    clearInterval(companionQrTimer);
+    companionQrTimer = null;
+  }
+
+  function closeCompanionQrModal() {
+    stopCompanionQrTimer();
+    companionQrKind = '';
+    const modal = document.getElementById('companionQrModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function tickCompanionQrTimer() {
+    const remaining = companionQrDeadline - Date.now();
+    const timer = document.getElementById('companionQrModalTimer');
+    if (timer) {
+      timer.textContent = remaining <= 0
+        ? 'This QR expired. Close this window and generate a new one.'
+        : `This QR expires in ${formatQrCountdown(remaining)}. Click outside or Close to hide it. Pairing stays active.`;
+    }
+    if (remaining <= 0) closeCompanionQrModal();
+  }
+
+  function companionQrInstructions(kind) {
+    if (kind === 'install') {
+      const url = escapeCompanionHtml(document.getElementById('companionApkInstallUrl')?.textContent || apkInstallStatus.url || '');
+      const meta = escapeCompanionHtml(document.getElementById('companionApkInstallMeta')?.textContent || '');
+      return `<strong>Scan this QR with the phone camera</strong>
+        <ol>
+          <li>Use the same trusted Wi-Fi, or enable the phone hotspot and connect this computer to it.</li>
+          <li>Open the camera or a QR scanner, not the companion app scanner.</li>
+          <li>On the landing page tap Download APK, then allow install from this source if Android asks.</li>
+        </ol>
+        <p class="companion-apk-install-url">${url}</p>
+        <small>${meta}</small>`;
+    }
+    if (kind === 'bluetooth') {
+      const pin = escapeCompanionHtml(document.getElementById('companionBluetoothPairingPin')?.textContent || wlanStatus.pin || '');
+      return `<strong>Scan this Bluetooth QR from the Android app</strong>
+        <ol>
+          <li>On Android choose Connect to Desktop App → Bluetooth and scan this QR.</li>
+          <li>The phone advertises this QR session automatically.</li>
+          <li>The desktop detects the matching phone, authorizes it, and synchronizes without another click.</li>
+        </ol>
+        <div class="companion-pin-display"><span>Manual pairing PIN</span><strong>${pin}</strong></div>
+        <small>Keep this desktop pairing session open while using the companion app.</small>`;
+    }
+    const usesProfilePin = Boolean(globalScope.activeProfileRequiresPin?.());
+    const pin = escapeCompanionHtml(document.getElementById('companionPairingPin')?.textContent || wlanStatus.pin || '');
+    const pinHtml = usesProfilePin ? '' : `<div class="companion-pin-display"><span>Temporary pairing PIN (profile has no login PIN)</span><strong>${pin}</strong></div>`;
+    return `<strong>Scan this QR code from the Android app</strong>
+      <ol>
+        <li>Use the same trusted Wi-Fi, or enable the phone hotspot and connect this computer to it.</li>
+        <li>If Android times out, open Windows Firewall and allow E-Class Record on Private networks. Then refresh the QR.</li>
+        <li>On Android scan this QR and enter your usual profile login PIN. The PIN is neither displayed nor included in the QR.</li>
+      </ol>
+      ${pinHtml}
+      <small>Do not photograph or share this QR code. It contains the encrypted session key.</small>`;
+  }
+
+  function openCompanionQrModal({ kind, title, image, expiresAt, fallbackMs }) {
+    companionQrKind = kind;
+    const modal = document.getElementById('companionQrModal');
+    const titleEl = document.getElementById('companionQrModalTitle');
+    const imageEl = document.getElementById('companionQrModalImage');
+    const instructions = document.getElementById('companionQrModalInstructions');
+    if (titleEl) titleEl.textContent = title;
+    if (imageEl) imageEl.src = image || '';
+    if (instructions) instructions.innerHTML = companionQrInstructions(kind);
+    const parsed = Date.parse(expiresAt || '');
+    companionQrDeadline = Number.isFinite(parsed) ? parsed : Date.now() + (fallbackMs || WLAN_QR_TTL_MS);
+    if (modal) modal.style.display = 'flex';
+    stopCompanionQrTimer();
+    tickCompanionQrTimer();
+    companionQrTimer = setInterval(tickCompanionQrTimer, 1000);
   }
 
   function renderWlanPairingPin(status = wlanStatus) {
@@ -288,8 +384,8 @@
     if (status) status.textContent = wlanReady ? 'WLAN sync is ready' : 'WLAN sync is off';
     if (details) details.textContent = wlanReady
       ? `${(wlanStatus.networkInterfaces || []).map((item) => `${item.type} ${item.address}`).join(' · ') || wlanStatus.host}:${wlanStatus.port} · Revision ${wlanStatus.revision || 0}${wlanStatus.lastClientAt ? ' · Phone connected' : ''}`
-      : 'Create a QR for phones connected to the same trusted Wi-Fi network.';
-    setCompanionDisplay(panel, wlanReady, 'companion-js-grid');
+      : 'Linked phones reconnect automatically after you unlock a profile. A new QR is only needed for a first-time pair.';
+    setCompanionDisplay(panel, false, 'companion-js-grid');
     const strength = Math.max(0, Math.min(100, Number(wlanStatus.linkStrength || 0)));
     if (linkQuality) linkQuality.textContent = wlanStatus.lastClientAt
       ? `${wlanStatus.linkQuality || 'Connected'} · ${strength}%`
@@ -311,8 +407,8 @@
     const bluetoothStart = document.getElementById('btnStartCompanionBluetooth');
     const bluetoothStop = document.getElementById('btnStopCompanionBluetooth');
     const bluetoothScan = document.getElementById('btnScanBle');
-    setCompanionDisplay(bluetoothPanel, bluetoothReady, 'companion-js-grid');
-    setCompanionDisplay(bluetoothStart, !bluetoothReady, 'companion-js-inline-flex');
+    setCompanionDisplay(bluetoothPanel, false, 'companion-js-grid');
+    setCompanionDisplay(bluetoothStart, true, 'companion-js-inline-flex');
     setCompanionDisplay(bluetoothStop, bluetoothReady, 'companion-js-inline-flex');
     setCompanionDisplay(bluetoothScan, bluetoothReady, 'companion-js-inline-flex');
   }
@@ -326,6 +422,13 @@
       const image = await globalScope.electronAPI.generateCompanionQr(wlanStatus.pairingPayloadV2 || wlanStatus.pairingPayload);
       const qr = document.getElementById('companionPairingQr');
       if (qr) qr.src = image;
+      openCompanionQrModal({
+        kind: 'wlan',
+        title: 'WLAN pairing QR',
+        image,
+        expiresAt: wlanStatus.pairingExpiresAt,
+        fallbackMs: WLAN_QR_TTL_MS
+      });
       await publish();
       globalScope.toast?.('Companion WLAN pairing is ready.', 'success');
     } catch (error) {
@@ -336,6 +439,7 @@
 
   async function stopCompanionWlan() {
     wlanStatus = await globalScope.electronAPI.stopCompanionWlan();
+    if (companionQrKind === 'wlan' || companionQrKind === 'bluetooth') closeCompanionQrModal();
     renderWlanStatus();
   }
 
@@ -349,12 +453,19 @@
   function renderMobileUpdateStatus(result) {
     const status = document.getElementById('companionMobileUpdateStatus');
     const github = document.getElementById('companionMobileUpdateGithubStatus');
+    const banner = document.getElementById('companionMobileUpdateBanner');
+    const bannerText = document.getElementById('companionMobileUpdateBannerText');
+    const available = Boolean(result?.available);
     if (status) {
-      status.textContent = result?.available
-        ? `Cached Android update ${result.update.versionName} (${formatApkSize(result.update.size)}).`
+      status.textContent = available
+        ? `Cached Android update ${result.update.versionName} (${formatApkSize(result.update.size)}). Linked phones receive it automatically over Wi-Fi.`
         : 'No cached Android update.';
     }
     if (github) github.textContent = result?.github?.message || 'GitHub mobile updates have not been checked yet.';
+    if (bannerText && available) {
+      bannerText.textContent = `Android ${result.update.versionName} is ready. Linked phones receive the package over Wi-Fi or hotspot.`;
+    }
+    setCompanionDisplay(banner, available, 'companion-js-flex');
   }
 
   function renderApkInstallPanel(status = apkInstallStatus) {
@@ -363,7 +474,7 @@
     setCompanionDisplay(document.getElementById('btnStartCompanionApkInstall'), !running, 'companion-js-inline-flex');
     setCompanionDisplay(document.getElementById('btnRefreshCompanionApkInstall'), running, 'companion-js-inline-flex');
     setCompanionDisplay(document.getElementById('btnStopCompanionApkInstall'), running, 'companion-js-inline-flex');
-    setCompanionDisplay(document.getElementById('companionApkInstallPanel'), running, 'companion-js-grid');
+    setCompanionDisplay(document.getElementById('companionApkInstallPanel'), false, 'companion-js-grid');
     const url = document.getElementById('companionApkInstallUrl');
     const meta = document.getElementById('companionApkInstallMeta');
     if (url) url.textContent = running ? String(apkInstallStatus.url || '') : '';
@@ -412,6 +523,13 @@
       const qr = document.getElementById('companionApkInstallQr');
       if (qr) qr.src = apkInstallStatus.qrDataUrl || '';
       renderApkInstallPanel(apkInstallStatus);
+      openCompanionQrModal({
+        kind: 'install',
+        title: 'Android install QR',
+        image: apkInstallStatus.qrDataUrl || '',
+        expiresAt: apkInstallStatus.expiresAt,
+        fallbackMs: INSTALL_QR_TTL_MS
+      });
       globalScope.toast?.('Scan the install QR with the phone camera to download the APK.', 'success');
     } catch (error) {
       renderApkInstallPanel({ running: false });
@@ -421,6 +539,7 @@
 
   async function stopCompanionApkInstall() {
     apkInstallStatus = await globalScope.electronAPI.stopCompanionApkInstall();
+    if (companionQrKind === 'install') closeCompanionQrModal();
     renderApkInstallPanel(apkInstallStatus);
   }
 
@@ -450,9 +569,16 @@
       const scan = document.getElementById('btnScanBle');
       if (qr) qr.src = image;
       if (pin) pin.textContent = wlanStatus.pin;
-      setCompanionDisplay(panel, true, 'companion-js-grid');
+      setCompanionDisplay(panel, false, 'companion-js-grid');
       setCompanionDisplay(scan, true, 'companion-js-inline-flex');
       renderWlanStatus();
+      openCompanionQrModal({
+        kind: 'bluetooth',
+        title: 'Bluetooth pairing QR',
+        image,
+        expiresAt: wlanStatus.pairingExpiresAt,
+        fallbackMs: WLAN_QR_TTL_MS
+      });
       await publish();
       globalScope.toast?.('Bluetooth QR is ready. Scan it with Android; pairing will continue automatically.', 'success');
       setTimeout(() => globalScope.startAutomaticBluetoothDiscovery?.().catch((error) => {
@@ -479,10 +605,11 @@
       learnerId: learner.id,
       assessmentId: assessment.id,
       previousValue,
-      newValue: value,
+      newValue: value === '' ? '' : String(value),
       source: 'android-companion'
     });
-    assignment.scores[key] = value;
+    if (value === '') delete assignment.scores[key];
+    else assignment.scores[key] = value;
     return true;
   }
 
@@ -600,8 +727,10 @@
       throw new Error('Open the matching desktop profile before pushing its mobile changes.');
     }
     const latestStatus = await globalScope.electronAPI.getCompanionWlanStatus();
-    if (Number(request.baseRevision || 0) !== Number(latestStatus.revision || 0)) {
-      throw new Error('Desktop data changed after these mobile edits were started. Refresh the phone and review the drafts before sending again.');
+    const desktopRevision = Number(latestStatus.revision || 0);
+    const baseRevision = Number(request.baseRevision || 0);
+    if (baseRevision > desktopRevision) {
+      throw new Error('The phone is ahead of this desktop snapshot. Refresh the phone and try again.');
     }
     await globalScope.electronAPI.createDatabaseRestorePoint?.('android-companion-import');
     let accepted = 0;
@@ -638,8 +767,13 @@
       };
       await globalScope.saveDatabase();
       globalScope.render?.();
+      globalScope.renderRecordTable?.();
+      globalScope.scheduleRecordTableRefresh?.();
+      globalScope.renderFinalOnly?.();
       globalScope.refreshCalendarView?.();
-      globalScope.toast?.(`${accepted} mobile entries were applied to the desktop record.`, 'success');
+      if (!request.liveSync) {
+        globalScope.toast?.(`${accepted} mobile entries were applied to the desktop record.`, 'success');
+      }
     }
     return { success: true, accepted: acceptedChangeIds.length || accepted, acceptedChangeIds };
   }
@@ -738,23 +872,73 @@
     if (!accepted) globalScope.toast?.('The phone requested an unsupported desktop control.', 'warning');
   }
 
+  let restorePromise = null;
+
+  function isProfileSessionActive() {
+    return typeof sessionActive !== 'undefined' && sessionActive === true;
+  }
+
+  function isProfileLockError(error) {
+    return /unlock a desktop profile/i.test(String(error?.message || error || ''));
+  }
+
+  function canRestoreTrustedLink() {
+    if (!isProfileSessionActive()) return false;
+    const overlay = document.getElementById('profileOverlay');
+    if (!overlay) return true;
+    const display = String(overlay.style.display || '').trim().toLowerCase();
+    return display !== 'flex';
+  }
+
+  function watchProfileWorkspace() {
+    const overlay = document.getElementById('profileOverlay');
+    if (!overlay) return;
+    new MutationObserver(() => {
+      if (!canRestoreTrustedLink()) return;
+      restoreTrustedLink().catch((error) => {
+        if (isProfileLockError(error)) return;
+        console.error('Companion status restore failed:', error);
+      });
+    }).observe(overlay, { attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
+  }
+
+  async function restoreTrustedLink() {
+    if (!canRestoreTrustedLink()) return wlanStatus;
+    if (restorePromise) return restorePromise;
+    restorePromise = restoreStatus().finally(() => {
+      restorePromise = null;
+    });
+    return restorePromise;
+  }
+
   async function restoreStatus() {
+    if (!canRestoreTrustedLink()) {
+      renderWlanStatus();
+      return wlanStatus;
+    }
     let descriptor;
     try {
       descriptor = activeProfileDescriptor();
     } catch (_error) {
       renderWlanStatus();
-      return;
+      return wlanStatus;
     }
     wlanStatus = await globalScope.electronAPI.getCompanionWlanStatus();
     if (wlanStatus.running && wlanStatus.transport === 'bluetooth') {
-      wlanStatus = await globalScope.electronAPI.startCompanionBluetooth(descriptor);
+      try {
+        wlanStatus = await globalScope.electronAPI.startCompanionBluetooth(descriptor);
+      } catch (error) {
+        renderWlanStatus();
+        if (isProfileLockError(error)) return wlanStatus;
+        throw error;
+      }
     } else {
       try {
         wlanStatus = await globalScope.electronAPI.startCompanionWlan(descriptor);
-      } catch (_error) {
-        if (wlanStatus.running) throw _error;
-        wlanStatus = await globalScope.electronAPI.startCompanionBluetooth(descriptor);
+      } catch (error) {
+        renderWlanStatus();
+        if (isProfileLockError(error)) return wlanStatus;
+        throw error;
       }
     }
     if (wlanStatus.running) {
@@ -782,6 +966,7 @@
       }
     }
     renderWlanStatus();
+    return wlanStatus;
   }
 
   async function applyBluetoothEnvelope(payload, transportAuthorized = false) {
@@ -789,12 +974,23 @@
     return applyChanges(payload);
   }
 
-  globalScope.MobileSyncBridge = { buildCompanionSnapshot, publish, schedulePublish, flushPublish, authorizePairing, applyChanges, applyBluetoothEnvelope, handleToolCommand };
+  globalScope.MobileSyncBridge = {
+    buildCompanionSnapshot,
+    publish,
+    schedulePublish,
+    flushPublish,
+    restoreTrustedLink,
+    authorizePairing,
+    applyChanges,
+    applyBluetoothEnvelope,
+    handleToolCommand
+  };
   globalScope.startCompanionWlan = startCompanionWlan;
   globalScope.startCompanionBluetoothPairing = startCompanionBluetoothPairing;
   globalScope.stopCompanionWlan = stopCompanionWlan;
   globalScope.startCompanionApkInstall = startCompanionApkInstall;
   globalScope.stopCompanionApkInstall = stopCompanionApkInstall;
+  globalScope.closeCompanionQrModal = closeCompanionQrModal;
   globalScope.refreshCompanionMobileUpdateFromGithub = refreshCompanionMobileUpdateFromGithub;
   globalScope.importCompanionMobileUpdate = importCompanionMobileUpdate;
   globalScope.configureCompanionFirewall = configureCompanionFirewall;
@@ -807,7 +1003,10 @@
       wlanStatus = { ...wlanStatus, ...activity, lastClientAt: activity.at };
       renderWlanStatus();
     });
-    restoreStatus().catch((error) => console.error('Companion status restore failed:', error));
+    globalScope.electronAPI?.onCompanionMobileUpdate?.((status) => {
+      renderMobileUpdateStatus(status);
+    });
+    watchProfileWorkspace();
     restoreMobileUpdateUi().catch((error) => console.error('Companion update status restore failed:', error));
   });
 })(window);

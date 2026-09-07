@@ -86,6 +86,7 @@ fun SyncScreen(
     var pushTransport by rememberSaveable { mutableStateOf("lan") }
     var pushPin by rememberSaveable { mutableStateOf("") }
     var pushError by rememberSaveable { mutableStateOf("") }
+    var pushSending by rememberSaveable { mutableStateOf(false) }
     var pendingLanQr by rememberSaveable { mutableStateOf("") }
     var pairingPin by rememberSaveable { mutableStateOf("") }
     var pairingInProgress by rememberSaveable { mutableStateOf(false) }
@@ -297,6 +298,12 @@ fun SyncScreen(
     var wasFullySynced by remember { mutableStateOf(fullySynced) }
     var showSyncCompleteDialog by rememberSaveable { mutableStateOf(false) }
 
+    LaunchedEffect(lanConnected, isAuthorized, hasUnsynced) {
+        if (hasUnsynced && (lanConnected || isAuthorized)) {
+            DatabaseHelper.requestLivePublish(context)
+        }
+    }
+
     LaunchedEffect(fullySynced) {
         if (fullySynced && !wasFullySynced) {
             wasFullySynced = true
@@ -411,6 +418,7 @@ fun SyncScreen(
         val reviewedCount = selectedPushChangeIds.size
         AlertDialog(
             onDismissRequest = {
+                if (pushSending) return@AlertDialog
                 showPushAuthorization = false
                 pushPin = ""
                 pushError = ""
@@ -419,7 +427,9 @@ fun SyncScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        if (pushPinRequired) {
+                        if (pushSending) {
+                            LanSyncManager.syncLog.ifBlank { "Sending reviewed changes to the desktop..." }
+                        } else if (pushPinRequired) {
                             if (pushTransport == "lan") {
                                 "Enter your desktop profile PIN. $reviewedCount reviewed change${if (reviewedCount == 1) "" else "s"} will be sent primarily through Wi-Fi or the phone hotspot."
                             } else {
@@ -433,6 +443,9 @@ fun SyncScreen(
                             }
                         }
                     )
+                    if (pushError.isNotBlank() && !pushPinRequired) {
+                        Text(pushError, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                    }
                     if (pushPinRequired) {
                         OutlinedTextField(
                             value = pushPin,
@@ -454,39 +467,61 @@ fun SyncScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val accepted = if (pushTransport == "lan") {
-                            LanSyncManager.pushChanges(
-                                context,
-                                if (pushPinRequired) pushPin else "",
-                                selectedPushChangeIds,
-                            )
-                        } else {
-                            BleServerManager.syncScoresToDesktop(
-                                context,
-                                if (pushPinRequired) pushPin else "",
-                                selectedPushChangeIds,
-                            )
-                        }
-                        if (accepted) {
-                            showPushAuthorization = false
-                            pushPin = ""
+                        if (pushSending) return@Button
+                        val pin = if (pushPinRequired) pushPin else ""
+                        if (pushTransport == "lan") {
+                            pushSending = true
                             pushError = ""
+                            val started = LanSyncManager.pushChanges(
+                                context,
+                                pin,
+                                selectedPushChangeIds,
+                                onComplete = { ok: Boolean ->
+                                    pushSending = false
+                                    if (ok) {
+                                        showPushAuthorization = false
+                                        pushPin = ""
+                                        pushError = ""
+                                    } else {
+                                        pushError = LanSyncManager.syncLog
+                                    }
+                                },
+                            )
+                            if (!started) {
+                                pushSending = false
+                                pushError = LanSyncManager.syncLog
+                            }
                         } else {
-                            pushError = if (pushTransport == "lan") LanSyncManager.syncLog else BleServerManager.syncLog
+                            val accepted = BleServerManager.syncScoresToDesktop(
+                                context,
+                                pin,
+                                selectedPushChangeIds,
+                            )
+                            if (accepted) {
+                                showPushAuthorization = false
+                                pushPin = ""
+                                pushError = ""
+                            } else {
+                                pushError = BleServerManager.syncLog
+                            }
                         }
                     },
-                    enabled = !pushPinRequired || pushPin.length == 6,
+                    enabled = !pushSending && (!pushPinRequired || pushPin.length == 6),
                 ) {
-                    Text("Push to Desktop")
+                    Text(if (pushSending) "Sending..." else "Push to Desktop")
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showPushAuthorization = false
-                    showPushReview = true
-                    pushPin = ""
-                    pushError = ""
-                }) {
+                TextButton(
+                    onClick = {
+                        if (pushSending) return@TextButton
+                        showPushAuthorization = false
+                        showPushReview = true
+                        pushPin = ""
+                        pushError = ""
+                    },
+                    enabled = !pushSending,
+                ) {
                     Text("Back to review")
                 }
             },
@@ -680,6 +715,11 @@ fun SyncScreen(
                         }
                     }
                     if (lanPaired) {
+                        Text(
+                            "While this phone is linked and the desktop profile is unlocked, scores, attendance, profile, and calendar edits publish automatically. Retry leftover work only if the desktop was locked or offline.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Button(
                             onClick = { beginPushReview("lan") },
                             enabled = hasUnsynced,
@@ -723,9 +763,9 @@ fun SyncScreen(
                             }
                             Text("The verified update is stored safely and can be installed whenever you are ready.", fontSize = 11.sp)
                         } else {
-                            Text("The desktop has a newer Android package. Ask it to send the file over Wi-Fi or hotspot after the version check.", fontSize = 12.sp)
+                            Text("The desktop is sending the newer Android package over Wi-Fi or hotspot.", fontSize = 12.sp)
                             Button(onClick = { LanSyncManager.requestUpdateFromDesktop(context) }) {
-                                Text("Ask desktop to send update")
+                                Text("Receive package now")
                             }
                             Button(onClick = { LanSyncManager.checkForUpdate(context) }) { Text("Check desktop version") }
                         }
@@ -959,8 +999,16 @@ fun SyncScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // Bluetooth is only offered for pushes when this profile has no WLAN pairing.
+                // Bluetooth is only offered for leftover retries when this profile has no live WLAN link.
                 if (!lanConnected) {
+                if (isAuthorized) {
+                    Text(
+                        "Bluetooth entries publish automatically while this link is authorized. Retry leftover work only if a send was interrupted.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 Button(
                     onClick = { beginPushReview("bluetooth") },
                     enabled = isAuthorized && hasUnsynced,

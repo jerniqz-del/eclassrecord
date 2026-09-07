@@ -427,6 +427,10 @@
               </div>
               <div class="companion-update-host">
                 <strong>Mobile app updates</strong>
+                <div class="companion-update-banner companion-js-hidden" id="companionMobileUpdateBanner" hidden>
+                  <strong>Mobile update available</strong>
+                  <span id="companionMobileUpdateBannerText">A newer Android package is cached on this desktop.</span>
+                </div>
                 <span class="text-muted text-xs" id="companionMobileUpdateStatus">No cached Android update.</span>
                 <span class="text-muted text-xs" id="companionMobileUpdateGithubStatus">GitHub mobile updates have not been checked yet.</span>
                 <div class="sync-actions-row">
@@ -438,7 +442,7 @@
                   <button class="btn btn-secondary companion-js-hidden" id="btnRefreshCompanionApkInstall" data-eclass-onclick="startCompanionApkInstall()" hidden>Refresh install QR</button>
                   <button class="btn btn-ghost companion-js-hidden" id="btnStopCompanionApkInstall" data-eclass-onclick="stopCompanionApkInstall()" hidden>Stop install QR</button>
                 </div>
-                <small>The desktop checks the independent GitHub mobile channel automatically and keeps the last verified APK for offline WLAN/hotspot delivery. Scan the install QR with the phone camera to download the APK from this computer. If download fails after pairing already works, allow E-Class Record on Private networks for TCP 38474. Manual import remains available.</small>
+                <small>The desktop checks GitHub automatically, caches the verified APK, and sends it to linked phones over Wi-Fi or hotspot. A banner appears here when a mobile update is available. Scan the install QR with the phone camera only for first-time installs. If download fails after pairing already works, allow E-Class Record on Private networks for TCP 38474. Manual import remains available.</small>
                 <div class="companion-pairing companion-js-hidden" id="companionApkInstallPanel" hidden>
                   <div class="companion-pairing__qr"><img id="companionApkInstallQr" alt="Android APK install QR code"></div>
                   <div class="companion-pairing__instructions">
@@ -1292,6 +1296,23 @@
       </div>
       <div class="modal__actions">
         <button class="btn btn-primary btn-sm" data-eclass-onclick="hideDonateQrModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="companionQrModal" class="modal-overlay modal-z-higher" data-eclass-style="display:none" data-eclass-onclick="closeCompanionQrModal()">
+    <div class="modal modal--lg companion-qr-dialog" data-eclass-onclick="event.stopPropagation()">
+      <div class="modal__title modal__title-row">
+        <span id="companionQrModalTitle">Companion QR</span>
+        <button type="button" class="transmutation-table-close" data-modal-cancel data-eclass-onclick="closeCompanionQrModal()" aria-label="Close QR">×</button>
+      </div>
+      <div class="modal__body companion-qr-modal__body">
+        <div class="companion-pairing__qr companion-qr-modal__frame"><img id="companionQrModalImage" alt="Companion QR code"></div>
+        <div id="companionQrModalInstructions" class="companion-pairing__instructions companion-qr-modal__instructions"></div>
+        <p class="companion-qr-modal__timer" id="companionQrModalTimer">This window closes automatically.</p>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn-ghost" data-modal-cancel data-eclass-onclick="closeCompanionQrModal()">Close</button>
       </div>
     </div>
   </div>

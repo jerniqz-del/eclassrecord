@@ -184,6 +184,25 @@ function discoverLan(status) {
     assert.strictEqual(updateResponse.body.update.versionCode, 4);
     assert.strictEqual(updateResponse.body.update.path, undefined);
 
+    service.status.pairingExpiresAt = new Date(Date.now() - 1000).toISOString();
+    const expiredPair = await requestJson(
+      status.port,
+      'POST',
+      pairPath,
+      signedHeaders(status.secret, 'POST', pairPath, acceptedPairBody),
+      acceptedPairBody
+    );
+    assert.strictEqual(expiredPair.status, 410);
+    const eventsAfterExpiryPath = `/v1/snapshot?session=${encodeURIComponent(status.sessionId)}&revision=0`;
+    const eventsAfterExpiry = await requestJson(
+      status.port,
+      'GET',
+      eventsAfterExpiryPath,
+      signedHeaders(status.secret, 'GET', eventsAfterExpiryPath)
+    );
+    assert.strictEqual(eventsAfterExpiry.status, 200);
+    assert.strictEqual(eventsAfterExpiry.body.success, true);
+
     const persistentIdentity = {
       sessionId: status.sessionId,
       secret: status.secret,

@@ -35,7 +35,12 @@ const database = {
   region: 'V',
   division: 'Sorsogon',
   district: 'Old District',
-  assignments: [],
+  assignments: [{
+    id: 'class-1',
+    learners: [{ id: 'learner-1', name: 'Ana' }],
+    assessments: [{ id: 'a-1', title: 'WW1', maxScore: 10 }],
+    scores: {},
+  }],
   calendarEvents: [
     { id: 'local-1', title: 'Old event', startDate: '2026-09-10', endDate: '2026-09-10', date: '2026-09-10' },
     { id: 'official-deped-x', title: 'Official', startDate: '2026-09-11', endDate: '2026-09-11', immutable: true },
@@ -54,6 +59,9 @@ const window = {
   addEventListener() {},
   saveDatabase: async () => {},
   render() {},
+  renderRecordTable() {},
+  scheduleRecordTableRefresh() {},
+  renderFinalOnly() {},
   refreshCalendarView() {},
   toast() {},
 };
@@ -114,6 +122,31 @@ vm.runInNewContext(companion, context);
   const created = database.calendarEvents.find((event) => event.id === 'mobile-event-1');
   assert.strictEqual(created.title, 'PTA meeting');
   assert.strictEqual(created.source, 'android-companion');
+
+  const appliedScore = await window.MobileSyncBridge.applyChanges({
+    profileId: 'profile-1',
+    baseRevision: 3,
+    batchId: 'batch-score-1',
+    changes: [{
+      changeId: 'score-change-1',
+      type: 'score',
+      classId: 'class-1',
+      learnerId: 'learner-1',
+      assessmentId: 'a-1',
+      value: '9',
+    }],
+  });
+  assert.strictEqual(appliedScore.success, true);
+  assert.strictEqual(database.assignments[0].scores['learner-1|a-1'], 9);
+
+  await assert.rejects(
+    () => window.MobileSyncBridge.applyChanges({
+      profileId: 'profile-1',
+      baseRevision: 9,
+      changes: [{ changeId: 'score-change-future', type: 'score', classId: 'class-1', learnerId: 'learner-1', assessmentId: 'a-1', value: '8' }],
+    }),
+    /ahead of this desktop snapshot/,
+  );
 
   await assert.rejects(
     () => window.MobileSyncBridge.applyChanges({

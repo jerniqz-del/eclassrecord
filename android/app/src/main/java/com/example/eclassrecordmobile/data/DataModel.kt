@@ -168,7 +168,8 @@ data class MobileChangesEnvelope(
     val batchId: String = "",
     val baseRevision: Long,
     val changes: List<MobileChange>,
-    val authorizationPin: String = ""
+    val authorizationPin: String = "",
+    val liveSync: Boolean = false,
 )
 
 @Serializable
