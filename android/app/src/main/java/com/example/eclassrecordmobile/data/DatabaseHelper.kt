@@ -18,6 +18,7 @@ object DatabaseHelper {
     private const val UNSYNCED_SCORE_IDS_FILE_NAME = "unsynced_score_ids.json"
     private const val UNSYNCED_ATTENDANCE_FILE_NAME = "unsynced_attendance.json"
     private const val UNSYNCED_EXTRAS_FILE_NAME = "unsynced_extras.json"
+    private const val AUTHORITATIVE_FILE_NAME = "authoritative_db.json"
 
     private val json = Json { 
         ignoreUnknownKeys = true
@@ -25,6 +26,7 @@ object DatabaseHelper {
     }
 
     private var currentPayload: SyncPayload? = null
+    private var lastAuthoritative: SyncPayload? = null
     private var activeProfileKey: String = ""
     var observedProfileKey by mutableStateOf("")
         private set
@@ -61,6 +63,9 @@ object DatabaseHelper {
     private fun getUnsyncedExtrasFile(context: Context) =
         File(storageDirectory(context), UNSYNCED_EXTRAS_FILE_NAME)
 
+    private fun getAuthoritativeFile(context: Context) =
+        File(storageDirectory(context), AUTHORITATIVE_FILE_NAME)
+
     private fun getUnsyncedAttendanceFile(context: Context): File {
         return File(storageDirectory(context), UNSYNCED_ATTENDANCE_FILE_NAME)
     }
@@ -73,6 +78,7 @@ object DatabaseHelper {
         observedProfileKey = profileKey
         migrateLegacyFiles(context)
         currentPayload = null
+        lastAuthoritative = null
         unsyncedScores = mutableMapOf()
         unsyncedScoreIds = mutableMapOf()
         unsyncedAttendance = mutableListOf()
@@ -92,6 +98,7 @@ object DatabaseHelper {
             activeProfileKey = ""
             observedProfileKey = ""
             currentPayload = null
+            lastAuthoritative = null
             unsyncedScores = mutableMapOf()
             unsyncedScoreIds = mutableMapOf()
             unsyncedAttendance = mutableListOf()
@@ -113,6 +120,7 @@ object DatabaseHelper {
             UNSYNCED_SCORE_IDS_FILE_NAME,
             UNSYNCED_ATTENDANCE_FILE_NAME,
             UNSYNCED_EXTRAS_FILE_NAME,
+            AUTHORITATIVE_FILE_NAME,
         ).forEach { name ->
             val source = File(context.filesDir, name)
             val destination = File(target, name)
@@ -131,6 +139,8 @@ object DatabaseHelper {
 
     @Synchronized
     fun saveAuthoritativePayload(context: Context, payload: SyncPayload) {
+        lastAuthoritative = payload
+        saveAuthoritativeSnapshot(context)
         savePayload(context, mergePendingChanges(payload))
     }
 
@@ -217,19 +227,274 @@ object DatabaseHelper {
         }
     }
 
-    fun pendingChanges(): List<MobileChange> = unsyncedScores.flatMap { (classId, scores) ->
-        scores.mapNotNull { (key, value) ->
-            val separator = key.indexOf('|')
-            if (separator < 1) null else MobileChange(
-                changeId = scoreChangeId(classId, key, value),
-                type = "score",
-                classId = classId,
-                learnerId = key.substring(0, separator),
-                assessmentId = key.substring(separator + 1),
-                value = value,
+    fun pendingChanges(changeIds: Collection<String>? = null): List<MobileChange> {
+        val all = unsyncedScores.flatMap { (classId, scores) ->
+            scores.mapNotNull { (key, value) ->
+                val separator = key.indexOf('|')
+                if (separator < 1) null else MobileChange(
+                    changeId = scoreChangeId(classId, key, value),
+                    type = "score",
+                    classId = classId,
+                    learnerId = key.substring(0, separator),
+                    assessmentId = key.substring(separator + 1),
+                    value = value,
+                )
+            }
+        } + unsyncedAttendance.map(::withChangeId) + unsyncedExtras.map(::withChangeId)
+        if (changeIds == null) return all
+        val wanted = changeIds.toSet()
+        return all.filter { it.changeId in wanted }
+    }
+
+    fun reviewPendingChanges(): PendingChangeReview {
+        val snapshot = lastAuthoritative
+        val pending = pendingChanges()
+        val items = pending.flatMap { change -> reviewItem(change, snapshot) }.toMutableList()
+        val reviewedIds = items.map { it.changeId }.toSet()
+        pending.filter { it.changeId !in reviewedIds }.forEach { change ->
+            items += PendingChangeReviewItem(
+                changeId = change.changeId,
+                change = change,
+                affectsExisting = true,
+                kindLabel = change.type.replaceFirstChar { it.uppercaseChar() },
+                title = "Pending ${change.type} change",
+                detail = "This change could not be compared with the desktop copy, so it is listed as possibly affecting existing records.",
+                previousValue = "Not compared yet",
+                newValue = displayValue(change.value ?: change.status ?: change.title),
             )
         }
-    } + unsyncedAttendance.map(::withChangeId) + unsyncedExtras.map(::withChangeId)
+        return PendingChangeReview(
+            items = items,
+            hasAuthoritativeSnapshot = snapshot != null,
+        )
+    }
+
+    private fun reviewItem(change: MobileChange, snapshot: SyncPayload?): List<PendingChangeReviewItem> {
+        return when (change.type) {
+            "score" -> listOf(reviewScore(change, snapshot))
+            "attendance" -> listOf(reviewAttendance(change, snapshot))
+            "calendar" -> listOf(reviewCalendar(change, snapshot))
+            "profile" -> reviewProfile(change, snapshot)
+            else -> listOf(
+                PendingChangeReviewItem(
+                    changeId = change.changeId,
+                    change = change,
+                    affectsExisting = true,
+                    kindLabel = "Other",
+                    title = "Unrecognized mobile change",
+                    detail = "This change is listed as possibly affecting existing desktop data until it can be classified.",
+                    previousValue = displayValue(""),
+                    newValue = displayValue(change.value),
+                )
+            )
+        }
+    }
+
+    private fun reviewScore(change: MobileChange, snapshot: SyncPayload?): PendingChangeReviewItem {
+        val assignment = assignmentFor(change.classId, snapshot)
+        val key = "${change.learnerId}|${change.assessmentId.orEmpty()}"
+        val desktopAssignment = snapshot?.let { authoritativeAssignment(it, change.classId) }
+        val previous = when {
+            snapshot == null -> null
+            desktopAssignment == null -> null
+            else -> desktopAssignment.scores[key].orEmpty()
+        }
+        val next = change.value.orEmpty()
+        val affects = previous == null || (previous.isNotBlank() && previous != next)
+        val learner = learnerName(assignment, change.learnerId)
+        val assessment = assessmentTitle(assignment, change.assessmentId.orEmpty())
+        return PendingChangeReviewItem(
+            changeId = change.changeId,
+            change = change,
+            affectsExisting = affects,
+            kindLabel = "Score",
+            title = "$learner · $assessment",
+            detail = assignmentLabel(assignment),
+            previousValue = if (previous == null) "Not compared yet" else displayValue(previous),
+            newValue = displayValue(next),
+        )
+    }
+
+    private fun reviewAttendance(change: MobileChange, snapshot: SyncPayload?): PendingChangeReviewItem {
+        val assignment = assignmentFor(change.classId, snapshot)
+        val date = change.date.orEmpty()
+        val term = change.term ?: "1"
+        val desktopAssignment = snapshot?.let { authoritativeAssignment(it, change.classId) }
+        val previous = when {
+            snapshot == null -> null
+            desktopAssignment == null -> null
+            else -> desktopAssignment.attendance
+                .find { it.date == date && it.term == term }
+                ?.statuses
+                ?.find { it.learnerId == change.learnerId }
+                ?.status
+                .orEmpty()
+        }
+        val next = change.status.orEmpty()
+        val affects = previous == null || (previous.isNotBlank() && previous != next)
+        val learner = learnerName(assignment, change.learnerId)
+        return PendingChangeReviewItem(
+            changeId = change.changeId,
+            change = change,
+            affectsExisting = affects,
+            kindLabel = "Attendance",
+            title = "$learner · $date",
+            detail = "${assignmentLabel(assignment)} · Term $term",
+            previousValue = if (previous == null) "Not compared yet" else displayAttendance(previous),
+            newValue = displayAttendance(next),
+        )
+    }
+
+    private fun reviewCalendar(change: MobileChange, snapshot: SyncPayload?): PendingChangeReviewItem {
+        val eventId = change.eventId.orEmpty().ifBlank { change.assessmentId.orEmpty() }
+        val existing = snapshot?.calendar?.find { it.id == eventId }
+        val deleting = change.action == "delete"
+        val affects = snapshot == null || existing != null
+        val title = when {
+            deleting && existing != null -> "Delete “${existing.title}”"
+            deleting -> "Delete calendar event"
+            existing == null -> change.title?.ifBlank { change.value }.orEmpty().ifBlank { "New school event" }
+            else -> "Update “${existing.title}”"
+        }
+        val next = if (deleting) {
+            "Remove from desktop calendar"
+        } else {
+            listOf(
+                change.title?.ifBlank { change.value }.orEmpty(),
+                change.date.orEmpty(),
+                change.endDate?.takeIf { it.isNotBlank() && it != change.date }?.let { "to $it" }.orEmpty(),
+            ).filter { it.isNotBlank() }.joinToString(" · ")
+        }
+        return PendingChangeReviewItem(
+            changeId = change.changeId,
+            change = change,
+            affectsExisting = affects,
+            kindLabel = "Calendar",
+            title = title,
+            detail = if (existing == null && snapshot != null && !deleting) {
+                "This event is not on the desktop yet."
+            } else if (deleting) {
+                "This will remove an event already stored on the desktop."
+            } else {
+                "This will replace the event already stored on the desktop."
+            },
+            previousValue = when {
+                snapshot == null -> "Not compared yet"
+                existing == null -> "None"
+                else -> listOf(existing.title, existing.date).filter { it.isNotBlank() }.joinToString(" · ")
+            },
+            newValue = next.ifBlank { displayValue("") },
+        )
+    }
+
+    private fun reviewProfile(change: MobileChange, snapshot: SyncPayload?): List<PendingChangeReviewItem> {
+        val patch = decodeProfilePatch(change) ?: return emptyList()
+        val diffs = profileFieldLabels().mapNotNull { (field, label) ->
+            if (!change.field.isNullOrBlank() && change.field != field) return@mapNotNull null
+            val next = profilePatchValue(patch, field)
+            val previous = snapshot?.let { profilePayloadValue(it, field) }
+            if (change.field.isNullOrBlank() && next.isBlank()) return@mapNotNull null
+            if (previous != null && next == previous) return@mapNotNull null
+            val affects = previous == null || (previous.isNotBlank() && previous != next)
+            PendingChangeReviewItem(
+                changeId = change.changeId,
+                change = change,
+                affectsExisting = affects,
+                kindLabel = "Profile",
+                title = label,
+                detail = if (affects) {
+                    "This value is already filled on the desktop."
+                } else {
+                    "This field is empty on the desktop."
+                },
+                previousValue = if (previous == null) "Not compared yet" else displayValue(previous),
+                newValue = displayValue(next),
+            )
+        }
+        if (diffs.isEmpty()) return emptyList()
+        if (change.field.isNullOrBlank() && diffs.size > 1) {
+            val affects = diffs.any { it.affectsExisting }
+            return listOf(
+                PendingChangeReviewItem(
+                    changeId = change.changeId,
+                    change = change,
+                    affectsExisting = affects,
+                    kindLabel = "Profile",
+                    title = if (affects) "School identity fields already on the desktop" else "New school identity fields",
+                    detail = diffs.joinToString("\n") { item ->
+                        "${item.title}: ${item.previousValue} → ${item.newValue}"
+                    },
+                    previousValue = diffs.joinToString(", ") { "${it.title} ${it.previousValue}" },
+                    newValue = diffs.joinToString(", ") { "${it.title} ${it.newValue}" },
+                )
+            )
+        }
+        return diffs
+    }
+
+    private fun displayValue(value: String?): String {
+        val text = value?.trim().orEmpty()
+        return if (text.isBlank()) "Empty" else text
+    }
+
+    private fun displayAttendance(value: String): String = when (value.trim().lowercase()) {
+        "" -> "None recorded"
+        "present" -> "Present"
+        "absent" -> "Absent"
+        "tardy" -> "Tardy"
+        "excused" -> "Excused"
+        else -> value
+    }
+
+    private fun assignmentFor(classId: String, snapshot: SyncPayload?): Assignment? =
+        snapshot?.let { authoritativeAssignment(it, classId) }
+            ?: currentPayload?.assignments?.find { it.id == classId }
+
+    private fun authoritativeAssignment(snapshot: SyncPayload, classId: String): Assignment? =
+        snapshot.assignments.find { it.id == classId }
+
+    private fun assignmentLabel(assignment: Assignment?): String {
+        if (assignment == null) return "Unknown class"
+        return listOf(assignment.gradeLevel, assignment.section, assignment.subject)
+            .filter { it.isNotBlank() }
+            .joinToString(" · ")
+            .ifBlank { "Class" }
+    }
+
+    private fun learnerName(assignment: Assignment?, learnerId: String): String =
+        assignment?.learners?.find { it.id == learnerId }?.name?.ifBlank { learnerId } ?: learnerId
+
+    private fun assessmentTitle(assignment: Assignment?, assessmentId: String): String =
+        assignment?.assessments?.find { it.id == assessmentId }?.title?.ifBlank { assessmentId } ?: assessmentId
+
+    private fun profileFieldLabels(): List<Pair<String, String>> = listOf(
+        "teacherName" to "Teacher name",
+        "schoolName" to "School name",
+        "schoolId" to "School ID",
+        "region" to "Region",
+        "division" to "Division",
+        "district" to "District",
+    )
+
+    private fun profilePayloadValue(payload: SyncPayload, field: String): String = when (field) {
+        "teacherName" -> payload.teacherName
+        "schoolName" -> payload.schoolName
+        "schoolId" -> payload.schoolId
+        "region" -> payload.region
+        "division" -> payload.division
+        "district" -> payload.district
+        else -> ""
+    }
+
+    private fun profilePatchValue(patch: ProfilePatch, field: String): String = when (field) {
+        "teacherName" -> patch.teacherName
+        "schoolName" -> patch.schoolName
+        "schoolId" -> patch.schoolId
+        "region" -> patch.region
+        "division" -> patch.division
+        "district" -> patch.district
+        else -> ""
+    }
 
     private fun scoreChangeId(classId: String, key: String, value: String): String {
         unsyncedScoreIds[classId]?.get(key)?.takeIf { it.isNotBlank() }?.let { return it }
@@ -356,6 +621,19 @@ object DatabaseHelper {
         } catch (e: Exception) {
             recordStorageError("Pending profile and calendar changes could not be decrypted. They were not overwritten.", e)
         }
+        try {
+            val authoritativeFile = getAuthoritativeFile(context)
+            lastAuthoritative = if (authoritativeFile.exists()) {
+                val stored = SecureFileStore.readText(authoritativeFile)
+                if (stored.wasPlaintext) SecureFileStore.writeText(authoritativeFile, stored.text)
+                json.decodeFromString(SyncPayload.serializer(), stored.text)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            lastAuthoritative = null
+            Log.e(TAG, "The stored desktop snapshot could not be opened for change review.", e)
+        }
 
         currentPayload = currentPayload?.let(::mergePendingChanges)
     }
@@ -426,6 +704,18 @@ object DatabaseHelper {
             )
         } catch (e: Exception) {
             recordStorageError("Error saving encrypted pending profile and calendar changes.", e)
+        }
+    }
+
+    private fun saveAuthoritativeSnapshot(context: Context) {
+        val payload = lastAuthoritative ?: return
+        try {
+            SecureFileStore.writeText(
+                getAuthoritativeFile(context),
+                json.encodeToString(SyncPayload.serializer(), payload),
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "The desktop snapshot for change review could not be saved.", e)
         }
     }
 
@@ -555,14 +845,21 @@ object DatabaseHelper {
     @Synchronized
     fun updateProfile(context: Context, patch: ProfilePatch) {
         val payload = currentPayload ?: return
+        val baseline = lastAuthoritative ?: payload
         unsyncedExtras.removeAll { it.type == "profile" }
-        unsyncedExtras.add(
-            MobileChange(
-                changeId = UUID.randomUUID().toString(),
-                type = "profile",
-                value = json.encodeToString(ProfilePatch.serializer(), patch),
-            ),
-        )
+        profileFieldLabels().forEach { (field, _) ->
+            val next = profilePatchValue(patch, field)
+            val previous = profilePayloadValue(baseline, field)
+            if (next == previous) return@forEach
+            unsyncedExtras.add(
+                MobileChange(
+                    changeId = UUID.randomUUID().toString(),
+                    type = "profile",
+                    field = field,
+                    value = next,
+                ),
+            )
+        }
         saveUnsyncedExtras(context)
         savePayload(
             context,

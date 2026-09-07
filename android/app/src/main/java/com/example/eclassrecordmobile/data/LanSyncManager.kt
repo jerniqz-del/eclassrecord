@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +45,12 @@ data class MobileUpdateInfo(
     val releaseNotes: String,
 )
 
+data class UpdateReminderOption(
+    val id: String,
+    val label: String,
+    val delayMs: Long,
+)
+
 object LanSyncManager {
     var isPaired by mutableStateOf(false)
         private set
@@ -59,6 +67,12 @@ object LanSyncManager {
     var isUpdateReady by mutableStateOf(false)
         private set
     var updatePromptVisible by mutableStateOf(false)
+        private set
+    var updateOfferVisible by mutableStateOf(false)
+        private set
+    var phoneVersionName by mutableStateOf("")
+        private set
+    var phoneVersionCode by mutableStateOf(0L)
         private set
     var dataRevision by mutableStateOf(0L)
         private set
@@ -98,8 +112,25 @@ object LanSyncManager {
     private const val UPDATE_PREFERENCES = "mobile_update_state"
     private const val READY_MANIFEST = "ready_manifest"
     private const val DEFERRED_UNTIL = "deferred_until"
+    private const val OFFER_DISMISSED_VERSION = "offer_dismissed_version"
     private const val UI_PREFERENCES = "mobile_ui_preferences"
     private const val AUTO_RECONNECT = "auto_reconnect"
+
+    val updateReminderOptions = listOf(
+        UpdateReminderOption("5m", "In 5 minutes", 5 * 60 * 1000L),
+        UpdateReminderOption("10m", "In 10 minutes", 10 * 60 * 1000L),
+        UpdateReminderOption("30m", "In 30 minutes", 30 * 60 * 1000L),
+        UpdateReminderOption("1h", "In 1 hour", 60 * 60 * 1000L),
+        UpdateReminderOption("2h", "In 2 hours", 2 * 60 * 60 * 1000L),
+        UpdateReminderOption("5h", "In 5 hours", 5 * 60 * 60 * 1000L),
+        UpdateReminderOption("12h", "In 12 hours", 12 * 60 * 60 * 1000L),
+        UpdateReminderOption("tomorrow", "Tomorrow", 24 * 60 * 60 * 1000L),
+    )
+
+    private val reminderHandler = Handler(Looper.getMainLooper())
+    private val reminderRunnable = Runnable {
+        if (isUpdateReady) updatePromptVisible = true
+    }
 
     fun init(context: Context) {
         appContext = context.applicationContext
@@ -111,7 +142,9 @@ object LanSyncManager {
         isPaired = pairing != null
         autoReconnectEnabled = context.getSharedPreferences(UI_PREFERENCES, Context.MODE_PRIVATE)
             .getBoolean(AUTO_RECONNECT, true)
+        refreshPhoneVersion(context.applicationContext)
         restoreReadyUpdate(context.applicationContext)
+        scheduleUpdateReminder(context.applicationContext)
         if (pairing != null && autoReconnectEnabled) start(context)
     }
 
@@ -366,15 +399,19 @@ object LanSyncManager {
         syncLog = "Desktop revision $revision received automatically over Wi-Fi."
     }
 
-    fun pushChanges(context: Context, authorizationPin: String): Boolean {
+    fun pushChanges(
+        context: Context,
+        authorizationPin: String,
+        changeIds: Collection<String>? = null,
+    ): Boolean {
         if (pairing == null) {
             syncLog = "Pair this profile over Wi-Fi or phone hotspot before pushing changes."
             return false
         }
-        val changes = DatabaseHelper.pendingChanges()
+        val changes = DatabaseHelper.pendingChanges(changeIds)
         if (changes.isEmpty()) {
-            syncLog = "No unsynced mobile changes."
-            return true
+            syncLog = if (changeIds == null) "No unsynced mobile changes." else "No reviewed mobile changes were selected."
+            return changeIds == null
         }
         syncLog = "Sending ${changes.size} authorized mobile change${if (changes.size == 1) "" else "s"} over Wi-Fi / hotspot..."
         actionExecutor.execute {
@@ -436,16 +473,14 @@ object LanSyncManager {
 
     fun checkForUpdate(context: Context) {
         lastUpdateCheckAt = System.currentTimeMillis()
+        refreshPhoneVersion(context)
+        val current = phoneVersionCode
+        val currentName = phoneVersionName
         actionExecutor.execute {
             runCatching {
                 val response = request("GET", "/v1/mobile-update", "", "")
                 if (!response.optBoolean("success")) return@runCatching
                 val item = response.getJSONObject("update")
-                val current = if (Build.VERSION.SDK_INT >= 28) {
-                    context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
-                } else {
-                    @Suppress("DEPRECATION") context.packageManager.getPackageInfo(context.packageName, 0).versionCode.toLong()
-                }
                 val offered = item.optLong("versionCode")
                 val available = if (offered > current) MobileUpdateInfo(
                     versionName = item.optString("versionName"),
@@ -458,19 +493,43 @@ object LanSyncManager {
                 updateInfo = available
                 if (available == null) {
                     clearReadyUpdate(context)
-                } else if (isUpdateReady && File(downloadedUpdatePath).exists() &&
+                    syncLog = "This phone already has the newest mobile version the desktop can send (${currentName.ifBlank { "current" }})."
+                    return@runCatching
+                }
+                val readyMatches = isUpdateReady && File(downloadedUpdatePath).exists() &&
                     JSONObject(context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE)
                         .getString(READY_MANIFEST, "{}") ?: "{}").optLong("versionCode") == available.versionCode
-                ) {
+                if (readyMatches) {
+                    updateOfferVisible = false
                     updatePromptVisible = shouldPrompt(context)
+                    scheduleUpdateReminder(context)
+                    syncLog = "Desktop has Android ${available.versionName}. The verified package is already on this phone."
                 } else {
-                    downloadUpdateInternal(context.applicationContext, available)
+                    updatePromptVisible = false
+                    updateOfferVisible = shouldShowUpdateOffer(context, available.versionCode)
+                    syncLog = "Desktop has Android ${available.versionName} (build ${available.versionCode}). This phone is ${currentName.ifBlank { "older" }} (build $current). Ask the desktop to send the package when you are ready."
                 }
             }.onFailure {
                 if (!isUpdateReady) updateProgress = 0
                 syncLog = "Update check paused: ${it.message}"
             }
         }
+    }
+
+    fun requestUpdateFromDesktop(context: Context) {
+        val info = updateInfo ?: return
+        updateOfferVisible = false
+        downloadUpdate(context)
+        syncLog = "Asking the desktop to send Android ${info.versionName} over Wi-Fi or hotspot..."
+    }
+
+    fun dismissUpdateOffer(context: Context) {
+        updateOfferVisible = false
+        val version = updateInfo?.versionCode ?: return
+        context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE).edit()
+            .putLong(OFFER_DISMISSED_VERSION, version)
+            .apply()
+        syncLog = "The desktop update is still available from Desktop Connection when you want it."
     }
 
     fun downloadUpdate(context: Context) {
@@ -489,12 +548,23 @@ object LanSyncManager {
         if (isUpdateReady) installReadyUpdate(context) else downloadUpdate(context)
     }
 
-    fun deferReadyUpdate(context: Context) {
+    fun deferReadyUpdate(context: Context, delayMs: Long = 5 * 60 * 1000L) {
+        val delay = delayMs.coerceAtLeast(60_000L)
         updatePromptVisible = false
         context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE).edit()
-            .putLong(DEFERRED_UNTIL, System.currentTimeMillis() + 24 * 60 * 60 * 1000L)
+            .putLong(DEFERRED_UNTIL, System.currentTimeMillis() + delay)
             .apply()
-        syncLog = "Mobile update kept securely on this device. You can install it later from Sync."
+        scheduleUpdateReminder(context)
+        val option = updateReminderOptions.find { it.delayMs == delay }
+        syncLog = "You'll be reminded ${option?.label?.lowercase() ?: "later"}. The verified update stays on this phone."
+    }
+
+    fun refreshUpdatePrompt(context: Context) {
+        refreshPhoneVersion(context)
+        if (isUpdateReady && shouldPrompt(context)) {
+            updatePromptVisible = true
+        }
+        scheduleUpdateReminder(context)
     }
 
     fun installReadyUpdate(context: Context) {
@@ -517,6 +587,7 @@ object LanSyncManager {
         updateProgress = 1
         isUpdateReady = false
         updatePromptVisible = false
+        updateOfferVisible = false
         val directory = File(context.filesDir, "mobile-updates").apply { mkdirs() }
         val target = File(directory, "${info.versionCode}-${File(info.fileName).name}")
         val incoming = File(directory, "${target.name}.incoming")
@@ -537,8 +608,10 @@ object LanSyncManager {
             .put("releaseNotes", info.releaseNotes).put("path", downloadedUpdatePath)
         val preferences = context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE)
         preferences.edit().putString(READY_MANIFEST, manifest.toString()).remove(DEFERRED_UNTIL).apply()
+        updateOfferVisible = false
         updatePromptVisible = true
-        syncLog = "Mobile update ${info.versionName} downloaded and verified. Install now or later."
+        reminderHandler.removeCallbacks(reminderRunnable)
+        syncLog = "Mobile update ${info.versionName} downloaded and verified. Install now or remind later."
     }
 
     private fun restoreReadyUpdate(context: Context) {
@@ -559,7 +632,34 @@ object LanSyncManager {
             isUpdateReady = true
             updateProgress = 100
             updatePromptVisible = shouldPrompt(context)
+            scheduleUpdateReminder(context)
         }.onFailure { clearReadyUpdate(context) }
+    }
+
+    fun refreshPhoneVersion(context: Context) {
+        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+        phoneVersionName = info.versionName.orEmpty()
+        phoneVersionCode = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else {
+            @Suppress("DEPRECATION") info.versionCode.toLong()
+        }
+    }
+
+    private fun shouldShowUpdateOffer(context: Context, versionCode: Long): Boolean {
+        val dismissed = context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE)
+            .getLong(OFFER_DISMISSED_VERSION, 0L)
+        return dismissed != versionCode
+    }
+
+    private fun scheduleUpdateReminder(context: Context) {
+        reminderHandler.removeCallbacks(reminderRunnable)
+        if (!isUpdateReady) return
+        val remaining = context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE)
+            .getLong(DEFERRED_UNTIL, 0L) - System.currentTimeMillis()
+        if (remaining <= 0) {
+            if (shouldPrompt(context)) updatePromptVisible = true
+            return
+        }
+        reminderHandler.postDelayed(reminderRunnable, remaining)
     }
 
     private fun shouldPrompt(context: Context): Boolean =
@@ -571,7 +671,9 @@ object LanSyncManager {
         downloadedUpdatePath = ""
         isUpdateReady = false
         updatePromptVisible = false
+        updateOfferVisible = false
         updateProgress = 0
+        reminderHandler.removeCallbacks(reminderRunnable)
         context.getSharedPreferences(UPDATE_PREFERENCES, Context.MODE_PRIVATE).edit().clear().apply()
     }
 

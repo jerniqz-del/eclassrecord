@@ -55,6 +55,8 @@ import com.example.eclassrecordmobile.ui.DesktopFeatureScreen
 import com.example.eclassrecordmobile.ui.ScoreEntryScreen
 import com.example.eclassrecordmobile.ui.SyncScreen
 import com.example.eclassrecordmobile.ui.MobilePinUnlockScreen
+import com.example.eclassrecordmobile.ui.MobileUpdateInstallDialog
+import com.example.eclassrecordmobile.ui.MobileUpdateOfferDialog
 import com.example.eclassrecordmobile.ui.main.PersistentAppDock
 import com.example.eclassrecordmobile.ui.main.PersistentAppRail
 import com.example.eclassrecordmobile.ui.main.PremiumMainScreen
@@ -233,24 +235,20 @@ fun MainNavigation() {
 
   val readyUpdate = LanSyncManager.updateInfo
   if (!showExitDialog && LanSyncManager.updatePromptVisible && readyUpdate != null) {
-    AlertDialog(
-      onDismissRequest = { LanSyncManager.deferReadyUpdate(context) },
-      title = { Text("Mobile update ready") },
-      text = {
-        Text(
-          buildString {
-            append("Version ${readyUpdate.versionName} has been downloaded and verified. ")
-            append("Install it now or continue working and update later.")
-            if (readyUpdate.releaseNotes.isNotBlank()) append("\n\n${readyUpdate.releaseNotes}")
-          }
-        )
-      },
-      confirmButton = {
-        Button(onClick = { LanSyncManager.installReadyUpdate(context) }) { Text("Update Now") }
-      },
-      dismissButton = {
-        TextButton(onClick = { LanSyncManager.deferReadyUpdate(context) }) { Text("Later") }
-      },
+    MobileUpdateInstallDialog(
+      update = readyUpdate,
+      phoneVersionName = LanSyncManager.phoneVersionName,
+      phoneVersionCode = LanSyncManager.phoneVersionCode,
+      onInstall = { LanSyncManager.installReadyUpdate(context) },
+      onRemindLater = { option -> LanSyncManager.deferReadyUpdate(context, option.delayMs) },
+    )
+  } else if (!showExitDialog && LanSyncManager.updateOfferVisible && readyUpdate != null && !LanSyncManager.isUpdateReady) {
+    MobileUpdateOfferDialog(
+      update = readyUpdate,
+      phoneVersionName = LanSyncManager.phoneVersionName,
+      phoneVersionCode = LanSyncManager.phoneVersionCode,
+      onRequestPackage = { LanSyncManager.requestUpdateFromDesktop(context) },
+      onDismiss = { LanSyncManager.dismissUpdateOffer(context) },
     )
   }
 }

@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "applicationId": "com.example.eclassrecordmobile",
-  "versionCode": 13,
-  "versionName": "1.11.3",
-  "fileName": "E-Class-Record-Mobile-v1.11.3.apk",
-  "downloadUrl": "https://github.com/jerniqz-del/eclassrecord/releases/download/mobile-v1.11.3/E-Class-Record-Mobile-v1.11.3.apk",
-  "size": 18976288,
-  "sha256": "b84d6d4f89575117ddd4de5b42745e6e63dbafff15f277999040e025dfe663fa",
+  "versionCode": 14,
+  "versionName": "1.11.4",
+  "fileName": "E-Class-Record-Mobile-v1.11.4.apk",
+  "downloadUrl": "https://github.com/jerniqz-del/eclassrecord/releases/download/mobile-v1.11.4/E-Class-Record-Mobile-v1.11.4.apk",
+  "size": 19009056,
+  "sha256": "ae460993ecdd7e970661a90a5fe319d7951f21eed0ae748689a7b0a24a9fc097",
   "minimumCompanionProtocol": 2,
-  "publishedAt": "2026-09-07T05:39:42.066Z",
-  "releaseNotes": "Profile tab that syncs teacher and school identity to the desktop, upcoming calendar events that push both ways, dashboard grading graphs, a compact E-Class Record App header, and the reconnect button hidden after the desktop is linked."
+  "publishedAt": "2026-09-07T10:22:24.636Z",
+  "releaseNotes": "Review mobile changes before pushing to desktop, with safe new entries separated from overwrites. Check the desktop version first, then ask it to send the Android package over Wi-Fi. Install now or remind later in 5 minutes, 10 minutes, 30 minutes, 1 hour, 2 hours, 5 hours, 12 hours, or tomorrow."
 }

@@ -81,6 +81,8 @@ fun SyncScreen(
     var isQrScanning by rememberSaveable { mutableStateOf(false) }
     var showBluetoothEnablePrompt by rememberSaveable { mutableStateOf(false) }
     var showPushAuthorization by rememberSaveable { mutableStateOf(false) }
+    var showPushReview by rememberSaveable { mutableStateOf(false) }
+    var selectedPushChangeIds by rememberSaveable { mutableStateOf(listOf<String>()) }
     var pushTransport by rememberSaveable { mutableStateOf("lan") }
     var pushPin by rememberSaveable { mutableStateOf("") }
     var pushError by rememberSaveable { mutableStateOf("") }
@@ -167,6 +169,14 @@ fun SyncScreen(
                 isQrScanning = false
                 pairingError = error.message ?: "WLAN QR scanner unavailable."
             }
+    }
+
+    val beginPushReview: (String) -> Unit = { transport ->
+        pushTransport = transport
+        pushError = ""
+        val review = DatabaseHelper.reviewPendingChanges()
+        selectedPushChangeIds = review.safe.map { it.changeId }
+        showPushReview = true
     }
 
     val bluetoothEnableLauncher = rememberLauncherForActivityResult(
@@ -381,7 +391,24 @@ fun SyncScreen(
         )
     }
 
+    if (showPushReview) {
+        val review = remember(DatabaseHelper.observedRevision, showPushReview) {
+            DatabaseHelper.reviewPendingChanges()
+        }
+        PushChangeReviewDialog(
+            review = review,
+            selectedIds = selectedPushChangeIds.toSet(),
+            onSelectedIdsChange = { selectedPushChangeIds = it.toList() },
+            onConfirm = {
+                showPushReview = false
+                showPushAuthorization = true
+            },
+            onDismiss = { showPushReview = false },
+        )
+    }
+
     if (showPushAuthorization) {
+        val reviewedCount = selectedPushChangeIds.size
         AlertDialog(
             onDismissRequest = {
                 showPushAuthorization = false
@@ -394,15 +421,15 @@ fun SyncScreen(
                     Text(
                         if (pushPinRequired) {
                             if (pushTransport == "lan") {
-                                "Enter your desktop profile PIN. Pending grades will be sent primarily through Wi-Fi or the phone hotspot."
+                                "Enter your desktop profile PIN. $reviewedCount reviewed change${if (reviewedCount == 1) "" else "s"} will be sent primarily through Wi-Fi or the phone hotspot."
                             } else {
                                 "Enter your desktop profile PIN. Bluetooth will be used only as the fallback because this profile has no WLAN pairing."
                             }
                         } else {
                             if (pushTransport == "lan") {
-                                "Confirm to push pending grades through Wi-Fi or the phone hotspot."
+                                "Confirm to push $reviewedCount reviewed change${if (reviewedCount == 1) "" else "s"} through Wi-Fi or the phone hotspot."
                             } else {
-                                "Confirm to push pending grades through the Bluetooth fallback."
+                                "Confirm to push $reviewedCount reviewed change${if (reviewedCount == 1) "" else "s"} through the Bluetooth fallback."
                             }
                         }
                     )
@@ -428,9 +455,17 @@ fun SyncScreen(
                 Button(
                     onClick = {
                         val accepted = if (pushTransport == "lan") {
-                            LanSyncManager.pushChanges(context, if (pushPinRequired) pushPin else "")
+                            LanSyncManager.pushChanges(
+                                context,
+                                if (pushPinRequired) pushPin else "",
+                                selectedPushChangeIds,
+                            )
                         } else {
-                            BleServerManager.syncScoresToDesktop(context, if (pushPinRequired) pushPin else "")
+                            BleServerManager.syncScoresToDesktop(
+                                context,
+                                if (pushPinRequired) pushPin else "",
+                                selectedPushChangeIds,
+                            )
                         }
                         if (accepted) {
                             showPushAuthorization = false
@@ -448,10 +483,11 @@ fun SyncScreen(
             dismissButton = {
                 TextButton(onClick = {
                     showPushAuthorization = false
+                    showPushReview = true
                     pushPin = ""
                     pushError = ""
                 }) {
-                    Text("Cancel")
+                    Text("Back to review")
                 }
             },
         )
@@ -645,11 +681,7 @@ fun SyncScreen(
                     }
                     if (lanPaired) {
                         Button(
-                            onClick = {
-                                pushTransport = "lan"
-                                pushError = ""
-                                showPushAuthorization = true
-                            },
+                            onClick = { beginPushReview("lan") },
                             enabled = hasUnsynced,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -673,22 +705,38 @@ fun SyncScreen(
                     LanSyncManager.updateInfo?.let { update ->
                         HorizontalDivider()
                         Text("Mobile update ${update.versionName} available", fontWeight = FontWeight.Bold)
+                        Text(
+                            "This phone: ${LanSyncManager.phoneVersionName.ifBlank { "unknown" }} (build ${LanSyncManager.phoneVersionCode})\nDesktop package: ${update.versionName} (build ${update.versionCode})",
+                            fontSize = 12.sp,
+                        )
                         if (update.releaseNotes.isNotBlank()) Text(update.releaseNotes, fontSize = 12.sp)
                         if (LanSyncManager.updateProgress in 1..99) {
                             LinearProgressIndicator(
                                 progress = { LanSyncManager.updateProgress / 100f },
                                 modifier = Modifier.fillMaxWidth(),
                             )
-                            Text("Downloading ${LanSyncManager.updateProgress}%", fontSize = 12.sp)
+                            Text("Desktop is sending the package ${LanSyncManager.updateProgress}%", fontSize = 12.sp)
                         } else if (LanSyncManager.isUpdateReady) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(onClick = { LanSyncManager.installReadyUpdate(context) }) { Text("Update Now") }
-                                TextButton(onClick = { LanSyncManager.deferReadyUpdate(context) }) { Text("Later") }
+                            Button(onClick = { LanSyncManager.installReadyUpdate(context) }) { Text("Update Now") }
+                            UpdateReminderButtons { option ->
+                                LanSyncManager.deferReadyUpdate(context, option.delayMs)
                             }
                             Text("The verified update is stored safely and can be installed whenever you are ready.", fontSize = 11.sp)
                         } else {
-                            Text("The update will download automatically over Wi-Fi or hotspot.", fontSize = 12.sp)
-                            Button(onClick = { LanSyncManager.downloadUpdate(context) }) { Text("Retry Download") }
+                            Text("The desktop has a newer Android package. Ask it to send the file over Wi-Fi or hotspot after the version check.", fontSize = 12.sp)
+                            Button(onClick = { LanSyncManager.requestUpdateFromDesktop(context) }) {
+                                Text("Ask desktop to send update")
+                            }
+                            Button(onClick = { LanSyncManager.checkForUpdate(context) }) { Text("Check desktop version") }
+                        }
+                    } ?: run {
+                        if (lanPaired) {
+                            HorizontalDivider()
+                            Text("This phone is ${LanSyncManager.phoneVersionName.ifBlank { "the installed app" }}", fontSize = 12.sp)
+                            Button(
+                                onClick = { LanSyncManager.checkForUpdate(context) },
+                                enabled = lanConnected,
+                            ) { Text("Check desktop version") }
                         }
                     }
                 }
@@ -914,11 +962,7 @@ fun SyncScreen(
                 // Bluetooth is only offered for pushes when this profile has no WLAN pairing.
                 if (!lanConnected) {
                 Button(
-                    onClick = {
-                        pushTransport = "bluetooth"
-                        pushError = ""
-                        showPushAuthorization = true
-                    },
+                    onClick = { beginPushReview("bluetooth") },
                     enabled = isAuthorized && hasUnsynced,
                     modifier = Modifier
                         .fillMaxWidth()

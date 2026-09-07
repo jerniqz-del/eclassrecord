@@ -42,6 +42,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +51,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -331,6 +333,13 @@ fun EClassTopBar(
     val dark = LocalDarkTheme.current
     val themeController = LocalThemeController.current
     val iconSize = if (fluid.isTablet) 34.dp else 30.dp
+    val context = LocalContext.current
+    val appTitle = remember(context) {
+        val version = runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+        }.getOrDefault("")
+        if (version.isBlank()) "E-Class Record App" else "E-Class Record App v$version"
+    }
     TopAppBar(
         windowInsets = WindowInsets.statusBars,
         navigationIcon = {
@@ -343,17 +352,19 @@ fun EClassTopBar(
             }
         },
         title = {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
                 Text(
-                    "E-Class Record App",
+                    appTitle,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = fluid.type(17),
+                    fontSize = fluid.type(16),
+                    lineHeight = fluid.type(18),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     title.ifBlank { subtitle }.ifBlank { "Home" },
                     fontSize = fluid.type(12),
+                    lineHeight = fluid.type(14),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

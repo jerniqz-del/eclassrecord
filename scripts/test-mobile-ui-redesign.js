@@ -22,6 +22,8 @@ assert(mark.length > 100_000, 'The 3D emblem should not be an empty placeholder.
 assert.match(design, /fun BrandMark/);
 assert.match(design, /fun DepthIcon/);
 assert.match(design, /fun EClassTopBar/);
+assert.match(design, /E-Class Record App v\$version/);
+assert.match(design, /getPackageInfo\(context\.packageName, 0\)\.versionName/);
 assert.match(design, /fun NeonCard/);
 assert.match(design, /BrandDepthGradient/);
 assert.doesNotMatch(navigation, /PersistentMobileHeader/);

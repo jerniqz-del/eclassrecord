@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
       runCatching { BleServerManager.ensureAdvertising(applicationContext) }
     }
     if (LanSyncManager.isPaired && LanSyncManager.autoReconnectEnabled) LanSyncManager.start(applicationContext)
+    LanSyncManager.refreshUpdatePrompt(applicationContext)
   }
 
   override fun onStop() {

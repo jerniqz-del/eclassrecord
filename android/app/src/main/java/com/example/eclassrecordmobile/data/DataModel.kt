@@ -178,3 +178,22 @@ data class SnapshotAcknowledgement(
     val success: Boolean,
     val error: String = ""
 )
+
+data class PendingChangeReviewItem(
+    val changeId: String,
+    val change: MobileChange,
+    val affectsExisting: Boolean,
+    val kindLabel: String,
+    val title: String,
+    val detail: String,
+    val previousValue: String,
+    val newValue: String,
+)
+
+data class PendingChangeReview(
+    val items: List<PendingChangeReviewItem>,
+    val hasAuthoritativeSnapshot: Boolean,
+) {
+    val safe: List<PendingChangeReviewItem> get() = items.filterNot { it.affectsExisting }
+    val affecting: List<PendingChangeReviewItem> get() = items.filter { it.affectsExisting }
+}

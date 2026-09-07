@@ -102,7 +102,7 @@ assert.match(screen, /Authorize desktop profile/);
 assert.match(screen, /Push via Wi-Fi \/ Hotspot/);
 assert.match(screen, /Push via Bluetooth \(Fallback\)/);
 assert.match(screen, /val accepted = if \(pushTransport == "lan"\)/);
-assert.match(screen, /pushTransport = "bluetooth"/);
+assert.match(screen, /beginPushReview\("bluetooth"\)/);
 assert.match(screen, /Delete permanently/);
 assert.match(screen, /downloaded class records, and pending mobile changes/);
 assert.match(screen, /The desktop profile is not deleted/);

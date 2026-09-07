@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -558,10 +557,27 @@ private fun GradingOverviewCard(assignment: Assignment, term: String, progress: 
 @Composable private fun AcademicHero(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String, colors: List<Color>) {
     val accent = colors.lastOrNull() ?: NeonBlue
     val fluid = LocalFluidLayout.current
-    Card(shape = RoundedCornerShape(fluid.cornerRadius), colors = CardDefaults.cardColors(containerColor = NeonPanel), border = BorderStroke(1.dp, accent.copy(alpha = .66f)), modifier = Modifier.fillMaxWidth().heightIn(min = fluid.mediaHeight).graphicsLayer { shadowElevation = 24f }) {
+    val panel = themePanel()
+    val raised = themePanel(raised = true)
+    Card(
+        shape = RoundedCornerShape(fluid.cornerRadius),
+        colors = CardDefaults.cardColors(containerColor = panel),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.42f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         Column {
             Box(Modifier.fillMaxWidth().height(4.dp).background(Brush.horizontalGradient(colors)))
-            Row(Modifier.background(Brush.horizontalGradient(listOf(NeonPanelRaised, NeonPanel))).padding(20.dp), verticalAlignment = Alignment.CenterVertically) { DepthIcon(icon, title, selected = true, size = 52.dp, accent = accent); Spacer(Modifier.width(13.dp)); Column { Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold); Text(subtitle, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold) } }
+            Row(
+                Modifier.background(Brush.horizontalGradient(listOf(raised, panel))).padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                DepthIcon(icon, title, selected = true, size = 42.dp, accent = accent)
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(subtitle, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }

@@ -31,6 +31,8 @@ assert.match(main, /WorkspaceInsights/);
 assert.match(main, /CompletionRing/);
 assert.match(main, /GradeBandChart/);
 assert.match(workspace, /fun CalendarEventEditorDialog/);
+assert.match(workspace, /themePanel\(\)/);
+assert.match(workspace, /MaterialTheme\.colorScheme\.onSurface/);
 assert.match(workspace, /Add school event/);
 assert.match(workspace, /Save to desktop sync/);
 assert.match(gradingDetail, /sheet-detail-completion/);

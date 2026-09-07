@@ -652,7 +652,11 @@ object BleServerManager {
     }
 
     // Trigger score sync back to desktop
-    fun syncScoresToDesktop(context: Context, authorizationPin: String = ""): Boolean {
+    fun syncScoresToDesktop(
+        context: Context,
+        authorizationPin: String = "",
+        changeIds: Collection<String>? = null,
+    ): Boolean {
         val device = connectedDevice
         val server = bluetoothGattServer
         if (device == null || server == null || !isAuthorized) {
@@ -660,10 +664,10 @@ object BleServerManager {
             return false
         }
 
-        val changes = DatabaseHelper.pendingChanges()
+        val changes = DatabaseHelper.pendingChanges(changeIds)
         if (changes.isEmpty()) {
-            syncLog = "No unsynced scores to upload."
-            return true
+            syncLog = if (changeIds == null) "No unsynced scores to upload." else "No reviewed mobile changes were selected."
+            return changeIds == null
         }
 
         val pinRequired = DatabaseHelper.getPayload()?.pushPinRequired ?: true
