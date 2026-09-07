@@ -15,7 +15,7 @@ While running, the desktop checks this channel immediately at startup and every 
 5. Copy the generated manifest to `mobile-updates/stable/mobile-update.json`, commit it to `main`, and verify that its `downloadUrl`, byte `size`, and `sha256` match the uploaded asset.
 6. In the desktop app, open Mobile Companion Synchronization and select **Check Updates Now**. Connected phones will be offered the cached update and can choose **Update Now** or **Later**.
 
-Only the first desktop version containing this generic channel reader must be installed. Later compatible Android releases update the manifest and APK on GitHub, not the desktop executable. If a future mobile release needs a companion protocol above `2`, publish a compatible desktop update first.
+Only the first desktop version containing this generic channel reader must be installed. Desktop v1.9.7 already includes it. Later compatible Android releases update only `mobile-updates/stable/mobile-update.json` and the `mobile-v*` GitHub prerelease; they do not require a new Windows installer. If a future mobile release needs a companion protocol above `2`, publish a compatible desktop update first.
 
 ## First install from the desktop (camera QR)
 

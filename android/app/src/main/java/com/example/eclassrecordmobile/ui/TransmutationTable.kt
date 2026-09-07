@@ -210,7 +210,7 @@ fun TransmutationTableDialog(
                         modifier = Modifier.heightIn(max = 360.dp),
                         verticalArrangement = Arrangement.spacedBy(0.dp),
                     ) {
-                        itemsIndexed(model.rows, key = { index, row -> "${row.low}-${row.tg}-$index" }) { index, row ->
+                        itemsIndexed(model.rows, key = { index, row -> "${row.low}-${row.transmuted}-$index" }) { index, row ->
                             val match = index == model.matchIndex
                             Row(
                                 Modifier

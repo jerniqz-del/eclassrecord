@@ -189,6 +189,7 @@ fun ScoreEntryScreen(
                         fontWeight = FontWeight.ExtraBold,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurface
+                    )
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -212,7 +213,6 @@ fun ScoreEntryScreen(
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
-                    }
                     }
                 }
             }

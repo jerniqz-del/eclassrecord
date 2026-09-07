@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "applicationId": "com.example.eclassrecordmobile",
-  "versionCode": 8,
-  "versionName": "1.10.0",
-  "fileName": "E-Class-Record-Mobile-v1.10.0.apk",
-  "downloadUrl": "https://github.com/jerniqz-del/eclassrecord/releases/download/mobile-v1.10.0/E-Class-Record-Mobile-v1.10.0.apk",
-  "size": 27087226,
-  "sha256": "ba09e4f1d2e0e46a835afa1968e321e80172324935488f720afb8ed8845589ee",
+  "versionCode": 12,
+  "versionName": "1.11.2",
+  "fileName": "E-Class-Record-Mobile-v1.11.2.apk",
+  "downloadUrl": "https://github.com/jerniqz-del/eclassrecord/releases/download/mobile-v1.11.2/E-Class-Record-Mobile-v1.11.2.apk",
+  "size": 18943520,
+  "sha256": "779f8eaf27524d0d23c0ea0c4412c42bf88154eed88708893efd5937055e2b5a",
   "minimumCompanionProtocol": 2,
-  "publishedAt": "2026-09-04T08:35:48.548Z",
-  "releaseNotes": "Modern Calendar, Attendance, Classes, and Grading workspaces with faster search, filters, progress insights, and 3D transitions"
+  "publishedAt": "2026-09-07T05:10:14.955Z",
+  "releaseNotes": "Light mode by default with a dark-mode toggle, fluid phone and tablet layout, transmutation table lookup, and Android updates that do not require a new desktop installer."
 }

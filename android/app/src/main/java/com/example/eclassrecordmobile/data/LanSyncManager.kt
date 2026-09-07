@@ -1,5 +1,6 @@
 package com.example.eclassrecordmobile.data
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -604,8 +605,18 @@ object LanSyncManager {
             throw IllegalStateException("Allow E-Class Record Mobile to install updates, then tap Install Update again.")
         }
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.updates", apk)
-        context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+        val intent = Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, "application/vnd.android.package-archive")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.clipData = ClipData.newRawUri("apk", uri)
+        context.packageManager.queryIntentActivities(intent, 0).forEach { resolve ->
+            context.grantUriPermission(
+                resolve.activityInfo.packageName,
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+        }
+        context.startActivity(intent)
     }
 
     private fun request(method: String, endpoint: String, query: String, body: String): JSONObject {

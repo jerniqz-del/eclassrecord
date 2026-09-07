@@ -11,13 +11,14 @@ android {
         applicationId = "com.example.eclassrecordmobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 11
-        versionName = "1.11.1"
+        versionCode = 12
+        versionName = "1.11.2"
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
