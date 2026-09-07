@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "applicationId": "com.example.eclassrecordmobile",
-  "versionCode": 12,
-  "versionName": "1.11.2",
-  "fileName": "E-Class-Record-Mobile-v1.11.2.apk",
-  "downloadUrl": "https://github.com/jerniqz-del/eclassrecord/releases/download/mobile-v1.11.2/E-Class-Record-Mobile-v1.11.2.apk",
-  "size": 18943520,
-  "sha256": "779f8eaf27524d0d23c0ea0c4412c42bf88154eed88708893efd5937055e2b5a",
+  "versionCode": 13,
+  "versionName": "1.11.3",
+  "fileName": "E-Class-Record-Mobile-v1.11.3.apk",
+  "downloadUrl": "https://github.com/jerniqz-del/eclassrecord/releases/download/mobile-v1.11.3/E-Class-Record-Mobile-v1.11.3.apk",
+  "size": 18976288,
+  "sha256": "b84d6d4f89575117ddd4de5b42745e6e63dbafff15f277999040e025dfe663fa",
   "minimumCompanionProtocol": 2,
-  "publishedAt": "2026-09-07T05:10:14.955Z",
-  "releaseNotes": "Light mode by default with a dark-mode toggle, fluid phone and tablet layout, transmutation table lookup, and Android updates that do not require a new desktop installer."
+  "publishedAt": "2026-09-07T05:39:42.066Z",
+  "releaseNotes": "Profile tab that syncs teacher and school identity to the desktop, upcoming calendar events that push both ways, dashboard grading graphs, a compact E-Class Record App header, and the reconnect button hidden after the desktop is linked."
 }

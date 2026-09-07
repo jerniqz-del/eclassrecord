@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,6 +30,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Bluetooth
@@ -43,7 +45,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
@@ -62,10 +63,12 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -79,6 +82,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -92,17 +97,20 @@ import com.example.eclassrecordmobile.DesktopFeature
 import com.example.eclassrecordmobile.Sync
 import com.example.eclassrecordmobile.data.Assignment
 import com.example.eclassrecordmobile.data.BleServerManager
+import com.example.eclassrecordmobile.data.CalendarEntry
 import com.example.eclassrecordmobile.data.DatabaseHelper
 import com.example.eclassrecordmobile.data.DesktopRemoteController
 import com.example.eclassrecordmobile.data.LanSyncManager
+import com.example.eclassrecordmobile.data.ProfilePatch
 import com.example.eclassrecordmobile.data.SyncPayload
 import com.example.eclassrecordmobile.theme.LocalDarkTheme
 import com.example.eclassrecordmobile.theme.LocalThemeController
+import com.example.eclassrecordmobile.ui.CalendarEventEditorDialog
 import com.example.eclassrecordmobile.ui.DesktopFeatureNames
-import com.example.eclassrecordmobile.ui.design.BrandMark
-import com.example.eclassrecordmobile.ui.design.DepthIcon
 import com.example.eclassrecordmobile.ui.ModernClassesTab
 import com.example.eclassrecordmobile.ui.ModernGradingTab
+import com.example.eclassrecordmobile.ui.design.BrandMark
+import com.example.eclassrecordmobile.ui.design.DepthIcon
 import com.example.eclassrecordmobile.ui.design.EClassTopBar
 import com.example.eclassrecordmobile.ui.design.GradientSection
 import com.example.eclassrecordmobile.ui.design.LocalFluidLayout
@@ -113,6 +121,7 @@ import com.example.eclassrecordmobile.ui.design.themePanel
 import com.example.eclassrecordmobile.theme.NeonBlue
 import com.example.eclassrecordmobile.theme.NeonGreen
 import com.example.eclassrecordmobile.theme.NeonPurple
+import java.time.LocalDate
 import kotlin.math.roundToInt
 
 internal enum class HomeTab(val label: String, val icon: ImageVector) {
@@ -120,7 +129,7 @@ internal enum class HomeTab(val label: String, val icon: ImageVector) {
     Classes("Classes", Icons.Default.School),
     Grading("Grading", Icons.Default.List),
     Tools("Tools", Icons.Default.Build),
-    Settings("Settings", Icons.Default.Settings),
+    Profile("Profile", Icons.Default.Person),
 }
 
 private enum class ClassLayout { List, Grid }
@@ -177,7 +186,8 @@ fun PremiumMainScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val payload = DatabaseHelper.getPayload()
+    val liveRevision = DatabaseHelper.observedRevision
+    val payload = remember(liveRevision) { DatabaseHelper.getPayload() }
     var smoothMotion by rememberSaveable { mutableStateOf(MobileUiPreferences.smoothMotion(context)) }
     val selected = HomeTab.entries[selectedIndex.coerceIn(HomeTab.entries.indices)]
     val hasUnsynced = DatabaseHelper.hasUnsyncedChanges()
@@ -220,7 +230,7 @@ fun PremiumMainScreen(
                 HomeTab.Classes -> ModernClassesTab(payload?.assignments.orEmpty()) { onNavigate(ClassDetail(it)) }
                 HomeTab.Grading -> ModernGradingTab(payload?.assignments.orEmpty()) { onNavigate(ClassDetail(it)) }
                 HomeTab.Tools -> ToolsTab(payload, onNavigate)
-                HomeTab.Settings -> SettingsTab(
+                HomeTab.Profile -> ProfileTab(
                     payload = payload,
                     smoothMotion = smoothMotion,
                     onSmoothMotionChange = {
@@ -369,10 +379,33 @@ private fun DashboardTab(
     val expectedScores = completionStats.sumOf { it.expected }
     val enteredScores = completionStats.sumOf { it.entered }
     val completion = CompletionStats(enteredScores, expectedScores).fraction
-    val animatedCompletion by animateFloatAsState(completion, label = "grading-completion")
     var classLayout by rememberSaveable { mutableStateOf(ClassLayout.List) }
     val fluid = LocalFluidLayout.current
     val classColumns = if (classLayout == ClassLayout.Grid) fluid.columns.coerceAtLeast(2) else 1
+    val desktopLinked = LanSyncManager.isConnected || BleServerManager.isAuthorized
+    val context = LocalContext.current
+    var showCalendarEditor by rememberSaveable { mutableStateOf(false) }
+    val today = remember { LocalDate.now() }
+    val upcoming = remember(payload?.calendar, DatabaseHelper.pendingChangeCount()) {
+        payload?.calendar.orEmpty()
+            .mapNotNull { event ->
+                val end = runCatching { LocalDate.parse(event.endDate.ifBlank { event.date }) }.getOrNull() ?: return@mapNotNull null
+                if (end.isBefore(today)) null else event
+            }
+            .sortedBy { it.date }
+            .take(5)
+    }
+
+    if (showCalendarEditor && payload != null) {
+        CalendarEventEditorDialog(
+            initialDate = today.toString(),
+            onDismiss = { showCalendarEditor = false },
+            onSave = { entry ->
+                DatabaseHelper.upsertCalendarEvent(context, entry)
+                showCalendarEditor = false
+            },
+        )
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -398,19 +431,15 @@ private fun DashboardTab(
                             color = Color.White.copy(alpha = 0.82f),
                             fontSize = 13.sp,
                         )
-                        Button(onClick = onSync) {
-                            Icon(
-                                if (LanSyncManager.isConnected) Icons.Default.Wifi else Icons.Default.Refresh,
-                                contentDescription = null,
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                when {
-                                    LanSyncManager.isConnected -> "Connected by Wi-Fi"
-                                    LanSyncManager.isPaired -> "Reconnect desktop"
-                                    else -> "Connect desktop"
-                                }
-                            )
+                        if (!desktopLinked) {
+                            Button(onClick = onSync) {
+                                Icon(Icons.Default.Refresh, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    if (LanSyncManager.isPaired || BleServerManager.isPaired) "Reconnect desktop"
+                                    else "Connect desktop",
+                                )
+                            }
                         }
                     }
                     BrandMark(size = fluid.mediaHeight * 0.55f)
@@ -434,19 +463,13 @@ private fun DashboardTab(
             }
         }
         item {
-            NeonCard(modifier = Modifier.fillMaxWidth(), accent = NeonPurple.copy(alpha = 0.35f)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Grading progress", fontWeight = FontWeight.Bold)
-                    Text("${(completion * 100).roundToInt()}%", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
-                }
-                Spacer(Modifier.height(10.dp))
-                LinearProgressIndicator(
-                    progress = { animatedCompletion },
-                    modifier = Modifier.fillMaxWidth().height(9.dp).clip(CircleShape),
-                )
-                Spacer(Modifier.height(8.dp))
-                Text("$enteredScores of $expectedScores score cells completed", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            WorkspaceInsights(
+                payload = payload,
+                assignments = assignments,
+                completion = completion,
+                enteredScores = enteredScores,
+                expectedScores = expectedScores,
+            )
         }
         item { SectionHeader("Quick actions", "Continue where you left off") }
         item {
@@ -454,6 +477,7 @@ private fun DashboardTab(
                 item { QuickAction("Classes", Icons.Default.School) { onSelectTab(HomeTab.Classes) } }
                 item { QuickAction("Grade now", Icons.Default.Assignment) { onSelectTab(HomeTab.Grading) } }
                 item { QuickAction("Teacher tools", Icons.Default.Build) { onSelectTab(HomeTab.Tools) } }
+                item { QuickAction("Profile", Icons.Default.Person) { onSelectTab(HomeTab.Profile) } }
                 item { QuickAction("Sync", Icons.Default.Refresh, onSync) }
             }
         }
@@ -521,9 +545,29 @@ private fun DashboardTab(
                 }
             }
         }
-        payload?.calendar?.sortedBy { it.date }?.take(3)?.takeIf { it.isNotEmpty() }?.let { events ->
-            item { SectionHeader("Upcoming", "School calendar") }
-            items(events, key = { it.id }) { event ->
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    SectionHeader("Upcoming", "School calendar shared with the desktop")
+                }
+                if (payload != null) {
+                    IconButton(onClick = { showCalendarEditor = true }) {
+                        DepthIcon(Icons.Default.Add, "Add calendar event", size = 34.dp, selected = true)
+                    }
+                }
+            }
+        }
+        if (upcoming.isEmpty()) {
+            item {
+                FeatureLine(
+                    Icons.Default.DateRange,
+                    if (payload == null) "Calendar waits for a desktop link" else "No upcoming school events",
+                    if (payload == null) "Connect to receive the official calendar" else "Add a local event to sync it to the desktop",
+                    "",
+                )
+            }
+        } else {
+            items(upcoming, key = { it.id }) { event ->
                 FeatureLine(Icons.Default.DateRange, event.title, event.date, event.details)
             }
         }
@@ -638,7 +682,7 @@ private fun ToolsTab(payload: SyncPayload?, onNavigate: (NavKey) -> Unit) {
 }
 
 @Composable
-private fun SettingsTab(
+private fun ProfileTab(
     payload: SyncPayload?,
     smoothMotion: Boolean,
     onSmoothMotionChange: (Boolean) -> Unit,
@@ -646,8 +690,50 @@ private fun SettingsTab(
 ) {
     val context = LocalContext.current
     var reconnect by rememberSaveable { mutableStateOf(MobileUiPreferences.autoReconnect(context)) }
+    var teacherName by remember(payload?.teacherName) { mutableStateOf(payload?.teacherName.orEmpty()) }
+    var schoolName by remember(payload?.schoolName) { mutableStateOf(payload?.schoolName.orEmpty()) }
+    var schoolId by remember(payload?.schoolId) { mutableStateOf(payload?.schoolId.orEmpty()) }
+    var district by remember(payload?.district) { mutableStateOf(payload?.district.orEmpty()) }
+    var saved by remember { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(LocalFluidLayout.current.gutter), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { SectionHeader("Android settings", "Only options that apply to this phone") }
+        item { SectionHeader("Teacher profile", "Edits save on this phone and sync to the desktop") }
+        item {
+            SettingsCard("School identity", Icons.Default.Person) {
+                if (payload == null) {
+                    Text("Connect the desktop first so this profile can be edited and synchronized.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(onClick = onSync, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                        Text("Connect desktop")
+                    }
+                } else {
+                    OutlinedTextField(teacherName, { teacherName = it; saved = false }, label = { Text("Teacher name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(schoolName, { schoolName = it; saved = false }, label = { Text("School name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(schoolId, { schoolId = it; saved = false }, label = { Text("School ID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(district, { district = it; saved = false }, label = { Text("District") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    SettingsLine("School year", payload.schoolYear.ifBlank { "Not set" })
+                    Button(
+                        onClick = {
+                            DatabaseHelper.updateProfile(
+                                context,
+                                ProfilePatch(
+                                    teacherName = teacherName.trim(),
+                                    schoolName = schoolName.trim(),
+                                    schoolId = schoolId.trim(),
+                                    region = payload.region,
+                                    division = payload.division,
+                                    district = district.trim(),
+                                ),
+                            )
+                            saved = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                    ) {
+                        Text(if (saved) "Saved for desktop sync" else "Save profile for desktop sync")
+                    }
+                }
+            }
+        }
+        item { SectionHeader("This phone", "Options that stay on Android") }
         item {
             SettingsCard("Desktop connection", Icons.Default.Bluetooth) {
                 SettingsToggle(
@@ -820,5 +906,119 @@ private fun SettingsLine(label: String, value: String) {
         Text(value, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
+
+@Composable
+private fun WorkspaceInsights(
+    payload: SyncPayload?,
+    assignments: List<Assignment>,
+    completion: Float,
+    enteredScores: Int,
+    expectedScores: Int,
+) {
+    val percent = (completion * 100).roundToInt()
+    val classBars = assignments.map { it to gradingCompletion(it).fraction }.sortedByDescending { it.second }.take(6)
+    val bands = gradeBands(payload)
+    NeonCard(modifier = Modifier.fillMaxWidth(), accent = NeonPurple.copy(alpha = 0.35f)) {
+        Text("Classroom snapshot", fontWeight = FontWeight.ExtraBold)
+        Text("Live graphs from the synced desktop record", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(14.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            CompletionRing(completion, percent)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Grading completion", fontWeight = FontWeight.Bold)
+                Text("$enteredScores of $expectedScores score cells", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ClassProgressIllustration(classBars)
+            }
+        }
+        if (bands.any { it.second > 0 }) {
+            Spacer(Modifier.height(16.dp))
+            Text("Term grade bands", fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            GradeBandChart(bands)
+        }
+    }
+}
+
+private fun gradeBands(payload: SyncPayload?): List<Pair<String, Int>> {
+    val buckets = linkedMapOf(
+        "O" to 0,
+        "VS" to 0,
+        "S" to 0,
+        "FS" to 0,
+        "DNME" to 0,
+    )
+    payload?.grades.orEmpty().forEach { grade ->
+        val value = grade.quarterlyGrade?.toDoubleOrNull() ?: return@forEach
+        val key = when {
+            value >= 90 -> "O"
+            value >= 85 -> "VS"
+            value >= 80 -> "S"
+            value >= 75 -> "FS"
+            else -> "DNME"
+        }
+        buckets[key] = (buckets[key] ?: 0) + 1
+    }
+    return buckets.toList()
+}
+
+@Composable
+private fun CompletionRing(fraction: Float, percent: Int) {
+    Box(Modifier.size(108.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(108.dp)) {
+            val stroke = Stroke(width = 14.dp.toPx(), cap = StrokeCap.Round)
+            drawArc(Color.White.copy(alpha = 0.18f), 135f, 270f, false, style = stroke)
+            drawArc(NeonPurple, 135f, 270f * fraction.coerceIn(0f, 1f), false, style = stroke)
+            drawArc(NeonBlue.copy(alpha = 0.85f), 135f, 270f * fraction.coerceIn(0f, 1f) * 0.55f, false, style = Stroke(width = 6.dp.toPx(), cap = StrokeCap.Round))
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("$percent%", fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
+            Text("done", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ClassProgressIllustration(classBars: List<Pair<Assignment, Float>>) {
+    if (classBars.isEmpty()) {
+        Text("Graphs appear after the first class record arrives.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        classBars.forEach { (assignment, fraction) ->
+            val color = SubjectVisuals.forAssignment(assignment).color
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(assignment.subject, modifier = Modifier.width(88.dp), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(color.copy(alpha = 0.18f))) {
+                    Box(Modifier.fillMaxWidth(fraction.coerceIn(0.04f, 1f)).height(8.dp).clip(CircleShape).background(color))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GradeBandChart(bands: List<Pair<String, Int>>) {
+    val total = bands.sumOf { it.second }.coerceAtLeast(1)
+    val colors = listOf(NeonGreen, NeonBlue, NeonPurple, Color(0xFFF59E0B), Color(0xFFEF4444))
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().height(18.dp).clip(CircleShape)) {
+            bands.forEachIndexed { index, (_, count) ->
+                if (count > 0) {
+                    Box(Modifier.weight(count.toFloat()).fillMaxSize().background(colors[index % colors.size]))
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            bands.forEachIndexed { index, (label, count) ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(colors[index % colors.size]))
+                    Text("$label $count", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        Text("Outstanding, Very Satisfactory, Satisfactory, Fairly Satisfactory, Did Not Meet", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
 
 

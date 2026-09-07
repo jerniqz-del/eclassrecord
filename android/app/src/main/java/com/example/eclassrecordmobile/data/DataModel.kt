@@ -10,6 +10,10 @@ data class SyncPayload(
     val profileName: String = "",
     val teacherName: String = "",
     val schoolName: String = "",
+    val schoolId: String = "",
+    val region: String = "",
+    val division: String = "",
+    val district: String = "",
     val schoolYear: String = "",
     val assignments: List<Assignment> = emptyList(),
     val revision: Long = 0,
@@ -122,14 +126,30 @@ data class BluetoothEnvelope(
 data class MobileChange(
     val changeId: String = "",
     val type: String,
-    val classId: String,
-    val learnerId: String,
+    val classId: String = "",
+    val learnerId: String = "",
     val assessmentId: String? = null,
     val value: String? = null,
     val date: String? = null,
     val term: String? = null,
     val status: String? = null,
-    val note: String? = null
+    val note: String? = null,
+    val action: String? = null,
+    val eventId: String? = null,
+    val title: String? = null,
+    val endDate: String? = null,
+    val details: String? = null,
+    val field: String? = null,
+)
+
+@Serializable
+data class ProfilePatch(
+    val teacherName: String = "",
+    val schoolName: String = "",
+    val schoolId: String = "",
+    val region: String = "",
+    val division: String = "",
+    val district: String = "",
 )
 
 @Serializable

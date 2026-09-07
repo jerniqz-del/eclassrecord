@@ -17,6 +17,7 @@ object DatabaseHelper {
     private const val UNSYNCED_FILE_NAME = "unsynced_scores.json"
     private const val UNSYNCED_SCORE_IDS_FILE_NAME = "unsynced_score_ids.json"
     private const val UNSYNCED_ATTENDANCE_FILE_NAME = "unsynced_attendance.json"
+    private const val UNSYNCED_EXTRAS_FILE_NAME = "unsynced_extras.json"
 
     private val json = Json { 
         ignoreUnknownKeys = true
@@ -27,6 +28,8 @@ object DatabaseHelper {
     private var activeProfileKey: String = ""
     var observedProfileKey by mutableStateOf("")
         private set
+    var observedRevision by mutableStateOf(0L)
+        private set
     private var storageBlocked = false
     private var storageError: String? = null
     
@@ -34,6 +37,7 @@ object DatabaseHelper {
     private var unsyncedScores: MutableMap<String, MutableMap<String, String>> = mutableMapOf()
     private var unsyncedScoreIds: MutableMap<String, MutableMap<String, String>> = mutableMapOf()
     private var unsyncedAttendance: MutableList<MobileChange> = mutableListOf()
+    private var unsyncedExtras: MutableList<MobileChange> = mutableListOf()
 
     fun init(context: Context) {
         loadData(context)
@@ -54,6 +58,9 @@ object DatabaseHelper {
     private fun getUnsyncedScoreIdsFile(context: Context) =
         File(storageDirectory(context), UNSYNCED_SCORE_IDS_FILE_NAME)
 
+    private fun getUnsyncedExtrasFile(context: Context) =
+        File(storageDirectory(context), UNSYNCED_EXTRAS_FILE_NAME)
+
     private fun getUnsyncedAttendanceFile(context: Context): File {
         return File(storageDirectory(context), UNSYNCED_ATTENDANCE_FILE_NAME)
     }
@@ -69,6 +76,7 @@ object DatabaseHelper {
         unsyncedScores = mutableMapOf()
         unsyncedScoreIds = mutableMapOf()
         unsyncedAttendance = mutableListOf()
+        unsyncedExtras = mutableListOf()
         loadData(context)
     }
 
@@ -87,6 +95,7 @@ object DatabaseHelper {
             unsyncedScores = mutableMapOf()
             unsyncedScoreIds = mutableMapOf()
             unsyncedAttendance = mutableListOf()
+            unsyncedExtras = mutableListOf()
             storageBlocked = false
             storageError = null
         }
@@ -103,6 +112,7 @@ object DatabaseHelper {
             UNSYNCED_FILE_NAME,
             UNSYNCED_SCORE_IDS_FILE_NAME,
             UNSYNCED_ATTENDANCE_FILE_NAME,
+            UNSYNCED_EXTRAS_FILE_NAME,
         ).forEach { name ->
             val source = File(context.filesDir, name)
             val destination = File(target, name)
@@ -150,7 +160,61 @@ object DatabaseHelper {
             }
             merged.copy(attendance = attendance)
         }
-        return payload.copy(assignments = assignments)
+        return applyPendingExtras(payload.copy(assignments = assignments))
+    }
+
+    private fun applyPendingExtras(payload: SyncPayload): SyncPayload {
+        var next = payload
+        unsyncedExtras.filter { it.type == "profile" }.forEach { change ->
+            val patch = decodeProfilePatch(change) ?: return@forEach
+            next = next.copy(
+                teacherName = patch.teacherName.ifBlank { next.teacherName },
+                schoolName = patch.schoolName.ifBlank { next.schoolName },
+                schoolId = patch.schoolId.ifBlank { next.schoolId },
+                region = patch.region.ifBlank { next.region },
+                division = patch.division.ifBlank { next.division },
+                district = patch.district.ifBlank { next.district },
+            )
+        }
+        val calendar = next.calendar.toMutableList()
+        unsyncedExtras.filter { it.type == "calendar" }.forEach { change ->
+            val eventId = change.eventId.orEmpty().ifBlank { change.assessmentId.orEmpty() }
+            if (eventId.isBlank()) return@forEach
+            if (change.action == "delete") {
+                calendar.removeAll { it.id == eventId }
+                return@forEach
+            }
+            val date = change.date.orEmpty()
+            if (!date.matches(Regex("""\d{4}-\d{2}-\d{2}"""))) return@forEach
+            val entry = CalendarEntry(
+                id = eventId,
+                title = change.title?.ifBlank { change.value }.orEmpty().ifBlank { "School event" },
+                date = date,
+                endDate = change.endDate?.ifBlank { date } ?: date,
+                type = change.status?.ifBlank { "local" } ?: "local",
+                details = change.details?.ifBlank { change.note }.orEmpty(),
+                classId = change.classId.takeIf { it.isNotBlank() },
+            )
+            val index = calendar.indexOfFirst { it.id == eventId }
+            if (index >= 0) calendar[index] = entry else calendar.add(entry)
+        }
+        return next.copy(calendar = calendar.sortedBy { it.date })
+    }
+
+    private fun decodeProfilePatch(change: MobileChange): ProfilePatch? {
+        val raw = change.value.orEmpty()
+        if (raw.startsWith("{")) {
+            return runCatching { json.decodeFromString(ProfilePatch.serializer(), raw) }.getOrNull()
+        }
+        return when (change.field) {
+            "teacherName" -> ProfilePatch(teacherName = change.value.orEmpty())
+            "schoolName" -> ProfilePatch(schoolName = change.value.orEmpty())
+            "schoolId" -> ProfilePatch(schoolId = change.value.orEmpty())
+            "region" -> ProfilePatch(region = change.value.orEmpty())
+            "division" -> ProfilePatch(division = change.value.orEmpty())
+            "district" -> ProfilePatch(district = change.value.orEmpty())
+            else -> null
+        }
     }
 
     fun pendingChanges(): List<MobileChange> = unsyncedScores.flatMap { (classId, scores) ->
@@ -165,7 +229,7 @@ object DatabaseHelper {
                 value = value,
             )
         }
-    } + unsyncedAttendance.map(::withChangeId)
+    } + unsyncedAttendance.map(::withChangeId) + unsyncedExtras.map(::withChangeId)
 
     private fun scoreChangeId(classId: String, key: String, value: String): String {
         unsyncedScoreIds[classId]?.get(key)?.takeIf { it.isNotBlank() }?.let { return it }
@@ -187,6 +251,12 @@ object DatabaseHelper {
             change.value.orEmpty(),
             change.status.orEmpty(),
             change.note.orEmpty(),
+            change.action.orEmpty(),
+            change.eventId.orEmpty(),
+            change.title.orEmpty(),
+            change.endDate.orEmpty(),
+            change.details.orEmpty(),
+            change.field.orEmpty(),
         ).joinToString(":")
         return change.copy(changeId = UUID.nameUUIDFromBytes(identity.toByteArray(StandardCharsets.UTF_8)).toString())
     }
@@ -196,11 +266,13 @@ object DatabaseHelper {
     }
 
     fun hasUnsyncedChanges(): Boolean {
-        return unsyncedScores.values.any { it.isNotEmpty() } || unsyncedAttendance.isNotEmpty()
+        return unsyncedScores.values.any { it.isNotEmpty() } ||
+            unsyncedAttendance.isNotEmpty() ||
+            unsyncedExtras.isNotEmpty()
     }
 
     fun pendingChangeCount(): Int =
-        unsyncedScores.values.sumOf { it.size } + unsyncedAttendance.size
+        unsyncedScores.values.sumOf { it.size } + unsyncedAttendance.size + unsyncedExtras.size
 
     fun getStorageError(): String? = storageError
 
@@ -272,6 +344,18 @@ object DatabaseHelper {
         } catch (e: Exception) {
             recordStorageError("Pending attendance could not be decrypted. It was not overwritten.", e)
         }
+        try {
+            val extrasFile = getUnsyncedExtrasFile(context)
+            unsyncedExtras = if (extrasFile.exists()) {
+                val stored = SecureFileStore.readText(extrasFile)
+                if (stored.wasPlaintext) SecureFileStore.writeText(extrasFile, stored.text)
+                json.decodeFromString<MutableList<MobileChange>>(stored.text)
+            } else {
+                mutableListOf()
+            }
+        } catch (e: Exception) {
+            recordStorageError("Pending profile and calendar changes could not be decrypted. They were not overwritten.", e)
+        }
 
         currentPayload = currentPayload?.let(::mergePendingChanges)
     }
@@ -286,6 +370,7 @@ object DatabaseHelper {
             currentPayload = payload
             val dbFile = getDbFile(context)
             SecureFileStore.writeText(dbFile, json.encodeToString(SyncPayload.serializer(), payload))
+            observedRevision += 1
         } catch (e: Exception) {
             recordStorageError("Error saving encrypted local records.", e)
         }
@@ -332,6 +417,19 @@ object DatabaseHelper {
     }
 
     @Synchronized
+    fun saveUnsyncedExtras(context: Context) {
+        if (storageBlocked) return
+        try {
+            SecureFileStore.writeText(
+                getUnsyncedExtrasFile(context),
+                json.encodeToString(unsyncedExtras),
+            )
+        } catch (e: Exception) {
+            recordStorageError("Error saving encrypted pending profile and calendar changes.", e)
+        }
+    }
+
+    @Synchronized
     fun clearUnsyncedScores(context: Context) {
         unsyncedScores.clear()
         saveUnsyncedScores(context)
@@ -339,6 +437,8 @@ object DatabaseHelper {
         saveUnsyncedScoreIds(context)
         unsyncedAttendance.clear()
         saveUnsyncedAttendance(context)
+        unsyncedExtras.clear()
+        saveUnsyncedExtras(context)
     }
 
     @Synchronized
@@ -356,9 +456,11 @@ object DatabaseHelper {
         unsyncedScores.entries.removeAll { it.value.isEmpty() }
         unsyncedScoreIds.entries.removeAll { it.value.isEmpty() }
         unsyncedAttendance.removeAll { withChangeId(it).changeId in accepted }
+        unsyncedExtras.removeAll { withChangeId(it).changeId in accepted }
         saveUnsyncedScores(context)
         saveUnsyncedScoreIds(context)
         saveUnsyncedAttendance(context)
+        saveUnsyncedExtras(context)
     }
 
     @Synchronized
@@ -448,5 +550,75 @@ object DatabaseHelper {
             assignment.copy(attendance = sessions)
         }
         savePayload(context, payload.copy(assignments = updatedAssignments))
+    }
+
+    @Synchronized
+    fun updateProfile(context: Context, patch: ProfilePatch) {
+        val payload = currentPayload ?: return
+        unsyncedExtras.removeAll { it.type == "profile" }
+        unsyncedExtras.add(
+            MobileChange(
+                changeId = UUID.randomUUID().toString(),
+                type = "profile",
+                value = json.encodeToString(ProfilePatch.serializer(), patch),
+            ),
+        )
+        saveUnsyncedExtras(context)
+        savePayload(
+            context,
+            payload.copy(
+                teacherName = patch.teacherName,
+                schoolName = patch.schoolName,
+                schoolId = patch.schoolId,
+                region = patch.region,
+                division = patch.division,
+                district = patch.district,
+            ),
+        )
+    }
+
+    @Synchronized
+    fun upsertCalendarEvent(context: Context, entry: CalendarEntry) {
+        val payload = currentPayload ?: return
+        if (entry.id.startsWith("official-") || entry.title.isBlank() || !entry.date.matches(Regex("""\d{4}-\d{2}-\d{2}"""))) return
+        unsyncedExtras.removeAll { it.type == "calendar" && it.eventId == entry.id }
+        unsyncedExtras.add(
+            MobileChange(
+                changeId = UUID.randomUUID().toString(),
+                type = "calendar",
+                action = "upsert",
+                eventId = entry.id,
+                title = entry.title,
+                value = entry.title,
+                date = entry.date,
+                endDate = entry.endDate.ifBlank { entry.date },
+                status = entry.type.ifBlank { "local" },
+                details = entry.details,
+                note = entry.details,
+                classId = entry.classId.orEmpty(),
+            ),
+        )
+        saveUnsyncedExtras(context)
+        val calendar = payload.calendar.toMutableList()
+        val index = calendar.indexOfFirst { it.id == entry.id }
+        if (index >= 0) calendar[index] = entry else calendar.add(entry)
+        savePayload(context, payload.copy(calendar = calendar.sortedBy { it.date }))
+    }
+
+    @Synchronized
+    fun deleteCalendarEvent(context: Context, eventId: String) {
+        val payload = currentPayload ?: return
+        if (eventId.isBlank() || eventId.startsWith("official-")) return
+        unsyncedExtras.removeAll { it.type == "calendar" && it.eventId == eventId }
+        unsyncedExtras.add(
+            MobileChange(
+                changeId = UUID.randomUUID().toString(),
+                type = "calendar",
+                action = "delete",
+                eventId = eventId,
+            ),
+        )
+        saveUnsyncedExtras(context)
+        savePayload(context, payload.copy(calendar = payload.calendar.filterNot { it.id == eventId }))
     }
 }

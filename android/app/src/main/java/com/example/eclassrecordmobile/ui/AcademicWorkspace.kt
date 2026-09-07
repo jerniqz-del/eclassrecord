@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.CheckCircle
@@ -41,6 +42,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -54,6 +56,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -70,6 +73,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -97,15 +103,20 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
 import java.util.Locale
+import java.util.UUID
 
 @Composable
 fun ModernCalendarScreen(calendar: List<CalendarEntry>, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val liveRevision = DatabaseHelper.observedRevision
+    val liveCalendar = remember(liveRevision, calendar) { DatabaseHelper.getPayload()?.calendar ?: calendar }
     val today = LocalDate.now()
     var monthText by rememberSaveable { mutableStateOf(YearMonth.from(today).toString()) }
     var selectedText by rememberSaveable { mutableStateOf(today.toString()) }
+    var showEditor by rememberSaveable { mutableStateOf(false) }
     val month = remember(monthText) { YearMonth.parse(monthText) }
     val selected = remember(selectedText) { LocalDate.parse(selectedText) }
-    val parsed = remember(calendar) { calendar.mapNotNull { event -> runCatching { Triple(event, LocalDate.parse(event.date), LocalDate.parse(event.endDate.ifBlank { event.date })) }.getOrNull() } }
+    val parsed = remember(liveCalendar) { liveCalendar.mapNotNull { event -> runCatching { Triple(event, LocalDate.parse(event.date), LocalDate.parse(event.endDate.ifBlank { event.date })) }.getOrNull() } }
     val selectedEvents = parsed.filter { (_, start, end) -> !selected.isBefore(start) && !selected.isAfter(end) }.map { it.first }
     val monthEvents = parsed.count { (_, start, end) -> YearMonth.from(start) == month || YearMonth.from(end) == month }
     val firstDay = WeekFields.of(Locale.getDefault()).firstDayOfWeek
@@ -113,6 +124,17 @@ fun ModernCalendarScreen(calendar: List<CalendarEntry>, modifier: Modifier = Mod
     val gridStart = month.atDay(1).minusDays(offset.toLong())
     val days = (0 until 42).map { gridStart.plusDays(it.toLong()) }
     val formatter = DateTimeFormatter.ofPattern("MMMM yyyy")
+
+    if (showEditor) {
+        CalendarEventEditorDialog(
+            initialDate = selectedText,
+            onDismiss = { showEditor = false },
+            onSave = { entry ->
+                DatabaseHelper.upsertCalendarEvent(context, entry)
+                showEditor = false
+            },
+        )
+    }
 
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(LocalFluidLayout.current.gutter), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
@@ -177,7 +199,11 @@ fun ModernCalendarScreen(calendar: List<CalendarEntry>, modifier: Modifier = Mod
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text(day.dayOfMonth.toString(), color = when { isSelected -> Color.White; inMonth -> MaterialTheme.colorScheme.onSurface; else -> MaterialTheme.colorScheme.outline }, fontWeight = if (isSelected || day == today) FontWeight.ExtraBold else FontWeight.Normal)
-                                        if (hasEvents) Box(Modifier.size(5.dp).clip(CircleShape).background(if (isSelected) Color.White else NeonGreen))
+                                        if (hasEvents) Box(
+                                            Modifier.size(5.dp).clip(CircleShape)
+                                                .background(if (isSelected) Color.White else NeonGreen)
+                                                .semantics { contentDescription = "event dot" },
+                                        )
                                     }
                                 }
                             }
@@ -190,19 +216,66 @@ fun ModernCalendarScreen(calendar: List<CalendarEntry>, modifier: Modifier = Mod
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 DepthIcon(Icons.Default.Event, "Agenda", size = 42.dp, selected = selectedEvents.isNotEmpty())
                 Spacer(Modifier.width(10.dp))
-                Column {
+                Column(Modifier.weight(1f)) {
                     Text(selected.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")), fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
                     Text(if (selectedEvents.isEmpty()) "No events scheduled" else "${selectedEvents.size} event${if (selectedEvents.size == 1) "" else "s"}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                IconButton(onClick = { showEditor = true }) {
+                    DepthIcon(Icons.Default.Add, "Add school event", size = 36.dp, selected = true)
+                }
             }
         }
-        if (selectedEvents.isEmpty()) item { AcademicEmptyCard("This date is clear. Select a date with an event dot to view its agenda.") }
-        items(selectedEvents, key = { it.id }) { event -> CalendarEventCard(event) }
+        if (selectedEvents.isEmpty()) item { AcademicEmptyCard("This date is clear. Add a local event to sync it with the desktop calendar.") }
+        items(selectedEvents, key = { it.id }) { event ->
+            CalendarEventCard(event) {
+                if (!event.id.startsWith("official-")) DatabaseHelper.deleteCalendarEvent(context, event.id)
+            }
+        }
     }
 }
 
 @Composable
-private fun CalendarEventCard(event: CalendarEntry) {
+fun CalendarEventEditorDialog(
+    initialDate: String,
+    onDismiss: () -> Unit,
+    onSave: (CalendarEntry) -> Unit,
+) {
+    var title by rememberSaveable { mutableStateOf("") }
+    var details by rememberSaveable { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add school event") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("This local event is saved on the phone and sent to the desktop calendar on the next push.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(title, { title = it }, label = { Text("Title") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(initialDate, {}, label = { Text("Date") }, enabled = false, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(details, { details = it }, label = { Text("Details") }, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (title.isBlank()) return@TextButton
+                    onSave(
+                        CalendarEntry(
+                            id = UUID.randomUUID().toString(),
+                            title = title.trim(),
+                            date = initialDate,
+                            endDate = initialDate,
+                            type = "local",
+                            details = details.trim(),
+                        ),
+                    )
+                },
+            ) { Text("Save to desktop sync") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun CalendarEventCard(event: CalendarEntry, onDelete: () -> Unit) {
     val accent = when (event.type.lowercase()) { "national", "holiday" -> Color(0xFFDC2626); "school" -> Color(0xFF2563EB); else -> Color(0xFF0891B2) }
     Card(
         Modifier.fillMaxWidth().graphicsLayer { shadowElevation = 12f },
@@ -216,6 +289,9 @@ private fun CalendarEventCard(event: CalendarEntry) {
                 Text(event.title, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
                 Text(event.type.ifBlank { "School event" }, color = accent, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 if (event.details.isNotBlank()) Text(event.details, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                if (!event.id.startsWith("official-")) {
+                    TextButton(onClick = onDelete) { Text("Remove and sync deletion") }
+                }
             }
         }
     }

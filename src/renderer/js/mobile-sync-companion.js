@@ -156,6 +156,10 @@
       pushPinRequired: Boolean(globalScope.activeProfileRequiresPin?.()),
       teacherName: String(database.teacherName || 'Teacher'),
       schoolName: String(database.schoolName || 'E-Class Record School'),
+      schoolId: String(database.schoolId || ''),
+      region: String(database.region || ''),
+      division: String(database.division || ''),
+      district: String(database.district || ''),
       schoolYear,
       assignments: assignments.map((assignment) => ({
         id: assignment.id,
@@ -517,6 +521,77 @@
     return before !== assignment.supportRecords.length || status !== 'present';
   }
 
+  function profileFields(change) {
+    if (change.field) {
+      return { [String(change.field)]: String(change.value || '') };
+    }
+    try {
+      const parsed = JSON.parse(String(change.value || '{}'));
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    } catch (_error) {}
+    return {};
+  }
+
+  function profileChange(change, database) {
+    const allowed = new Set(['teacherName', 'schoolName', 'schoolId', 'region', 'division', 'district']);
+    const fields = profileFields(change);
+    let changed = false;
+    allowed.forEach((key) => {
+      if (!Object.prototype.hasOwnProperty.call(fields, key)) return;
+      const next = String(fields[key] || '').trim().slice(0, 160);
+      if (String(database[key] || '') === next) return;
+      database[key] = next;
+      changed = true;
+    });
+    if (changed && database.teacherName) {
+      const root = typeof getRootDatabase === 'function' ? getRootDatabase() : globalScope.getRootDatabase?.();
+      const profile = (root?.profiles || []).find((item) => item.id === activeProfileDescriptor().profileId);
+      if (profile && profile.name !== database.teacherName) profile.name = database.teacherName;
+    }
+    return changed;
+  }
+
+  function calendarChange(change, database) {
+    if (!Array.isArray(database.calendarEvents)) database.calendarEvents = [];
+    const action = String(change.action || 'upsert');
+    const eventId = String(change.eventId || change.assessmentId || '').trim();
+    if (!eventId) throw new Error('A mobile calendar change is missing its event id.');
+    const existing = database.calendarEvents.find((item) => String(item.id) === eventId);
+    const official = Boolean(existing?.immutable || existing?.sourceId || eventId.startsWith('official-'));
+    if (official) throw new Error('Official calendar events cannot be changed from the phone.');
+    if (action === 'delete') {
+      const before = database.calendarEvents.length;
+      database.calendarEvents = database.calendarEvents.filter((item) => String(item.id) !== eventId);
+      return database.calendarEvents.length !== before;
+    }
+    const date = String(change.date || '');
+    const endDate = String(change.endDate || date);
+    const title = String(change.title || change.value || '').trim().slice(0, 160);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate) || !title) {
+      throw new Error('A mobile calendar entry is invalid.');
+    }
+    if (endDate < date) throw new Error('A mobile calendar entry ends before it starts.');
+    const next = {
+      id: eventId,
+      title,
+      type: String(change.status || 'local').trim().slice(0, 40) || 'local',
+      date,
+      startDate: date,
+      endDate,
+      details: String(change.details || change.note || '').trim().slice(0, 500),
+      schoolYear: String(database.schoolYear || ''),
+      source: 'android-companion',
+      immutable: false
+    };
+    if (change.classId) next.classId = String(change.classId);
+    if (!existing) {
+      database.calendarEvents.push(next);
+      return true;
+    }
+    Object.assign(existing, next);
+    return true;
+  }
+
   async function applyChanges(request) {
     const database = activeProfile();
     if (!database) throw new Error('No active desktop profile is open.');
@@ -538,11 +613,17 @@
         acceptedChangeIds.push(changeId);
         continue;
       }
-      const assignment = (database.assignments || []).find((item) => item.id === change.classId);
-      if (!assignment) throw new Error('A mobile change references an unknown class.');
-      if (change.type === 'score' && scoreChange(change, assignment)) accepted += 1;
-      else if (change.type === 'attendance' && attendanceChange(change, assignment)) accepted += 1;
-      else if (!['score', 'attendance'].includes(change.type)) throw new Error('Unsupported mobile change type.');
+      if (change.type === 'profile') {
+        if (profileChange(change, database)) accepted += 1;
+      } else if (change.type === 'calendar') {
+        if (calendarChange(change, database)) accepted += 1;
+      } else {
+        const assignment = (database.assignments || []).find((item) => item.id === change.classId);
+        if (!assignment) throw new Error('A mobile change references an unknown class.');
+        if (change.type === 'score' && scoreChange(change, assignment)) accepted += 1;
+        else if (change.type === 'attendance' && attendanceChange(change, assignment)) accepted += 1;
+        else if (!['score', 'attendance'].includes(change.type)) throw new Error('Unsupported mobile change type.');
+      }
       if (changeId) {
         appliedIds.add(changeId);
         acceptedChangeIds.push(changeId);
@@ -557,6 +638,7 @@
       };
       await globalScope.saveDatabase();
       globalScope.render?.();
+      globalScope.refreshCalendarView?.();
       globalScope.toast?.(`${accepted} mobile entries were applied to the desktop record.`, 'success');
     }
     return { success: true, accepted: acceptedChangeIds.length || accepted, acceptedChangeIds };

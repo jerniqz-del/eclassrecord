@@ -72,7 +72,7 @@ object DesktopFeatureNames {
         CHECKLIST to "Performance Checklist",
         CALENDAR to "Calendar",
         TOOLS to "Teacher Tools",
-        SETTINGS to "Settings",
+        SETTINGS to "Profile",
     )
 
     fun title(name: String): String = menu.firstOrNull { it.first == name }?.second ?: "Desktop Features"

@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -102,12 +104,15 @@ fun DepthIcon(
     accent: Color = MaterialTheme.colorScheme.primary,
 ) {
     val shape = RoundedCornerShape(size * 0.32f)
+    val dark = LocalDarkTheme.current
     val lift by animateFloatAsState(if (selected) -3f else 0f, label = "depth-icon-lift")
     val tilt by animateFloatAsState(if (selected) 7f else 0f, label = "depth-icon-tilt")
     val colors = if (selected) {
-        listOf(NeonBlue, accent, NeonPurple)
+        listOf(accent.copy(alpha = 0.95f), NeonBlue, NeonPurple)
+    } else if (dark) {
+        listOf(Color(0xFF334155), Color(0xFF1E293B))
     } else {
-        listOf(NeonPanelRaised, NeonPanel)
+        listOf(Color.White, Color(0xFFE0F2FE), Color(0xFFF3E8FF))
     }
     Box(
         modifier = modifier
@@ -126,8 +131,8 @@ fun DepthIcon(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color.Black.copy(alpha = 0.2f),
-            modifier = Modifier.size(size * 0.52f).offset(y = 1.5.dp),
+            tint = Color.White.copy(alpha = if (selected) 0.35f else 0.55f),
+            modifier = Modifier.size(size * 0.52f).offset(x = 1.dp, y = 1.5.dp),
         )
         Icon(
             imageVector = icon,
@@ -325,37 +330,34 @@ fun EClassTopBar(
     val fluid = LocalFluidLayout.current
     val dark = LocalDarkTheme.current
     val themeController = LocalThemeController.current
+    val iconSize = if (fluid.isTablet) 34.dp else 30.dp
     TopAppBar(
+        windowInsets = WindowInsets.statusBars,
         navigationIcon = {
             if (onBack != null) {
                 IconButton(onClick = onBack) {
-                    DepthIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", size = 38.dp)
+                    DepthIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", size = iconSize)
                 }
             } else {
-                BrandMark(modifier = Modifier.padding(start = 12.dp), size = 46.dp)
+                BrandMark(modifier = Modifier.padding(start = 8.dp), size = iconSize)
             }
         },
         title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (onBack == null) Spacer(Modifier.width(5.dp))
-                Column {
-                    Text(
-                        title,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = fluid.type(20),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (subtitle.isNotBlank()) {
-                        Text(
-                            subtitle,
-                            fontSize = fluid.type(11),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
+            Column {
+                Text(
+                    "E-Class Record App",
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = fluid.type(17),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    title.ifBlank { subtitle }.ifBlank { "Home" },
+                    fontSize = fluid.type(12),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         },
         actions = {
@@ -364,16 +366,15 @@ fun EClassTopBar(
                     DepthIcon(
                         if (dark) Icons.Default.LightMode else Icons.Default.DarkMode,
                         if (dark) "Switch to light mode" else "Switch to dark mode",
-                        size = 38.dp,
+                        size = iconSize,
                         selected = dark,
                     )
                 }
             }
             if (actionIcon != null && onAction != null) {
                 IconButton(onClick = onAction) {
-                    DepthIcon(actionIcon, actionDescription, size = 40.dp, selected = true)
+                    DepthIcon(actionIcon, actionDescription, size = iconSize, selected = true)
                 }
-                Spacer(Modifier.width(10.dp))
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(

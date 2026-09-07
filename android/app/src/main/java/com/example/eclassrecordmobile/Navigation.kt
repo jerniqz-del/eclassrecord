@@ -131,6 +131,7 @@ fun MainNavigation() {
     }
   }
   Scaffold(
+    contentWindowInsets = WindowInsets(0, 0, 0, 0),
     bottomBar = {
       if (!imeVisible && !fluid.useRailNavigation) {
         PersistentAppDock(
@@ -146,7 +147,7 @@ fun MainNavigation() {
           PersistentAppRail(
             selectedIndex = selectedDock,
             onSelectedIndexChange = ::openDock,
-            modifier = Modifier.fillMaxHeight(),
+            modifier = Modifier.fillMaxHeight().statusBarsPadding(),
           )
         }
       NavDisplay(

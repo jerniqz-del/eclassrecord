@@ -70,7 +70,7 @@
     "test:advisory-backup": "node scripts/test-advisory-backup.js",
     "test:advisory-e2e": "node scripts/test-advisory-e2e.js",
     "test:advisory-redesign": "node scripts/test-advisory-redesign.js",
-    "test:mobile-lan-sync": "node scripts/test-mobile-lan-sync-update.js && node scripts/test-mobile-apk-install.js && node scripts/test-mobile-multi-profile-sync.js && node scripts/test-mobile-ui-redesign.js && node scripts/test-mobile-desktop-remote.js && node scripts/test-mobile-github-update-channel.js && node scripts/test-mobile-link-experience.js && node scripts/test-mobile-academic-ui.js && node scripts/test-mobile-subject-visuals.js && node scripts/test-mobile-neon-ui.js && node scripts/test-transmutation-table.js",
+    "test:mobile-lan-sync": "node scripts/test-mobile-lan-sync-update.js && node scripts/test-mobile-apk-install.js && node scripts/test-mobile-multi-profile-sync.js && node scripts/test-mobile-ui-redesign.js && node scripts/test-mobile-desktop-remote.js && node scripts/test-mobile-github-update-channel.js && node scripts/test-mobile-link-experience.js && node scripts/test-mobile-academic-ui.js && node scripts/test-mobile-subject-visuals.js && node scripts/test-mobile-neon-ui.js && node scripts/test-transmutation-table.js && node scripts/test-mobile-profile-calendar-sync.js",
     "test:mobile-multi-profile-sync": "node scripts/test-mobile-multi-profile-sync.js",
     "test:desktop-profile-management": "node scripts/test-desktop-profile-management.js",
     "test:mobile-ui-redesign": "node scripts/test-mobile-ui-redesign.js",
