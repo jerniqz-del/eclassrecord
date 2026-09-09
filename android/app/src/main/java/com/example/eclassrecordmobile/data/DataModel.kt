@@ -37,7 +37,24 @@ data class Assignment(
     val learners: List<Learner> = emptyList(),
     val assessments: List<Assessment> = emptyList(),
     val scores: Map<String, String> = emptyMap(),
+    val paceRatings: Map<String, String> = emptyMap(),
+    val paceOverrides: Map<String, String> = emptyMap(),
+    val paceNarratives: Map<String, String> = emptyMap(),
+    val paceCompetencies: List<PaceCompetency> = emptyList(),
     val attendance: List<AttendanceSession> = emptyList()
+)
+
+@Serializable
+data class PaceCompetency(
+    val id: String,
+    val number: Int = 0,
+    val title: String = "",
+    val terms: List<Int> = emptyList(),
+    val skills: List<String> = emptyList(),
+    val group: String = "",
+    val standard: String = "",
+    val details: List<String> = emptyList(),
+    val subject: String = "",
 )
 
 @Serializable
@@ -47,7 +64,8 @@ data class Learner(
     val sex: String,
     val lrn: String = "",
     val avatarPresetId: String = "",
-    val avatarAssignment: String = "automatic"
+    val avatarAssignment: String = "automatic",
+    val transferredOutTerm: String = "",
 )
 
 @Serializable

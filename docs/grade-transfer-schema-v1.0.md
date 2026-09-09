@@ -44,12 +44,23 @@ Grade Transfer Files are UTF-8 JSON documents for offline exchange of one subjec
 }
 ```
 
+Grade 1 PACE transfer rows use a letter and Annex C range instead of a percentage:
+
+```json
+{
+  "finalGrade": "B",
+  "annexCRange": "80-89",
+  "originalBasis": "descriptive",
+  "gradeStatus": "final",
+  "remarks": "Original basis of grade was descriptive (DO 15, s. 2026)."
+}
+
 ## Validation rules
 
 - `format` must equal `eclass-record-grade-export` and `schemaVersion` must equal `1.0`.
 - `exportId` must be present and unique per export; `exportedAt` must be a valid ISO-8601 timestamp.
 - Root `schoolYear`, class grade level and section, subject name and normalized key, and `term.number` are required. Supported term numbers are `1`, `2`, and `3`.
-- `learners` must be a non-empty array. Each row needs first and last name plus one finite numeric `finalGrade` from 60 through 100.
+- `learners` must be a non-empty array. Each row needs first and last name plus a `finalGrade`. For Grades 4 and up, `finalGrade` is a finite number from 60 through 100. For Grade 1 (DO 15 descriptive / PACE), `finalGrade` is a letter **A–E**. When a receiving school still uses numerical grading, include `annexCRange` (A `90-100`, B `80-89`, C `75-79`, D `65-74`, E `0-64`) and `originalBasis: "descriptive"`. Do not invent a single mid-range number such as 85.
 - LRNs, when present, are 12 digits and must not be duplicated in the file.
 - Raw scores, assessment columns, HPS, attendance, and grades from other terms are outside this schema and must not be exported.
 - Unknown properties may be retained for forward compatibility, but importers must not treat them as authoritative grade data.

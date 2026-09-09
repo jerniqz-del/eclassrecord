@@ -286,8 +286,24 @@ function updateLearnerGradesDisplay() {
  * Builds table rows of term assessments for standard subjects.
  */
 function renderTermStandardDetails(a, learnerId, term) {
-  const items = termAssessments(a, term);
   const result = computeTerm(a, learnerId, term);
+  if (isGrade1Assignment(a) && typeof paceTermResult === 'function') {
+    const pace = paceTermResult(a, learnerId, term, typeof paceWorkingSubject === 'function' ? paceWorkingSubject(a) : a.subject);
+    const narrative = a.pace?.narratives?.[typeof paceOverrideKey === 'function' ? paceOverrideKey(learnerId, term, typeof paceWorkingSubject === 'function' ? paceWorkingSubject(a) : a.subject, a) : `${learnerId}|${term}`] || '';
+    const remarksBadge = result.termGrade === null
+      ? '—'
+      : `<span class="badge ${isPassing(result.termGrade) ? 'badge--pass' : 'badge--fail'}">${isPassing(result.termGrade) ? 'Passed' : 'For Intervention'}</span>`;
+    return `
+      <div class="term-result-strip">
+        <div>PACE letter: <strong class="term-grade-highlight">${result.termGrade === null ? '—' : wrapTransmutationTrigger(formatGradeForDisplay(result.termGrade, a.policy), result.initialGrade, result.termGrade, { disabled: true })}</strong></div>
+        <div>Rated: <strong>${pace.rated} of ${pace.expected}</strong>${pace.override ? ' · override' : ''}</div>
+        <div>Remarks: ${remarksBadge}</div>
+      </div>
+      ${narrative ? `<p class="pace-standard">${esc(narrative)}</p>` : ''}
+      <p class="text-muted">Written Work and Performance Task scores are optional evidence and do not change this letter.</p>
+    `;
+  }
+  const items = termAssessments(a, term);
   const w = weightsForAssignment(a);
   
   let html = `
@@ -361,8 +377,8 @@ function renderTermStandardDetails(a, learnerId, term) {
     </table>
     
     <div class="term-result-strip">
-      <div>Initial Grade (IG): <strong>${result.hasData ? fmt(result.initialGrade) : '—'}</strong></div>
-      <div>Transmuted Grade (TG): <strong class="term-grade-highlight">${result.termGrade === null ? '—' : wrapTransmutationTrigger(formatGradeForDisplay(result.termGrade, a.policy), result.initialGrade, result.termGrade, { disabled: !result.hasData, isTransferredIn: !!result.isTransferredIn, isTransferredOut: !!result.isTransferredOut })}</strong></div>
+      <div>${isGrade1Assignment(a) ? 'PACE letter' : 'Initial Grade (IG)'}: <strong>${isGrade1Assignment(a) ? (result.termGrade === null ? '—' : formatGradeForDisplay(result.termGrade, a.policy)) : (result.hasData ? fmt(result.initialGrade) : '—')}</strong></div>
+      <div>${isGrade1Assignment(a) ? 'Rated cells' : 'Transmuted Grade (TG)'}: <strong class="term-grade-highlight">${isGrade1Assignment(a) ? `${result.paceRated || 0} of ${result.paceExpected || 0}` : (result.termGrade === null ? '—' : wrapTransmutationTrigger(formatGradeForDisplay(result.termGrade, a.policy), result.initialGrade, result.termGrade, { disabled: !result.hasData, isTransferredIn: !!result.isTransferredIn, isTransferredOut: !!result.isTransferredOut }))}</strong></div>
       <div>Remarks: ${remarksBadge}</div>
     </div>
   `;
@@ -450,12 +466,12 @@ function renderSummaryStandardDetails(a, learnerId) {
     const res = computeTerm(a, learnerId, String(t));
     terms.push(res.termGrade);
     
-    if (isDescriptive) {
-      if (res.hasData) {
+    if (isDescriptive && !isGrade1Assignment(a)) {
+      if (res.hasData && Number.isFinite(Number(res.initialGrade))) {
         sumIg += res.initialGrade;
         countIg++;
       }
-    } else {
+    } else if (!isDescriptive) {
       if (res.termGrade !== null) {
         sum += res.termGrade;
         count++;
@@ -463,9 +479,11 @@ function renderSummaryStandardDetails(a, learnerId) {
     }
   }
   
-  const fg = isDescriptive
+  const fg = isGrade1Assignment(a)
+    ? null
+    : (isDescriptive
     ? (countIg > 0 ? transmute(a, sumIg / countIg) : null)
-    : (count > 0 ? Math.round(sum / count) : null);
+    : (count > 0 ? Math.round(sum / count) : null));
   const remarks = finalRemark(a, fg);
   
   let html = `

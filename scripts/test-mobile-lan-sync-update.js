@@ -128,5 +128,15 @@ assert.match(installer, /localport=38472 remoteip=LocalSubnet/);
 assert.match(installer, /localport=38474 remoteip=LocalSubnet/);
 assert.match(desktopHtml, /Show install QR/);
 assert.match(companion, /startCompanionApkInstall/);
+assert.match(desktopHtml, /id="btnCompanionInstructions"/);
+assert.match(desktopHtml, /id="companionInstructionsModal"/);
+assert.match(desktopHtml, /data-eclass-onclick="openCompanionInstructions\(\)"/);
+assert.match(companion, /function openCompanionInstructions/);
+assert.match(companion, /function closeCompanionInstructions/);
+assert.match(companion, /Show WLAN QR/);
+assert.match(companion, /phone camera/);
+assert.match(companion, /Start Bluetooth Pairing/);
+assert.match(read('src', 'renderer', 'js', 'ui-helpers.js'), /companionInstructionsModal: 'closeCompanionInstructions'/);
+assert.match(read('src', 'renderer', 'js', 'help.js'), /id: 'mobile_companion_sync'/);
 
 console.log('Mobile LAN live-sync and desktop-assisted update tests passed.');

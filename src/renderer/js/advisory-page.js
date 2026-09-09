@@ -64,6 +64,15 @@
       </div>
       <button class="btn btn-danger btn-sm advisory-page__reset" type="button" data-advisory-page-reset>Reset Advisory Class</button>`;
     header.querySelector('[data-advisory-page-reset]')?.addEventListener('click', () => globalScope.showAdvisoryResetModal?.());
+    const sf9Btn = page.querySelector('[data-advisory-sf9]');
+    if (sf9Btn) {
+      const isGrade1 = parseInt(advisoryClass.gradeLevel, 10) === 1;
+      const isKinder = typeof globalScope.isKinderGradeLevel === 'function'
+        ? globalScope.isKinderGradeLevel(advisoryClass.gradeLevel)
+        : /kinder/i.test(String(advisoryClass.gradeLevel || ''));
+      sf9Btn.hidden = !(isGrade1 || isKinder);
+      if (isKinder) sf9Btn.textContent = 'Print Kinder SF9';
+    }
     globalScope.AdvisoryGradeTransfer?.renderWorkspacePanel?.(page, advisoryClass);
     syncSidebarButton();
     syncActiveNavigation();
@@ -89,6 +98,9 @@
       const advisoryClass = currentClass();
       if (advisoryClass) globalScope.AdvisoryGradeReport?.showOptions?.(advisoryClass, button.dataset.advisoryPageReport);
     }));
+    page.querySelector('[data-advisory-sf9]')?.addEventListener('click', () => {
+      if (typeof globalScope.openGrade1Sf9Preview === 'function') globalScope.openGrade1Sf9Preview();
+    });
     page.querySelector('.advisory-page__toolbar')?.addEventListener('keydown', event => {
       const currentIndex = tabs.indexOf(event.target.closest?.('[data-advisory-page-tab]'));
       if (currentIndex < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;

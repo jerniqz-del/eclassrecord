@@ -2094,6 +2094,52 @@ ipcMain.handle('dialog:export-excel-template', async (_event, payload) => {
   }
 });
 
+ipcMain.handle('dialog:export-official-ecr', async (_event, payload) => {
+  const assignment = payload?.assignment || payload || {};
+  const filename = mockSafeFilename(
+    `Official-ECR-${assignment.gradeLevel || payload?.gradeLevel}-${assignment.section || payload?.section}-${assignment.subject || payload?.subject}.xlsx`,
+    payload
+  );
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Official ECR',
+    defaultPath: path.join(app.getPath('desktop'), filename),
+    filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
+  });
+  if (result.canceled || !result.filePath) return { success: false };
+  try {
+    const officialExporter = require('./official-ecr-exporter');
+    officialExporter.generateOfficialExcel(result.filePath, payload);
+    return { success: true, path: result.filePath };
+  } catch (e) {
+    console.error(e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('dialog:export-pace-form', async (_event, payload) => {
+  const filename = mockSafeFilename(payload?.filename || 'PACE Form Term 1.docx', payload);
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Individual PACE Form',
+    defaultPath: path.join(app.getPath('desktop'), filename),
+    filters: [{ name: 'Word Documents', extensions: ['docx'] }]
+  });
+  if (result.canceled || !result.filePath) return { success: false };
+  try {
+    const { fillPaceFormDocx } = require('./pace-docx');
+    const buffer = fillPaceFormDocx(payload?.replacements || {});
+    fs.writeFileSync(result.filePath, buffer);
+    return { success: true, path: result.filePath };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('pace:official-form-html', async (_event, payload) => {
+  const preview = require('./official-pace-form-preview');
+  return preview.renderOfficialPaceForm(payload || {});
+});
+
 ipcMain.handle('dialog:export-pdf', async (_event, options) => {
   const { size, landscape, filename, metadata } = options || {};
   const isSelfContainedSf2Report = /^School Form 2 \(SF2\)\b/i.test(String(metadata?.title || '').trim());

@@ -101,6 +101,8 @@ fun ClassDetailScreen(
     var selectedSheetTab by rememberSaveable { mutableIntStateOf(0) }
     val isMapeh = assignment.subject.uppercase().contains("MAPEH")
     var selectedMapePart by rememberSaveable { mutableStateOf("music_arts") }
+    val isPace = assignment.gradeLevel == "1" && assignment.paceCompetencies.isNotEmpty()
+    val sheetTabs = if (isPace) listOf("PACE", "Evidence", "Individual", "Grid", "Summary") else listOf("Assessments", "Individual", "Grid", "Summary")
     val visual = SubjectVisuals.forAssignment(assignment)
     val visibleForTerm = assignment.assessments.filter { it.term == selectedTerm }
     val expectedForTerm = assignment.learners.size * visibleForTerm.size
@@ -160,7 +162,7 @@ fun ClassDetailScreen(
                 contentColor = NeonPurple,
                 edgePadding = 8.dp,
             ) {
-                listOf("Assessments", "Individual", "Grid", "Summary").forEachIndexed { index, label ->
+                sheetTabs.forEachIndexed { index, label ->
                     Tab(
                         selected = selectedSheetTab == index,
                         onClick = { selectedSheetTab = index },
@@ -197,11 +199,16 @@ fun ClassDetailScreen(
                 },
                 label = "grading-sheet-mode",
             ) { sheet ->
-                when (sheet) {
-                  0 -> AssessmentList(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh }) { onNavigate(ScoreEntry(assignment.id, it)) }
-                  1 -> IndividualGradeView(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh })
-                  2 -> GridGradeSheet(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh })
-                  else -> GradeSummary(assignment, selectedTerm, payload.grades)
+                when {
+                    isPace && sheet == 0 -> PaceRatingPane(assignment, selectedTerm, Modifier.fillMaxSize())
+                    isPace && sheet == 1 -> AssessmentList(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh }) { onNavigate(ScoreEntry(assignment.id, it)) }
+                    isPace && sheet == 2 -> IndividualGradeView(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh })
+                    isPace && sheet == 3 -> GridGradeSheet(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh })
+                    isPace -> GradeSummary(assignment, selectedTerm, payload.grades)
+                    sheet == 0 -> AssessmentList(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh }) { onNavigate(ScoreEntry(assignment.id, it)) }
+                    sheet == 1 -> IndividualGradeView(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh })
+                    sheet == 2 -> GridGradeSheet(assignment, selectedTerm, selectedMapePart.takeIf { isMapeh })
+                    else -> GradeSummary(assignment, selectedTerm, payload.grades)
                 }
             }
         }

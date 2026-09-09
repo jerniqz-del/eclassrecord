@@ -26,6 +26,30 @@
     return value === undefined || value === null ? '' : String(value).trim();
   }
 
+  function isDescriptiveLetter(value) {
+    return /^[A-E]$/i.test(String(value == null ? '' : value).trim());
+  }
+
+  function normalizeStoredGrade(value) {
+    if (value === '' || value === null || value === undefined) return null;
+    const letter = String(value).trim().toUpperCase();
+    if (/^[A-E]$/.test(letter)) return letter;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  function isValidStoredGrade(value) {
+    if (isDescriptiveLetter(value)) return true;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric >= 60 && numeric <= 100;
+  }
+
+  function annexCRangeForLetter(letter) {
+    if (typeof globalScope.paceAnnexCRange === 'function') return globalScope.paceAnnexCRange(letter);
+    const map = { A: '90-100', B: '80-89', C: '75-79', D: '65-74', E: '0-64' };
+    return map[String(letter || '').toUpperCase()] || '';
+  }
+
   function createId(prefix) {
     const cryptoApi = globalScope && globalScope.crypto;
     if (cryptoApi && typeof cryptoApi.randomUUID === 'function') {
@@ -145,9 +169,7 @@
       gradeLevel: cleanString(item.gradeLevel),
       section: cleanString(item.section),
       term: cleanString(item.term),
-      finalGrade: item.finalGrade === '' || item.finalGrade === null || item.finalGrade === undefined
-        ? null
-        : Number(item.finalGrade),
+      finalGrade: normalizeStoredGrade(item.finalGrade),
       gradeStatus: cleanString(item.gradeStatus) || 'final',
       sourceType: cleanString(item.sourceType) || 'manual',
       sourceClassId: cleanString(item.sourceClassId),
@@ -160,10 +182,12 @@
       validationStatus: cleanString(item.validationStatus) || 'valid',
       conflictStatus: cleanString(item.conflictStatus) || 'none',
       remarks: cleanString(item.remarks),
+      annexCRange: cleanString(item.annexCRange) || (isDescriptiveLetter(item.finalGrade) ? annexCRangeForLetter(item.finalGrade) : ''),
+      originalBasis: cleanString(item.originalBasis) || (isDescriptiveLetter(item.finalGrade) ? 'descriptive' : ''),
       adviserEditAllowed: item.adviserEditAllowed === true,
       submittedFinalGrade: item.submittedFinalGrade === '' || item.submittedFinalGrade === null || item.submittedFinalGrade === undefined
-        ? (item.finalGrade === '' || item.finalGrade === null || item.finalGrade === undefined ? null : Number(item.finalGrade))
-        : Number(item.submittedFinalGrade),
+        ? normalizeStoredGrade(item.finalGrade)
+        : normalizeStoredGrade(item.submittedFinalGrade),
       adviserModifiedAt: normalizeTimestamp(item.adviserModifiedAt),
       adviserModifiedBy: cleanString(item.adviserModifiedBy),
       createdAt,
@@ -505,7 +529,7 @@
       if (!batch || batch.advisoryClassId !== candidate.advisoryClassId) throw new Error('The grade import batch must belong to the selected Advisory Class.');
     }
     if (!candidate.term) throw new Error('A grading term is required.');
-    if (candidate.finalGrade === null || !Number.isFinite(candidate.finalGrade)) throw new Error('A finite final grade is required.');
+    if (candidate.finalGrade === null || !isValidStoredGrade(candidate.finalGrade)) throw new Error('A valid final grade is required.');
     const key = [candidate.advisoryClassId, candidate.advisoryLearnerId, candidate.advisorySubjectId, candidate.term].join('|');
     if (store.grades.some(item => item.id !== currentId && [item.advisoryClassId, item.advisoryLearnerId, item.advisorySubjectId, item.term].join('|') === key)) {
       throw new Error('A final grade already exists for this learner, subject, and term.');
@@ -569,7 +593,7 @@
       if (subject && subject.advisoryClassId !== item.advisoryClassId) errors.push({ code: 'cross-class-subject-reference', collection: 'grades', id: item.id });
       if (batch && batch.advisoryClassId !== item.advisoryClassId) errors.push({ code: 'cross-class-import-batch-reference', collection: 'grades', id: item.id });
       if (!item.term) errors.push({ code: 'missing-grade-term', collection: 'grades', id: item.id });
-      if (item.finalGrade !== null && !Number.isFinite(item.finalGrade)) errors.push({ code: 'invalid-final-grade', collection: 'grades', id: item.id });
+      if (item.finalGrade !== null && !isValidStoredGrade(item.finalGrade)) errors.push({ code: 'invalid-final-grade', collection: 'grades', id: item.id });
     });
     store.sourceMappings.forEach(item => {
       if (!subjectIds.has(item.advisorySubjectId)) errors.push({ code: 'orphan-subject-reference', collection: 'sourceMappings', id: item.id });
@@ -619,6 +643,10 @@
 
   const api = {
     ADVISORY_SCHEMA_VERSION,
+    isDescriptiveLetter,
+    normalizeStoredGrade,
+    isValidStoredGrade,
+    annexCRangeForLetter,
     createAdvisoryStore,
     normalizeAdvisoryData,
     rosterImportSources,

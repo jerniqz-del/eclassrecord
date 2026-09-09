@@ -213,7 +213,7 @@ function renderDashboardOverview() {
         
         <div class="dashboard-card__identity">
           <h3 class="dashboard-card__title">${subjectCardIconMarkup(a.subject, a.gradeLevel)}<span>Grade ${esc(a.gradeLevel)} - ${esc(a.section)}</span></h3>
-          <div class="dashboard-card__subject">${esc(a.subject)}</div>
+          <div class="dashboard-card__subject">${esc(typeof assignmentSubjectLabel === 'function' ? assignmentSubjectLabel(a) : a.subject)}${a.term1GradeOnly ? ` · ${esc(typeof assignmentOfficialSheetLabel === 'function' ? assignmentOfficialSheetLabel(a) : 'Official sheet · Term 1 grades copied')}` : ''}</div>
         </div>
         
         <div class="dashboard-card__students-details">

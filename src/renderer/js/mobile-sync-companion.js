@@ -67,6 +67,67 @@
     if (modal) modal.style.display = 'none';
   }
 
+  function companionInstructionGuideHtml() {
+    return `
+      <section class="companion-guide-step">
+        <h3>Before you start</h3>
+        <p>Open your teacher profile on this computer. The phone and this computer should be on the same Wi-Fi, or turn on the phone hotspot and connect this computer to it. Internet is not required.</p>
+      </section>
+      <section class="companion-guide-step">
+        <h3>1. Install the Android companion (first time)</h3>
+        <ol>
+          <li>On this page tap <strong>Check Updates Now</strong> if you need the latest package, then tap <strong>Show install QR</strong>.</li>
+          <li>Scan that QR with the <strong>phone camera</strong> or a QR scanner, not the companion app scanner.</li>
+          <li>On the landing page tap Download APK. Allow install from this source if Android asks.</li>
+          <li>The install QR expires after 15 minutes. Tap <strong>Refresh install QR</strong> if it timed out.</li>
+        </ol>
+      </section>
+      <section class="companion-guide-step">
+        <h3>2. Pair over Wi-Fi or hotspot (recommended)</h3>
+        <ol>
+          <li>Tap <strong>Show WLAN QR</strong> on this page.</li>
+          <li>On Android open Connect to Desktop App and scan the WLAN QR.</li>
+          <li>Enter your usual desktop profile PIN. The PIN is not shown in the QR.</li>
+          <li>If Android times out, tap <strong>Open Windows Firewall</strong>, allow E-Class Record on Private networks, then tap <strong>Refresh Network QR</strong>.</li>
+          <li>Do not photograph or share the WLAN QR. It contains the encrypted session key.</li>
+        </ol>
+      </section>
+      <section class="companion-guide-step">
+        <h3>3. Use it every day</h3>
+        <ol>
+          <li>Keep this computer on with the same profile open. Linked phones reconnect automatically on the trusted network.</li>
+          <li>The desktop is the official class record. The phone receives updates automatically.</li>
+          <li>Scores entered on the phone are drafts until you review and approve them here.</li>
+          <li>Use <strong>Refresh Phone Now</strong> only if the phone looks out of date after a Bluetooth session.</li>
+        </ol>
+      </section>
+      <section class="companion-guide-step">
+        <h3>4. Bluetooth when Wi-Fi is unavailable</h3>
+        <ol>
+          <li>Tap <strong>Start Bluetooth Pairing</strong>.</li>
+          <li>On Android choose Connect to Desktop App → Bluetooth and scan the Bluetooth QR.</li>
+          <li>Keep this Mobile Sync page open. The desktop detects the matching phone and synchronizes.</li>
+          <li>Use <strong>Retry Phone Detection</strong> if the phone does not appear.</li>
+        </ol>
+      </section>
+      <section class="companion-guide-step">
+        <h3>5. Keep the phone app updated</h3>
+        <p>Tap <strong>Check Updates Now</strong> to cache the verified APK. Linked phones can receive it over Wi-Fi or hotspot. First-time installs still use the camera and the install QR.</p>
+      </section>`;
+  }
+
+  function closeCompanionInstructions() {
+    const modal = document.getElementById('companionInstructionsModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function openCompanionInstructions() {
+    const modal = document.getElementById('companionInstructionsModal');
+    const body = document.getElementById('companionInstructionsBody');
+    if (body) body.innerHTML = companionInstructionGuideHtml();
+    if (modal) modal.style.display = 'flex';
+  }
+
   function tickCompanionQrTimer() {
     const remaining = companionQrDeadline - Date.now();
     const timer = document.getElementById('companionQrModalTimer');
@@ -271,7 +332,8 @@
           sex: String(learner.sex || ''),
           lrn: String(learner.lrn || ''),
           avatarPresetId: String(learner.avatarPresetId || ''),
-          avatarAssignment: String(learner.avatarAssignment || 'automatic')
+          avatarAssignment: String(learner.avatarAssignment || 'automatic'),
+          transferredOutTerm: learner.transferredOutTerm ? String(learner.transferredOutTerm) : ''
         })),
         assessments: (assignment.assessments || []).map((assessment) => ({
           id: assessment.id,
@@ -283,6 +345,26 @@
           mapePart: assessment.mapePart ? String(assessment.mapePart) : null
         })),
         scores: Object.fromEntries(Object.entries(assignment.scores || {}).map(([key, value]) => [key, String(value)])),
+        paceRatings: Object.fromEntries(Object.entries(assignment.pace?.ratings || {}).map(([key, value]) => [key, String(value)])),
+        paceOverrides: Object.fromEntries(Object.entries(assignment.pace?.termLetterOverride || {}).map(([key, value]) => [key, String(value)])),
+        paceNarratives: Object.fromEntries(Object.entries(assignment.pace?.narratives || {}).map(([key, value]) => [key, String(value)])),
+        paceCompetencies: (typeof isPaceHomeroomAssignment === 'function' && isPaceHomeroomAssignment(assignment)
+          ? (typeof paceHomeroomSubjectNames === 'function' ? paceHomeroomSubjectNames() : [])
+          : [assignment.subject]
+        ).flatMap((subjectName) => {
+          const items = typeof paceSubjectCatalog === 'function' ? (paceSubjectCatalog(subjectName)?.items || []) : [];
+          return items.map((item) => ({
+            id: item.id,
+            number: Number(item.number) || 0,
+            title: String(item.title || ''),
+            terms: Array.isArray(item.terms) ? item.terms.slice() : [1, 2, 3],
+            skills: Array.isArray(item.skills) ? item.skills.slice() : [],
+            group: String(item.group || ''),
+            standard: String(item.standard || ''),
+            details: Array.isArray(item.details) ? item.details.slice() : [],
+            subject: String(subjectName || assignment.subject || '')
+          }));
+        }),
         attendance: attendance.filter((session) => session.classId === assignment.id)
           .map((session) => ({
             classId: session.classId,
@@ -323,7 +405,7 @@
             learnerId: learner.id,
             classId: assignment.id,
             term,
-            initialGrade: Number(result.initialGrade || 0),
+            initialGrade: Number.isFinite(Number(result.initialGrade)) ? Number(result.initialGrade) : null,
             quarterlyGrade: result.termGrade == null ? null : String(result.termGrade),
             remark: typeof descriptor === 'function' ? String(descriptor(result.termGrade) || '') : ''
           }];
@@ -589,6 +671,30 @@
     }
   }
 
+  function paceChange(change, assignment) {
+    if (parseInt(assignment.gradeLevel, 10) !== 1) throw new Error('PACE ratings apply to Grade 1 only.');
+    if (typeof paceEnsureStore !== 'function' || typeof paceSetRating !== 'function') {
+      throw new Error('PACE rating support is not loaded.');
+    }
+    paceEnsureStore(assignment);
+    const competencyId = String(change.assessmentId || change.competencyId || '');
+    const term = String(change.term || '1');
+    const skill = String(change.field || change.skill || '');
+    const learner = (assignment.learners || []).find((item) => item.id === change.learnerId);
+    if (!learner || !competencyId) throw new Error('A mobile PACE rating is missing a learner or competency.');
+    const letter = change.value === null || change.value === '' ? '' : String(change.value).trim().toUpperCase();
+    if (letter && typeof paceNormalizeLetter === 'function' && !paceNormalizeLetter(letter)) {
+      throw new Error('A PACE rating must be A, B, C, D, or E.');
+    }
+    const previous = typeof paceGetRating === 'function'
+      ? paceGetRating(assignment, learner.id, competencyId, term, skill)
+      : '';
+    const next = letter && typeof paceNormalizeLetter === 'function' ? paceNormalizeLetter(letter) : '';
+    if (previous === next) return false;
+    paceSetRating(assignment, learner.id, competencyId, term, skill, next);
+    return true;
+  }
+
   function scoreChange(change, assignment) {
     const learner = (assignment.learners || []).find((item) => item.id === change.learnerId);
     const assessment = (assignment.assessments || []).find((item) => item.id === change.assessmentId);
@@ -660,7 +766,7 @@
   }
 
   function profileChange(change, database) {
-    const allowed = new Set(['teacherName', 'schoolName', 'schoolId', 'region', 'division', 'district']);
+    const allowed = new Set(['teacherName', 'schoolName', 'schoolId', 'region', 'division', 'district', 'city', 'schoolHead']);
     const fields = profileFields(change);
     let changed = false;
     allowed.forEach((key) => {
@@ -750,8 +856,9 @@
         const assignment = (database.assignments || []).find((item) => item.id === change.classId);
         if (!assignment) throw new Error('A mobile change references an unknown class.');
         if (change.type === 'score' && scoreChange(change, assignment)) accepted += 1;
+        else if (change.type === 'pace' && paceChange(change, assignment)) accepted += 1;
         else if (change.type === 'attendance' && attendanceChange(change, assignment)) accepted += 1;
-        else if (!['score', 'attendance'].includes(change.type)) throw new Error('Unsupported mobile change type.');
+        else if (!['score', 'attendance', 'pace'].includes(change.type)) throw new Error('Unsupported mobile change type.');
       }
       if (changeId) {
         appliedIds.add(changeId);
@@ -991,6 +1098,8 @@
   globalScope.startCompanionApkInstall = startCompanionApkInstall;
   globalScope.stopCompanionApkInstall = stopCompanionApkInstall;
   globalScope.closeCompanionQrModal = closeCompanionQrModal;
+  globalScope.openCompanionInstructions = openCompanionInstructions;
+  globalScope.closeCompanionInstructions = closeCompanionInstructions;
   globalScope.refreshCompanionMobileUpdateFromGithub = refreshCompanionMobileUpdateFromGithub;
   globalScope.importCompanionMobileUpdate = importCompanionMobileUpdate;
   globalScope.configureCompanionFirewall = configureCompanionFirewall;

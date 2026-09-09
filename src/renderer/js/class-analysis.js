@@ -153,18 +153,19 @@ function computeClassAnalysis(a, term, mapePart) {
   const learners = [];
   const termGrades = [];
   const isDescriptive = a.policy === 'DO15_DESCRIPTIVE';
+  const grade1 = typeof isGrade1Assignment === 'function' && isGrade1Assignment(a);
 
   a.learners.forEach(learner => {
     if (typeof computeTerm !== 'function') return;
     let result;
-    if (isSummary) {
+    if (isSummary && !grade1) {
       let total = 0;
       let count = 0;
       for (let t = 1; t <= 3; t++) {
         const termResult = computeTerm(a, learner.id, String(t), activePart);
         const grade = typeof termResult.termGrade === 'number'
           ? termResult.termGrade
-          : (isDescriptive && termResult.hasData ? termResult.initialGrade : null);
+          : (isDescriptive && termResult.hasData && Number.isFinite(Number(termResult.initialGrade)) ? termResult.initialGrade : null);
         if (typeof grade === 'number') {
           total += grade;
           count++;
@@ -178,7 +179,7 @@ function computeClassAnalysis(a, term, mapePart) {
 
     const grade = typeof result.termGrade === 'number'
       ? result.termGrade
-      : (isDescriptive && result.hasData ? result.initialGrade : null);
+      : (!grade1 && isDescriptive && result.hasData && Number.isFinite(Number(result.initialGrade)) ? result.initialGrade : null);
     if (typeof grade === 'number') termGrades.push(grade);
 
     learners.push({
@@ -188,15 +189,21 @@ function computeClassAnalysis(a, term, mapePart) {
       ww: result.ww || { ps: 0, hasData: false },
       pt: result.pt || { ps: 0, hasData: false },
       exam: { ps: result.examPS || 0 },
+      hasData: !!result.hasData,
       remarks: result.termGrade === 'T/O'
         ? 'Transferred Out'
-        : (grade === null ? '--' : (isPassing(grade) ? 'Passed' : (a.policy === 'DO15_DESCRIPTIVE' ? 'For Intervention' : 'Failed')))
+        : (result.termGrade == null ? '--' : (isPassing(result.termGrade) ? 'Passed' : (a.policy === 'DO15_DESCRIPTIVE' ? 'For Intervention' : 'Failed')))
     });
   });
 
-  learners.sort((left, right) => (right.initialGrade || -1) - (left.initialGrade || -1));
-  learners.forEach((learner, index) => { learner.rank = learner.initialGrade === null ? '' : index + 1; });
+  if (grade1) {
+    learners.forEach(learner => { learner.rank = ''; });
+  } else {
+    learners.sort((left, right) => (right.initialGrade || -1) - (left.initialGrade || -1));
+    learners.forEach((learner, index) => { learner.rank = learner.initialGrade === null ? '' : index + 1; });
+  }
 
+  const letterPass = learners.filter(item => item.termGrade && item.termGrade !== 'T/O');
   const averageMps = assessments.length ? reportMean(assessments.map(item => item.mps)) : 0;
   const classStats = {
     mean: reportMean(termGrades),
@@ -204,7 +211,9 @@ function computeClassAnalysis(a, term, mapePart) {
     mode: reportMode(termGrades),
     stdDev: reportStdDev(termGrades),
     mps: averageMps,
-    passRate: termGrades.length ? termGrades.filter(grade => isPassing(grade)).length / termGrades.length * 100 : 0,
+    passRate: grade1
+      ? (letterPass.length ? letterPass.filter(item => isPassing(item.termGrade)).length / letterPass.length * 100 : 0)
+      : (termGrades.length ? termGrades.filter(grade => isPassing(grade)).length / termGrades.length * 100 : 0),
     distribution: { advanced: 0, proficient: 0, developing: 0, beginning: 0 },
     gradeDistribution: [0, 0, 0, 0, 0]
   };

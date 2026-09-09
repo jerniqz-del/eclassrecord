@@ -144,6 +144,30 @@ function renderQrPixels(payload) {
     assert.strictEqual(fs.readdirSync(atomicDirectory).some(name => name.endsWith('.tmp')), false);
     assert.throws(() => fileIoModule.exports.writeJsonAtomically(atomicFile, '{broken'), /JSON/);
     assert.deepStrictEqual(JSON.parse(fs.readFileSync(atomicFile, 'utf8')), { version: 4, value: 'replaced' }, 'invalid replacement must not damage the existing file');
+    const busy = Object.assign(new Error('EPERM'), { code: 'EPERM' });
+    let copies = 0;
+    const lockedFs = {
+      renameSync() { throw busy; },
+      existsSync() { return true; },
+      unlinkSync() { throw busy; },
+      copyFileSync() { copies += 1; }
+    };
+    assert.strictEqual(fileIoModule.exports.replaceFileAtomically('a.tmp', 'a.json', lockedFs), 'copy');
+    assert.strictEqual(copies, 1, 'OneDrive-locked daily backups must copy over the destination when rename is denied');
+    let unlinked = 0;
+    let renamed = 0;
+    const unlinkThenRenameFs = {
+      renameSync() {
+        renamed += 1;
+        if (unlinked === 0) throw busy;
+      },
+      existsSync() { return true; },
+      unlinkSync() { unlinked += 1; },
+      copyFileSync() { throw new Error('copy should not run'); }
+    };
+    assert.strictEqual(fileIoModule.exports.replaceFileAtomically('b.tmp', 'b.json', unlinkThenRenameFs), 'rename-after-unlink');
+    assert.strictEqual(unlinked, 1);
+    assert.strictEqual(renamed, 2);
   } finally {
     fs.rmSync(atomicDirectory, { recursive: true, force: true });
   }
@@ -256,6 +280,8 @@ function renderQrPixels(payload) {
   assert(fileIoSource.includes('createSecondaryBackupEnvelope(activeProfile)'));
   assert(fileIoSource.includes("crypto.createHash('sha256')"));
   assert(fileIoSource.includes('writeJsonAtomically(dbPath, payload)'));
+  assert(fileIoSource.includes("code === 'EPERM'"));
+  assert(fileIoSource.includes('replaceFileAtomically(temporaryFile, targetFile)'));
   assert(htmlSource.includes('id="profileRecoveryPanel"'));
   assert(htmlSource.includes('id="recoveryQrFile"'));
   assert(!preloadSource.includes("require('qrcode')"));

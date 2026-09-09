@@ -167,7 +167,7 @@ assert.strictEqual(context.transmute({ gradeLevel: '1', subject: gmrc, schoolYea
 assert.strictEqual(context.transmute({ gradeLevel: '3', subject: gmrc, schoolYear: '2026-2027' }, 70), 75);
 assert.strictEqual(context.transmute({ gradeLevel: '4', subject: gmrc, schoolYear: '2026-2027' }, 70), 75);
 assert.match(recordSource, /Original basis of grade was descriptive \(DO 15, s\. 2026\)\./);
-assert.doesNotMatch(recordSource, /Cognitive|Affective|Behavioral/);
+assert.match(recordSource, /usesGmrcDomainScoring/, 'GMRC domain headers must stay behind the opt-in scoring model');
 const helpSource = fs.readFileSync(path.join(root, 'src/renderer/js/help.js'), 'utf8');
 assert.match(helpSource, /A Advancing \(Namumukod-tangi\):/);
 assert.doesNotMatch(helpSource, /A \(Outstanding\)/);

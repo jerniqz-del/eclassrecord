@@ -93,9 +93,9 @@ object TransmutationTables {
         if (policy == "DO15_DESCRIPTIVE") {
             val rows = listOf(
                 TransmutationRow(90.0, 100.0, "A", "Advancing (Namumukod-tangi)"),
-                TransmutationRow(80.0, 89.99, "B", "Benchmarking (Napamamalas)"),
+                TransmutationRow(80.0, 89.99, "B", "Benchmarking (Naipamamalas)"),
                 TransmutationRow(75.0, 79.99, "C", "Connecting (Natutungo)"),
-                TransmutationRow(65.0, 74.99, "D", "Developing (Napauunlad)"),
+                TransmutationRow(65.0, 74.99, "D", "Developing (Nagpapaunlad)"),
                 TransmutationRow(0.0, 64.99, "E", "Emerging (Nagsisimula)"),
             )
             return TransmutationTableModel(

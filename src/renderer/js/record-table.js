@@ -416,15 +416,37 @@ function checkActiveSheetChange() {
 
 function updateRecordActionButtons(hasUsableSheet) {
   const shouldShow = !!hasUsableSheet && currentView === 'record';
-  showEl('quickGradeBtn', shouldShow, 'inline-flex');
-  showEl('transferScoresBtn', shouldShow, 'inline-flex');
+  const assignment = currentAssignment();
+  const paceOn = typeof isPaceAssignment === 'function' && isPaceAssignment(assignment);
+  const term1Only = typeof usesTermGradeOnly === 'function'
+    && usesTermGradeOnly(assignment, typeof db !== 'undefined' ? db.currentTerm : '1');
+  showEl('quickGradeBtn', shouldShow && !paceOn && !term1Only, 'inline-flex');
+  showEl('transferScoresBtn', shouldShow && !term1Only && (!paceOn || paceUi?.showEvidence), 'inline-flex');
   showEl('viewLearnerGradesBtn', shouldShow, 'inline-flex');
+  if (typeof syncPaceWorkspace === 'function') syncPaceWorkspace();
+  syncDuplicateOfficialSheetButtons();
+}
+
+function syncDuplicateOfficialSheetButtons() {
+  const assignment = typeof currentAssignment === 'function' ? currentAssignment() : null;
+  const canDuplicate = typeof canDuplicateToOfficialSheet === 'function' && canDuplicateToOfficialSheet(assignment);
+  const classesOn = canDuplicate && (typeof currentView === 'undefined' || currentView === 'classes');
+  const recordOn = canDuplicate && currentView === 'record';
+  ['duplicateOfficialSheetClassesBtn', 'duplicateOfficialSheetRecordBtn'].forEach(id => {
+    const button = document.getElementById(id);
+    if (!button) return;
+    const show = id.includes('Classes') ? classesOn : recordOn;
+    button.hidden = !show;
+    button.style.display = show ? 'inline-flex' : 'none';
+  });
+  if (typeof relabelOfficialSheetClassOptions === 'function') relabelOfficialSheetClassOptions();
 }
 
 function hasUsableRecordSheetForActions() {
   const assignment = currentAssignment();
   if (!assignment || !Array.isArray(assignment.learners) || assignment.learners.length === 0) return false;
-  return !(isMapehSubject(assignment.subject) && currentMapehSubTab === 'consolidated');
+  return !(isMapehSubject(assignment.subject) && currentMapehSubTab === 'consolidated')
+    && !(typeof usesTleComponentScoring === 'function' && usesTleComponentScoring(assignment) && currentTleSubTab === 'consolidated');
 }
 
 function syncRecordActionButtonsForView() {
@@ -464,41 +486,64 @@ function renderRecordTable() {
     updateRecordActionButtons(false);
     recordRowCount = 0;
     recordColCount = 0;
-    document.getElementById('recordTable').innerHTML = emptyState(
-      'No teaching load selected',
-      'Select a class load from the Dashboard or Teaching Load view to get started.'
-    );
+    const emptyRoot = document.getElementById('recordTable');
+    if (emptyRoot) {
+      emptyRoot.innerHTML = emptyState(
+        'No teaching load selected',
+        'Select a class load from the Dashboard or Teaching Load view to get started.'
+      );
+    }
     return;
   }
   
   ensureTemplateAssessments(a);
+  if (typeof paceEnsureStore === 'function' && parseInt(a.gradeLevel, 10) === 1) paceEnsureStore(a);
+  if (typeof syncPaceWorkspace === 'function') syncPaceWorkspace();
+  syncDuplicateOfficialSheetButtons();
   
   if (a.learners.length === 0) {
     updateRecordActionButtons(false);
     recordRowCount = 0;
     recordColCount = 0;
-    document.getElementById('recordTable').innerHTML = emptyState(
-      'No learners yet',
-      'Add student rosters under the Classes tab, upload an SF1, or paste a CSV list.',
-      'Upload SF1',
-      'proceedToUploadSf1()',
-      'Bulk Add Learners',
-      'showBulkAddLearnersModal()',
-      'Import Roster from Other Class',
-      'showImportRosterModal()'
-    );
+    const emptyRoot = document.getElementById('recordTable');
+    if (emptyRoot) {
+      emptyRoot.innerHTML = emptyState(
+        'No learners yet',
+        'Add student rosters under the Classes tab, upload an SF1, or paste a CSV list.',
+        'Upload SF1',
+        'proceedToUploadSf1()',
+        'Bulk Add Learners',
+        'showBulkAddLearnersModal()',
+        'Import Roster from Other Class',
+        'showImportRosterModal()'
+      );
+    }
     return;
   }
   
   const isMapeh = isMapehSubject(a.subject);
+  const isTleComponents = typeof usesTleComponentScoring === 'function' && usesTleComponentScoring(a);
+  const term1Only = typeof usesTermGradeOnly === 'function' && usesTermGradeOnly(a, db.currentTerm);
+  syncMapehSubTabs(a);
+  syncTleSubTabs(a);
+  if (term1Only) {
+    updateRecordActionButtons(true);
+    renderTermGradeOnlyTable(a);
+    return;
+  }
   if (isMapeh && currentMapehSubTab === 'consolidated') {
     updateRecordActionButtons(false);
     renderConsolidatedMapehTable(a);
     return;
   }
+  if (isTleComponents && currentTleSubTab === 'consolidated') {
+    updateRecordActionButtons(false);
+    renderConsolidatedTleTable(a);
+    return;
+  }
   updateRecordActionButtons(true);
   
-  const mapePart = isMapeh ? currentMapehSubTab : undefined;
+  const mapePart = isMapeh ? currentMapehSubTab : (isTleComponents ? currentTlePartForTerm(a, db.currentTerm) : undefined);
   const items = termAssessments(a, db.currentTerm, mapePart);
   const learnerRows = getRecordLearnerRows(a, db.currentTerm, items, mapePart);
   recordRowCount = learnerRows.length;
@@ -507,7 +552,7 @@ function renderRecordTable() {
   const cols = recordColGroup(a, items, mapePart);
   
   const isExpanded = usesExpandedRecordLayout(a);
-  const assessmentGroups = expandedAssessmentGroups(items);
+  const assessmentGroups = expandedAssessmentGroups(items, a);
   let html = `<div class="record-scroll"><table class="record-grid${isMapeh ? ' is-mapeh' : ''}${isExpanded ? ' is-expanded' : ''}">${cols}<thead>`;
   
   if (isExpanded) {
@@ -547,9 +592,9 @@ function renderRecordTable() {
     }
     html += `
       <th class="c-spacer"></th>
-      <th class="c-calc" title="Written Works Percentage Score">WW PS</th>
-      <th class="c-calc" title="Performance Task Percentage Score">PT PS</th>
-      <th class="c-calc" title="Term Examination Percentage Score">EX PS</th>
+      <th class="c-calc" title="Written / Oral Works Percentage Score">WW PS</th>
+      <th class="c-calc" title="Product / Performance Tasks Percentage Score">PT PS</th>
+      <th class="c-calc" title="Examinations Percentage Score">EX PS</th>
       <th class="c-grade" title="Initial Grade">IG</th>
       <th class="c-grade" title="Transmuted Grade">TG ${recordSortButton('tg', 'Transmuted Grade')}</th>
       <th class="c-desc">Desc.</th>
@@ -572,7 +617,7 @@ function renderRecordTable() {
       const group = expandedAssessmentGroupEndingAt(assessmentGroups, h);
       if (group) {
         const groupMax = groupScoreMax(items, group);
-        const wsVal = w[group.weightIndex];
+        const wsVal = group.weightPercent != null ? group.weightPercent : w[group.weightIndex];
       html += `<td class="c-calc">${blankZero(groupMax)}</td>
                <td class="c-calc">100</td>
                <td class="c-calc">${wsVal}%</td>`;
@@ -645,10 +690,12 @@ function renderRecordTable() {
           block = result.ww;
         } else if (group.key === 'PT') {
           block = result.pt;
+        } else if (result.gmrcDomains && result.gmrcDomains[group.key]) {
+          block = result.gmrcDomains[group.key];
         } else {
           block = examinationResultForAssignment(a, result);
         }
-        const weight = w[group.weightIndex];
+        const weight = group.weightPercent != null ? group.weightPercent : w[group.weightIndex];
         html += `<td class="c-calc">${isDisabled ? '' : blankZero(block.raw)}</td>
                  <td class="c-calc">${(!isDisabled && block.hasData) ? fmt(block.ps) : ''}</td>
                  <td class="c-calc">${(!isDisabled && block.hasData) ? fmt(block.ps * weight / 100) : ''}</td>`;
@@ -663,7 +710,7 @@ function renderRecordTable() {
                <td class="c-calc">${isDisabled ? '' : fmt(result.examPS)}</td>`;
     }
     
-    const igDisplay = isRowTO ? 'T/O' : (isRowTI ? 'T/I' : (result.hasData ? fmt(result.initialGrade) : ''));
+    const igDisplay = isRowTO ? 'T/O' : (isRowTI ? 'T/I' : ((isGrade1Assignment(a) || result.initialGrade === null || result.initialGrade === undefined) ? '' : (result.hasData ? fmt(result.initialGrade) : '')));
     const tgDisplay = result.termGrade === null ? '' : formatGradeForDisplay(result.termGrade, a.policy);
     const descDisplay = esc(termDescription(a, result.termGrade));
     const lookupOptions = { isTransferredOut: isRowTO, isTransferredIn: isRowTI, disabled: !result.hasData };
@@ -681,6 +728,7 @@ function renderRecordTable() {
     html += `<div class="compliance-footnote" data-eclass-style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
   }
   const recordTableRoot = document.getElementById('recordTable');
+  if (!recordTableRoot) return;
   recordTableRoot.innerHTML = html;
   bindScoreHistoryTriggers(recordTableRoot);
   
@@ -714,7 +762,7 @@ function adjustHpsStickyTop() {
 function recordColGroup(a, items, mapePart) {
   let html = '<colgroup>';
   if (usesExpandedRecordLayout(a)) {
-    const groups = expandedAssessmentGroups(items);
+    const groups = expandedAssessmentGroups(items, a);
     const detailColumnCount = Math.max(1, items.length + (groups.length * 3));
     const detailWidth = 60 / detailColumnCount;
     html += "<col data-eclass-style='width:3%' /><col data-eclass-style='width:18%' /><col data-eclass-style='width:3%' />";
@@ -755,6 +803,7 @@ function maxTermAssessmentCount(a, mapePart) {
 
 function usesExpandedRecordLayout(a) {
   if (!a) return false;
+  if (typeof usesGmrcDomainScoring === 'function' && usesGmrcDomainScoring(a)) return true;
   const grade = parseInt(a.gradeLevel);
   return isKeyStage2(a) || (grade >= 4 && grade <= 12);
 }
@@ -766,11 +815,33 @@ function expandedAssessmentGroupKey(component) {
   return '';
 }
 
-function expandedAssessmentGroups(items) {
+function expandedAssessmentGroups(items, assignment) {
+  if (assignment && typeof usesGmrcDomainScoring === 'function' && usesGmrcDomainScoring(assignment)) {
+    const definitions = [
+      { key: 'WW_cognitive', title: (typeof gmrcDomainHeaderTitle === 'function' ? gmrcDomainHeaderTitle('WW', 'cognitive') : 'Written / Oral Works · Cognitive'), cssClass: 'c-comp-ww', weightPercent: 10, component: 'WW', domain: 'cognitive', indexes: [] },
+      { key: 'WW_affective', title: (typeof gmrcDomainHeaderTitle === 'function' ? gmrcDomainHeaderTitle('WW', 'affective') : 'Written / Oral Works · Affective'), cssClass: 'c-comp-ww', weightPercent: 10, component: 'WW', domain: 'affective', indexes: [] },
+      { key: 'PT_cognitive', title: (typeof gmrcDomainHeaderTitle === 'function' ? gmrcDomainHeaderTitle('PT', 'cognitive') : 'Product / Performance Tasks · Cognitive'), cssClass: 'c-comp-pt', weightPercent: 10, component: 'PT', domain: 'cognitive', indexes: [] },
+      { key: 'PT_affective', title: (typeof gmrcDomainHeaderTitle === 'function' ? gmrcDomainHeaderTitle('PT', 'affective') : 'Product / Performance Tasks · Affective'), cssClass: 'c-comp-pt', weightPercent: 10, component: 'PT', domain: 'affective', indexes: [] },
+      { key: 'PT_behavioral', title: (typeof gmrcDomainHeaderTitle === 'function' ? gmrcDomainHeaderTitle('PT', 'behavioral') : 'Product / Performance Tasks · Behavioral'), cssClass: 'c-comp-pt', weightPercent: 30, component: 'PT', domain: 'behavioral', indexes: [] },
+      { key: 'EX', title: (typeof officialComponentTitle === 'function' ? officialComponentTitle('EX') : 'Examinations'), cssClass: 'c-comp-te', weightPercent: 30, weightIndex: 2, indexes: [] }
+    ];
+    (items || []).forEach((item, index) => {
+      const examKey = expandedAssessmentGroupKey(item.component);
+      if (examKey === 'EX') {
+        definitions[5].indexes.push(index);
+        return;
+      }
+      const group = definitions.find(entry => entry.component === item.component && entry.domain === (item.domain || ''));
+      if (group) group.indexes.push(index);
+    });
+    return definitions
+      .filter(group => group.indexes.length > 0)
+      .map(group => ({ ...group, endIndex: group.indexes[group.indexes.length - 1] }));
+  }
   const definitions = {
-    WW: { key: 'WW', title: 'Written Works', cssClass: 'c-comp-ww', weightIndex: 0, indexes: [] },
-    PT: { key: 'PT', title: 'Performance Tasks', cssClass: 'c-comp-pt', weightIndex: 1, indexes: [] },
-    EX: { key: 'EX', title: 'Examinations', cssClass: 'c-comp-te', weightIndex: 2, indexes: [] }
+    WW: { key: 'WW', title: (typeof officialComponentTitle === 'function' ? officialComponentTitle('WW') : 'Written / Oral Works'), cssClass: 'c-comp-ww', weightIndex: 0, indexes: [] },
+    PT: { key: 'PT', title: (typeof officialComponentTitle === 'function' ? officialComponentTitle('PT') : 'Product / Performance Tasks'), cssClass: 'c-comp-pt', weightIndex: 1, indexes: [] },
+    EX: { key: 'EX', title: (typeof officialComponentTitle === 'function' ? officialComponentTitle('EX') : 'Examinations'), cssClass: 'c-comp-te', weightIndex: 2, indexes: [] }
   };
   (items || []).forEach((item, index) => {
     const key = expandedAssessmentGroupKey(item.component);
@@ -812,7 +883,7 @@ function summaryGradeDisplay(grade, policy) {
 function summaryInitialGradeDisplay(result) {
   if (!result) return '';
   if (result.termGrade === 'T/O') return '<span data-eclass-style="color:#ffb703; font-weight:600;">T/O</span>';
-  return result.hasData ? fmt(result.initialGrade) : '';
+  return result.hasData && result.initialGrade !== null && result.initialGrade !== undefined ? fmt(result.initialGrade) : '';
 }
 
 function summaryTermCells(result, weights, policy, termNumber, assignment) {
@@ -833,18 +904,39 @@ function summaryTermCells(result, weights, policy, termNumber, assignment) {
   `;
 }
 
+function termResultForSummary(assignment, learnerId, term, mapePart) {
+  if (typeof usesTleComponentScoring === 'function' && usesTleComponentScoring(assignment)
+    && !(typeof usesTermGradeOnly === 'function' && usesTermGradeOnly(assignment, term))) {
+    const combined = computeTleConsolidatedTerm(assignment, learnerId, String(term));
+    return {
+      ww: { ps: 0, hasData: false },
+      pt: { ps: 0, hasData: false },
+      st1: { hasData: false },
+      st2: { hasData: false },
+      te: { hasData: false },
+      examPS: 0,
+      initialGrade: null,
+      termGrade: combined.termGrade,
+      hasData: combined.hasData
+    };
+  }
+  return computeTerm(assignment, learnerId, String(term), mapePart);
+}
+
 /**
  * Renders the Final Summary Table displaying averages across all terms.
  */
 function renderFinalOnly() {
   const a = currentAssignment();
+  const finalRoot = document.getElementById('finalTable');
+  if (!finalRoot) return;
   if (!a) {
-    document.getElementById('finalTable').innerHTML = '';
+    finalRoot.innerHTML = '';
     return;
   }
   
   if (a.learners.length === 0) {
-    document.getElementById('finalTable').innerHTML = emptyState(
+    finalRoot.innerHTML = emptyState(
       'No learners yet',
       'Final grades will appear once class lists are populated.',
       'Upload SF1',
@@ -885,21 +977,21 @@ function renderFinalOnly() {
         <th rowspan="2" class="summary-final-head">Remarks</th>
       </tr>
       <tr>
-        <th class="summary-term-head summary-term-1" title="Written Works Weighted Score">WW</th>
-        <th class="summary-term-head summary-term-1" title="Performance Task Weighted Score">PT</th>
-        <th class="summary-term-head summary-term-1" title="Summative Test and Term Examination Weighted Score">STE</th>
+        <th class="summary-term-head summary-term-1" title="Written / Oral Works Weighted Score">WW</th>
+        <th class="summary-term-head summary-term-1" title="Product / Performance Tasks Weighted Score">PT</th>
+        <th class="summary-term-head summary-term-1" title="Examinations Weighted Score">STE</th>
         <th class="summary-term-head summary-term-1" title="Initial Grade">IG</th>
-        <th class="summary-term-head summary-term-1" title="Total Grade">TG</th>
-        <th class="summary-term-head summary-term-2" title="Written Works Weighted Score">WW</th>
-        <th class="summary-term-head summary-term-2" title="Performance Task Weighted Score">PT</th>
-        <th class="summary-term-head summary-term-2" title="Summative Test and Term Examination Weighted Score">STE</th>
+        <th class="summary-term-head summary-term-1" title="Term Grade">TG</th>
+        <th class="summary-term-head summary-term-2" title="Written / Oral Works Weighted Score">WW</th>
+        <th class="summary-term-head summary-term-2" title="Product / Performance Tasks Weighted Score">PT</th>
+        <th class="summary-term-head summary-term-2" title="Examinations Weighted Score">STE</th>
         <th class="summary-term-head summary-term-2" title="Initial Grade">IG</th>
-        <th class="summary-term-head summary-term-2" title="Total Grade">TG</th>
-        <th class="summary-term-head summary-term-3" title="Written Works Weighted Score">WW</th>
-        <th class="summary-term-head summary-term-3" title="Performance Task Weighted Score">PT</th>
-        <th class="summary-term-head summary-term-3" title="Summative Test and Term Examination Weighted Score">STE</th>
+        <th class="summary-term-head summary-term-2" title="Term Grade">TG</th>
+        <th class="summary-term-head summary-term-3" title="Written / Oral Works Weighted Score">WW</th>
+        <th class="summary-term-head summary-term-3" title="Product / Performance Tasks Weighted Score">PT</th>
+        <th class="summary-term-head summary-term-3" title="Examinations Weighted Score">STE</th>
         <th class="summary-term-head summary-term-3" title="Initial Grade">IG</th>
-        <th class="summary-term-head summary-term-3" title="Total Grade">TG</th>
+        <th class="summary-term-head summary-term-3" title="Term Grade">TG</th>
       </tr>
     </thead><tbody>`;
   
@@ -928,15 +1020,15 @@ function renderFinalOnly() {
           hasData: false
         });
       } else {
-        const res = computeTerm(a, learner.id, String(t), mapePart);
+        const res = termResultForSummary(a, learner.id, String(t), mapePart);
         termResults.push(res);
         
-        if (isDescriptive) {
-          if (res.hasData) {
+        if (isDescriptive && !isGrade1Assignment(a)) {
+          if (res.hasData && Number.isFinite(Number(res.initialGrade))) {
             sumIg += res.initialGrade;
             countIg++;
           }
-        } else {
+        } else if (!isDescriptive) {
           if (res.termGrade !== null && typeof res.termGrade === 'number') {
             sum += res.termGrade;
             count++;
@@ -951,9 +1043,11 @@ function renderFinalOnly() {
       fg = 'T/O';
       remarks = '<span data-eclass-style="color:#ffb703; font-weight:600;">Transferred Out</span>';
     } else {
-      fg = isDescriptive
+      fg = isGrade1Assignment(a)
+        ? null
+        : (isDescriptive
         ? (countIg > 0 ? transmute(a, sumIg / countIg) : null)
-        : (count > 0 ? Math.round(sum / count) : null);
+        : (count > 0 ? Math.round(sum / count) : null));
       remarks = finalRemark(a, fg);
     }
     
@@ -978,7 +1072,152 @@ function renderFinalOnly() {
   if (a.policy === 'DO15_DESCRIPTIVE') {
     html += `<div class="compliance-footnote" data-eclass-style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
   }
-  document.getElementById('finalTable').innerHTML = html;
+  const paceOn = typeof isPaceAssignment === 'function' && isPaceAssignment(a);
+  if (!paceOn && a.policy !== 'DO15_DESCRIPTIVE') {
+    html += `<div class="compliance-footnote official-final-hint" data-eclass-style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); text-align:center">Official final appears after Term 3. The Final Grade column shows a running average until then.</div>`;
+  }
+  finalRoot.innerHTML = html;
+}
+
+function updateCopiedTerm1Grade(learnerId, value) {
+  const assignment = currentAssignment();
+  if (typeof setLearnerCopiedTermGrade !== 'function') return;
+  if (!setLearnerCopiedTermGrade(assignment, learnerId, value)) {
+    toast('Enter a whole term grade, or leave the cell blank.', 'warning');
+    renderRecordTable();
+    return;
+  }
+  if (typeof saveDatabase === 'function') saveDatabase();
+  renderRecordTable();
+}
+
+function renderTermGradeOnlyTable(assignment) {
+  const learners = assignment.learners || [];
+  const layoutNote = typeof assignmentOfficialSheetLabel === 'function'
+    ? assignmentOfficialSheetLabel(assignment)
+    : 'Official sheet · Term 1 grades copied';
+  let html = `<div class="record-scroll">
+    <p class="text-muted" data-eclass-style="margin:12px 16px 8px;">${esc(layoutNote)}. WW, PT, and exam columns stay on the original class. Terms 2 and 3 use the official sheet.</p>
+    <table class="record-grid">
+      <thead>
+        <tr>
+          <th class="c-no">No.</th>
+          <th class="c-learner">Learner</th>
+          <th class="c-sex">Sex</th>
+          <th class="c-grade">Term 1 Grade</th>
+          <th class="c-desc">Desc.</th>
+        </tr>
+      </thead><tbody>`;
+  for (let index = 0; index < learners.length; index++) {
+    const learner = learners[index];
+    const result = computeTerm(assignment, learner.id, '1');
+    const gradeValue = result.termGrade === null || result.termGrade === undefined ? '' : result.termGrade;
+    const displayValue = gradeValue === 'T/O' ? 'T/O' : (gradeValue === '' ? '' : formatGradeForDisplay(gradeValue, assignment.policy));
+    html += `<tr class="${result.isTransferredIn ? 'row-transferred-in' : ''}">
+      <td class="c-no">${index + 1}</td>
+      <td class="c-learner learner-cell" title="${esc(learnerDisplayName(learner))}"><span class="learner-avatar-name">${globalThis.LearnerAvatars ? LearnerAvatars.renderLearner(learner, { size: 'xs' }) : ''}<span>${esc(learnerDisplayName(learner))}</span></span></td>
+      <td class="c-sex">${esc(learner.sex || '')}</td>
+      <td class="c-grade">
+        <input class="score-input" title="Copied Term 1 final grade" value="${esc(String(displayValue))}"
+          data-eclass-onchange="updateCopiedTerm1Grade('${esc(learner.id)}', this.value)" />
+      </td>
+      <td class="c-desc">${esc(typeof termDescription === 'function' ? (termDescription(assignment, result.termGrade) || '') : '')}</td>
+    </tr>`;
+  }
+  html += '</tbody></table></div>';
+  const recordTableRoot = document.getElementById('recordTable');
+  if (recordTableRoot) recordTableRoot.innerHTML = html;
+}
+
+function syncMapehSubTabs(assignment) {
+  const tabs = document.getElementById('mapehSubTabs');
+  if (!tabs) return;
+  const enabled = !!(assignment && typeof isMapehSubject === 'function' && isMapehSubject(assignment.subject));
+  tabs.style.display = enabled ? 'flex' : 'none';
+  if (!enabled) return;
+  const term = (typeof db !== 'undefined' && db.currentTerm) || '1';
+  const buttons = [
+    { id: 'mapehTabMusicArts', part: 'music_arts' },
+    { id: 'mapehTabPEHealth', part: 'pe_health' },
+    { id: 'mapehTabConsolidated', part: 'consolidated' }
+  ];
+  buttons.forEach(item => {
+    const button = document.getElementById(item.id);
+    if (!button) return;
+    if (typeof officialComponentTabLabel === 'function') {
+      button.textContent = officialComponentTabLabel('mapeh', term, item.part);
+    }
+    button.classList.toggle('record-tab--active', currentMapehSubTab === item.part);
+    button.classList.toggle('is-active', currentMapehSubTab === item.part);
+    button.setAttribute('aria-pressed', currentMapehSubTab === item.part ? 'true' : 'false');
+  });
+}
+
+function syncTleSubTabs(assignment) {
+  const tabs = document.getElementById('tleSubTabs');
+  if (!tabs) return;
+  const term1Only = typeof usesTermGradeOnly === 'function'
+    && usesTermGradeOnly(assignment, typeof db !== 'undefined' ? db.currentTerm : '1');
+  const enabled = !term1Only && typeof usesTleComponentScoring === 'function' && usesTleComponentScoring(assignment);
+  tabs.style.display = enabled ? 'flex' : 'none';
+  if (!enabled) return;
+  const term = db.currentTerm || '1';
+  const spec = typeof tleSpecializationForTerm === 'function' ? tleSpecializationForTerm(term) : 'afa';
+  const ictBtn = document.getElementById('tleTabIct');
+  const specBtn = document.getElementById('tleTabSpec');
+  const consBtn = document.getElementById('tleTabConsolidated');
+  if (ictBtn && typeof officialComponentTabLabel === 'function') {
+    ictBtn.textContent = officialComponentTabLabel('tle', term, 'ict');
+  }
+  if (specBtn) {
+    specBtn.textContent = typeof officialComponentTabLabel === 'function'
+      ? officialComponentTabLabel('tle', term, spec)
+      : ({ afa: 'AFA', fcs: 'FCS', ia: 'IA' }[spec] || 'Specialization');
+  }
+  if (consBtn && typeof officialComponentTabLabel === 'function') {
+    consBtn.textContent = officialComponentTabLabel('tle', term, 'consolidated');
+  }
+  ['tleTabIct', 'tleTabSpec', 'tleTabConsolidated'].forEach(id => {
+    const button = document.getElementById(id);
+    if (!button) return;
+    const part = id === 'tleTabIct' ? 'ict' : id === 'tleTabSpec' ? 'spec' : 'consolidated';
+    button.classList.toggle('record-tab--active', currentTleSubTab === part);
+    button.classList.toggle('is-active', currentTleSubTab === part);
+    button.setAttribute('aria-pressed', currentTleSubTab === part ? 'true' : 'false');
+  });
+}
+
+function renderConsolidatedTleTable(a) {
+  const term = db.currentTerm || '1';
+  const spec = tleSpecializationForTerm(term);
+  const specLabel = { afa: 'AFA', fcs: 'FCS', ia: 'IA' }[spec] || 'Specialization';
+  const learners = (a.learners || []).filter(learner => learner && !learner.archived);
+  let html = `<div class="record-scroll"><table class="record-grid">
+    <thead>
+      <tr>
+        <th class="c-no">No.</th>
+        <th class="c-learner">Learner</th>
+        <th class="c-sex">Sex</th>
+        <th class="c-grade">ICT Grade</th>
+        <th class="c-grade">${esc(specLabel)} Grade</th>
+        <th class="c-grade">Term Grade (25/75)</th>
+        <th class="c-desc">Remarks</th>
+      </tr>
+    </thead><tbody>`;
+  learners.forEach((learner, index) => {
+    const combined = computeTleConsolidatedTerm(a, learner.id, term);
+    html += `<tr>
+      <td class="c-no">${index + 1}</td>
+      <td class="c-learner">${esc(learnerDisplayName(learner))}</td>
+      <td class="c-sex">${esc(learner.sex || '')}</td>
+      <td class="c-grade">${blankNull(formatGradeForDisplay(combined.ictTermGrade, a.policy))}</td>
+      <td class="c-grade">${blankNull(formatGradeForDisplay(combined.specTermGrade, a.policy))}</td>
+      <td class="c-grade"><strong>${blankNull(formatGradeForDisplay(combined.termGrade, a.policy))}</strong></td>
+      <td class="c-desc">${renderBadge(combined.termGrade)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('recordTable').innerHTML = html;
 }
 
 function renderConsolidatedMapehTable(a) {
@@ -1204,6 +1443,7 @@ function renderConsolidatedMapehSummary(a) {
   if (a.policy === 'DO15_DESCRIPTIVE') {
     html += `<div class="compliance-footnote" data-eclass-style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); font-style:italic; text-align:center">Original basis of grade was descriptive (DO 15, s. 2026).</div>`;
   }
+  html += `<div class="compliance-footnote official-final-hint" data-eclass-style="margin-top:var(--space-2); font-size:var(--font-size-xs); color:var(--text-secondary); text-align:center">Official final appears after Term 3. The Final Grade column shows a running average until then.</div>`;
   document.getElementById('finalTable').innerHTML = html;
 }
 
@@ -1415,7 +1655,7 @@ function updateAssessmentMax(assessmentId, value) {
  */
 function termAssessments(a, term, mapePart) {
   const out = [];
-  if (!a) return out;
+  if (!a || !Array.isArray(a.assessments)) return out;
   for (let i = 0; i < a.assessments.length; i++) {
     const ast = a.assessments[i];
     if (String(ast.term) === String(term)) {
@@ -1479,10 +1719,16 @@ function componentLabel(component) {
 }
 
 function componentFullName(component) {
-  if (component === 'WW') return 'Written Works';
-  if (component === 'PT') return 'Performance Task';
-  if (component === 'SA' || component === 'SA1' || component === 'SA2' || component === 'ST1' || component === 'ST2') return 'Summative Test';
-  if (component === 'TE') return 'Term Examination';
+  if (typeof officialComponentTitle === 'function') {
+    if (component === 'WW' || component === 'PT') return officialComponentTitle(component);
+    if (component === 'SA' || component === 'SA1' || component === 'SA2' || component === 'ST1' || component === 'ST2' || component === 'TE') {
+      return officialComponentTitle('EX');
+    }
+  }
+  if (component === 'WW') return 'Written / Oral Works';
+  if (component === 'PT') return 'Product / Performance Tasks';
+  if (component === 'SA' || component === 'SA1' || component === 'SA2' || component === 'ST1' || component === 'ST2') return 'Examinations';
+  if (component === 'TE') return 'Examinations';
   return component || 'Assessment';
 }
 
@@ -1496,7 +1742,9 @@ function assessmentHeaderOccurrence(item, items, component) {
   let count = 0;
   for (let i = 0; i < items.length; i++) {
     const current = items[i];
-    if (assessmentHeaderComponent(current.component) === component) count++;
+    if (assessmentHeaderComponent(current.component) !== component) continue;
+    if (item.domain && String(current.domain || '') !== String(item.domain || '')) continue;
+    count++;
     if (current.id === item.id) return count;
   }
   return count || 1;
@@ -1522,7 +1770,7 @@ function scoreTransferAssignments() {
 
 function scoreTransferClassLabel(assignment) {
   if (!assignment) return 'Unknown class';
-  return `Grade ${assignment.gradeLevel || ''} - ${assignment.section || ''} (${assignment.subject || 'Subject'})`;
+  return `Grade ${assignment.gradeLevel || ''} - ${assignment.section || ''} (${typeof assignmentSubjectLabel === 'function' ? assignmentSubjectLabel(assignment) : (assignment.subject || 'Subject')})`;
 }
 
 function scoreTransferMapehParts(assignment) {

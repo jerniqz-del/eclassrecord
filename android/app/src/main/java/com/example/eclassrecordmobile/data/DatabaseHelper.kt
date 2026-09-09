@@ -272,6 +272,7 @@ object DatabaseHelper {
     private fun reviewItem(change: MobileChange, snapshot: SyncPayload?): List<PendingChangeReviewItem> {
         return when (change.type) {
             "score" -> listOf(reviewScore(change, snapshot))
+            "pace" -> listOf(reviewPace(change, snapshot))
             "attendance" -> listOf(reviewAttendance(change, snapshot))
             "calendar" -> listOf(reviewCalendar(change, snapshot))
             "profile" -> reviewProfile(change, snapshot)
@@ -288,6 +289,31 @@ object DatabaseHelper {
                 )
             )
         }
+    }
+
+    private fun reviewPace(change: MobileChange, snapshot: SyncPayload?): PendingChangeReviewItem {
+        val assignment = assignmentFor(change.classId, snapshot)
+        val key = "${change.learnerId}|${change.assessmentId.orEmpty()}|${change.term ?: "1"}|${change.field.orEmpty()}"
+        val desktopAssignment = snapshot?.let { authoritativeAssignment(it, change.classId) }
+        val previous = when {
+            snapshot == null -> null
+            desktopAssignment == null -> null
+            else -> desktopAssignment.paceRatings[key].orEmpty()
+        }
+        val next = change.value.orEmpty()
+        val affects = previous == null || (previous.isNotBlank() && previous != next)
+        val learner = learnerName(assignment, change.learnerId)
+        val title = assignment?.paceCompetencies?.find { it.id == change.assessmentId }?.title ?: change.assessmentId.orEmpty()
+        return PendingChangeReviewItem(
+            changeId = change.changeId,
+            change = change,
+            affectsExisting = affects,
+            kindLabel = "PACE",
+            title = "$learner · $title",
+            detail = "${assignmentLabel(assignment)} · Term ${change.term ?: "1"}",
+            previousValue = if (previous == null) "Not compared yet" else displayValue(previous),
+            newValue = displayValue(next),
+        )
     }
 
     private fun reviewScore(change: MobileChange, snapshot: SyncPayload?): PendingChangeReviewItem {
@@ -793,6 +819,52 @@ object DatabaseHelper {
         }
         val newPayload = payload.copy(assignments = updatedAssignments)
         savePayload(context, newPayload)
+        notifyLivePush(context)
+    }
+
+    @Synchronized
+    fun updatePaceRating(
+        context: Context,
+        assignmentId: String,
+        learnerId: String,
+        competencyId: String,
+        term: String,
+        skill: String,
+        letter: String,
+    ) {
+        val payload = currentPayload ?: return
+        val key = "$learnerId|$competencyId|$term|$skill"
+        val next = letter.trim().uppercase()
+        val existing = payload.assignments.find { it.id == assignmentId }?.paceRatings?.get(key).orEmpty()
+        if (existing == next) return
+
+        unsyncedExtras.removeAll {
+            it.type == "pace" && it.classId == assignmentId && it.learnerId == learnerId &&
+                it.assessmentId == competencyId && it.term == term && it.field == skill
+        }
+        unsyncedExtras.add(
+            MobileChange(
+                changeId = UUID.randomUUID().toString(),
+                type = "pace",
+                classId = assignmentId,
+                learnerId = learnerId,
+                assessmentId = competencyId,
+                term = term,
+                field = skill,
+                value = next,
+            ),
+        )
+        saveUnsyncedExtras(context)
+
+        val updatedAssignments = payload.assignments.map { assignment ->
+            if (assignment.id != assignmentId) assignment
+            else {
+                val ratings = assignment.paceRatings.toMutableMap()
+                if (next.isEmpty()) ratings.remove(key) else ratings[key] = next
+                assignment.copy(paceRatings = ratings)
+            }
+        }
+        savePayload(context, payload.copy(assignments = updatedAssignments))
         notifyLivePush(context)
     }
 

@@ -216,6 +216,37 @@
   color: #0f766e;
 }
 
+.companion-guide-body {
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.companion-guide-step h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.companion-guide-step p,
+.companion-guide-step li {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.companion-guide-step ol {
+  margin: 6px 0 0;
+  padding-left: 1.25rem;
+}
+
+.companion-guide-step li + li {
+  margin-top: 4px;
+}
+
 @media (max-width: 780px) {
   .companion-pairing { grid-template-columns: 1fr; }
   .companion-pairing__qr { max-width: 280px; }

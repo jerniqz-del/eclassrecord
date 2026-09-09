@@ -868,16 +868,18 @@ function compileStudentExcelData(a, student, mapePart) {
         saPS: result.hasData ? result.examPS : '',
         saWS: result.hasData ? (result.examPS * weightsForAssignment(a)[2] / 100) : '',
         
-        initialGrade: result.hasData ? result.initialGrade : '',
+        initialGrade: result.hasData && result.initialGrade !== null && result.initialGrade !== undefined ? result.initialGrade : '',
         termGrade: result.termGrade !== null ? formatGradeForDisplay(result.termGrade, a.policy) : '',
         desc: result.termGrade !== null ? termDescription(a, result.termGrade) : ''
       };
       
       if (result.termGrade !== null) {
-        if (isDescriptive) {
-          sumIg += result.initialGrade;
-          countIg++;
-        } else {
+        if (isDescriptive && !(typeof isGrade1Assignment === 'function' && isGrade1Assignment(a))) {
+          if (Number.isFinite(Number(result.initialGrade))) {
+            sumIg += result.initialGrade;
+            countIg++;
+          }
+        } else if (!isDescriptive) {
           if (typeof result.termGrade === 'number') {
             sum += result.termGrade;
             termCount++;
@@ -892,6 +894,8 @@ function compileStudentExcelData(a, student, mapePart) {
   
   if (isTO) {
     finalGrade = 'T/O';
+  } else if (typeof isGrade1Assignment === 'function' && isGrade1Assignment(a)) {
+    finalGrade = '';
   } else if (isDescriptive) {
     finalGrade = countIg > 0 ? transmute(a, sumIg / countIg) : '';
   } else {
@@ -934,6 +938,262 @@ function compileTermHps(a, term, mapePart) {
     sa2Hps,
     teHps
   };
+}
+
+function officialAssessmentScore(assignment, studentId, assessment) {
+  if (!assessment) return '';
+  const val = assignment.scores[`${studentId}|${assessment.id}`];
+  return (val !== undefined && val !== '') ? parseFloat(val) : '';
+}
+
+function officialAssessmentHps(assessment) {
+  if (!assessment || assessment.maxScore === undefined || assessment.maxScore === '') return '';
+  return number(assessment.maxScore);
+}
+
+function compileOfficialTermScores(assignment, student, term, mapePart) {
+  const items = termAssessments(assignment, String(term), mapePart);
+  const by = (component, domain) => items.filter(item => item.component === component && (!domain || item.domain === domain));
+  const exam = aliases => {
+    const ast = items.find(item => aliases.includes(item.component));
+    return officialAssessmentScore(assignment, student.id, ast);
+  };
+  if (typeof usesGmrcDomainScoring === 'function' && usesGmrcDomainScoring(assignment)) {
+    return {
+      wwCognitive: by('WW', 'cognitive').map(item => officialAssessmentScore(assignment, student.id, item)),
+      wwAffective: by('WW', 'affective').map(item => officialAssessmentScore(assignment, student.id, item)),
+      ptCognitive: by('PT', 'cognitive').map(item => officialAssessmentScore(assignment, student.id, item)),
+      ptAffective: by('PT', 'affective').map(item => officialAssessmentScore(assignment, student.id, item)),
+      ptBehavioral: by('PT', 'behavioral').map(item => officialAssessmentScore(assignment, student.id, item)),
+      sa1: exam(['ST1', 'SA1']),
+      sa2: exam(['ST2', 'SA2']),
+      te: exam(['TE'])
+    };
+  }
+  return {
+    ww: by('WW').map(item => officialAssessmentScore(assignment, student.id, item)),
+    pt: by('PT').map(item => officialAssessmentScore(assignment, student.id, item)),
+    sa1: exam(['ST1', 'SA1']),
+    sa2: exam(['ST2', 'SA2']),
+    te: exam(['TE'])
+  };
+}
+
+function compileOfficialTermHps(assignment, term, mapePart) {
+  const items = termAssessments(assignment, String(term), mapePart);
+  const by = (component, domain) => items.filter(item => item.component === component && (!domain || item.domain === domain));
+  const examHps = aliases => officialAssessmentHps(items.find(item => aliases.includes(item.component)));
+  if (typeof usesGmrcDomainScoring === 'function' && usesGmrcDomainScoring(assignment)) {
+    return {
+      wwCognitiveHps: by('WW', 'cognitive').map(officialAssessmentHps),
+      wwAffectiveHps: by('WW', 'affective').map(officialAssessmentHps),
+      ptCognitiveHps: by('PT', 'cognitive').map(officialAssessmentHps),
+      ptAffectiveHps: by('PT', 'affective').map(officialAssessmentHps),
+      ptBehavioralHps: by('PT', 'behavioral').map(officialAssessmentHps),
+      sa1Hps: examHps(['ST1', 'SA1']),
+      sa2Hps: examHps(['ST2', 'SA2']),
+      teHps: examHps(['TE'])
+    };
+  }
+  return compileTermHps(assignment, term, mapePart);
+}
+
+function officialLearnerExportRow(assignment, student, mapePart) {
+  return {
+    name: formatLearnerName(student.lastName, student.firstName, student.middleName),
+    lrn: student.lrn || '',
+    sex: student.sex || '',
+    birthdate: student.birthdate || '',
+    terms: {
+      1: compileOfficialTermScores(assignment, student, '1', mapePart),
+      2: compileOfficialTermScores(assignment, student, '2', mapePart),
+      3: compileOfficialTermScores(assignment, student, '3', mapePart)
+    }
+  };
+}
+
+function buildOfficialEcrPayload(assignment) {
+  const pack = officialEcrPackForAssignment(assignment);
+  const school = officialEcrSchoolSnapshot();
+  if (!school.schoolYear) school.schoolYear = assignment.schoolYear || '';
+  const payload = {
+    packId: pack.id,
+    school,
+    assignment: {
+      gradeLevel: assignment.gradeLevel,
+      section: assignment.section,
+      subject: assignment.subject,
+      scoringModel: assignment.scoringModel,
+      tleMode: assignment.tleMode,
+      policy: assignment.policy,
+      learners: assignment.learners || []
+    },
+    males: (assignment.learners || []).filter(learner => learner.sex === 'M').map(learner => officialLearnerExportRow(assignment, learner)),
+    females: (assignment.learners || []).filter(learner => learner.sex === 'F').map(learner => officialLearnerExportRow(assignment, learner)),
+    terms: {
+      1: compileOfficialTermHps(assignment, '1'),
+      2: compileOfficialTermHps(assignment, '2'),
+      3: compileOfficialTermHps(assignment, '3')
+    }
+  };
+  if (pack.id === 'mapeh') {
+    payload.music_arts = {
+      males: (assignment.learners || []).filter(learner => learner.sex === 'M').map(learner => officialLearnerExportRow(assignment, learner, 'music_arts')),
+      females: (assignment.learners || []).filter(learner => learner.sex === 'F').map(learner => officialLearnerExportRow(assignment, learner, 'music_arts')),
+      terms: {
+        1: compileOfficialTermHps(assignment, '1', 'music_arts'),
+        2: compileOfficialTermHps(assignment, '2', 'music_arts'),
+        3: compileOfficialTermHps(assignment, '3', 'music_arts')
+      }
+    };
+    payload.pe_health = {
+      males: (assignment.learners || []).filter(learner => learner.sex === 'M').map(learner => officialLearnerExportRow(assignment, learner, 'pe_health')),
+      females: (assignment.learners || []).filter(learner => learner.sex === 'F').map(learner => officialLearnerExportRow(assignment, learner, 'pe_health')),
+      terms: {
+        1: compileOfficialTermHps(assignment, '1', 'pe_health'),
+        2: compileOfficialTermHps(assignment, '2', 'pe_health'),
+        3: compileOfficialTermHps(assignment, '3', 'pe_health')
+      }
+    };
+  }
+  if (pack.id === 'tle-component') {
+    const tracks = [
+      { key: 'ict', part: 'ict', terms: ['1', '2', '3'] },
+      { key: 'afa', part: 'afa', terms: ['1'] },
+      { key: 'fcs', part: 'fcs', terms: ['2'] },
+      { key: 'ia', part: 'ia', terms: ['3'] }
+    ];
+    tracks.forEach(track => {
+      payload[track.key] = {
+        males: (assignment.learners || []).filter(learner => learner.sex === 'M').map(learner => officialLearnerExportRow(assignment, learner, track.part)),
+        females: (assignment.learners || []).filter(learner => learner.sex === 'F').map(learner => officialLearnerExportRow(assignment, learner, track.part)),
+        terms: {}
+      };
+      track.terms.forEach(term => {
+        payload[track.key].terms[term] = compileOfficialTermHps(assignment, term, track.part);
+      });
+    });
+  }
+  if (pack.id === 'grade1') {
+    const events = typeof OfficialSchoolCalendar !== 'undefined' && OfficialSchoolCalendar.officialEvents
+      ? OfficialSchoolCalendar.officialEvents()
+      : undefined;
+    function enrichGrade1(learner, row) {
+      const next = { ...row, birthdate: learner.birthdate || row.birthdate || '' };
+      next.summaries = {};
+      ['1', '2', '3'].forEach(term => {
+        next.summaries[term] = typeof paceTermSummary === 'function'
+          ? paceTermSummary(assignment, learner.id, term)
+          : { canDo: '', toImprove: '' };
+      });
+      next.attendancePresent = {};
+      if (typeof paceSf9AttendanceByMonth === 'function') {
+        paceSf9AttendanceByMonth(assignment, learner.id, events).forEach(item => {
+          next.attendancePresent[item.key] = item.present || 0;
+        });
+      }
+      return next;
+    }
+    const maleLearners = (assignment.learners || []).filter(learner => learner.sex === 'M');
+    const femaleLearners = (assignment.learners || []).filter(learner => learner.sex === 'F');
+    payload.males = payload.males.map((row, index) => enrichGrade1(maleLearners[index] || {}, row));
+    payload.females = payload.females.map((row, index) => enrichGrade1(femaleLearners[index] || {}, row));
+    payload.attendanceClassDays = typeof paceSf9ClassDaysMap === 'function'
+      ? paceSf9ClassDaysMap(assignment, events)
+      : {};
+  }
+  if (pack.id === 'kinder') {
+    const items = typeof kinderAllItems === 'function' ? kinderAllItems() : [];
+    function enrichKinder(learner, row) {
+      const ratings = typeof officialLetterRatingsByTerm === 'function'
+        ? officialLetterRatingsByTerm(items, (id, term) => (
+          typeof paceGetRating === 'function' ? paceGetRating(assignment, learner.id, id, term, '') : ''
+        ))
+        : { 1: {}, 2: {}, 3: {} };
+      return Object.assign({}, row, { ratings });
+    }
+    const maleLearners = (assignment.learners || []).filter(learner => learner.sex === 'M');
+    const femaleLearners = (assignment.learners || []).filter(learner => learner.sex === 'F');
+    payload.males = payload.males.map((row, index) => enrichKinder(maleLearners[index] || {}, row));
+    payload.females = payload.females.map((row, index) => enrichKinder(femaleLearners[index] || {}, row));
+  }
+  return payload;
+}
+
+function officialEcrSchoolSnapshot() {
+  if (typeof officialEcrSchoolFromProfile === 'function') {
+    return officialEcrSchoolFromProfile(typeof db === 'object' ? db : {});
+  }
+  return {
+    schoolName: db.schoolName || '',
+    schoolId: db.schoolId || '',
+    region: db.region || '',
+    division: db.division || '',
+    district: db.district || '',
+    city: db.city || db.municipality || '',
+    schoolYear: db.schoolYear || '',
+    teacherName: db.teacherName || '',
+    schoolHead: db.schoolHead || ''
+  };
+}
+
+function openOfficialEcrExport() {
+  const assignment = currentAssignment();
+  if (!assignment) return;
+  const wizard = typeof officialEcrWizardState === 'function'
+    ? officialEcrWizardState(officialEcrSchoolSnapshot(), assignment)
+    : officialEcrExportReadiness(officialEcrSchoolSnapshot(), assignment);
+  const pack = wizard.pack;
+  const itemMarkup = (wizard.items || []).map(item => `<li><strong>${esc(item.label)}:</strong> ${item.ok ? 'Ready' : 'Missing'}</li>`).join('');
+  const emptyMarkup = (wizard.emptyOfficialCells || []).length
+    ? `<ul>${wizard.emptyOfficialCells.map(cell => `<li>${esc(cell.label)} — ${esc(cell.cell)}</li>`).join('')}</ul>`
+    : '<p>No empty official header cells were found.</p>';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '12000';
+  overlay.innerHTML = `
+    <div class="modal" data-eclass-style="max-width: 560px; width: 92%;">
+      <div class="modal__title">Export Official ECR</div>
+      <div class="modal__body">
+        <p><strong>Pack:</strong> ${esc(pack.title || pack.id)}</p>
+        ${pack.warning ? `<p class="text-muted">${esc(pack.warning)}</p>` : ''}
+        <p>Fills INPUT DATA from Settings and the class roster, then opens the matching official pack. Generic Excel export remains available from Print.</p>
+        <p class="text-muted">${esc(wizard.source || 'Settings and class roster')} · Males ${wizard.males || 0} · Females ${wizard.females || 0}</p>
+        <ul>${itemMarkup}</ul>
+        <h5>Empty official cells</h5>
+        ${emptyMarkup}
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn-cancel btn-sm" data-cancel>Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" data-export ${pack.available ? '' : 'disabled'}>Export Official ECR</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('[data-cancel]').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', event => {
+    if (event.target === overlay) overlay.remove();
+  });
+  overlay.querySelector('[data-export]')?.addEventListener('click', async () => {
+    overlay.remove();
+    await exportOfficialEcrTemplate();
+  });
+}
+
+async function exportOfficialEcrTemplate() {
+  const assignment = currentAssignment();
+  if (!assignment) return;
+  toast('Compiling official ECR pack...', 'info');
+  const payload = buildOfficialEcrPayload(assignment);
+  if (window.AdminTestMode?.isActive?.()) payload.isMockTestData = true;
+  try {
+    const result = await window.electronAPI.exportOfficialEcr(payload);
+    if (result.success) toast(`Successfully exported official ECR to: ${result.path}`, 'success');
+    else if (result.error) toast('Official ECR export failed: ' + result.error, 'error');
+  } catch (error) {
+    console.error(error);
+    toast('Official ECR export failed: ' + error.message, 'error');
+  }
 }
 
 function compileStudentConsolidatedExcelData(a, student) {

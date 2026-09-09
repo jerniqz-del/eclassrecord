@@ -10,7 +10,7 @@
   }
 
   function classLabel(assignment) {
-    return assignment ? `Grade ${assignment.gradeLevel} - ${assignment.section} · ${assignment.subject}` : 'Choose a teaching load';
+    return assignment ? `Grade ${assignment.gradeLevel} - ${assignment.section} · ${typeof assignmentSubjectLabel === 'function' ? assignmentSubjectLabel(assignment) : assignment.subject}` : 'Choose a teaching load';
   }
 
   function dateLabel(date, today) {

@@ -208,6 +208,39 @@ function scanBackupDirectory(baseDir, expectedRecoveryId) {
   return { latest: matches[0] || null, matchCount: matches.length, invalidMatchingFiles };
 }
 
+function isBusyReplaceError(error) {
+  const code = error && error.code;
+  return code === 'EPERM' || code === 'EACCES' || code === 'EBUSY' || code === 'EEXIST';
+}
+
+/**
+ * Replaces targetFile with temporaryFile. Windows/OneDrive often deny
+ * rename-over-existing (EPERM); unlink-then-rename or copy is the fallback.
+ */
+function replaceFileAtomically(temporaryFile, targetFile, io = fs) {
+  try {
+    io.renameSync(temporaryFile, targetFile);
+    return 'rename';
+  } catch (error) {
+    if (!isBusyReplaceError(error)) throw error;
+  }
+  try {
+    if (io.existsSync(targetFile)) {
+      try {
+        io.unlinkSync(targetFile);
+      } catch (unlinkError) {
+        if (!isBusyReplaceError(unlinkError)) throw unlinkError;
+      }
+    }
+    io.renameSync(temporaryFile, targetFile);
+    return 'rename-after-unlink';
+  } catch (error) {
+    if (!isBusyReplaceError(error)) throw error;
+  }
+  io.copyFileSync(temporaryFile, targetFile);
+  return 'copy';
+}
+
 function writeJsonAtomically(targetFile, payload) {
   JSON.parse(payload);
   const temporaryFile = `${targetFile}.${process.pid}.${Date.now()}.tmp`;
@@ -219,10 +252,14 @@ function writeJsonAtomically(targetFile, payload) {
     fs.closeSync(descriptor);
     descriptor = null;
     JSON.parse(fs.readFileSync(temporaryFile, 'utf8'));
-    fs.renameSync(temporaryFile, targetFile);
+    replaceFileAtomically(temporaryFile, targetFile);
   } finally {
-    if (descriptor !== null) fs.closeSync(descriptor);
-    if (fs.existsSync(temporaryFile)) fs.unlinkSync(temporaryFile);
+    if (descriptor !== null) {
+      try { fs.closeSync(descriptor); } catch (_closeError) { /* already closed */ }
+    }
+    if (fs.existsSync(temporaryFile)) {
+      try { fs.unlinkSync(temporaryFile); } catch (_cleanupError) { /* OneDrive may still hold the temp name */ }
+    }
   }
 }
 
@@ -249,8 +286,15 @@ function createRollingBackup(payload, baseDir, limit = 30, prefix = 'backup') {
     const filename = `${prefix}-${dateStr}.json`;
     const targetFile = path.join(backupFolder, filename);
 
-    // Save today's backup file (overwrites if saved again today)
-    writeJsonAtomically(targetFile, payload);
+    // Save today's backup file (overwrites if saved again today).
+    // OneDrive can lock the canonical name; keep a timestamped copy instead of dropping the backup.
+    try {
+      writeJsonAtomically(targetFile, payload);
+    } catch (error) {
+      if (!isBusyReplaceError(error)) throw error;
+      const fallbackFile = path.join(backupFolder, `${prefix}-${dateStr}-${process.pid}-${Date.now()}.json`);
+      writeJsonAtomically(fallbackFile, payload);
+    }
 
     // Prune backups exceeding the retention limit
     const files = fs.readdirSync(backupFolder);
@@ -515,6 +559,8 @@ module.exports = {
   createSecondaryBackupEnvelope,
   createLocalRestorePoint,
   writeJsonAtomically,
+  replaceFileAtomically,
+  isBusyReplaceError,
   verifyBackupEnvelopeIntegrity,
   scanBackupDirectory,
   discoverOneDriveBackups,

@@ -94,9 +94,29 @@ const HELP_TOPICS = [
         <li>Open the <strong>Teaching Load</strong> view from the sidebar.</li>
         <li>Click <strong>Add Class Load</strong> from the Dashboard card or empty-state action.</li>
         <li>Select the <strong>Grade Level</strong>, enter the <strong>Section</strong> name, and pick the <strong>School Year</strong>.</li>
-        <li>Select the <strong>Subject</strong> from the dropdown (or select <em>Custom Subject</em> to type your own subject name).</li>
+        <li>Select the <strong>Subject</strong> from the dropdown (or select <em>Custom Subject</em> to type your own subject name). Grade 1 does not ask for a subject: it creates one class for Reading and Literacy, Language, Mathematics, GMRC, and Makabansa.</li>
         <li>Click <strong>Add Teaching Load</strong> to save it to your roster panel.</li>
       </ol>
+    `
+  },
+  {
+    id: 'mobile_companion_sync',
+    category: 'getting_started',
+    title: 'Using the Android Mobile Companion',
+    keywords: 'mobile sync companion android phone wlan wifi hotspot bluetooth pairing qr install apk instructions',
+    content: `
+      <p>The Android companion lets you rate, check attendance, and review class data away from the computer. This desktop remains the official record.</p>
+      <h5>How to set it up:</h5>
+      <ol>
+        <li>Open <strong>Mobile Sync</strong> from the sidebar (or press Ctrl+Shift+M).</li>
+        <li>Tap <strong>Instructions</strong> on that page for the full walkthrough.</li>
+        <li>Install the phone app with <strong>Show install QR</strong> and the phone camera (first time only).</li>
+        <li>Pair with <strong>Show WLAN QR</strong> on the same Wi-Fi or the phone hotspot, then enter your profile PIN on Android.</li>
+        <li>Use <strong>Start Bluetooth Pairing</strong> only when a trusted Wi-Fi or hotspot link is not available.</li>
+      </ol>
+      <div class="help-highlight-box">
+        Phone scores are drafts until you review them on the desktop. Do not photograph pairing QR codes.
+      </div>
     `
   },
   {
@@ -175,7 +195,7 @@ const HELP_TOPICS = [
     id: 'import_roster_class',
     category: 'roster_management',
     title: 'Cloning and Importing Rosters from Other Classes',
-    keywords: 'clone copy roster import class other section load year merge overwrite combine duplicate enroll enrollment learners students same section',
+    keywords: 'clone copy roster import class other section load year merge overwrite combine duplicate enroll enrollment learners students same section official sheet gmrc tle',
     content: `
       <p>If you teach multiple subjects to the same section, you can copy the roster of one class load to another without re-typing or re-uploading spreadsheets.</p>
       <h5>How to Clone a Roster:</h5>
@@ -249,6 +269,53 @@ const HELP_TOPICS = [
         <li>Type the student's score and press <strong>Enter</strong>. The app automatically saves the score and advances to the next student.</li>
         <li>Use the <strong>Up and Down Arrows</strong> to navigate between students without saving, or press <strong>Esc</strong> to close the modal.</li>
       </ol>
+    `
+  },
+  {
+    id: 'official_ecr_export',
+    category: 'grading_scoring',
+    title: 'Export Official ECR packs',
+    keywords: 'export official ecr excel pack input data gmrc mapeh tle school id region sex lrn generic excel',
+    content: `
+      <p>The class record can fill the updated DepEd K to 10 Excel packs without replacing the older generic Excel export.</p>
+      <h5>Official pack</h5>
+      <ol>
+        <li>Open a class record and click <strong>Export Official ECR</strong>.</li>
+        <li>The wizard fills INPUT DATA from Settings and the class roster, then opens Academic, GMRC/Values, MAPEH, EPP/TLE, Grade 1 PACE+SF9, or Kindergarten SF9.</li>
+        <li>Review the checklist for <strong>school ID</strong>, <strong>region</strong>, <strong>sex</strong>, <strong>LRN</strong>, and <strong>school head</strong>, plus a preview of empty official cells. Set school head under Settings → Teacher Profile.</li>
+        <li>Save the filled workbook. Term Grade and Final Grade stay as Excel formulas, including blanking the official final until all three terms exist. In the app, <strong>Official final appears after Term 3</strong>; the summary shows a running average until then.</li>
+      </ol>
+      <p>Keep using generic Excel export from Print until your school confirms the official pack. Existing scores are not rewritten.</p>
+    `
+  },
+  {
+    id: 'grade1_pace',
+    category: 'grading_scoring',
+    title: 'Grade 1 PACE ratings (Individual and Class)',
+    keywords: 'pace grade 1 descriptive a e advancing emerging competency booklet class increment individual median override annex c do 15',
+    content: `
+      <p>Grade 1 follows DepEd Order No. 15, s. 2026 descriptive reporting. The official rating surface is the <strong>PACE</strong> booklet: one A–E letter per competency (and skill square), stored per learner. Kindergarten uses the same A–E letter keys on developmental items. Written Work and Performance Task scores remain as optional evidence and never compute the subject letter.</p>
+      <h5>Letters</h5>
+      <p>A Advancing, B Benchmarking, C Connecting, D Developing, E Emerging. Empty cells are unrated, not E.</p>
+      <h5>Individual grading</h5>
+      <ol>
+        <li>Open a Grade 1 class record. Use the <strong>Class / Individual</strong> toggle (or <strong>Alt+C</strong> / <strong>Alt+I</strong>). Choose a color-coded learning-area tab, or press <strong>Alt+1</strong> through <strong>Alt+5</strong>. The list shows each competency once. Live squares appear nested as <strong>&gt; Listening</strong>, <strong>&gt; Speaking</strong>, <strong>&gt; Reading</strong>, and <strong>&gt; Copying and Guided Writing</strong>. Subcompetencies such as Reading item 12 appear as <strong>a. Words that label…</strong> under the numbered title. Hover a letter for its descriptor.</li>
+        <li>Use <strong>Export Individual PACE Form</strong> (or <strong>Ctrl+E</strong>) to open a live preview of the exact official PACE sheet. Letters update as you rate. Choose a learner to refresh the sheet, then print or save the Word file for the open term.</li>
+        <li>Rate one learner, one criterion at a time. Keys <strong>A–E</strong> or <strong>1–5</strong> save the letter and stay on this criterion. <strong>Left/Right arrows</strong> change criterion. <strong>Up/Down arrows</strong> change learner. Use <strong>Next criterion</strong> to move on. Press <strong>?</strong> to show or hide the shortcut bar.</li>
+        <li>Skip leaves the cell unrated. Next learner starts when the term list is done.</li>
+        <li>The subject letter is the <strong>median</strong> of rated cells. You may override it and add term remarks (strengths, emerging competencies, and next steps).</li>
+        <li>Copy Term 1 into later terms only for year-long Reading and Language rows, never for Math, GMRC, or Makabansa term lists.</li>
+      </ol>
+      <h5>Class grading</h5>
+      <ol>
+        <li>Set the focused competency for unrated learners (for example all E). Confirm the count. Turn on <strong>Replace existing letters</strong> only when you mean to overwrite.</li>
+        <li><strong>Increment class</strong> moves everyone one step on the ladder E→D→C→B→A and never past A. The learner’s current letter stays in color; the other letters stay gray.</li>
+        <li>Check the learners who should move, then <strong>Increment selected</strong>. Repeat until the few Advancing children are at B or A. <strong>Clear</strong> removes letters on this competency for selected (or visible) learners. In Class mode, <strong>A–E</strong> rates the highlighted row, <strong>Space</strong> selects it, and <strong>/</strong> focuses search. <strong>Ctrl+Z</strong> undoes the last bulk action.</li>
+        <li>Class actions still save per-learner cells. Reports never show a class grade. Undo restores the last bulk action.</li>
+      </ol>
+      <div class="help-highlight-box">
+        <strong>Transfers:</strong> Advisory accepts A–E. When a numerical field is required, the file includes the Annex C range (A 90–100, B 80–89, C 75–79, D 65–74, E 0–64) and the descriptive footnote. The app does not invent a single mid-range number such as 85. Arts and Physical Education uses one overall competency until a district APE PACE page exists.
+      </div>
     `
   },
   {
@@ -463,7 +530,7 @@ const HELP_TOPICS = [
     id: 'deped_order_15',
     category: 'deped_policies',
     title: 'DepEd Order No. 15 s. 2026 Guidelines',
-    keywords: 'deped order 15 s 2026 assessment count written works performance tasks 3-5 2-3 transitional rules weighting examinations descriptors scale annex c letter grade',
+    keywords: 'deped order 15 s 2026 assessment count written works performance tasks 3-5 2-3 transitional rules weighting examinations descriptors scale annex c letter grade duplicate official sheet gmrc tle term 1',
     content: `
       <p>This application is designed specifically to comply with the transitional guidelines set in <strong>DepEd Order No. 15 s. 2026</strong>.</p>
       <h5>Key Policy Rules Applied:</h5>
@@ -471,14 +538,16 @@ const HELP_TOPICS = [
         <li><strong>Recommended assessment pacing:</strong> For Grades 4&ndash;12, Table 3 recommends <strong>3&ndash;5 Written Works</strong>, <strong>2&ndash;3 Performance Tasks</strong>, and <strong>2 Summative Tests plus 1 Term Examination</strong> per learning area, per term. DepEd describes these ranges as flexible guidance rather than fixed compliance requirements.</li>
         <li><strong>Grades 1&ndash;3:</strong> Teachers determine a sufficient and manageable quantity of assessment evidence; DO 15 does not prescribe a numeric WW/PT range for these grades.</li>
         <li><strong>Component weighting:</strong> Grades 4&ndash;10 and Strengthened SHS (Grades 11&ndash;12) use the prescribed WW, PT, and examination weights for their applicable learning area or SHS subject classification. Non-pilot Grade 12 classes in SY 2026-2027 use DepEd Order No. 8, s. 2015 weights with the DO 15 transmutation table.</li>
+        <li><strong>GMRC and Values Education:</strong> Existing classes and new SY 2026-2027 loads keep a single pooled WW/PT average so Term 1 encodings stay on that sheet. Official domain scoring (WW Cognitive 10% and Affective 10%; PT Cognitive 10%, Affective 10%, and Behavioral 30%; Examinations 30%) is opt-in this year and becomes the default for new classes from SY 2027-2028. To move a Term 1-complete class onto the official sheet, use <strong>Duplicate to official sheet</strong>: the original class is kept, learners and Term 1 final grades are copied, Term 1 on the new class is grades-only, and Terms 2 and 3 use domain scoring.</li>
+        <li><strong>TLE per-component:</strong> Existing EPP/TLE classes and new SY 2026-2027 loads stay one component. Official ICT 25% + specialization 75% (Term 1 AFA, Term 2 FCS, Term 3 IA) is opt-in this year and becomes the default for new TLE classes from SY 2027-2028. <strong>Duplicate to official sheet</strong> copies an old EPP/TLE class the same way: Term 1 finals only, Terms 2 and 3 on the per-component sheet.</li>
         <li><strong>Zero-based calculations:</strong> Computations are adjusted so that zero scores are not inflated, representing actual student performance.</li>
         <li><strong>Descriptive grading (Key Stage 1):</strong> Grade 1 in SY 2026-2027 uses letters A–E. The engine uses the DO 15 names, not the old DO 8 names:
           <ul>
-            <li><strong>A Advancing (Namumukod-tangi):</strong> 90–100</li>
-            <li><strong>B Benchmarking (Napamamalas):</strong> 80–89</li>
-            <li><strong>C Connecting (Natutungo):</strong> 75–79</li>
-            <li><strong>D Developing (Napauunlad):</strong> 65–74</li>
-            <li><strong>E Emerging (Nagsisimula):</strong> 0–64</li>
+            <li><strong>A Advancing (Namumukod-tangi):</strong> 90–100. The learner demonstrates knowledge and skills beyond grade-level expectations.</li>
+            <li><strong>B Benchmarking (Naipamamalas):</strong> 80–89. The learner consistently demonstrates the knowledge and skills expected at grade level.</li>
+            <li><strong>C Connecting (Natutungo):</strong> 75–79. The learner is approaching the knowledge and skills expected at grade level.</li>
+            <li><strong>D Developing (Nagpapaunlad):</strong> 65–74. The learner is developing the knowledge and skills expected at grade level and needs support.</li>
+            <li><strong>E Emerging (Nagsisimula):</strong> 0–64. The learner is beginning to demonstrate the knowledge and skills expected at grade level.</li>
           </ul>
           Annex C ranges appear next to letters only when <strong>Show Numerical Equivalents</strong> is on, and only when a number is formally required (for example a transfer).
         </li>

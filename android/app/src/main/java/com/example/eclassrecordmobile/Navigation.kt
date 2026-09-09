@@ -52,6 +52,7 @@ import com.example.eclassrecordmobile.data.MobilePinLock
 import com.example.eclassrecordmobile.ui.ClassDetailScreen
 import com.example.eclassrecordmobile.ui.DesktopFeatureScreen
 import com.example.eclassrecordmobile.ui.ScoreEntryScreen
+import com.example.eclassrecordmobile.ui.PaceRatingScreen
 import com.example.eclassrecordmobile.ui.SyncScreen
 import com.example.eclassrecordmobile.ui.MobilePinUnlockScreen
 import com.example.eclassrecordmobile.ui.MobileUpdateInstallDialog
@@ -125,6 +126,7 @@ fun MainNavigation() {
     when (val route = activeRoute) {
       is ClassDetail -> DesktopRemoteController.openPage("record", route.assignmentId)
       is ScoreEntry -> DesktopRemoteController.openPage("record", route.assignmentId)
+      is PaceRating -> DesktopRemoteController.openPage("record", route.assignmentId)
       is DesktopFeature -> DesktopRemoteController.openPage(
         when (route.name) {
           "grading" -> "record"
@@ -189,6 +191,13 @@ fun MainNavigation() {
             ScoreEntryScreen(
               assignmentId = key.assignmentId,
               assessmentId = key.assessmentId,
+              onBack = { backStack.removeLastOrNull() }
+            )
+          }
+          entry<PaceRating> { key ->
+            PaceRatingScreen(
+              assignmentId = key.assignmentId,
+              term = key.term,
               onBack = { backStack.removeLastOrNull() }
             )
           }

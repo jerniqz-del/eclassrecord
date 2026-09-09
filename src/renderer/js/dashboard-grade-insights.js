@@ -36,6 +36,9 @@
     } catch (error) {
       return { value: null, usesInitialGrade: false };
     }
+    if (typeof result?.termGrade === 'string' && /^[A-E]$/i.test(result.termGrade)) {
+      return { value: null, usesInitialGrade: false, letter: result.termGrade.toUpperCase() };
+    }
     if (typeof result?.termGrade === 'number' && Number.isFinite(result.termGrade)) {
       return { value: result.termGrade, usesInitialGrade: false };
     }
@@ -59,14 +62,14 @@
       usesInitialGrade = usesInitialGrade || learnerResult.usesInitialGrade;
       const classGrades = activeLearners(assignment, term)
         .map(item => numericGrade(assignment, item, term).value)
-        .filter(value => value !== null);
+        .filter(value => typeof value === 'number');
       return {
         term,
-        grade: learnerResult.value,
+        grade: learnerResult.letter || learnerResult.value,
         classAverage: classGrades.length ? classGrades.reduce((sum, value) => sum + value, 0) / classGrades.length : null
       };
     });
-    const recorded = terms.map(item => item.grade).filter(value => value !== null);
+    const recorded = terms.map(item => item.grade).filter(value => typeof value === 'number');
     return {
       assignment,
       learners,
@@ -78,7 +81,10 @@
   }
 
   function gradeDisplay(value) {
-    return value === null ? '—' : String(Math.round(value * 10) / 10);
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'string' && /^[A-E]$/i.test(value)) return value.toUpperCase();
+    if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+    return String(Math.round(value * 10) / 10);
   }
 
   function performanceMarkup(data) {
@@ -87,8 +93,8 @@
       : 'No working class selected';
     const options = data.learners.map(learner => `<option value="${escapeHtml(learner.id)}" ${learner === data.learner ? 'selected' : ''}>${escapeHtml(learnerName(learner))}</option>`).join('');
     const rows = data.terms.map(item => {
-      const learnerWidth = item.grade === null ? 0 : Math.max(3, Math.min(100, item.grade));
-      const averageWidth = item.classAverage === null ? 0 : Math.max(3, Math.min(100, item.classAverage));
+      const learnerWidth = typeof item.grade === 'number' ? Math.max(3, Math.min(100, item.grade)) : 0;
+      const averageWidth = typeof item.classAverage === 'number' ? Math.max(3, Math.min(100, item.classAverage)) : 0;
       return `<div class="workplace-student-term">
         <div class="workplace-student-term__label"><strong>Term ${item.term}</strong><span>${gradeDisplay(item.grade)}</span></div>
         <div class="workplace-student-term__plot">
@@ -98,9 +104,11 @@
         <div class="workplace-student-term__values"><strong>${gradeDisplay(item.grade)}</strong><span>${gradeDisplay(item.classAverage)} class</span></div>
       </div>`;
     }).join('');
-    const note = data.usesInitialGrade
+    const note = Number(data.assignment?.gradeLevel) === 1
+      ? 'Grade 1 reports PACE letters. Optional WW/PT scores are evidence only.'
+      : (data.usesInitialGrade
       ? 'Descriptive grading uses the computed initial-grade percentage.'
-      : 'Term grade compared with the class average.';
+      : 'Term grade compared with the class average.');
 
     return `<article class="workplace-insight-card workplace-grade-insight workplace-performance-card">
       <header class="workplace-performance-header">

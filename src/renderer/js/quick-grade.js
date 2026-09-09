@@ -22,6 +22,11 @@ function quickGradeComponentName(component) {
  */
 function showQuickGradeModal() {
   const a = currentAssignment();
+  if (a && typeof isPaceAssignment === 'function' && isPaceAssignment(a)) {
+    if (typeof paceUi !== 'undefined') paceUi.showEvidence = false;
+    if (typeof renderPaceUi === 'function') renderPaceUi();
+    return;
+  }
   if (!a) {
     toast('No class load selected.', 'warning');
     return;
@@ -33,7 +38,11 @@ function showQuickGradeModal() {
   }
   
   const isMapeh = isMapehSubject(a.subject);
-  const mapePart = isMapeh ? currentMapehSubTab : undefined;
+  const mapePart = isMapeh
+    ? currentMapehSubTab
+    : (typeof usesTleComponentScoring === 'function' && usesTleComponentScoring(a)
+      ? currentTlePartForTerm(a, db.currentTerm)
+      : undefined);
   const assessments = termAssessments(a, db.currentTerm, mapePart);
   
   if (assessments.length === 0) {
@@ -111,7 +120,11 @@ function hideQuickGradeModal() {
     const a = currentAssignment();
     if (a) {
       const isMapeh = isMapehSubject(a.subject);
-      const mapePart = isMapeh ? currentMapehSubTab : undefined;
+      const mapePart = isMapeh
+    ? currentMapehSubTab
+    : (typeof usesTleComponentScoring === 'function' && usesTleComponentScoring(a)
+      ? currentTlePartForTerm(a, db.currentTerm)
+      : undefined);
       const items = termAssessments(a, db.currentTerm, mapePart);
       const colIndex = items.findIndex(it => it.id === window.lastFocusedAssessmentId);
       if (colIndex !== -1) {

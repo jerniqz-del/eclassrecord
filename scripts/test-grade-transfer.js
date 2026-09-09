@@ -511,4 +511,42 @@ function validPayload(data = fixture()) {
   assert(main.includes("title: 'Select Grade Transfer File'"));
 }
 
+{
+  const profile = { teacherName: 'Adviser', schoolYear: '2026-2027', assignments: [] };
+  AdvisoryData.normalizeAdvisoryData(profile);
+  const advisoryClass = AdvisoryData.createClass(profile, { id: 'advisory-g1', schoolYear: profile.schoolYear, gradeLevel: '1', section: 'A', adviserName: 'Adviser', isActive: true });
+  const learner = AdvisoryData.createLearner(profile, { id: 'advisory-g1-1', advisoryClassId: advisoryClass.id, lrn: '990000000010', lastName: 'Cruz', firstName: 'Ana' });
+  const sourceClass = {
+    id: 'class-makabansa-1', schoolYear: profile.schoolYear, gradeLevel: '1', section: 'A', subject: 'Makabansa',
+    learners: [{ id: 'source-g1-1', lrn: learner.lrn, lastName: 'Cruz', firstName: 'Ana' }]
+  };
+  profile.assignments.push(sourceClass);
+  Transfer.ensureGradeLevelSubjects(profile, advisoryClass);
+  const subjects = AdvisoryData.normalizeAdvisoryData(profile).subjects.filter(item => item.advisoryClassId === advisoryClass.id);
+  const makabansa = subjects.find(item => /MAKABANSA/.test(item.normalizedSubjectKey || item.subjectName.toUpperCase())) || subjects[0];
+  AdvisoryData.updateSubject(profile, makabansa.id, {
+    sourceType: 'local-subject-class', expectedSourceClassId: sourceClass.id,
+    expectedSourceClass: 'Makabansa · Grade 1 - A', expectedSourceTeacher: profile.teacherName
+  });
+  const linked = AdvisoryData.normalizeAdvisoryData(profile).subjects.find(item => item.id === makabansa.id);
+  const result = Transfer.syncLocalSubjectGrades(profile, advisoryClass, linked, {
+    getTermGrade: () => 'B'
+  });
+  assert.strictEqual(result.created, 3);
+  const stored = AdvisoryData.normalizeAdvisoryData(profile).grades.find(item => item.advisoryLearnerId === learner.id && item.term === '1');
+  assert.strictEqual(stored.finalGrade, 'B');
+  assert.strictEqual(stored.annexCRange, '80-89');
+  const payload = Transfer.buildExportPayload({
+    assignment: sourceClass,
+    profileDb: profile,
+    term: 1,
+    getFinalGrade: () => 'B'
+  });
+  assert.strictEqual(payload.learners[0].finalGrade, 'B');
+  assert.strictEqual(payload.learners[0].annexCRange, '80-89');
+  const report = Transfer.validatePayload(payload);
+  assert.strictEqual(report.isValid, true, report.errors.join('; '));
+  assert.strictEqual(Transfer.formatVisibleGrade('B'), 'B');
+}
+
 console.log('Offline Grade Transfer File export, validation, preview, and import tests passed.');

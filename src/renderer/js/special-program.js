@@ -133,8 +133,67 @@
     if (grade >= 11 && grade <= 12) populateSeniorHighSubjects(subjectSelect, grade, curriculum);
     addCustomOption(subjectSelect);
     globalScope.handleSubjectChanged?.();
+    syncGrade1AddClassForm();
     return result;
   };
+
+  function officialLayoutDefaultOn() {
+    const year = document.getElementById('newClassSchoolYear')?.value || '';
+    return typeof globalScope.officialGmrcTleLayoutsDefaultOn === 'function'
+      && globalScope.officialGmrcTleLayoutsDefaultOn(year);
+  }
+
+  function syncOfficialLayoutCheckboxes() {
+    const rawGrade = String(document.getElementById('newGrade')?.value || '');
+    const grade = Number(rawGrade);
+    const isGrade1 = grade === 1;
+    const isKinder = typeof globalScope.isKinderGradeLevel === 'function'
+      ? globalScope.isKinderGradeLevel(rawGrade)
+      : /kinder/i.test(rawGrade);
+    const subjectValue = document.getElementById('newSubject')?.value || '';
+    const defaultOn = officialLayoutDefaultOn();
+
+    const gmrcField = document.getElementById('gmrcDomainsField');
+    const gmrcBox = document.getElementById('newGmrcDomains');
+    const showGmrc = !isGrade1 && !isKinder && grade >= 2
+      && typeof globalScope.isGmrcOrValuesSubject === 'function'
+      && globalScope.isGmrcOrValuesSubject(subjectValue);
+    if (gmrcField) gmrcField.hidden = !showGmrc;
+    if (gmrcBox) gmrcBox.checked = !!(showGmrc && defaultOn);
+
+    const tleField = document.getElementById('tlePerComponentField');
+    const tleBox = document.getElementById('newTlePerComponent');
+    const showTle = !isGrade1 && !isKinder
+      && typeof globalScope.isEppOrTleSubject === 'function'
+      && globalScope.isEppOrTleSubject(subjectValue);
+    if (tleField) tleField.hidden = !showTle;
+    if (tleBox) tleBox.checked = !!(showTle && defaultOn);
+  }
+
+  function syncGrade1AddClassForm() {
+    const rawGrade = String(document.getElementById('newGrade')?.value || '');
+    const isGrade1 = Number(rawGrade) === 1;
+    const isKinder = typeof globalScope.isKinderGradeLevel === 'function'
+      ? globalScope.isKinderGradeLevel(rawGrade)
+      : /kinder/i.test(rawGrade);
+    const subjectField = document.getElementById('newSubjectField');
+    const note = document.getElementById('newGrade1HomeroomNote');
+    const customField = document.getElementById('customSubjectField');
+    const specialField = document.getElementById('specialProgramSubjectField');
+    if (subjectField) subjectField.hidden = isGrade1 || isKinder;
+    if (note) note.hidden = !isGrade1;
+    const paceField = document.getElementById('pacePerSkillField');
+    if (paceField) paceField.hidden = !isGrade1;
+    if (!isGrade1) {
+      const paceBox = document.getElementById('newPacePerSkill');
+      if (paceBox) paceBox.checked = false;
+    }
+    if (isGrade1 || isKinder) {
+      if (customField) customField.style.display = 'none';
+      if (specialField) specialField.hidden = true;
+    }
+    syncOfficialLayoutCheckboxes();
+  }
 
   const originalHandleSubjectChanged = globalScope.handleSubjectChanged;
   globalScope.handleSubjectChanged = function handleSubjectChangedWithSpecialProgram(...args) {
@@ -144,8 +203,13 @@
     const isSeniorHigh = grade >= 11 && grade <= 12;
     const customField = document.getElementById('customSubjectField');
     const specialField = document.getElementById('specialProgramSubjectField');
+    if (grade === 1) {
+      syncGrade1AddClassForm();
+      return result;
+    }
     if (customField) customField.style.display = isCustom ? 'block' : 'none';
     if (specialField) specialField.hidden = !isCustom || isSeniorHigh;
+    syncOfficialLayoutCheckboxes();
     if (!isCustom || isSeniorHigh) {
       const checkbox = document.getElementById('newSpecialProgramSubject');
       if (checkbox) checkbox.checked = false;
@@ -158,7 +222,36 @@
   globalScope.syncNewSpecialProgramWeights = syncNewSpecialProgramWeights;
   globalScope.syncSeniorHighSubjectGroup = syncSeniorHighSubjectGroup;
   globalScope.selectedNewShsCurriculum = selectedNewShsCurriculum;
+  globalScope.relabelOfficialSheetClassOptions = function relabelOfficialSheetClassOptions() {
+    const assignments = globalScope.db?.assignments || [];
+    ['recordClassSelect', 'classesClassSelect'].forEach(id => {
+      const select = document.getElementById(id);
+      if (!select) return;
+      Array.from(select.options || []).forEach(option => {
+        const assignment = assignments.find(item => item && item.id === option.value);
+        if (!assignment?.term1GradeOnly) return;
+        const marker = ' · Official sheet';
+        if (!String(option.textContent || '').includes('Official sheet')) {
+          option.textContent = `${option.textContent}${marker}`;
+        }
+      });
+    });
+  };
+  const originalRender = globalScope.render;
+  if (typeof originalRender === 'function') {
+    globalScope.render = function renderWithOfficialSheetDuplicate(...args) {
+      const result = originalRender.apply(this, args);
+      globalScope.relabelOfficialSheetClassOptions();
+      if (typeof globalScope.syncDuplicateOfficialSheetButtons === 'function') {
+        globalScope.syncDuplicateOfficialSheetButtons();
+      }
+      return result;
+    };
+  }
   document.addEventListener('input', event => {
     if (event.target?.id && /^newSpecial(?:Ww|Pt|Exam)Weight$/.test(event.target.id)) updateWeightTotal('new');
+  });
+  document.addEventListener('change', event => {
+    if (event.target?.id === 'newClassSchoolYear') syncOfficialLayoutCheckboxes();
   });
 })(typeof window !== 'undefined' ? window : globalThis);

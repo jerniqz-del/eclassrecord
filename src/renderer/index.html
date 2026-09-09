@@ -8,12 +8,13 @@
   <!-- Typography from Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet" />
   
   <!-- Style Sheets -->
   <link rel="stylesheet" href="css/design-tokens.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/pace-workspace.css" />
   <link rel="stylesheet" href="css/school-cloud.css" />
   <link rel="stylesheet" href="css/advisory.css" />
   <link rel="stylesheet" href="css/record-table.css" />
@@ -384,6 +385,9 @@
             <button class="btn btn-ghost btn-sm advisory-page-tab" type="button" role="tab" data-advisory-page-tab="roster" aria-selected="false" aria-controls="advisoryRosterPanel" tabindex="-1">Manage Roster</button>
             <button class="btn btn-ghost btn-sm advisory-page-tab" type="button" role="tab" data-advisory-page-tab="settings" aria-selected="false" aria-controls="advisorySettingsPanel" tabindex="-1">Advisory Settings</button>
             <div class="advisory-page__report-actions" aria-label="Learner Grade Record report actions">
+              <button class="btn btn-ghost btn-sm" type="button" data-advisory-sf9 hidden title="Print the Grade 1 SF9 Learner’s Progress Report Card">
+                Print SF9
+              </button>
               <button class="btn btn-primary btn-sm" type="button" data-advisory-page-report="print" title="Preview and print the Learner Grade Record">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                 Print
@@ -404,8 +408,18 @@
       <section class="view-section" data-view="sync" data-eclass-style="display:none">
         <div class="card sync-panel">
           <div class="sync-panel__header">
-            <h2 class="card-title card-title--inline">Mobile Companion Synchronization</h2>
-            <div class="text-muted text-xs">The desktop is authoritative. Phones receive updates automatically and send reviewed drafts only when you approve them.</div>
+            <div class="sync-panel__header-copy">
+              <h2 class="card-title card-title--inline">Mobile Companion Synchronization</h2>
+              <div class="text-muted text-xs">The desktop is authoritative. Phones receive updates automatically and send reviewed drafts only when you approve them.</div>
+            </div>
+            <button type="button" class="btn btn-olive" id="btnCompanionInstructions" data-eclass-onclick="openCompanionInstructions()" title="Step-by-step guide for installing, pairing, and using the Android companion">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              Instructions
+            </button>
           </div>
           
           <div class="sync-panel__body">
@@ -550,6 +564,9 @@
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
                 Proceed to Grading Sheet
               </button>
+              <button id="duplicateOfficialSheetClassesBtn" class="btn btn-olive btn-lg" hidden data-eclass-onclick="duplicateCurrentAssignmentToOfficialSheet()" title="Copy this class and its Term 1 final grades onto the official GMRC or TLE sheet for Terms 2 and 3">
+                Duplicate to official sheet
+              </button>
               <button class="btn btn-warn btn-lg" data-eclass-onclick="removeCurrentAssignment()" title="Delete this class load">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 Delete This Class
@@ -648,6 +665,11 @@
           <button id="mapehTabPEHealth" class="record-tab record-tab--sub" data-eclass-onclick="setMapehSubTab('pe_health')">PE & Health</button>
           <button id="mapehTabConsolidated" class="record-tab record-tab--sub record-tab--consolidated" data-eclass-onclick="setMapehSubTab('consolidated')">Consolidated Grades</button>
         </div>
+        <div id="tleSubTabs" class="record-tabs record-tabs--sub no-print record-tabs--pull" data-eclass-style="display:none;">
+          <button id="tleTabIct" class="record-tab record-tab--sub" data-eclass-onclick="setTleSubTab('ict')">ICT</button>
+          <button id="tleTabSpec" class="record-tab record-tab--sub" data-eclass-onclick="setTleSubTab('spec')">Specialization</button>
+          <button id="tleTabConsolidated" class="record-tab record-tab--sub record-tab--consolidated" data-eclass-onclick="setTleSubTab('consolidated')">Consolidated Grades</button>
+        </div>
 
 
         <!-- Sheet Grid Tables -->
@@ -665,6 +687,25 @@
               </button>
             </div>
             <div class="action-cluster action-cluster--end">
+              <button id="duplicateOfficialSheetRecordBtn" class="btn btn-olive btn-lg" hidden data-eclass-onclick="duplicateCurrentAssignmentToOfficialSheet()" title="Copy this class and its Term 1 final grades onto the official GMRC or TLE sheet for Terms 2 and 3">
+                Duplicate to official sheet
+              </button>
+              <button id="officialEcrExportBtn" class="btn btn-olive btn-lg" hidden data-eclass-onclick="openOfficialEcrExport()" title="Export Official ECR checklist of empty official cells (school ID, region, sex, LRN)">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                Export Official ECR
+              </button>
+              <button id="paceExportBtn" class="btn btn-primary btn-lg" data-eclass-onclick="openPaceFormPreview()" title="Preview and export the official Individual PACE Form (Ctrl+E)" hidden>
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Export Individual PACE Form
+              </button>
+              <button id="pacePrintBtn" class="btn btn-ghost btn-lg" data-eclass-onclick="printPaceBooklet()" title="Print PACE booklet" hidden>
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Print PACE booklet
+              </button>
+              <button id="paceEvidenceBtn" class="btn btn-ghost btn-lg" data-eclass-onclick="paceToggleEvidence()" title="Show optional WW/PT evidence sheet" hidden>
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                <span id="paceEvidenceLabel">Evidence (optional)</span>
+              </button>
               <button id="quickGradeBtn" class="btn btn-primary btn-lg" data-eclass-onclick="showQuickGradeModal()" title="Enter scores sequentially" data-eclass-style="display:none">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -693,6 +734,7 @@
             </div>
           </div>
           <div id="classRecordPrintHeader" class="print-metadata-header"></div>
+          <div id="paceRatingPanel" class="pace-panel" hidden></div>
           <div id="recordTable" class="table-wrap"></div>
         </div>
 
@@ -785,15 +827,19 @@
           
           <div class="split-row">
             <div class="field">
-              <label class="field-label">Teacher Name</label>
+              <label class="field-label" for="teacherName">Teacher Name</label>
               <input id="teacherName" class="field-input" placeholder="e.g. DELA CRUZ, MARIA S." data-eclass-onkeyup="updateProfile()" data-eclass-onchange="updateProfile()" />
             </div>
             <div class="field">
-              <label class="field-label">School Name</label>
+              <label class="field-label" for="schoolHead">School Head</label>
+              <input id="schoolHead" class="field-input" placeholder="e.g. REYES, PEDRO A." data-eclass-onkeyup="updateProfile()" data-eclass-onchange="updateProfile(); saveDatabase()" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="schoolName">School Name</label>
               <input id="schoolName" class="field-input" placeholder="e.g. Manila High School" data-eclass-onkeyup="updateProfile()" data-eclass-onchange="updateProfile()" />
             </div>
             <div class="field">
-              <label class="field-label">School ID</label>
+              <label class="field-label" for="schoolId">School ID</label>
               <input id="schoolId" class="field-input" placeholder="e.g. 300123" data-eclass-onkeyup="updateProfile()" data-eclass-onchange="updateProfile()" />
             </div>
           </div>
@@ -810,6 +856,10 @@
             <div class="field">
               <label class="field-label">District</label>
               <input id="schoolDistrict" class="field-input" placeholder="e.g. Irosin II District" data-eclass-onkeyup="updateProfile()" data-eclass-onchange="updateProfile(); saveDatabase()" />
+            </div>
+            <div class="field">
+              <label class="field-label">City / Municipality</label>
+              <input id="schoolCity" class="field-input" placeholder="e.g. Irosin" data-eclass-onkeyup="updateProfile()" data-eclass-onchange="updateProfile(); saveDatabase()" />
             </div>
           </div>
         </div>
@@ -1151,6 +1201,7 @@
           <div class="field">
             <label class="field-label">Grade Level</label>
             <select id="newGrade" class="field-select" data-eclass-onchange="populateSubjects()">
+              <option value="Kindergarten">Kindergarten</option>
               <option>1</option><option>2</option><option>3</option><option selected>4</option>
               <option>5</option><option>6</option><option>7</option><option>8</option>
               <option>9</option><option>10</option><option>11</option><option>12</option>
@@ -1186,9 +1237,14 @@
           </label>
         </div>
         
-        <div class="field">
+        <div class="field" id="newSubjectField">
           <label class="field-label">Subject</label>
           <select id="newSubject" class="field-select" data-eclass-onchange="handleSubjectChanged()"></select>
+        </div>
+        <p id="newGrade1HomeroomNote" class="text-muted" hidden>Grade 1 is one class record for Reading and Literacy, Language, Mathematics, GMRC, and Makabansa. Choose the learning area inside the class.</p>
+        <div id="pacePerSkillField" class="field" hidden>
+          <label class="checkbox-row"><input type="checkbox" id="newPacePerSkill"> Rate Listening, Speaking, Reading, and Copying separately on Reading and Language</label>
+          <p class="text-muted u-mb-0">Leave unchecked to keep one letter per competency. Existing Grade 1 classes stay on one letter until you opt in.</p>
         </div>
 
         <div id="seniorHighSubjectGroupField" class="field" hidden>
@@ -1200,6 +1256,16 @@
         <div id="customSubjectField" class="field" data-eclass-style="display:none">
           <label class="field-label">Custom Subject Name</label>
           <input id="customSubjectInput" class="field-input" placeholder="e.g. Science Elective" />
+        </div>
+
+        <div id="gmrcDomainsField" class="field" hidden>
+          <label class="checkbox-row"><input type="checkbox" id="newGmrcDomains"> Use official GMRC/Values domain scoring (Cognitive / Affective / Behavioral)</label>
+          <p class="text-muted u-mb-0">This layout applies to Terms 1–3 of this class. Leave it off for SY 2026-2027 if Term 1 was already encoded on the pooled WW/PT sheet. It turns on by default from SY 2027-2028.</p>
+        </div>
+
+        <div id="tlePerComponentField" class="field" hidden>
+          <label class="checkbox-row"><input type="checkbox" id="newTlePerComponent"> Use official TLE per-component scoring (ICT 25% + AFA/FCS/IA 75%)</label>
+          <p class="text-muted u-mb-0">This layout applies to Terms 1–3 of this class. Leave it off for SY 2026-2027 if Term 1 was already encoded as a single EPP/TLE component. It turns on by default from SY 2027-2028.</p>
         </div>
 
         <div id="specialProgramSubjectField" class="special-program-weight-panel" hidden>
@@ -1304,6 +1370,19 @@
       </div>
       <div class="modal__actions">
         <button class="btn btn-primary btn-sm" data-eclass-onclick="hideDonateQrModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="companionInstructionsModal" class="modal-overlay modal-z-higher" data-eclass-style="display:none" data-eclass-onclick="closeCompanionInstructions()">
+    <div class="modal modal--lg companion-guide-dialog" data-eclass-onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="companionInstructionsTitle">
+      <div class="modal__title modal__title-row">
+        <span id="companionInstructionsTitle">How to use Mobile Companion</span>
+        <button type="button" class="transmutation-table-close" data-modal-cancel data-eclass-onclick="closeCompanionInstructions()" aria-label="Close instructions">×</button>
+      </div>
+      <div class="modal__body companion-guide-body" id="companionInstructionsBody"></div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn-primary" data-modal-cancel data-eclass-onclick="closeCompanionInstructions()">Got it</button>
       </div>
     </div>
   </div>
@@ -2106,6 +2185,9 @@
     </div>
   </div>
 
+  <div id="paceBookletPrint" aria-hidden="true"></div>
+  <div id="paceFormPrint" aria-hidden="true"></div>
+
   <!-- Mock Electron API for testing outside Electron -->
   <script src="js/browser-mock.js"></script>
   <!--
@@ -2189,6 +2271,10 @@
   <script src="js/shared-sync-crypto.js"></script>
   <script src="js/shared-sync-merge.js"></script>
 <script src="js/grading.js"></script>
+<script src="js/pace-catalog.js"></script>
+<script src="js/kinder-catalog.js"></script>
+<script src="js/pace-engine.js"></script>
+<script src="js/pace-form-export.js"></script>
 <script src="js/score-history.js"></script>
 <script src="js/learner-avatars.js"></script>
 <script src="js/learners.js"></script>
@@ -2204,6 +2290,7 @@
   <script src="js/usage-analytics.js"></script>
   <script src="js/diagnostics-ui.js"></script>
   <script src="js/update-manager.js"></script>
+  <script src="js/official-ecr-packs.js"></script>
   <script src="js/import-export.js"></script>
   <script src="js/record-table.js"></script>
   <script src="js/score-history-ui.js"></script>
@@ -2224,6 +2311,7 @@
   <script src="js/advisory-reset.js"></script>
   <script src="js/advisory-page.js"></script>
   <script src="js/quick-grade.js"></script>
+  <script src="js/pace-ui.js"></script>
   <script src="js/learner-grades.js"></script>
   <script src="js/support-tracker.js"></script>
   <script src="js/mobile-sync.js"></script>
@@ -2232,6 +2320,7 @@
   <script src="js/advisory-integrity.js"></script>
   <script src="js/calendar.js"></script>
 <script src="js/official-calendar-pack.js"></script>
+<script src="js/pace-sf9.js"></script>
   <script src="js/help.js"></script>
   <script src="js/community-helper.js"></script>
   <script src="js/help-assistant.js"></script>

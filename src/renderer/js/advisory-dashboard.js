@@ -137,7 +137,7 @@
     }
     const escHtml = globalScope.esc || (value => String(value ?? ''));
     const gradeLevels = ['Kindergarten', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-    const supportedGrades = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']);
+    const supportedGrades = new Set(['Kindergarten', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']);
     const selectedGrade = existing?.gradeLevel || '';
     const sourceClasses = (profileDb.assignments || []).filter(item => item.schoolYear === schoolYear && Array.isArray(item.learners));
     const sections = [];

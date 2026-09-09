@@ -184,14 +184,14 @@ function componentCount(template, component) {
   return Array.from(template).filter(item => item.component === component).length;
 }
 
-['4', '7', '10', '11', '12'].forEach(grade => {
+['2', '3', '4', '7', '10', '11', '12'].forEach(grade => {
   const template = context.templateForGrade(grade);
-  assert.strictEqual(componentCount(template, 'WW'), 5, `Grade ${grade} must provide the DO 15 upper-range preset of 5 WWs`);
-  assert.strictEqual(componentCount(template, 'PT'), 3, `Grade ${grade} must provide the DO 15 upper-range preset of 3 PTs`);
+  assert.strictEqual(componentCount(template, 'WW'), 5, `Grade ${grade} must provide the official 5 WW preset`);
+  assert.strictEqual(componentCount(template, 'PT'), 3, `Grade ${grade} must provide the official 3 PT preset`);
 });
 
-assert.strictEqual(componentCount(context.templateForGrade('1'), 'WW'), 4, 'Grades 1-3 remain teacher-discretionary');
-assert.strictEqual(componentCount(context.templateForGrade('1'), 'PT'), 4, 'Grades 1-3 remain teacher-discretionary');
+assert.strictEqual(componentCount(context.templateForGrade('1'), 'WW'), 4, 'Grade 1 PACE evidence columns stay 4 WW');
+assert.strictEqual(componentCount(context.templateForGrade('1'), 'PT'), 4, 'Grade 1 PACE evidence columns stay 4 PT');
 
 const freshSeniorHigh = { gradeLevel: '11', subject: 'General Mathematics', assessments: [], scores: {} };
 context.seedTemplateAssessments(freshSeniorHigh, context.templateForGrade('11'));

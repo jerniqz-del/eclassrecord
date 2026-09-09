@@ -35,6 +35,56 @@
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
   }
 
+  function isDescriptiveLetter(value) {
+    return /^[A-E]$/i.test(String(value == null ? '' : value).trim());
+  }
+
+  function normalizeTransferredGrade(value) {
+    if (value === '' || value === null || value === undefined) return null;
+    if (isDescriptiveLetter(value)) return String(value).trim().toUpperCase();
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  function annexCRangeFor(letter) {
+    if (typeof globalScope.paceAnnexCRange === 'function') return globalScope.paceAnnexCRange(letter);
+    if (typeof globalScope.AdvisoryData?.annexCRangeForLetter === 'function') return globalScope.AdvisoryData.annexCRangeForLetter(letter);
+    const map = { A: '90-100', B: '80-89', C: '75-79', D: '65-74', E: '0-64' };
+    return map[String(letter || '').toUpperCase()] || '';
+  }
+
+  function descriptiveGradeMeta(finalGrade) {
+    if (!isDescriptiveLetter(finalGrade)) return {};
+    const letter = String(finalGrade).toUpperCase();
+    return {
+      annexCRange: annexCRangeFor(letter),
+      originalBasis: 'descriptive',
+      remarks: 'Original basis of grade was descriptive (DO 15, s. 2026).'
+    };
+  }
+
+  function isGrade1Record(record) {
+    return parseInt(record?.gradeLevel, 10) === 1;
+  }
+
+  function parseEnteredGrade(advisoryClass, rawValue, options) {
+    const settings = options && typeof options === 'object' ? options : {};
+    const value = text(rawValue);
+    if (!value) {
+      if (settings.required) throw new Error(isGrade1Record(advisoryClass) ? 'Enter a letter from A to E.' : 'Enter a final grade from 60 to 100.');
+      return null;
+    }
+    if (isGrade1Record(advisoryClass)) {
+      if (!isDescriptiveLetter(value)) throw new Error('Enter a letter from A to E, or leave it blank.');
+      return String(value).trim().toUpperCase();
+    }
+    const finalGrade = Number(value);
+    if (!Number.isFinite(finalGrade) || finalGrade < 60 || finalGrade > 100) {
+      throw new Error(settings.required ? 'Enter a final grade from 60 to 100.' : 'Enter a final grade from 60 to 100, or leave it blank.');
+    }
+    return finalGrade;
+  }
+
   function normalizeSubjectKey(value) {
     return text(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, ' ').trim().toUpperCase();
   }
@@ -59,6 +109,14 @@
   }
 
   function formatVisibleGrade(value, alwaysDecimal = false) {
+    if (isDescriptiveLetter(value)) {
+      const letter = String(value).trim().toUpperCase();
+      if (alwaysDecimal || advisoryDecimalView) {
+        const range = annexCRangeFor(letter);
+        return range ? `${letter} (${range})` : letter;
+      }
+      return letter;
+    }
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return '\u2014';
     return advisoryDecimalView || alwaysDecimal ? numeric.toFixed(2) : String(numeric);
@@ -89,8 +147,12 @@
     return base;
   }
 
-  function readLocalSourceTermGrade(sourceClass, learnerId, term, mapePart) {
+  function readLocalSourceTermGrade(sourceClass, learnerId, term, mapePart, advisorySubject) {
     if (mapePart) return globalScope.computeTerm?.(sourceClass, learnerId, term, mapePart)?.termGrade ?? null;
+    const paceSubject = text(advisorySubject?.subjectName || advisorySubject);
+    if (paceSubject && typeof globalScope.isPaceHomeroomAssignment === 'function' && globalScope.isPaceHomeroomAssignment(sourceClass)) {
+      return globalScope.computeTerm?.(sourceClass, learnerId, term, paceSubject)?.termGrade ?? null;
+    }
     if (typeof globalScope.getLearnerTermGradeForExport === 'function') {
       return globalScope.getLearnerTermGradeForExport(sourceClass, learnerId, term);
     }
@@ -109,7 +171,7 @@
       gradeLevel: text(advisoryClass.gradeLevel),
       section: text(advisoryClass.section),
       term: String(term),
-      finalGrade: Number(finalGrade),
+      finalGrade: isDescriptiveLetter(finalGrade) ? String(finalGrade).toUpperCase() : Number(finalGrade),
       gradeStatus: 'final',
       sourceType: 'local-subject-class',
       sourceClassId: text(sourceClass.id),
@@ -118,7 +180,8 @@
       validationStatus: 'valid',
       conflictStatus: 'none',
       remarks: '',
-      adviserEditAllowed: false
+      adviserEditAllowed: false,
+      ...descriptiveGradeMeta(finalGrade)
     };
   }
 
@@ -137,14 +200,17 @@
       if (!match.learner || matchedAdvisoryLearners.has(match.learner.id)) { result.unmatched += 1; return; }
       matchedAdvisoryLearners.add(match.learner.id);
       ['1', '2', '3'].forEach(term => {
-        const finalGrade = gradeReader(sourceClass, sourceLearner.id, term, mapePart);
-        const numericGrade = Number(finalGrade);
-        if (finalGrade === null || finalGrade === undefined || finalGrade === '' || finalGrade === 'T/O'
-          || !Number.isFinite(numericGrade) || numericGrade < 60 || numericGrade > 100) {
+        const finalGrade = gradeReader(sourceClass, sourceLearner.id, term, mapePart, subject);
+        const normalized = normalizeTransferredGrade(finalGrade);
+        if (finalGrade === null || finalGrade === undefined || finalGrade === '' || finalGrade === 'T/O' || normalized === null) {
           result.missing += 1;
           return;
         }
-        desired.set(`${match.learner.id}|${term}`, localGradeValues(advisoryClass, subject, sourceClass, match.learner, term, numericGrade));
+        if (typeof normalized === 'number' && (normalized < 60 || normalized > 100)) {
+          result.missing += 1;
+          return;
+        }
+        desired.set(`${match.learner.id}|${term}`, localGradeValues(advisoryClass, subject, sourceClass, match.learner, term, normalized));
       });
     });
     const existing = store.grades.filter(item => item.advisoryClassId === advisoryClass.id && item.advisorySubjectId === subject.id);
@@ -203,7 +269,7 @@
     if (typeof globalScope.getSubjectsForGrade === 'function') {
       return splitMapehSubjects(globalScope.getSubjectsForGrade(gradeLevel));
     }
-    if (grade === 1) return ['Language', 'Reading and Literacy', 'Mathematics', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Arts and Physical Education'];
+    if (grade === 1) return ['Reading and Literacy', 'Language', 'Mathematics', 'Good Manners and Right Conduct (GMRC)', 'Makabansa', 'Arts and Physical Education'];
     if (grade === 2) return ['Filipino', 'English', 'Mathematics', 'Makabansa', 'Good Manners and Right Conduct (GMRC)', 'Music & Arts', 'PE & Health'];
     if (grade === 3) return ['Filipino', 'English', 'Mathematics', 'Science', 'Makabansa', 'Good Manners and Right Conduct (GMRC)'];
     if (grade >= 4 && grade <= 5) return ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'Good Manners and Right Conduct (GMRC)', 'Edukasyong Pantahanan at Pangkabuhayan (EPP)', 'Music & Arts', 'PE & Health'];
@@ -561,7 +627,10 @@
     if (adviserModificationNote.length > ADVISER_NOTE_MAX_LENGTH) throw new Error(`The note to the adviser must be ${ADVISER_NOTE_MAX_LENGTH} characters or fewer.`);
     const learners = (assignment.learners || []).map(learner => {
       const grade = options.getFinalGrade(assignment, learner.id, String(termNumber), text(options.mapePart));
-      if (grade === null || grade === undefined || grade === '' || grade === 'T/O' || !Number.isFinite(Number(grade))) return null;
+      const normalized = normalizeTransferredGrade(grade);
+      if (grade === null || grade === undefined || grade === '' || grade === 'T/O' || normalized === null) return null;
+      if (typeof normalized === 'number' && (normalized < 60 || normalized > 100)) return null;
+      const meta = descriptiveGradeMeta(normalized);
       return {
         learnerId: text(learner.id),
         lrn: text(learner.lrn),
@@ -570,9 +639,11 @@
         middleName: text(learner.middleName),
         extensionName: text(learner.extensionName),
         fullName: officialFullName(learner),
-        finalGrade: Number(grade),
+        finalGrade: normalized,
+        annexCRange: meta.annexCRange || undefined,
+        originalBasis: meta.originalBasis || undefined,
         gradeStatus: 'final',
-        remarks: text(learner.gradeRemarks?.[String(termNumber)] || '')
+        remarks: text(learner.gradeRemarks?.[String(termNumber)] || meta.remarks || '')
       };
     }).filter(Boolean);
     return {
@@ -651,8 +722,16 @@
       if (lrn && seenLrns.has(lrn)) errors.push(`Two learner records use the same LRN (${lrn}).`);
       if (lrn) seenLrns.add(lrn);
       if (!text(learner?.lastName) || !text(learner?.firstName)) errors.push(`${label} is missing the learner's official name.`);
-      const grade = Number(learner?.finalGrade);
-      if (!Number.isFinite(grade) || grade < 60 || grade > 100) errors.push(`${label} contains an invalid final grade.`);
+      const gradeValue = learner?.finalGrade;
+      const letter = isDescriptiveLetter(gradeValue);
+      const range = text(learner?.annexCRange);
+      const gradeLevel = text(payload.class?.gradeLevel);
+      if (parseInt(gradeLevel, 10) === 1 && (letter || /^\d{1,3}-\d{1,3}$/.test(range))) {
+        if (!letter && !range) errors.push(`${label} contains an invalid final grade.`);
+      } else {
+        const grade = Number(gradeValue);
+        if (!Number.isFinite(grade) || grade < 60 || grade > 100) errors.push(`${label} contains an invalid final grade.`);
+      }
       if (text(learner?.gradeStatus) && text(learner.gradeStatus) !== 'final') warnings.push(`${label} is not marked final.`);
     });
     return { isValid: errors.length === 0, errors, warnings };
@@ -876,7 +955,7 @@
           gradeLevel: text(plan.payload.class.gradeLevel),
           section: text(plan.payload.class.section),
           term: text(plan.payload.term.number),
-          finalGrade: Number(row.incoming.finalGrade),
+          finalGrade: normalizeTransferredGrade(row.incoming.finalGrade),
           gradeStatus: 'final',
           sourceType: 'grade-transfer-file',
           sourceClassId: text(plan.payload.class.id),
@@ -888,9 +967,11 @@
           importedAt,
           validationStatus: 'valid',
           conflictStatus: row.existingGrade ? 'resolved' : 'none',
-          remarks: text(row.incoming.remarks),
+          remarks: text(row.incoming.remarks) || descriptiveGradeMeta(row.incoming.finalGrade).remarks || '',
           adviserEditAllowed: plan.payload.permissions?.adviserMayModifySubmittedGrades === true,
-          submittedFinalGrade: Number(row.incoming.finalGrade),
+          submittedFinalGrade: normalizeTransferredGrade(row.incoming.finalGrade),
+          annexCRange: text(row.incoming.annexCRange) || descriptiveGradeMeta(row.incoming.finalGrade).annexCRange || '',
+          originalBasis: text(row.incoming.originalBasis) || descriptiveGradeMeta(row.incoming.finalGrade).originalBasis || '',
           adviserModifiedAt: '',
           adviserModifiedBy: ''
         };
@@ -1360,8 +1441,8 @@
                 <h3>${globalScope.esc(globalScope.AdvisoryRoster.displayName(learner))}</h3>
                 <p>${globalScope.esc(learner.lrn || 'No LRN')} · ${globalScope.esc(subject.subjectName)} · Term ${term}</p>
                 <label class="field-label" for="advisoryQuickGradeInput">Final Grade</label>
-                <input class="advisory-quick-grade-input" id="advisoryQuickGradeInput" type="number" min="60" max="100" step="1" inputmode="decimal" value="${globalScope.esc(grade?.finalGrade ?? '')}" data-saved-value="${globalScope.esc(grade?.finalGrade ?? '')}" data-advisory-quick-grade-input aria-describedby="advisoryQuickGradeHint">
-                <div class="advisory-quick-grade-summary"><span>Allowed: 60–100</span>${subject.sourceType === 'manual' ? '' : `<span>Original: <strong>${globalScope.esc(grade?.submittedFinalGrade ?? grade?.finalGrade ?? '—')}</strong></span>`}<span>Subject Final: <strong>${subjectFinal === null ? '—' : globalScope.esc(formatVisibleGrade(subjectFinal))}</strong></span></div>
+                <input class="advisory-quick-grade-input" id="advisoryQuickGradeInput" type="${isGrade1Record(advisoryClass) ? 'text' : 'number'}" ${isGrade1Record(advisoryClass) ? 'maxlength="1" autocapitalize="characters"' : 'min="60" max="100" step="1" inputmode="decimal"'} value="${globalScope.esc(grade?.finalGrade ?? '')}" data-saved-value="${globalScope.esc(grade?.finalGrade ?? '')}" data-advisory-quick-grade-input aria-describedby="advisoryQuickGradeHint">
+                <div class="advisory-quick-grade-summary"><span>Allowed: ${isGrade1Record(advisoryClass) ? 'A–E' : '60–100'}</span>${subject.sourceType === 'manual' ? '' : `<span>Original: <strong>${globalScope.esc(grade?.submittedFinalGrade ?? grade?.finalGrade ?? '—')}</strong></span>`}<span>Subject Final: <strong>${subjectFinal === null ? '—' : globalScope.esc(formatVisibleGrade(subjectFinal))}</strong></span></div>
                 <p id="advisoryQuickGradeHint">Press Enter to save and continue to the next learner. ${subject.sourceType === 'manual' ? 'Leave blank to clear the grade.' : 'Teacher-submitted grades cannot be cleared.'}</p>
               </section>
               <div class="advisory-quick-grade-navigation"><button class="btn btn-ghost" type="button" data-advisory-quick-prev ${navigationIndex <= 0 ? 'disabled' : ''}>Previous</button><button class="btn btn-primary" type="button" data-advisory-quick-next>${navigationIndex >= 0 && navigationIndex < visible.length - 1 ? 'Save & Next' : 'Save Grade'}</button></div>
@@ -1631,8 +1712,12 @@
       globalScope.AdvisoryData.deleteGrade(profileDb, existing.id);
       return { action: 'deleted', grade: null };
     }
-    const finalGrade = Number(value);
-    if (!Number.isFinite(finalGrade) || finalGrade < 60 || finalGrade > 100) throw new Error('Enter a final grade from 60 to 100, or leave it blank.');
+    const finalGrade = parseEnteredGrade(advisoryClass, value);
+    if (finalGrade === null) {
+      if (!existing) return { action: 'unchanged', grade: null };
+      globalScope.AdvisoryData.deleteGrade(profileDb, existing.id);
+      return { action: 'deleted', grade: null };
+    }
     const gradeValues = {
       advisoryClassId: advisoryClass.id,
       advisoryLearnerId: learner.id,
@@ -1656,7 +1741,8 @@
       importedAt: '',
       validationStatus: 'valid',
       conflictStatus: 'none',
-      remarks: ''
+      remarks: descriptiveGradeMeta(finalGrade).remarks || '',
+      ...descriptiveGradeMeta(finalGrade)
     };
     if (existing) return { action: 'updated', grade: globalScope.AdvisoryData.updateGrade(profileDb, existing.id, gradeValues) };
     return { action: 'created', grade: globalScope.AdvisoryData.createGrade(profileDb, gradeValues) };
@@ -1674,17 +1760,17 @@
       throw new Error('The subject teacher did not allow this submitted grade to be modified.');
     }
     const value = text(rawValue);
-    if (!value) throw new Error('A submitted grade cannot be cleared. Enter a grade from 60 to 100.');
-    const finalGrade = Number(value);
-    if (!Number.isFinite(finalGrade) || finalGrade < 60 || finalGrade > 100) throw new Error('Enter a final grade from 60 to 100.');
-    if (Number(existing.finalGrade) === finalGrade) return { action: 'unchanged', grade: existing };
+    if (!value) throw new Error(isGrade1Record(advisoryClass) ? 'A submitted grade cannot be cleared. Enter a letter from A to E.' : 'A submitted grade cannot be cleared. Enter a grade from 60 to 100.');
+    const finalGrade = parseEnteredGrade(advisoryClass, value, { required: true });
+    if (String(existing.finalGrade) === String(finalGrade)) return { action: 'unchanged', grade: existing };
     return {
       action: 'updated',
       grade: globalScope.AdvisoryData.updateGrade(profileDb, existing.id, {
         finalGrade,
-        submittedFinalGrade: Number.isFinite(Number(existing.submittedFinalGrade)) ? Number(existing.submittedFinalGrade) : Number(existing.finalGrade),
+        submittedFinalGrade: existing.submittedFinalGrade == null ? existing.finalGrade : existing.submittedFinalGrade,
         adviserModifiedAt: new Date().toISOString(),
-        adviserModifiedBy: text(advisoryClass.adviserName || profileDb.teacherName)
+        adviserModifiedBy: text(advisoryClass.adviserName || profileDb.teacherName),
+        ...descriptiveGradeMeta(finalGrade)
       })
     };
   }
@@ -1736,15 +1822,25 @@
   }
 
   function editableGradeCell(record, learner, subject, term, extraClass = '', entryMode = 'manual') {
-    const rawValue = record && Number.isFinite(Number(record.finalGrade)) ? Number(record.finalGrade) : '';
-    const value = rawValue === '' ? '' : formatVisibleGrade(rawValue);
+    const grade1 = isGrade1Record(record) || isGrade1Record(subject)
+      || isGrade1Record(globalScope.AdvisoryDashboard?.currentClass?.());
+    const rawValue = record && record.finalGrade !== null && record.finalGrade !== undefined && record.finalGrade !== ''
+      ? record.finalGrade
+      : '';
+    const value = rawValue === '' ? '' : (isDescriptiveLetter(rawValue) ? String(rawValue).toUpperCase() : formatVisibleGrade(rawValue));
     const label = `${subject.subjectName}, Term ${term}, ${globalScope.AdvisoryRoster.displayName(learner)}`;
     const isTeacherSubmission = entryMode === 'adviser-adjustment';
-    const original = isTeacherSubmission && Number.isFinite(Number(record?.submittedFinalGrade)) ? Number(record.submittedFinalGrade) : null;
-    const title = isTeacherSubmission
+    const original = isTeacherSubmission ? (record?.submittedFinalGrade ?? null) : null;
+    const title = grade1
+      ? (isTeacherSubmission
+        ? `Subject teacher allowed editing. Original submitted grade: ${original ?? value}. Enter A–E; clearing is not allowed.`
+        : 'Enter A, B, C, D, or E. Leave blank to clear.')
+      : (isTeacherSubmission
       ? `Subject teacher allowed editing. Original submitted grade: ${original ?? value}. Enter 60 to 100; clearing is not allowed.`
-      : 'Enter a final grade from 60 to 100. Leave blank to clear.';
-    return `<td class="advisory-manual-grade-cell ${value === '' ? 'is-missing' : 'has-grade'} ${isTeacherSubmission ? 'advisory-permitted-grade-cell' : ''} ${record?.adviserModifiedAt ? 'is-adviser-modified' : ''} ${extraClass}"><input type="number" min="60" max="100" step="1" inputmode="decimal" value="${globalScope.esc(value)}" data-advisory-grade-entry data-entry-mode="${entryMode}" ${entryMode === 'manual' ? 'data-advisory-manual-grade' : 'data-advisory-permitted-grade'} data-learner-id="${globalScope.esc(learner.id)}" data-subject-id="${globalScope.esc(subject.id)}" data-term="${globalScope.esc(term)}" data-saved-value="${globalScope.esc(value)}" aria-label="${globalScope.esc(label)}" title="${globalScope.esc(title)}"></td>`;
+      : 'Enter a final grade from 60 to 100. Leave blank to clear.');
+    const inputType = grade1 ? 'text' : 'number';
+    const extraAttrs = grade1 ? 'maxlength="1" autocapitalize="characters"' : 'min="60" max="100" step="1" inputmode="decimal"';
+    return `<td class="advisory-manual-grade-cell ${value === '' ? 'is-missing' : 'has-grade'} ${isTeacherSubmission ? 'advisory-permitted-grade-cell' : ''} ${record?.adviserModifiedAt ? 'is-adviser-modified' : ''} ${extraClass}"><input type="${inputType}" ${extraAttrs} value="${globalScope.esc(value)}" data-advisory-grade-entry data-entry-mode="${entryMode}" ${entryMode === 'manual' ? 'data-advisory-manual-grade' : 'data-advisory-permitted-grade'} data-learner-id="${globalScope.esc(learner.id)}" data-subject-id="${globalScope.esc(subject.id)}" data-term="${globalScope.esc(term)}" data-saved-value="${globalScope.esc(value)}" aria-label="${globalScope.esc(label)}" title="${globalScope.esc(title)}"></td>`;
   }
 
   function manualGradeCell(record, learner, subject, term, extraClass = '') {
@@ -2038,7 +2134,7 @@
             </div>
           </div>
           <label class="checkbox-row"><input type="checkbox" id="advisoryInlineArchived" ${advisoryClass.isArchived ? 'checked' : ''}> Archive this Advisory Class</label>
-          <div class="advisory-settings-managed"><strong>Managed in Global Settings</strong><span>School Year: ${globalScope.esc(profileDb.schoolYear || advisoryClass.schoolYear)} · Adviser: ${globalScope.esc(profileDb.teacherName || advisoryClass.adviserName || 'Not provided')} · School: ${globalScope.esc(profileDb.schoolName || advisoryClass.schoolName || 'Not provided')}</span><span>School ID, district, division, and region also come from your global teacher profile.</span></div>
+          <div class="advisory-settings-managed"><strong>Managed in Global Settings</strong><span>School Year: ${globalScope.esc(profileDb.schoolYear || advisoryClass.schoolYear)} · Adviser: ${globalScope.esc(profileDb.teacherName || advisoryClass.adviserName || 'Not provided')} · School: ${globalScope.esc(profileDb.schoolName || advisoryClass.schoolName || 'Not provided')}</span><span>School ID, district, division, region, and school head also come from your global teacher profile.</span></div>
           <div class="advisory-settings-form__actions"><button class="btn btn-primary btn-sm" type="submit">Save Advisory Settings</button></div>
         </form>
       </section>`;
@@ -2294,6 +2390,9 @@
     FORMAT,
     SCHEMA_VERSION,
     ADVISER_NOTE_MAX_LENGTH,
+    isDescriptiveLetter,
+    normalizeTransferredGrade,
+    annexCRangeFor,
     normalizeSubjectKey,
     matchingLocalClasses,
     localSourceMapehPart,

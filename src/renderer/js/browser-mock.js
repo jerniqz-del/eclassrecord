@@ -53,6 +53,8 @@ if (!window.electronAPI) {
     onMenuExportJson: () => () => {},
     onMenuImportJson: () => () => {},
     exportGradeTransfer: async () => ({ success: false }),
+    exportOfficialEcr: async () => ({ success: false }),
+    getOfficialPaceFormHtml: async () => ({ html: '', fallback: true }),
     importGradeTransfer: async () => ({ success: false }),
     exportAdvisoryResetBackup: async () => ({ success: false }),
     generateRecoveryQr: async () => '',

@@ -148,6 +148,7 @@ let db = {
   lastUpdatedAt: '',
   teacherName: '',
   schoolName: '',
+  schoolHead: '',
   schoolYear: '2026-2027',
   currentAssignmentId: '',
   currentTerm: '1',
@@ -250,6 +251,8 @@ function normalizeDatabase() {
   if (db.division === undefined) db.division = '';
   if (db.district === undefined) db.district = '';
   if (db.autoBlur === undefined) db.autoBlur = false;
+  if (db.city === undefined) db.city = '';
+  if (db.schoolHead === undefined) db.schoolHead = '';
   normalizeAdvisoryData(db);
   if (typeof DashboardWorkplace !== 'undefined') DashboardWorkplace.normalize(db);
   if (typeof ToolsData !== 'undefined') ToolsData.normalize(db);
@@ -308,7 +311,8 @@ function normalizeDatabase() {
     const isCustomSubject = !getSubjectsForGrade(a.gradeLevel, {
       curriculum: a.shsCurriculum,
       schoolYear: a.schoolYear
-    }).includes(a.subject);
+    }).includes(a.subject)
+      && !(typeof isPaceHomeroomAssignment === 'function' && isPaceHomeroomAssignment(a));
     a.isSpecialProgramSubject = isCustomSubject && a.isSpecialProgramSubject === true;
     if (a.isSpecialProgramSubject) {
       const custom = normalizeSpecialProgramWeights(a.specialProgramWeights);
@@ -328,6 +332,10 @@ function normalizeDatabase() {
     
     normalizeAssessmentComponents(a);
     ensureTemplateAssessments(a);
+    if (parseInt(a.gradeLevel, 10) === 1 && typeof paceEnsureStore === 'function') {
+      paceEnsureStore(a);
+      if (typeof isPaceHomeroomAssignment === 'function' && isPaceHomeroomAssignment(a)) a.paceHomeroom = true;
+    }
   }
   if (typeof LearnerAvatars !== 'undefined') {
     LearnerAvatars.assignDatabase(db);
@@ -527,16 +535,26 @@ function currentAssignment() {
 function addAssignment() {
   const gradeLevel = document.getElementById('newGrade').value;
   const section = trim(document.getElementById('newSection').value);
+  const isGrade1Homeroom = parseInt(gradeLevel, 10) === 1;
+  const isKinder = typeof isKinderGradeLevel === 'function'
+    ? isKinderGradeLevel(gradeLevel)
+    : String(gradeLevel).toLowerCase().includes('kinder');
   let subject = trim(document.getElementById('newSubject').value);
   const classSchoolYear = (document.getElementById('newClassSchoolYear') && document.getElementById('newClassSchoolYear').value) || db.schoolYear || '2026-2027';
 
-  const isCustomSubject = subject === 'Custom';
+  const isCustomSubject = !isGrade1Homeroom && subject === 'Custom';
   if (isCustomSubject) {
     subject = trim(document.getElementById('customSubjectInput').value);
   }
+  if (isGrade1Homeroom) {
+    subject = typeof PACE_HOMEROOM_SUBJECT !== 'undefined' ? PACE_HOMEROOM_SUBJECT : 'Grade 1';
+  }
+  if (isKinder) {
+    subject = 'Kindergarten';
+  }
 
   if (!section || !subject) {
-    toast('Section and subject fields are required.', 'warning');
+    toast(isGrade1Homeroom || isKinder ? 'Section is required.' : 'Section and subject fields are required.', 'warning');
     return;
   }
 
@@ -573,15 +591,40 @@ function addAssignment() {
     ...(shsCurriculum ? { shsCurriculum } : {}),
     isSpecialProgramSubject,
     ...(isSpecialProgramSubject ? { specialProgramWeights } : {}),
+    scoringModel: typeof isGmrcOrValuesSubject === 'function' && isGmrcOrValuesSubject(subject)
+      ? (document.getElementById('newGmrcDomains')
+        ? (document.getElementById('newGmrcDomains').checked ? 'gmrc-domains-2026' : 'pooled-ww-pt')
+        : (typeof defaultScoringModelForNewAssignment === 'function'
+          ? defaultScoringModelForNewAssignment(gradeLevel, subject, classSchoolYear)
+          : 'pooled-ww-pt'))
+      : 'pooled-ww-pt',
+    tleMode: typeof isEppOrTleSubject === 'function' && isEppOrTleSubject(subject)
+      ? (document.getElementById('newTlePerComponent')
+        ? (document.getElementById('newTlePerComponent').checked ? 'per-component' : 'single')
+        : (typeof defaultTleModeForNewAssignment === 'function'
+          ? defaultTleModeForNewAssignment(gradeLevel, subject, classSchoolYear)
+          : 'single'))
+      : 'single',
     policy,
     schoolYear: classSchoolYear,
     dashboardOrder: nextDashboardOrderForYear(classSchoolYear),
     learners: [],
     assessments: [],
-    scores: {}
+    scores: {},
+    ...(isGrade1Homeroom ? {
+      paceHomeroom: true,
+      ...(document.getElementById('newPacePerSkill')?.checked ? { pace: { skillRatingMode: 'per-skill' } } : {})
+    } : {}),
+    ...(isKinder ? {
+      kinderProgram: true,
+      pace: { catalogId: typeof KINDER_CATALOG_ID !== 'undefined' ? KINDER_CATALOG_ID : 'kinder-matatag-2026', skillRatingMode: 'single-letter' }
+    } : {})
   };
 
-  seedTemplateAssessments(assignment, templateForGrade(gradeLevel));
+  const template = assignment.scoringModel === 'gmrc-domains-2026' && typeof gmrcDomainTemplate === 'function'
+    ? gmrcDomainTemplate()
+    : templateForGrade(gradeLevel);
+  seedTemplateAssessments(assignment, template);
   const populatedWithMockData = window.AdminTestMode?.populateNewAssignment?.(assignment) === true;
 
   db.assignments.push(assignment);
@@ -601,8 +644,22 @@ function addAssignment() {
   if (specialCheckbox) specialCheckbox.checked = false;
   if (typeof syncNewSpecialProgramWeights === 'function') syncNewSpecialProgramWeights();
 
-  saveDatabase();
-  render();
+  try {
+    const pending = saveDatabase();
+    if (pending && typeof pending.catch === 'function') {
+      pending.catch(error => console.error('Failed to save the new class:', error));
+    }
+  } catch (error) {
+    console.error('Failed to save the new class:', error);
+  }
+  try {
+    render();
+  } catch (error) {
+    console.error('Failed to refresh after adding a class:', error);
+    toast('Class was saved, but the screen could not refresh. Open it from the dashboard.', 'warning');
+    if (typeof hideAddClassLoadModal === 'function') hideAddClassLoadModal();
+    return;
+  }
   if (typeof hideAddClassLoadModal === 'function') {
     hideAddClassLoadModal();
   }
@@ -621,7 +678,12 @@ function selectAssignment(id) {
     const targetView = (currentView === 'classes') ? 'classes' : 'record';
     setView(targetView);
   }
-  render();
+  try {
+    render();
+  } catch (error) {
+    console.error('Failed to open the selected class:', error);
+    toast('The class is saved, but this screen could not refresh. Open it again from the dashboard.', 'warning');
+  }
 }
 
 /**
@@ -639,7 +701,38 @@ function removeCurrentAssignment() {
       db.currentAssignmentId = db.assignments.length > 0 ? db.assignments[0].id : '';
       saveDatabase();
       render();
-      toast('Teaching load deleted.', 'success');
+      toast('Class load deleted.', 'success');
+    }
+  );
+}
+
+function duplicateCurrentAssignmentToOfficialSheet() {
+  const source = currentAssignment();
+  if (typeof canDuplicateToOfficialSheet !== 'function' || !canDuplicateToOfficialSheet(source)) {
+    toast('Only an existing GMRC/Values or EPP/TLE class on the old sheet can be duplicated this way.', 'warning');
+    return;
+  }
+  const layoutName = typeof isGmrcOrValuesSubject === 'function' && isGmrcOrValuesSubject(source.subject)
+    ? 'GMRC/Values domain scoring'
+    : 'TLE per-component scoring';
+  confirmModal(
+    'Duplicate to official sheet',
+    `This class stays unchanged. A new class is created with the same learners. Term 1 will show the copied final grades only, with no WW, PT, or exam entry. Terms 2 and 3 will use official ${layoutName}.`,
+    () => {
+      const copy = duplicateAssignmentToOfficialSheet(source);
+      if (!copy) {
+        toast('Could not duplicate this class.', 'error');
+        return;
+      }
+      copy.dashboardOrder = nextDashboardOrderForYear(copy.schoolYear || db.schoolYear);
+      if (!Array.isArray(db.assignments)) db.assignments = [];
+      db.assignments.push(copy);
+      db.currentAssignmentId = copy.id;
+      db.currentTerm = '1';
+      saveDatabase();
+      if (typeof setView === 'function') setView('record');
+      render();
+      toast('Official sheet class created. Term 1 final grades were copied.', 'success');
     }
   );
 }
@@ -654,6 +747,8 @@ function updateProfile() {
   const regionEl = document.getElementById('schoolRegion');
   const divisionEl = document.getElementById('schoolDivision');
   const districtEl = document.getElementById('schoolDistrict');
+  const cityEl = document.getElementById('schoolCity');
+  const schoolHeadEl = document.getElementById('schoolHead');
   const yearEl = document.getElementById('schoolYear');
   
   if (teacherEl) db.teacherName = teacherEl.value;
@@ -662,6 +757,8 @@ function updateProfile() {
   if (regionEl) db.region = regionEl.value;
   if (divisionEl) db.division = divisionEl.value;
   if (districtEl) db.district = districtEl.value;
+  if (cityEl) db.city = cityEl.value;
+  if (schoolHeadEl) db.schoolHead = schoolHeadEl.value;
   if (yearEl) db.schoolYear = yearEl.value;
   if (typeof updateSidebarUserName === 'function') updateSidebarUserName();
 }
@@ -669,6 +766,16 @@ function updateProfile() {
 function syncDistrictProfileField() {
   const districtEl = document.getElementById('schoolDistrict');
   if (districtEl) districtEl.value = db.district || '';
+  const cityEl = document.getElementById('schoolCity');
+  if (cityEl) cityEl.value = db.city || db.municipality || '';
+  const schoolHeadEl = document.getElementById('schoolHead');
+  if (schoolHeadEl) schoolHeadEl.value = db.schoolHead || '';
+  const teacherEl = document.getElementById('teacherName');
+  if (teacherEl && !teacherEl.value) teacherEl.value = db.teacherName || '';
+  const schoolEl = document.getElementById('schoolName');
+  if (schoolEl && !schoolEl.value) schoolEl.value = db.schoolName || '';
+  const schoolIdEl = document.getElementById('schoolId');
+  if (schoolIdEl && !schoolIdEl.value) schoolIdEl.value = db.schoolId || '';
 }
 
 /**
@@ -817,6 +924,7 @@ function clearLocalData() {
           region: '',
           division: '',
           district: '',
+          schoolHead: '',
           schoolYear: '2026-2027',
           currentAssignmentId: '',
           currentTerm: '1',
@@ -889,10 +997,11 @@ function editAssignmentModal(id) {
             This Grade 12 class uses Strengthened SHS (pilot school)
           </label>
         </div>
-        <div class="field">
+        <div class="field" id="editSubjectField">
           <label class="field-label">Subject</label>
           <select id="editSubject" class="field-input"></select>
         </div>
+        <p id="editGrade1HomeroomNote" class="text-muted" hidden>Grade 1 keeps all five learning areas in this class. Choose the subject inside the class record.</p>
         <div id="editSeniorHighSubjectGroupField" class="field" hidden>
           <label class="field-label" for="editSeniorHighSubjectGroup">Senior High Subject Type</label>
           <select id="editSeniorHighSubjectGroup" class="field-input"></select>
@@ -926,6 +1035,16 @@ function editAssignmentModal(id) {
   const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
 
   const editGradeSelect = overlay.querySelector('#editGrade');
+  const editSubjectField = overlay.querySelector('#editSubjectField');
+  const editHomeroomNote = overlay.querySelector('#editGrade1HomeroomNote');
+  const syncEditHomeroom = () => {
+    const grade1 = parseInt(editGradeSelect.value, 10) === 1;
+    const becomeHomeroom = grade1 && (typeof isPaceHomeroomAssignment === 'function'
+      ? (isPaceHomeroomAssignment(a) || parseInt(a.gradeLevel, 10) !== 1)
+      : parseInt(a.gradeLevel, 10) !== 1);
+    if (editSubjectField) editSubjectField.hidden = becomeHomeroom;
+    if (editHomeroomNote) editHomeroomNote.hidden = !becomeHomeroom;
+  };
   const editSchoolYearSelect = overlay.querySelector('#editSchoolYear');
   const editSubjectSelect = overlay.querySelector('#editSubject');
   const editCustomField = overlay.querySelector('#editCustomSubjectField');
@@ -1070,6 +1189,7 @@ function editAssignmentModal(id) {
     editCustomInput.value = a.subject;
   }
   handleEditSubjectChange();
+  syncEditHomeroom();
   if (parseInt(a.gradeLevel) >= 11) {
     editSeniorHighGroupSelect.value = normalizeSeniorHighSubjectGroup(a.shsSubjectGroup || a.subjectGroup)
       || determineSubjectGroup(a.gradeLevel, a.subject, a.policy, '', inferShsCurriculum(a));
@@ -1082,6 +1202,7 @@ function editAssignmentModal(id) {
       editSubjectSelect.value = previousSubject;
     }
     handleEditSubjectChange();
+    syncEditHomeroom();
   };
 
   editGradeSelect.addEventListener('change', refreshEditSubjects);
@@ -1095,6 +1216,12 @@ function editAssignmentModal(id) {
     let newSubject = editSubjectSelect.value;
     if (newSubject === 'Custom') {
       newSubject = trim(editCustomInput.value);
+    }
+    const becomeHomeroom = parseInt(editGradeSelect.value, 10) === 1 && (typeof isPaceHomeroomAssignment === 'function'
+      ? (isPaceHomeroomAssignment(a) || parseInt(a.gradeLevel, 10) !== 1)
+      : parseInt(a.gradeLevel, 10) !== 1);
+    if (becomeHomeroom) {
+      newSubject = typeof PACE_HOMEROOM_SUBJECT !== 'undefined' ? PACE_HOMEROOM_SUBJECT : 'Grade 1';
     }
     if (!newSection || !newSubject) {
       toast('Section and subject cannot be empty.', 'warning');
@@ -1123,6 +1250,8 @@ function editAssignmentModal(id) {
       a.gradeLevel = newGrade;
       a.section = newSection;
       a.subject = newSubject;
+      a.paceHomeroom = becomeHomeroom;
+      if (!becomeHomeroom) delete a.paceHomeroom;
       a.schoolYear = newSchoolYear;
       a.policy = newPolicy;
       a.subjectGroup = nextGroup;

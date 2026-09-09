@@ -7,6 +7,24 @@
  */
 
 let currentMapehSubTab = 'music_arts';
+let currentTleSubTab = 'ict';
+
+function setTleSubTab(part) {
+  currentTleSubTab = part || 'ict';
+  if (typeof renderRecordTable === 'function') renderRecordTable();
+}
+
+function setMapehSubTab(part) {
+  currentMapehSubTab = part || 'music_arts';
+  if (typeof renderRecordTable === 'function') renderRecordTable();
+}
+
+function currentTlePartForTerm(assignment, term) {
+  if (!usesTleComponentScoring(assignment)) return undefined;
+  if (currentTleSubTab === 'consolidated') return 'consolidated';
+  if (currentTleSubTab === 'spec') return tleSpecializationForTerm(term);
+  return 'ict';
+}
 
 function isMapehSubject(subject) {
   const s = (subject || '').toLowerCase();
@@ -107,14 +125,416 @@ const seniorHighTemplate = [
  * @param {string|number} gradeLevel
  */
 function templateForGrade(gradeLevel) {
+  if (typeof isKinderGradeLevel === 'function' && isKinderGradeLevel(gradeLevel)) return [];
+  if (typeof isKinderAssignment === 'function' && isKinderAssignment({ gradeLevel })) return [];
   if (typeof db !== 'undefined' && db.useUniversalTrimesterLayout) {
     return keyStage2Template;
   }
   const grade = parseInt(gradeLevel);
-  if (grade <= 3) return keyStage1Template;
+  if (grade === 1) return keyStage1Template;
+  if (grade <= 3) return keyStage2Template;
   if (grade <= 6) return keyStage2Template;
   if (grade <= 10) return juniorHighTemplate;
   return seniorHighTemplate;
+}
+
+const DESCRIPTOR_LEGEND = Object.freeze({
+  A: {
+    english: 'Advancing',
+    filipino: 'Namumukod-tangi',
+    range: '90–100',
+    description: 'The learner demonstrates knowledge and skills beyond grade-level expectations.'
+  },
+  B: {
+    english: 'Benchmarking',
+    filipino: 'Naipamamalas',
+    range: '80–89',
+    description: 'The learner consistently demonstrates the knowledge and skills expected at grade level.'
+  },
+  C: {
+    english: 'Connecting',
+    filipino: 'Natutungo',
+    range: '75–79',
+    description: 'The learner is approaching the knowledge and skills expected at grade level.'
+  },
+  D: {
+    english: 'Developing',
+    filipino: 'Nagpapaunlad',
+    range: '65–74',
+    description: 'The learner is developing the knowledge and skills expected at grade level and needs support.'
+  },
+  E: {
+    english: 'Emerging',
+    filipino: 'Nagsisimula',
+    range: '0–64',
+    description: 'The learner is beginning to demonstrate the knowledge and skills expected at grade level.'
+  }
+});
+
+function descriptorLabel(letter) {
+  const item = DESCRIPTOR_LEGEND[String(letter || '').toUpperCase()];
+  return item ? `${item.english} (${item.filipino})` : '';
+}
+
+function descriptorLegendText(letter) {
+  const code = String(letter || '').toUpperCase();
+  const item = DESCRIPTOR_LEGEND[code];
+  if (!item) return '';
+  return `${code} — ${item.english} (${item.filipino}), ${item.range}. ${item.description}`;
+}
+
+function officialComponentTitle(componentOrGroup) {
+  const key = String(componentOrGroup || '').toUpperCase();
+  if (key === 'WW') return 'Written / Oral Works';
+  if (key === 'PT') return 'Product / Performance Tasks';
+  if (key === 'EX' || key === 'TE' || key === 'ST1' || key === 'ST2' || key === 'SA1' || key === 'SA2') {
+    return 'Examinations';
+  }
+  if (key === 'IG') return 'Initial Grade';
+  if (key === 'TG') return 'Term Grade';
+  return '';
+}
+
+function gmrcDomainHeaderTitle(component, domain) {
+  const base = officialComponentTitle(component) || String(component || '');
+  const label = {
+    cognitive: 'Cognitive',
+    affective: 'Affective',
+    behavioral: 'Behavioral'
+  }[String(domain || '').toLowerCase()] || '';
+  return label ? `${base} · ${label}` : base;
+}
+
+function officialComponentTabLabel(kind, term, part) {
+  const termLabel = `Term ${term || '1'}`;
+  const which = String(part || '');
+  if (kind === 'mapeh') {
+    if (which === 'music_arts') return `${termLabel} Music & Arts`;
+    if (which === 'pe_health') return `${termLabel} PE & Health`;
+    if (which === 'consolidated') return `${termLabel} MAPEH`;
+  }
+  if (kind === 'tle') {
+    if (which === 'ict') return `${termLabel} ICT`;
+    if (which === 'afa') return `${termLabel} AFA`;
+    if (which === 'fcs') return `${termLabel} FCS`;
+    if (which === 'ia') return `${termLabel} IA`;
+    if (which === 'spec') {
+      const spec = typeof tleSpecializationForTerm === 'function'
+        ? tleSpecializationForTerm(term)
+        : 'afa';
+      return officialComponentTabLabel('tle', term, spec);
+    }
+    if (which === 'consolidated') return `${termLabel} TLE`;
+  }
+  return termLabel;
+}
+
+/** Existing classes keep pooled WW/PT averages. Official GMRC domains are opt-in later. */
+const SCORING_MODEL_POOLED = 'pooled-ww-pt';
+const SCORING_MODEL_GMRC_DOMAINS = 'gmrc-domains-2026';
+/** Existing TLE/EPP classes stay one component. Per-component ICT+specialization is opt-in. */
+const TLE_MODE_SINGLE = 'single';
+const TLE_MODE_PER_COMPONENT = 'per-component';
+const TLE_COMPONENT_WEIGHTS = Object.freeze({ ict: 0.25, specialization: 0.75 });
+
+function isEppOrTleSubject(subject) {
+  const value = String(subject || '').toLowerCase();
+  if (!value) return false;
+  if (value.includes('edukasyong pantahanan')) return true;
+  if (value.includes('technology and livelihood')) return true;
+  if (/\bepp\b/.test(value)) return true;
+  return /\btle\b/.test(value);
+}
+
+function usesTleComponentScoring(assignment) {
+  return (assignment?.tleMode || TLE_MODE_SINGLE) === TLE_MODE_PER_COMPONENT;
+}
+
+function tlePartsForTerm(term) {
+  const spec = { 1: 'afa', 2: 'fcs', 3: 'ia' }[String(term)];
+  return spec ? ['ict', spec] : ['ict'];
+}
+
+function tleSpecializationForTerm(term) {
+  return tlePartsForTerm(term)[1];
+}
+
+function assessmentPartsForTerm(assignment, term) {
+  if (isMapehSubject(assignment && assignment.subject)) return ['music_arts', 'pe_health'];
+  if (usesTleComponentScoring(assignment)) return tlePartsForTerm(term);
+  return [undefined];
+}
+
+function consolidateTleTermGrade(ictGrade, specGrade) {
+  const ict = Number(ictGrade);
+  const spec = Number(specGrade);
+  if (!Number.isFinite(ict) || !Number.isFinite(spec)) return null;
+  return Math.round(ict * TLE_COMPONENT_WEIGHTS.ict + spec * TLE_COMPONENT_WEIGHTS.specialization);
+}
+
+function computeTleConsolidatedTerm(assignment, learnerId, term) {
+  const parts = tlePartsForTerm(term);
+  const ict = computeTerm(assignment, learnerId, term, parts[0]);
+  const spec = computeTerm(assignment, learnerId, term, parts[1]);
+  const termGrade = consolidateTleTermGrade(ict.termGrade, spec.termGrade);
+  return {
+    ict,
+    spec,
+    ictTermGrade: ict.termGrade,
+    specTermGrade: spec.termGrade,
+    specPart: parts[1],
+    termGrade,
+    hasData: !!(ict.hasData && spec.hasData && termGrade !== null)
+  };
+}
+
+const GMRC_DOMAIN_WEIGHTS = Object.freeze({
+  WW_cognitive: 10,
+  WW_affective: 10,
+  PT_cognitive: 10,
+  PT_affective: 10,
+  PT_behavioral: 30,
+  EX: 30
+});
+
+function isGmrcOrValuesSubject(subject) {
+  const value = String(subject || '').toLowerCase();
+  if (!value) return false;
+  if (value.includes('values education')) return true;
+  return value.includes('good manners and right conduct') || value.includes('gmrc');
+}
+
+function usesGmrcDomainScoring(assignment) {
+  return (assignment?.scoringModel || SCORING_MODEL_POOLED) === SCORING_MODEL_GMRC_DOMAINS;
+}
+
+function schoolYearStartYear(schoolYear) {
+  const year = parseInt(String(schoolYear || '').slice(0, 4), 10);
+  return Number.isFinite(year) ? year : 0;
+}
+
+/** Official GMRC domain and TLE per-component sheets default from SY 2027-2028. */
+const OFFICIAL_GMRC_TLE_LAYOUT_FROM_YEAR = 2027;
+
+function officialGmrcTleLayoutsDefaultOn(schoolYear) {
+  return schoolYearStartYear(schoolYear) >= OFFICIAL_GMRC_TLE_LAYOUT_FROM_YEAR;
+}
+
+function defaultScoringModelForNewAssignment(gradeLevel, subject, schoolYear) {
+  if (parseInt(gradeLevel, 10) >= 2 && isGmrcOrValuesSubject(subject) && officialGmrcTleLayoutsDefaultOn(schoolYear)) {
+    return SCORING_MODEL_GMRC_DOMAINS;
+  }
+  return SCORING_MODEL_POOLED;
+}
+
+function defaultTleModeForNewAssignment(gradeLevel, subject, schoolYear) {
+  if (officialGmrcTleLayoutsDefaultOn(schoolYear) && isEppOrTleSubject(subject)) {
+    return TLE_MODE_PER_COMPONENT;
+  }
+  return TLE_MODE_SINGLE;
+}
+
+function usesTermGradeOnly(assignment, term) {
+  return !!(assignment && assignment.term1GradeOnly && String(term) === '1');
+}
+
+function canDuplicateToOfficialSheet(assignment) {
+  if (!assignment) return false;
+  if (assignment.term1GradeOnly) return false;
+  const grade = parseInt(assignment.gradeLevel, 10);
+  if (!Number.isFinite(grade) || grade < 2) return false;
+  if (isGmrcOrValuesSubject(assignment.subject) && !usesGmrcDomainScoring(assignment)) return true;
+  if (isEppOrTleSubject(assignment.subject) && !usesTleComponentScoring(assignment)) return true;
+  return false;
+}
+
+function assignmentOfficialSheetLabel(assignment) {
+  if (!assignment?.term1GradeOnly) return '';
+  if (usesGmrcDomainScoring(assignment)) return 'Official sheet · Term 1 grades copied';
+  if (usesTleComponentScoring(assignment)) return 'Official sheet · Term 1 grades copied';
+  return 'Official sheet · Term 1 grades copied';
+}
+
+function cloneLearnerForOfficialSheet(learner, term1Grade) {
+  const copy = {
+    id: typeof uid === 'function' ? uid('learner') : `learner-${Date.now()}`,
+    lrn: learner?.lrn || '',
+    lastName: learner?.lastName,
+    firstName: learner?.firstName,
+    middleName: learner?.middleName || '',
+    name: learner?.name,
+    sex: learner?.sex,
+    birthdate: learner?.birthdate,
+    avatarPresetId: learner?.avatarPresetId || '',
+    avatarAssignment: learner?.avatarAssignment === 'manual' ? 'manual' : 'auto',
+    displayName: learner?.displayName
+  };
+  if (learner?.transferredOutTerm) copy.transferredOutTerm = learner.transferredOutTerm;
+  if (term1Grade !== null && term1Grade !== undefined && term1Grade !== '') {
+    copy.transferredInGrades = { 1: term1Grade };
+  }
+  return copy;
+}
+
+function termGradeForOfficialSheetCopy(assignment, learnerId) {
+  if (!assignment) return null;
+  const result = computeTerm(assignment, learnerId, '1');
+  if (!result || !result.hasData) return null;
+  return result.termGrade;
+}
+
+function setLearnerCopiedTermGrade(assignment, learnerId, value) {
+  if (!assignment?.term1GradeOnly || !Array.isArray(assignment.learners)) return false;
+  const learner = assignment.learners.find(item => item && item.id === learnerId);
+  if (!learner) return false;
+  const trimmed = String(value ?? '').trim();
+  if (!learner.transferredInGrades) learner.transferredInGrades = {};
+  if (!trimmed) {
+    delete learner.transferredInGrades['1'];
+    if (!Object.keys(learner.transferredInGrades).length) delete learner.transferredInGrades;
+    return true;
+  }
+  if (trimmed.toUpperCase() === 'T/O') {
+    learner.transferredInGrades['1'] = 'T/O';
+    return true;
+  }
+  const numeric = Number(trimmed);
+  if (!Number.isFinite(numeric)) return false;
+  learner.transferredInGrades['1'] = Math.round(numeric);
+  return true;
+}
+
+function duplicateAssignmentToOfficialSheet(source) {
+  if (!canDuplicateToOfficialSheet(source)) return null;
+  const isGmrc = isGmrcOrValuesSubject(source.subject);
+  const copy = {
+    id: typeof uid === 'function' ? uid('class') : `class-${Date.now()}`,
+    gradeLevel: source.gradeLevel,
+    section: source.section,
+    subject: source.subject,
+    subjectGroup: source.subjectGroup,
+    policy: source.policy,
+    schoolYear: source.schoolYear,
+    ...(source.shsSubjectGroup ? { shsSubjectGroup: source.shsSubjectGroup } : {}),
+    ...(source.shsCurriculum ? { shsCurriculum: source.shsCurriculum } : {}),
+    isSpecialProgramSubject: !!source.isSpecialProgramSubject,
+    ...(source.isSpecialProgramSubject && source.specialProgramWeights
+      ? { specialProgramWeights: Array.isArray(source.specialProgramWeights) ? source.specialProgramWeights.slice() : source.specialProgramWeights }
+      : {}),
+    scoringModel: isGmrc ? SCORING_MODEL_GMRC_DOMAINS : SCORING_MODEL_POOLED,
+    tleMode: isGmrc ? TLE_MODE_SINGLE : TLE_MODE_PER_COMPONENT,
+    term1GradeOnly: true,
+    layoutMigration: {
+      sourceAssignmentId: source.id || '',
+      copiedTerm: '1'
+    },
+    learners: [],
+    assessments: [],
+    scores: {}
+  };
+  const template = isGmrc && typeof gmrcDomainTemplate === 'function'
+    ? gmrcDomainTemplate()
+    : (typeof templateForGrade === 'function' ? templateForGrade(copy.gradeLevel) : []);
+  seedTemplateAssessments(copy, template);
+  copy.learners = (source.learners || []).map(learner => {
+    const term1Grade = termGradeForOfficialSheetCopy(source, learner.id);
+    return cloneLearnerForOfficialSheet(learner, term1Grade);
+  });
+  return copy;
+}
+
+function gmrcDomainTemplate() {
+  const items = [];
+  for (let i = 1; i <= 5; i++) items.push({ component: 'WW', title: `WW ${i}`, domain: 'cognitive' });
+  for (let i = 1; i <= 5; i++) items.push({ component: 'WW', title: `WW ${i}`, domain: 'affective' });
+  for (let i = 1; i <= 3; i++) items.push({ component: 'PT', title: `PT ${i}`, domain: 'cognitive' });
+  for (let i = 1; i <= 3; i++) items.push({ component: 'PT', title: `PT ${i}`, domain: 'affective' });
+  for (let i = 1; i <= 3; i++) items.push({ component: 'PT', title: `PT ${i}`, domain: 'behavioral' });
+  items.push({ component: 'ST1', title: 'ST1' }, { component: 'ST2', title: 'ST2' }, { component: 'TE', title: 'TE' });
+  return items;
+}
+
+function maxComponentCount(a, component) {
+  const groups = new Map();
+  (a?.assessments || []).forEach(item => {
+    if (canonicalAssessmentComponent(item?.component) !== component) return;
+    const key = `${item.term}|${item.mapePart || 'regular'}`;
+    groups.set(key, (groups.get(key) || 0) + 1);
+  });
+  let max = 0;
+  groups.forEach(count => {
+    if (count > max) max = count;
+  });
+  return max;
+}
+
+function templateFromColumnCounts(wwCount, ptCount) {
+  const template = [];
+  for (let i = 1; i <= wwCount; i++) template.push({ component: 'WW', title: `WW ${i}` });
+  for (let i = 1; i <= ptCount; i++) template.push({ component: 'PT', title: `PT ${i}` });
+  template.push({ component: 'ST1', title: 'ST1' }, { component: 'ST2', title: 'ST2' }, { component: 'TE', title: 'TE' });
+  return template;
+}
+
+/**
+ * Pins the WW/PT column counts already stored on a class so later preset
+ * changes (for example Grades 2–3 moving from 4+4 to 5+3) cannot drop or
+ * reshape existing records.
+ */
+function freezeColumnPreset(a) {
+  if (!a || typeof a !== 'object') return null;
+  const frozenWw = Number(a.columnPreset?.ww);
+  const frozenPt = Number(a.columnPreset?.pt);
+  if (Number.isInteger(frozenWw) && frozenWw >= 0 && Number.isInteger(frozenPt) && frozenPt >= 0) {
+    const ww = Math.max(frozenWw, maxComponentCount(a, 'WW'));
+    const pt = Math.max(frozenPt, maxComponentCount(a, 'PT'));
+    a.columnPreset = { ww, pt };
+    return a.columnPreset;
+  }
+  const ww = maxComponentCount(a, 'WW');
+  const pt = maxComponentCount(a, 'PT');
+  if (ww === 0 && pt === 0) return null;
+  a.columnPreset = { ww, pt };
+  return a.columnPreset;
+}
+
+/**
+ * Additive compatibility flags. Existing databases keep their current
+ * formulas and column layouts; new official packs must opt in per class.
+ */
+function freezeRecordCompatibility(a) {
+  if (!a || typeof a !== 'object') return a;
+  freezeColumnPreset(a);
+  if (!a.scoringModel) a.scoringModel = SCORING_MODEL_POOLED;
+  if (!a.tleMode) a.tleMode = TLE_MODE_SINGLE;
+  return a;
+}
+
+function templateForAssignment(a) {
+  freezeColumnPreset(a);
+  if (usesGmrcDomainScoring(a)) return gmrcDomainTemplate();
+  const preset = a?.columnPreset;
+  if (preset && Number.isInteger(Number(preset.ww)) && Number.isInteger(Number(preset.pt))) {
+    return templateFromColumnCounts(preset.ww, preset.pt);
+  }
+  return templateForGrade(a?.gradeLevel);
+}
+
+function retainUnmatchedAssessments(a, newAssessments, usedIds) {
+  const leftovers = (a?.assessments || []).filter(item => item && item.id && !usedIds.has(item.id));
+  leftovers.forEach(item => {
+    usedIds.add(item.id);
+    let insertAt = newAssessments.length;
+    for (let i = newAssessments.length - 1; i >= 0; i--) {
+      const current = newAssessments[i];
+      if (String(current.term) === String(item.term) && matchingMapehPart(current, item.mapePart)) {
+        insertAt = i + 1;
+        break;
+      }
+    }
+    newAssessments.splice(insertAt, 0, item);
+  });
+  return leftovers.length;
 }
 
 const SHS_CURRICULUM_SSHS = 'SSHS';
@@ -647,12 +1067,16 @@ function seniorHighSubjectGroupForSubject(subject, curriculum) {
 function getSubjectsForGrade(gradeLevel, options) {
   const grade = parseInt(gradeLevel);
   if (grade === 1) {
+    if (typeof paceGrade1SubjectNames === 'function') {
+      const names = paceGrade1SubjectNames();
+      if (names.length) return names;
+    }
     return [
-      'Language',
       'Reading and Literacy',
+      'Language',
       'Mathematics',
-      'Makabansa',
       'Good Manners and Right Conduct (GMRC)',
+      'Makabansa',
       'Arts and Physical Education'
     ];
   } else if (grade === 2) {
@@ -1039,7 +1463,8 @@ function createTemplateAssessment(term, mapePart, slotIndex, templateItem) {
     templateSlotId: assessmentTemplateSlotId(term, mapePart, slotIndex),
     maxScore: '',
     date: '',
-    ...(mapePart ? { mapePart } : {})
+    ...(mapePart ? { mapePart } : {}),
+    ...(templateItem.domain ? { domain: templateItem.domain } : {})
   };
 }
 
@@ -1052,6 +1477,7 @@ function keepAssessmentInTemplateSlot(assessment, term, mapePart, slotIndex, tem
   if (assessment.title === 'SA2') assessment.title = 'ST2';
   if (mapePart) assessment.mapePart = mapePart;
   else delete assessment.mapePart;
+  if (templateItem.domain) assessment.domain = templateItem.domain;
   return assessment;
 }
 
@@ -1059,22 +1485,41 @@ function matchingMapehPart(assessment, mapePart) {
   return (assessment.mapePart || undefined) === (mapePart || undefined);
 }
 
+function matchingAssessmentDomain(assessment, domain) {
+  return String(assessment?.domain || '') === String(domain || '');
+}
+
 function assessmentMatchesTemplateComponent(assessment, templateItem) {
-  return canonicalAssessmentComponent(assessment.component) === canonicalAssessmentComponent(templateItem.component);
+  if (canonicalAssessmentComponent(assessment.component) !== canonicalAssessmentComponent(templateItem.component)) {
+    return false;
+  }
+  if (templateItem.domain) return matchingAssessmentDomain(assessment, templateItem.domain);
+  return true;
 }
 
 function templateComponentOccurrence(template, slotIndex) {
   const component = canonicalAssessmentComponent(template[slotIndex].component);
+  const domain = template[slotIndex].domain || '';
   let occurrence = 0;
   for (let i = 0; i < slotIndex; i++) {
-    if (canonicalAssessmentComponent(template[i].component) === component) occurrence++;
+    if (canonicalAssessmentComponent(template[i].component) !== component) continue;
+    if (String(template[i].domain || '') !== domain) continue;
+    occurrence++;
   }
   return occurrence;
 }
 
 function findAssessmentForTemplate(a, usedIds, term, mapePart, slotIndex, template) {
   const templateItem = template[slotIndex];
-  const legacyMatch = findAssessment(a, String(term), templateItem.component, templateItem.title, mapePart, usedIds);
+  const legacyMatch = findAssessment(
+    a,
+    String(term),
+    templateItem.component,
+    templateItem.title,
+    mapePart,
+    usedIds,
+    templateItem.domain
+  );
   if (legacyMatch) return legacyMatch;
 
   const slotId = assessmentTemplateSlotId(term, mapePart, slotIndex);
@@ -1090,7 +1535,8 @@ function findAssessmentForTemplate(a, usedIds, term, mapePart, slotIndex, templa
   const sameComponent = a.assessments.filter(item =>
     String(item.term) === String(term) &&
     canonicalAssessmentComponent(item.component) === component &&
-    matchingMapehPart(item, mapePart)
+    matchingMapehPart(item, mapePart) &&
+    matchingAssessmentDomain(item, templateItem.domain)
   );
   const occurrenceMatch = sameComponent[occurrence];
   if (occurrenceMatch && !usedIds.has(occurrenceMatch.id)) return occurrenceMatch;
@@ -1102,16 +1548,14 @@ function findAssessmentForTemplate(a, usedIds, term, mapePart, slotIndex, templa
  */
 function seedTemplateAssessments(a, template) {
   a.assessments = [];
-  const isMapeh = isMapehSubject(a.subject);
-  const parts = isMapeh ? ['music_arts', 'pe_health'] : [undefined];
-  
   for (let term = 1; term <= 3; term++) {
-    for (const mapePart of parts) {
+    for (const mapePart of assessmentPartsForTerm(a, term)) {
       for (let i = 0; i < template.length; i++) {
         a.assessments.push(createTemplateAssessment(term, mapePart, i, template[i]));
       }
     }
   }
+  freezeRecordCompatibility(a);
 }
 
 function assessmentHasRecordedData(a, assessment) {
@@ -1126,60 +1570,58 @@ function assessmentHasRecordedData(a, assessment) {
 }
 
 /**
- * Keeps previously used PT4/PT5 columns visible during the DO 015 migration.
- * New Grades 7-12 records receive the recommended five-WW/three-PT preset,
- * while populated legacy columns are retained so no recorded evidence is hidden.
+ * Keeps extra WW/PT columns that already hold evidence when a newer preset
+ * is shorter. Applies to every grade so Grades 2–3 4+4 records cannot lose PT4.
  */
-function templateWithPopulatedLegacyPerformanceTasks(a, template) {
-  const grade = parseInt(a?.gradeLevel);
-  if (!Array.isArray(a?.assessments) || grade < 7 || grade > 12) return template;
-
-  let performanceTaskCount = template.filter(item => item.component === 'PT').length;
+function expandTemplateForRecordedComponent(a, template, component, maxAllowed) {
+  if (!Array.isArray(a?.assessments) || !Array.isArray(template)) return template;
+  let needed = template.filter(item => item.component === component).length;
   const groups = new Map();
   a.assessments.forEach(assessment => {
-    if (canonicalAssessmentComponent(assessment.component) !== 'PT') return;
+    if (canonicalAssessmentComponent(assessment.component) !== component) return;
     const key = `${assessment.term}|${assessment.mapePart || 'regular'}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(assessment);
   });
-
   groups.forEach(items => {
     items.forEach((assessment, index) => {
-      if (index >= performanceTaskCount && assessmentHasRecordedData(a, assessment)) {
-        performanceTaskCount = Math.max(performanceTaskCount, index + 1);
+      if (index >= needed && assessmentHasRecordedData(a, assessment)) {
+        needed = Math.max(needed, index + 1);
       }
     });
   });
-
-  performanceTaskCount = Math.min(performanceTaskCount, 5);
-  const standardCount = template.filter(item => item.component === 'PT').length;
-  if (performanceTaskCount <= standardCount) return template;
-
+  needed = Math.min(needed, maxAllowed);
+  const standardCount = template.filter(item => item.component === component).length;
+  if (needed <= standardCount) return template;
   const expanded = template.map(item => ({ ...item }));
-  const insertAt = expanded.reduce((last, item, index) => item.component === 'PT' ? index + 1 : last, 0);
-  const legacySlots = [];
-  for (let index = standardCount + 1; index <= performanceTaskCount; index++) {
-    legacySlots.push({ component: 'PT', title: `PT ${index}` });
+  const insertAt = expanded.reduce((last, item, index) => item.component === component ? index + 1 : last, 0);
+  const extraSlots = [];
+  for (let index = standardCount + 1; index <= needed; index++) {
+    extraSlots.push({ component, title: `${component} ${index}` });
   }
-  expanded.splice(insertAt, 0, ...legacySlots);
+  expanded.splice(insertAt, 0, ...extraSlots);
   return expanded;
 }
 
+function templateWithPopulatedLegacyPerformanceTasks(a, template) {
+  const wwCap = usesGmrcDomainScoring(a) ? 15 : 10;
+  const ptCap = usesGmrcDomainScoring(a) ? 15 : 5;
+  const withWrittenWorks = expandTemplateForRecordedComponent(a, template, 'WW', wwCap);
+  return expandTemplateForRecordedComponent(a, withWrittenWorks, 'PT', ptCap);
+}
+
 /**
- * Ensures appropriate template assessments exist, removing legacy custom ones
- * and preserving scores on matching template columns.
+ * Ensures template slots exist without deleting stored assessments or scores.
+ * Existing classes follow their frozen column preset; unmatched columns are kept.
  */
 function ensureTemplateAssessments(a) {
   if (!a) return;
-  const template = templateWithPopulatedLegacyPerformanceTasks(a, templateForGrade(a.gradeLevel));
-  const isMapeh = isMapehSubject(a.subject);
-  
+  freezeRecordCompatibility(a);
+  const template = templateWithPopulatedLegacyPerformanceTasks(a, templateForAssignment(a));
   const newAssessments = [];
   const usedIds = new Set();
-  const parts = isMapeh ? ['music_arts', 'pe_health'] : [undefined];
-  
   for (let term = 1; term <= 3; term++) {
-    for (const mapePart of parts) {
+    for (const mapePart of assessmentPartsForTerm(a, term)) {
       for (let i = 0; i < template.length; i++) {
         const tItem = template[i];
         const existing = findAssessmentForTemplate(a, usedIds, String(term), mapePart, i, template);
@@ -1194,10 +1636,12 @@ function ensureTemplateAssessments(a) {
     }
   }
 
+  retainUnmatchedAssessments(a, newAssessments, usedIds);
   a.assessments = newAssessments;
+  freezeColumnPreset(a);
 }
 
-function findAssessment(a, term, component, title, mapePart, usedIds) {
+function findAssessment(a, term, component, title, mapePart, usedIds, domain) {
   const componentAliases = component === 'ST1' ? ['ST1', 'SA1'] : component === 'ST2' ? ['ST2', 'SA2'] : [component];
   const titleAliases = title === 'ST1' ? ['ST1', 'SA1'] : title === 'ST2' ? ['ST2', 'SA2'] : [title];
   for (let i = 0; i < a.assessments.length; i++) {
@@ -1207,7 +1651,8 @@ function findAssessment(a, term, component, title, mapePart, usedIds) {
       String(item.term) === String(term) &&
       componentAliases.includes(canonicalAssessmentComponent(item.component)) &&
       titleAliases.includes(item.title) &&
-      matchingMapehPart(item, mapePart)
+      matchingMapehPart(item, mapePart) &&
+      matchingAssessmentDomain(item, domain)
     ) {
       return item;
     }
@@ -1218,7 +1663,7 @@ function findAssessment(a, term, component, title, mapePart, usedIds) {
 /**
  * Computes component raw/max/percentage score.
  */
-function componentScore(a, learnerId, term, components, mapePart) {
+function componentScore(a, learnerId, term, components, mapePart, domain) {
   let raw = 0;
   let max = 0;
   let hasData = false;
@@ -1228,6 +1673,7 @@ function componentScore(a, learnerId, term, components, mapePart) {
     if (String(item.term) !== String(term)) continue;
     if (!components.includes(item.component)) continue;
     if (mapePart && item.mapePart !== mapePart) continue;
+    if (domain && !matchingAssessmentDomain(item, domain)) continue;
 
     const maxScoreVal = number(item.maxScore);
     if (maxScoreVal <= 0) continue;
@@ -1273,7 +1719,7 @@ function computeTerm(a, learnerId, term, mapePart) {
         st2: { raw: 0, max: 0, ps: 0, hasData: false },
         te: { raw: 0, max: 0, ps: 0, hasData: false },
         examPS: 0,
-        initialGrade: 0,
+        initialGrade: null,
         termGrade: overriddenGrade,
         hasData: true,
         isTransferredIn: true
@@ -1281,9 +1727,51 @@ function computeTerm(a, learnerId, term, mapePart) {
     }
   }
 
-  const w = weightsForAssignment(a);
-  const ww = componentScore(a, learnerId, term, ['WW'], mapePart);
-  const pt = componentScore(a, learnerId, term, ['PT'], mapePart);
+  if ((typeof isKinderAssignment === 'function' && isKinderAssignment(a)) || (typeof isKinderGradeLevel === 'function' && isKinderGradeLevel(a.gradeLevel))) {
+    const empty = { raw: 0, max: 0, ps: 0, hasData: false };
+    const result = typeof kinderTermResult === 'function'
+      ? kinderTermResult(a, learnerId, term)
+      : { letter: null, hasData: false };
+    return {
+      ww: empty,
+      pt: empty,
+      st1: empty,
+      st2: empty,
+      te: empty,
+      examPS: 0,
+      initialGrade: null,
+      termGrade: result.letter || null,
+      hasData: Boolean(result.hasData),
+      paceRated: result.rated || 0,
+      paceExpected: result.expected || 0
+    };
+  }
+
+  if (parseInt(a.gradeLevel, 10) === 1 && typeof paceTermResult === 'function') {
+    const empty = { raw: 0, max: 0, ps: 0, hasData: false };
+    const paceSubject = (mapePart && typeof paceSubjectKey === 'function' && paceSubjectKey(mapePart))
+      ? mapePart
+      : (typeof paceWorkingSubject === 'function' ? paceWorkingSubject(a) : a.subject);
+    const pace = paceTermResult(a, learnerId, term, paceSubject);
+    return {
+      ww: empty,
+      pt: empty,
+      st1: empty,
+      st2: empty,
+      te: empty,
+      examPS: 0,
+      initialGrade: null,
+      termGrade: pace.letter,
+      hasData: pace.hasData,
+      paceRated: pace.rated,
+      paceExpected: pace.expected,
+      paceOverride: pace.override || ''
+    };
+  }
+
+  // Displayed term grades are calculated from stored raw scores. Never write
+  // them back over scores. Official GMRC domain weights must check scoringModel
+  // and must not switch existing classes by subject name.
   const st1 = componentScore(a, learnerId, term, ['SA1', 'ST1'], mapePart);
   const st2 = componentScore(a, learnerId, term, ['SA2', 'ST2'], mapePart);
   const te = componentScore(a, learnerId, term, ['TE'], mapePart);
@@ -1295,6 +1783,49 @@ function computeTerm(a, learnerId, term, mapePart) {
   } else if (examinationComponents.length > 0) {
     examPS = (st1.ps * 0.30) + (st2.ps * 0.30) + (te.ps * 0.40);
   }
+
+  if (usesGmrcDomainScoring(a)) {
+    const wwCognitive = componentScore(a, learnerId, term, ['WW'], mapePart, 'cognitive');
+    const wwAffective = componentScore(a, learnerId, term, ['WW'], mapePart, 'affective');
+    const ptCognitive = componentScore(a, learnerId, term, ['PT'], mapePart, 'cognitive');
+    const ptAffective = componentScore(a, learnerId, term, ['PT'], mapePart, 'affective');
+    const ptBehavioral = componentScore(a, learnerId, term, ['PT'], mapePart, 'behavioral');
+    const ig = (wwCognitive.ps * GMRC_DOMAIN_WEIGHTS.WW_cognitive / 100)
+      + (wwAffective.ps * GMRC_DOMAIN_WEIGHTS.WW_affective / 100)
+      + (ptCognitive.ps * GMRC_DOMAIN_WEIGHTS.PT_cognitive / 100)
+      + (ptAffective.ps * GMRC_DOMAIN_WEIGHTS.PT_affective / 100)
+      + (ptBehavioral.ps * GMRC_DOMAIN_WEIGHTS.PT_behavioral / 100)
+      + (examPS * GMRC_DOMAIN_WEIGHTS.EX / 100);
+    const examinationHasData = examinationComponents.some(component => {
+      if (component === 'ST1') return st1.hasData;
+      if (component === 'ST2') return st2.hasData;
+      return te.hasData;
+    });
+    const hasData = wwCognitive.hasData || wwAffective.hasData || ptCognitive.hasData
+      || ptAffective.hasData || ptBehavioral.hasData || examinationHasData;
+    return {
+      ww: componentScore(a, learnerId, term, ['WW'], mapePart),
+      pt: componentScore(a, learnerId, term, ['PT'], mapePart),
+      st1,
+      st2,
+      te,
+      examPS,
+      gmrcDomains: {
+        WW_cognitive: wwCognitive,
+        WW_affective: wwAffective,
+        PT_cognitive: ptCognitive,
+        PT_affective: ptAffective,
+        PT_behavioral: ptBehavioral
+      },
+      initialGrade: ig,
+      termGrade: hasData ? transmute(a, ig) : null,
+      hasData
+    };
+  }
+
+  const w = weightsForAssignment(a);
+  const ww = componentScore(a, learnerId, term, ['WW'], mapePart);
+  const pt = componentScore(a, learnerId, term, ['PT'], mapePart);
 
   const ig = (ww.ps * w[0] / 100) + (pt.ps * w[1] / 100) + (examPS * w[2] / 100);
   const examinationHasData = examinationComponents.some(component => {
@@ -1378,20 +1909,16 @@ function descriptor(grade) {
   if (grade === null || grade === undefined || grade === '') return '';
   const g = String(grade).toUpperCase();
   if (g === 'T/O' || g === 'TRANSFERRED OUT') return 'Transferred Out';
-  if (g === 'A') return 'Advancing (Namumukod-tangi)';
-  if (g === 'B') return 'Benchmarking (Napamamalas)';
-  if (g === 'C') return 'Connecting (Natutungo)';
-  if (g === 'D') return 'Developing (Napauunlad)';
-  if (g === 'E') return 'Emerging (Nagsisimula)';
+  const fromLetter = descriptorLabel(g);
+  if (fromLetter) return fromLetter;
   
   const num = parseFloat(grade);
   if (isNaN(num)) return grade;
-  
-  if (num >= 90) return 'Advancing (Namumukod-tangi)';
-  if (num >= 80) return 'Benchmarking (Napamamalas)';
-  if (num >= 75) return 'Connecting (Natutungo)';
-  if (num >= 65) return 'Developing (Napauunlad)';
-  return 'Emerging (Nagsisimula)';
+  if (num >= 90) return descriptorLabel('A');
+  if (num >= 80) return descriptorLabel('B');
+  if (num >= 75) return descriptorLabel('C');
+  if (num >= 65) return descriptorLabel('D');
+  return descriptorLabel('E');
 }
 
 function consolidateMapehGrades(gm, gp) {
@@ -1416,6 +1943,10 @@ function isZeroBasedSy(sy) {
   const parts = String(sy).split('-');
   const startYear = parseInt(parts[0]);
   return !isNaN(startYear) && startYear >= 2027;
+}
+
+function isGrade1Assignment(a) {
+  return parseInt(a?.gradeLevel, 10) === 1;
 }
 
 function isPassing(grade) {
@@ -1532,11 +2063,11 @@ function transmutationTableModel(assignment, ig) {
 
   if (policy === 'DO15_DESCRIPTIVE') {
     const rows = [
-      { low: 90, high: 100, tg: 'A', descriptor: 'Advancing (Namumukod-tangi)' },
-      { low: 80, high: 89.99, tg: 'B', descriptor: 'Benchmarking (Napamamalas)' },
-      { low: 75, high: 79.99, tg: 'C', descriptor: 'Connecting (Natutungo)' },
-      { low: 65, high: 74.99, tg: 'D', descriptor: 'Developing (Napauunlad)' },
-      { low: 0, high: 64.99, tg: 'E', descriptor: 'Emerging (Nagsisimula)' }
+      { low: 90, high: 100, tg: 'A', descriptor: descriptorLabel('A') },
+      { low: 80, high: 89.99, tg: 'B', descriptor: descriptorLabel('B') },
+      { low: 75, high: 79.99, tg: 'C', descriptor: descriptorLabel('C') },
+      { low: 65, high: 74.99, tg: 'D', descriptor: descriptorLabel('D') },
+      { low: 0, high: 64.99, tg: 'E', descriptor: descriptorLabel('E') }
     ];
     return {
       kind: 'descriptive',

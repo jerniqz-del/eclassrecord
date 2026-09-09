@@ -19,6 +19,18 @@
   padding: var(--space-5);
   background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
   border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.sync-panel__header-copy {
+  min-width: 0;
+}
+
+.sync-panel__header #btnCompanionInstructions {
+  flex: 0 0 auto;
 }
 
 .sync-panel__body {

@@ -2,8 +2,8 @@
 
 This document records the implemented changes from the beginning of the project through the latest restored update set. It is meant to be a durable engineering and release reference, especially for fixes that worked immediately and patches that were later adjusted.
 
-Current app version: 1.9.8
-Last reviewed: 2026-09-08
+Current app version: 1.10.0
+Last reviewed: 2026-09-09
 
 ## 1. Project Foundation
 
@@ -35,6 +35,8 @@ Implemented changes:
 - Added Key Stage 2 trimester calculation and universal trimester layout support.
 - Added MAPEH handling for Music and Arts, PE and Health, and consolidated summaries.
 - Added descriptor and numerical-equivalent display support for Annex C style reporting.
+- Added Grade 1 PACE (Performance and Competency Evaluation) as the official A–E rating surface: Individual (one learner, one criterion) and Class (set unrated baseline, increment class, increment selected) modes, median subject letter with teacher override, optional WW/PT evidence that does not compute the letter, learner booklet print, Advisory A–E transfer with Annex C ranges, and Android companion rating sync.
+- Redesigned the Grade 1 class record page with subject-colored workspace chrome, larger letter tiles, rating progress, and keyboard shortcuts that do not change stored PACE data.
 
 Worked patches:
 
@@ -250,7 +252,8 @@ Adjusted patches:
 | v1.9.5 | Redesigned the Name Picker and presentation mode with Wheel of Learners, Carnival Prize Wheel, picking history, star leaderboard, configurable pick retention, wheel sizing and speed; added drag-and-drop Group Randomizer controls; replicated the new School Calendar; refined Performance Checklist deletion; limited score-history actions to changed cells; removed score-change highlighting; and enabled differential silent updates. | Feature and maintenance release focused on classroom presentation, fair learner selection, flexible grouping, calendar usability, cleaner grading feedback, and update delivery without a full reinstall. |
 | v1.9.6 | Corrected SY 2026-2027 TLE and other numerically graded subjects to use DO 15's adjusted transmutation table, closed hundredth-boundary lookup gaps, added full-table and supplied-PDF row regression coverage, and removed MAPEH from Grade 3 class creation and Advisory records. | Grading-integrity patch release; existing records are preserved and recalculated from their stored raw scores when displayed or exported. |
 | v1.9.7 | Added click-to-open transmutation table lookup with highlighted matching ranges, two-decimal initial grades and whole transmuted grades in the popup, desktop profile backup/restore/delete, Windows-lock profile locking, and local crash recovery with teacher-controlled diagnostics. | Patch release focused on transmutation transparency and safer desktop profile handling; existing records remain compatible. |
-| v1.9.8 | Added DepEd Order No. 017 s. 2026 Strengthened SHS catalogs for Grade 11, with Grade 12 in SY 2026-2027 defaulting to the 2016 K to 12 subjects and DepEd Order No. 8 s. 2015 weights unless marked as a pilot SSHS class; auto-unlocks the 6-digit profile PIN; and keeps Android Quick Grade on the current learner after live publish. | Patch release for the phased SSHS rollout; existing Grade 12 SSHS loads and stored scores remain compatible. |
+| v1.9.8 | Added DepEd Order No. 017 s. 2026 Strengthened SHS catalogs for Grade 11, with Grade 12 in SY 2026-2027 defaulting to the 2016 K to 12 subjects and DepEd Order No. 8 s. 2015 weights unless marked as a pilot SSHS class; auto-unlocks the 6-digit profile PIN; and keeps Android Quick Grade on the current learner after live publish. | Patch checkpoint committed on main; it was not tagged as a GitHub Latest release and ships to teachers inside v1.10.0. |
+| v1.10.0 | Shipped K to 10 Updated ECR Phases 0–G and Grade 1 PACE: official SF9 wording and 5+3 presets for new Grades 2–3; official GMRC domain scoring and TLE per-component scoring as opt-in layouts; Duplicate to official sheet; Export Official ECR packs including Grade 1 and Kinder; Grade 1 PACE booklet with nested skill lines, labeled School on the Individual PACE Form, and Android companion rating; Kindergarten A–E developmental rating; and the unpublished v1.9.8 Strengthened SHS catalogs. | Public minor release. Existing WW/PT layouts, pooled GMRC, single-component TLE, one-letter Grade 1 PACE keys, and stored scores remain unchanged. |
 | v2.0.0 (unreleased) | Added secure School Cloud services and announcements; expanded Bluetooth, QR, and relay-based desktop-to-mobile companion synchronization; strengthened calendar integration, score history, learner avatars, and Performance Checklist behavior; and distinguished Summative Test 1 from Summative Test 2 in Quick Grade Entry. | Unreleased major-version work retained in the repository for later completion and release. |
 | v2.0.2 (unreleased) | Unified the desktop and Android companion workspace; added Bluetooth QR pairing, retained personal checklists, expanded mobile teaching tools, introduced a shared premium desktop and Material 3 visual system, and redesigned attendance checking around an accessible date carousel. | Unreleased patch-line work retained in the repository; it is not the current releasable app version. |
 
@@ -259,3 +262,4 @@ Adjusted patches:
 - Wire a visible dashboard entry point for Class Analysis if it should be user-facing.
 - Smoke-test calendar, database integrity repair, Quick Grade Entry, PDF/Excel export, SF1 import, backup restore, and OTA update flows.
 - Clean encoding artifacts in older UI strings where mojibake appears.
+- Keep Phase 0 existing-record safety green after K to 10 follow-up work. Plan: `docs/k-to-10-updated-ecr-conformance-plan.md`. Phases A–G shipped in v1.10.0.
