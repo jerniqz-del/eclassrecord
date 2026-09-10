@@ -34,6 +34,8 @@ assert(index.includes('js/legacy-markup-runtime.js'));
 const markup = fs.readFileSync(path.join(rendererRoot, 'js', 'legacy-markup-runtime.js'), 'utf8');
 assert(markup.includes("'electronAPI'"));
 assert(markup.includes("BLOCKED_MEMBERS = new Set(['__proto__', 'prototype', 'constructor', 'electronAPI'])"));
+assert(markup.includes('function migrateInlineHandlers'), 'compressed modules still emit onclick; runtime must migrate them');
+assert(markup.includes('migrateInlineHandlers(root)'), 'inserted Attendance markup must be migrated');
 assert(security.includes('"script-src-attr \'none\'"'));
 assert(security.includes('"style-src-attr \'none\'"'));
 assert(!security.includes('"script-src-attr \'unsafe-inline\'"'));

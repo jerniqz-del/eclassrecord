@@ -215,6 +215,32 @@
     }
   }
 
+  function migrateInlineHandlers(root) {
+    if (!root) return;
+    const visit = (element) => {
+      if (!(element instanceof Element)) return;
+      EVENT_TYPES.forEach((type) => {
+        const name = 'on' + type;
+        if (!element.hasAttribute(name)) return;
+        const source = element.getAttribute(name);
+        element.removeAttribute(name);
+        if (String(source || '').trim()) {
+          element.setAttribute('data-eclass-on' + type, source);
+        }
+      });
+    };
+    visit(root);
+    if (typeof root.querySelectorAll !== 'function') return;
+    EVENT_TYPES.forEach((type) => {
+      root.querySelectorAll('[on' + type + ']').forEach(visit);
+    });
+  }
+
+  function hydrateSubtree(root) {
+    migrateInlineHandlers(root);
+    hydrateStyles(root);
+  }
+
   EVENT_TYPES.forEach(type => {
     document.addEventListener(type, event => {
       const target = event.target instanceof Element
@@ -234,12 +260,12 @@
   const observer = new MutationObserver(records => {
     records.forEach(record => {
       if (record.type === 'attributes') hydrateStyle(record.target);
-      record.addedNodes.forEach(hydrateStyles);
+      record.addedNodes.forEach(hydrateSubtree);
     });
   });
 
   function start() {
-    hydrateStyles(document);
+    hydrateSubtree(document);
     observer.observe(document.documentElement, {
       childList: true,
       subtree: true,
@@ -254,6 +280,8 @@
   globalScope.LegacyMarkupRuntime = Object.freeze({
     runHandler,
     hydrateStyles,
+    migrateInlineHandlers,
+    hydrateSubtree,
     eventTypes: EVENT_TYPES.slice()
   });
 })(window);

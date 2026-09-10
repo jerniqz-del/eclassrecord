@@ -2,7 +2,7 @@
 
 Last reviewed: 2026-09-09  
 Source pack: `K to 10 (Updated)` official workbooks dated 2026-09-08  
-App baseline: E-Class Record 1.10.0  
+App baseline: E-Class Record 1.10.1  
 Active goal: complete Phases A–G with a test-then-integrity gate before each next phase. Phase 0 is done.
 
 This plan compares the updated DepEd Excel ECR / PACE / SF9 files with the app and sequences the work needed to match their **functionality and usability**. It does not copy password protection, 50+50 hardcoded Excel slots, or sheet-protection passwords from the official files.

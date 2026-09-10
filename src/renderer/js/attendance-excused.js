@@ -465,12 +465,15 @@
   function decorateAttendanceDateCarousel(modal) {
     const rollCall = modal.querySelector('.attendance-roll-call');
     if (!rollCall) return;
-    if (!rollCall.querySelector('.attendance-date-carousel')) {
-      rollCall.insertAdjacentHTML('afterbegin', renderAttendanceDateCarousel());
-    }
+    const html = renderAttendanceDateCarousel();
+    const existing = rollCall.querySelector('.attendance-date-carousel');
+    if (existing) existing.outerHTML = html;
+    else rollCall.insertAdjacentHTML('afterbegin', html);
     const carousel = rollCall.querySelector('.attendance-date-carousel');
+    if (!carousel) return;
     const setDate = (value) => {
-      if (value && value !== currentRollCallDate() && typeof setAttendanceRollCallDate === 'function') {
+      if (!value || value === currentRollCallDate()) return;
+      if (typeof setAttendanceRollCallDate === 'function') {
         setAttendanceRollCallDate(value);
       }
     };
@@ -525,9 +528,16 @@
     });
   }
 
+  function migrateAttendanceHandlers(root) {
+    if (typeof window.LegacyMarkupRuntime?.migrateInlineHandlers === 'function') {
+      window.LegacyMarkupRuntime.migrateInlineHandlers(root);
+    }
+  }
+
   function decorateRollCallModal() {
     const modal = document.getElementById('attendanceRollCallModal');
     if (!modal) return;
+    migrateAttendanceHandlers(modal);
     decorateAttendanceDateCarousel(modal);
     hideRollCallTermControl(modal);
     const toolbar = modal.querySelector('.attendance-roll-call__toolbar');
@@ -1000,6 +1010,16 @@
       const result = typeof originalShow === 'function' ? originalShow.apply(this, args) : undefined;
       hydrateSavedExcusedReasons();
       decorateRollCallModal();
+      return result;
+    };
+
+    const originalRenderTracker = window.renderAttendanceTracker;
+    window.renderAttendanceTracker = function patchedRenderAttendanceTracker(...args) {
+      const result = typeof originalRenderTracker === 'function'
+        ? originalRenderTracker.apply(this, args)
+        : undefined;
+      migrateAttendanceHandlers(document.getElementById('attendanceTrackerView') || document);
+      migrateAttendanceHandlers(document.getElementById('attendanceRollCallModal'));
       return result;
     };
 

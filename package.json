@@ -1,6 +1,6 @@
 {
   "name": "eclass-record",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "description": "Local, teacher-owned class record for DepEd three-term and legacy grading workflows",
   "author": "E-Class Record App",
   "license": "MIT",
@@ -68,7 +68,7 @@
     "test:k10-official-layout-duplicate": "node scripts/test-k10-official-layout-duplicate.js",
     "test:k10-integrity": "npm run test:ecr-record-safety && npm run test:grade-integrity && npm run test:pace && npm run test:senior-high && npm run test:record-layout && npm run test:k10-phase-a && npm run test:k10-phase-c && npm run test:k10-phase-b && npm run test:k10-phase-d && npm run test:k10-phase-e && npm run test:k10-phase-f && npm run test:k10-phase-g && npm run test:k10-official-layout-duplicate",
     "test:record-layout": "node scripts/test-record-layout.js",
-    "test:attendance-pdf-print": "node scripts/test-attendance-pdf-print.js",
+    "test:attendance-pdf-print": "node scripts/test-attendance-pdf-print.js && node scripts/test-attendance-roll-call.js",
     "test:advisory-compatibility": "node scripts/test-advisory-compatibility.js",
     "test:advisory-dashboard": "node scripts/test-advisory-dashboard.js",
     "test:advisory-roster": "node scripts/test-advisory-roster.js",
